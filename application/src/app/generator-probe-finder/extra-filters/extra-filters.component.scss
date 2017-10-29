@@ -1,0 +1,31 @@
+.filter {
+    position: relative;
+    .close-btn {
+        cursor: pointer;
+        position: absolute;
+        top: 5px;
+        right: 5px;
+    }
+}
+.form-check-inline {
+    display: inline-block;
+}
+.form-check-inline+.form-check-inline {
+    margin-left: .75rem;
+}
+
+.toggle-filter {
+    cursor: pointer;
+}
+
+.filter {
+    background-color: #f5f5f5;
+    margin-top: 5px;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+hr {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
