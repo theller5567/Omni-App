@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { trigger, state, transition, style, animate } from '@angular/animations';
 import { GprobeUiService } from "../../services/gprobe-ui/gprobe-ui.service";
 import { DataService } from './../../services/data/data.service';

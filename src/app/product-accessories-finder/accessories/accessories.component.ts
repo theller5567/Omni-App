@@ -1,8 +1,9 @@
 import { Component, OnInit, EventEmitter } from '@angular/core';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { trigger, state, transition, style, animate, query, stagger, keyframes } from '@angular/animations';
 import { ProductsService } from "../../services/products/products.service";
 import { DataService } from './../../services/data/data.service';
-import { Ng4LoadingSpinnerService  } from 'ng4-loading-spinner';
+// import { Ng4LoadingSpinnerService  } from 'ng4-loading-spinner';
 import { IProduct } from '../../product';
 import * as _ from 'underscore';
 
@@ -60,8 +61,8 @@ export class AccessoriesComponent implements OnInit {
 
   constructor(
       private _service: ProductsService, 
-      private data: DataService,
-      private spinnerService: Ng4LoadingSpinnerService 
+      private data: DataService
+      // private spinnerService: Ng4LoadingSpinnerService
     ) {
     this.getProductsList();
   }
@@ -163,14 +164,14 @@ export class AccessoriesComponent implements OnInit {
 
 
   getProductsList() {
-    this.spinnerService.show();
+    // this.spinnerService.show();
     this._service.getCatgegories()
       .subscribe(response => {
         let masterList = this.getProductsWithAccessories(response);
         this.powers = masterList;
         this.masterProductList = response;
         this.getCatgegories(this.masterProduct);
-        this.spinnerService.hide();
+        // this.spinnerService.hide();
       });
   }
 

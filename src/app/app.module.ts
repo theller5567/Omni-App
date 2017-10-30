@@ -3,7 +3,6 @@ import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { NgModule } from '@angular/core';
 import { AppComponent } from './app.component';
-import { AutoGrowDirective } from './auto-grow.directive';
 import { HttpModule } from '@angular/http';
 import { ProductsService } from './services/products/products.service';
 import { GprobeUiService } from './services/gprobe-ui/gprobe-ui.service';
@@ -21,12 +20,11 @@ import { ProductViewComponent } from './generator-probe-finder/product-view/prod
 import { ExtraFiltersComponent } from './generator-probe-finder/extra-filters/extra-filters.component';
 import { ProductComponent } from './generator-probe-finder/product-view/product/product.component';
 import { AlertModule } from 'ngx-bootstrap';
-import { Ng4LoadingSpinnerModule } from 'ng4-loading-spinner';
+// import { Ng4LoadingSpinnerModule } from 'ng4-loading-spinner';
 
 @NgModule({
   declarations: [
     AppComponent,
-    AutoGrowDirective,
     AccessoriesComponent,
     MasterInputComponent,
     CartComponent,
@@ -45,7 +43,7 @@ import { Ng4LoadingSpinnerModule } from 'ng4-loading-spinner';
     HttpModule,
     FormsModule,
     BrowserAnimationsModule,
-    Ng4LoadingSpinnerModule,
+    // Ng4LoadingSpinnerModule,
     AlertModule.forRoot(),
     RouterModule.forRoot([
       {
