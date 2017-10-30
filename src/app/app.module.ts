@@ -20,6 +20,7 @@ import { ProductViewComponent } from './generator-probe-finder/product-view/prod
 import { ExtraFiltersComponent } from './generator-probe-finder/extra-filters/extra-filters.component';
 import { ProductComponent } from './generator-probe-finder/product-view/product/product.component';
 import { AlertModule } from 'ngx-bootstrap';
+import { LoadingModule } from 'ngx-loading';
 // import { Ng4LoadingSpinnerModule } from 'ng4-loading-spinner';
 
 @NgModule({
@@ -36,13 +37,13 @@ import { AlertModule } from 'ngx-bootstrap';
     ProductViewComponent,
     ExtraFiltersComponent,
     ProductComponent
-    
   ],
   imports: [
     BrowserModule,
     HttpModule,
     FormsModule,
     BrowserAnimationsModule,
+    LoadingModule,
     // Ng4LoadingSpinnerModule,
     AlertModule.forRoot(),
     RouterModule.forRoot([

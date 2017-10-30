@@ -208,6 +208,10 @@ MIT
 MIT
 MIT
 
+ngx-loading@1.0.8
+ISC
+ISC
+
 @angular/common@4.4.6
 MIT
 MIT

@@ -27,6 +27,7 @@ export class GpInputComponent implements OnInit {
   selectedValue: any;
   cart: any[];
   showFilters: boolean;
+  public loading = false;
 
   constructor( 
       private _service:GprobeUiService, 
@@ -45,9 +46,11 @@ export class GpInputComponent implements OnInit {
 
   getGeneratprobes(){
     // this.spinnerService.show();
+    this.loading = true;
     this._service.getGeneratprobes('Generator Probes')
       .subscribe(response => {
         this.getMasterproducts();
+        this.loading = false;
         // this.spinnerService.hide();
       });
   }

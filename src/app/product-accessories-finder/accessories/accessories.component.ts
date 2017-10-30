@@ -58,6 +58,7 @@ export class AccessoriesComponent implements OnInit {
   catList: any[];
   powers;
   masterProductList: any[];
+  public loading = false;
 
   constructor(
       private _service: ProductsService, 
@@ -165,12 +166,14 @@ export class AccessoriesComponent implements OnInit {
 
   getProductsList() {
     // this.spinnerService.show();
+    this.loading = true;
     this._service.getCatgegories()
       .subscribe(response => {
         let masterList = this.getProductsWithAccessories(response);
         this.powers = masterList;
         this.masterProductList = response;
         this.getCatgegories(this.masterProduct);
+        this.loading = false;
         // this.spinnerService.hide();
       });
   }
