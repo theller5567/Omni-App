@@ -57,35 +57,35 @@ if(false) {
 /***/ "../../../../bootstrap/dist/fonts/glyphicons-halflings-regular.eot":
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__.p + "glyphicons-halflings-regular.f4769f9bdb7466be6508.eot";
+module.exports = __webpack_require__.p + "glyphicons-halflings-regular.eot";
 
 /***/ }),
 
 /***/ "../../../../bootstrap/dist/fonts/glyphicons-halflings-regular.svg":
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__.p + "glyphicons-halflings-regular.89889688147bd7575d63.svg";
+module.exports = __webpack_require__.p + "glyphicons-halflings-regular.svg";
 
 /***/ }),
 
 /***/ "../../../../bootstrap/dist/fonts/glyphicons-halflings-regular.ttf":
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__.p + "glyphicons-halflings-regular.e18bbf611f2a2e43afc0.ttf";
+module.exports = __webpack_require__.p + "glyphicons-halflings-regular.ttf";
 
 /***/ }),
 
 /***/ "../../../../bootstrap/dist/fonts/glyphicons-halflings-regular.woff":
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__.p + "glyphicons-halflings-regular.fa2772327f55d8198301.woff";
+module.exports = __webpack_require__.p + "glyphicons-halflings-regular.woff";
 
 /***/ }),
 
 /***/ "../../../../bootstrap/dist/fonts/glyphicons-halflings-regular.woff2":
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__.p + "glyphicons-halflings-regular.448c34a56d699c29117a.woff2";
+module.exports = __webpack_require__.p + "glyphicons-halflings-regular.woff2";
 
 /***/ }),
 

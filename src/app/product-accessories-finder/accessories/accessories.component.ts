@@ -2,6 +2,7 @@ import { Component, OnInit, EventEmitter } from '@angular/core';
 import { trigger, state, transition, style, animate, query, stagger, keyframes } from '@angular/animations';
 import { ProductsService } from "../../services/products/products.service";
 import { DataService } from './../../services/data/data.service';
+import { Ng4LoadingSpinnerService  } from 'ng4-loading-spinner';
 import { IProduct } from '../../product';
 import * as _ from 'underscore';
 
@@ -57,7 +58,11 @@ export class AccessoriesComponent implements OnInit {
   powers;
   masterProductList: any[];
 
-  constructor(private _service: ProductsService, private data: DataService) {
+  constructor(
+      private _service: ProductsService, 
+      private data: DataService,
+      private spinnerService: Ng4LoadingSpinnerService 
+    ) {
     this.getProductsList();
   }
 
@@ -121,13 +126,6 @@ export class AccessoriesComponent implements OnInit {
     return mNumber;
   }
 
-  getFields(input, field) {
-    var output = [];
-    for (var i = 0; i < input.length; ++i)
-      output.push(input[i][field]);
-    return output;
-  }
-
   getProductsWithAccessories(masterList) {
     let productArray = masterList;
     let productsWithAccessories = [];
@@ -165,12 +163,14 @@ export class AccessoriesComponent implements OnInit {
 
 
   getProductsList() {
+    this.spinnerService.show();
     this._service.getCatgegories()
       .subscribe(response => {
         let masterList = this.getProductsWithAccessories(response);
         this.powers = masterList;
         this.masterProductList = response;
         this.getCatgegories(this.masterProduct);
+        this.spinnerService.hide();
       });
   }
 

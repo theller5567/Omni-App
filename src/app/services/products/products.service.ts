@@ -2,6 +2,9 @@ import { Http, Response } from '@angular/http';
 import { Headers, RequestOptions } from '@angular/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
+import 'rxjs/add/operator/retry';
+import 'rxjs/add/operator/timeout';
+import 'rxjs/add/operator/delay';
 import 'rxjs/add/operator/map';
 
 @Injectable()
@@ -39,14 +42,17 @@ export class ProductsService {
   }
 
   getCatgegories( ) {
-    console.log("GET WITH HEADERS");
     let headers = new Headers();
     headers.append('Access-Control-Allow-Origin','*');
     let opts = new RequestOptions();
     opts.headers = headers;
+    console.log('HEADERS', opts.headers);
     let url = `${this.url}`;
     return this.http
       .get("/api/products", opts)
+      .retry(2)
+      .timeout(10000)
+      .delay(10)
       .map(response => {
         console.log("CHECKING: ", response.json());
         //let productArray = this.getFields(response.json()[0].products, 'product');

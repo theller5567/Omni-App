@@ -1,6 +1,7 @@
 import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
 import { GprobeUiService } from "../../services/gprobe-ui/gprobe-ui.service";
 import { DataService } from './../../services/data/data.service';
+import { Ng4LoadingSpinnerService  } from 'ng4-loading-spinner';
 
 @Component({
   selector: 'gpInput',
@@ -27,7 +28,11 @@ export class GpInputComponent implements OnInit {
   cart: any[];
   showFilters: boolean;
 
-  constructor(private _service:GprobeUiService, private data: DataService){
+  constructor( 
+      private _service:GprobeUiService, 
+      private data: DataService,
+      private spinnerService: Ng4LoadingSpinnerService
+    ){
     this.getGeneratprobes();
   }
 
@@ -39,9 +44,11 @@ export class GpInputComponent implements OnInit {
   }
 
   getGeneratprobes(){
+    this.spinnerService.show();
     this._service.getGeneratprobes('Generator Probes')
       .subscribe(response => {
         this.getMasterproducts();
+        this.spinnerService.hide();
       });
   }
  

@@ -20,7 +20,7 @@ webpackEmptyAsyncContext.id = "../../../../../src/$$_gendir lazy recursive";
 /***/ "../../../../../src/app/app.component.html":
 /***/ (function(module, exports) {
 
-module.exports = "<cart #cart ></cart>\n<product #product ></product>\n<div class=\"container\">\n  <div class=\"nav\">\n    <button type=\"button\" class=\"btn btn-solid\" routerLink=\"/gp-finder\" routerLinkActive=\"active-link\"  placement=\"bottom\" ngbTooltip=\"Tooltip on bottom\">Generator probe Finder</button>\n    <button type=\"button\" class=\"btn btn-solid\" routerLink=\"/product-page\" routerLinkActive=\"active-link\">Product Accessories Finder</button>\n  </div>\n  <router-outlet></router-outlet>\n</div>\n"
+module.exports = "<cart #cart ></cart>\n<product #product ></product>\n<div class=\"container\">\n  <div class=\"nav\">\n    <button type=\"button\" class=\"btn btn-solid\" routerLink=\"/gp-finder\" routerLinkActive=\"active-link\"  placement=\"bottom\" ngbTooltip=\"Tooltip on bottom\">Generator probe Finder</button>\n    <button type=\"button\" class=\"btn btn-solid\" routerLink=\"/product-page\" routerLinkActive=\"active-link\">Product Accessories Finder</button>\n  </div>\n  <app-spinner></app-spinner>\n  <router-outlet></router-outlet>\n</div>\n"
 
 /***/ }),
 
@@ -111,12 +111,14 @@ AppComponent = __decorate([
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_20__generator_probe_finder_extra_filters_extra_filters_component__ = __webpack_require__("../../../../../src/app/generator-probe-finder/extra-filters/extra-filters.component.ts");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_21__generator_probe_finder_product_view_product_product_component__ = __webpack_require__("../../../../../src/app/generator-probe-finder/product-view/product/product.component.ts");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_22_ngx_bootstrap__ = __webpack_require__("../../../../ngx-bootstrap/index.js");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_23_ng4_loading_spinner__ = __webpack_require__("../../../../ng4-loading-spinner/ng4-loading-spinner.esm.js");
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+
 
 
 
@@ -167,6 +169,7 @@ AppModule = __decorate([
             __WEBPACK_IMPORTED_MODULE_6__angular_http__["c" /* HttpModule */],
             __WEBPACK_IMPORTED_MODULE_10__angular_forms__["a" /* FormsModule */],
             __WEBPACK_IMPORTED_MODULE_2__angular_platform_browser_animations__["a" /* BrowserAnimationsModule */],
+            __WEBPACK_IMPORTED_MODULE_23_ng4_loading_spinner__["a" /* Ng4LoadingSpinnerModule */],
             __WEBPACK_IMPORTED_MODULE_22_ngx_bootstrap__["a" /* AlertModule */].forRoot(),
             __WEBPACK_IMPORTED_MODULE_15__angular_router__["a" /* RouterModule */].forRoot([
                 {
@@ -670,6 +673,7 @@ module.exports = module.exports.toString();
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__angular_core__ = __webpack_require__("../../../core/@angular/core.es5.js");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__services_gprobe_ui_gprobe_ui_service__ = __webpack_require__("../../../../../src/app/services/gprobe-ui/gprobe-ui.service.ts");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__services_data_data_service__ = __webpack_require__("../../../../../src/app/services/data/data.service.ts");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_ng4_loading_spinner__ = __webpack_require__("../../../../ng4-loading-spinner/ng4-loading-spinner.esm.js");
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -682,10 +686,12 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 
 
 
+
 var GpInputComponent = (function () {
-    function GpInputComponent(_service, data) {
+    function GpInputComponent(_service, data, spinnerService) {
         this._service = _service;
         this.data = data;
+        this.spinnerService = spinnerService;
         this.catName = 'Generator Probes';
         this.hasChanged = new __WEBPACK_IMPORTED_MODULE_0__angular_core__["x" /* EventEmitter */]();
         this.getGeneratprobes();
@@ -696,9 +702,11 @@ var GpInputComponent = (function () {
     };
     GpInputComponent.prototype.getGeneratprobes = function () {
         var _this = this;
+        this.spinnerService.show();
         this._service.getGeneratprobes('Generator Probes')
             .subscribe(function (response) {
             _this.getMasterproducts();
+            _this.spinnerService.hide();
         });
     };
     GpInputComponent.prototype.ngOnInit = function () {
@@ -740,10 +748,10 @@ GpInputComponent = __decorate([
         template: "\n    <form>\n      <div class=\"form-group\">\n        <label for=\"Master-Products\">Select Product</label>\n        <select [ngModel]=\"selectedValue\" name=\"product\" (ngModelChange)=\"change($event)\" class=\"form-control\" id=\"Master-Products\">\n          <option *ngFor=\"let product of inputProducts\" [ngValue]=\"product\">{{product}}</option>\n        </select>\n      </div>\n    </form>\n  ",
         styles: [__webpack_require__("../../../../../src/app/generator-probe-finder/gp-input/gp-input.component.scss")]
     }),
-    __metadata("design:paramtypes", [typeof (_b = typeof __WEBPACK_IMPORTED_MODULE_1__services_gprobe_ui_gprobe_ui_service__["a" /* GprobeUiService */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_1__services_gprobe_ui_gprobe_ui_service__["a" /* GprobeUiService */]) === "function" && _b || Object, typeof (_c = typeof __WEBPACK_IMPORTED_MODULE_2__services_data_data_service__["a" /* DataService */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_2__services_data_data_service__["a" /* DataService */]) === "function" && _c || Object])
+    __metadata("design:paramtypes", [typeof (_b = typeof __WEBPACK_IMPORTED_MODULE_1__services_gprobe_ui_gprobe_ui_service__["a" /* GprobeUiService */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_1__services_gprobe_ui_gprobe_ui_service__["a" /* GprobeUiService */]) === "function" && _b || Object, typeof (_c = typeof __WEBPACK_IMPORTED_MODULE_2__services_data_data_service__["a" /* DataService */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_2__services_data_data_service__["a" /* DataService */]) === "function" && _c || Object, typeof (_d = typeof __WEBPACK_IMPORTED_MODULE_3_ng4_loading_spinner__["b" /* Ng4LoadingSpinnerService */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_3_ng4_loading_spinner__["b" /* Ng4LoadingSpinnerService */]) === "function" && _d || Object])
 ], GpInputComponent);
 
-var _a, _b, _c;
+var _a, _b, _c, _d;
 //# sourceMappingURL=gp-input.component.js.map
 
 /***/ }),
@@ -1076,7 +1084,7 @@ var _a;
 /***/ "../../../../../src/app/product-accessories-finder/accessories/accessories.component.html":
 /***/ (function(module, exports) {
 
-module.exports = "<div role=\"tabpanel\" class=\"tab-pane\" id=\"accessories\">\n    <h1>Product Accessories Finder</h1>\n  <master-input [powers]=\"powers\" (hasChanged)=\"hasChanged($event)\"></master-input>\n  <div class=\"accessories-wrapper\">\n    <div class=\"category-list-wrapper\" [@fade]=\"categories.length\">\n      <div class=\"cat-column\" [ngClass]=\"{ 'show-cat': !showSubCat, 'hide-cat': showSubCat }\">\n      <div class=\"desktop-list btn-group-vertical show-cat\" >\n            <ng-template ngFor let-category [ngForOf]=\"categories\"> \n                <button class=\"list-group-item list-group-item-action cat-btn\" *ngIf=\"category !=='Select a Category'\" (click)=\"getCatName($event)\"><span>{{category}}</span><i class=\"glyphicon glyphicon-chevron-right\"></i>\n                  </button>\n            </ng-template>\n        </div>\n        <div class=\"mobile-select show-cat\">\n          <select class=\"form-control mobile-select show-cat\" [ngModel]=\"selectedCat\" (ngModelChange)=\"change($event)\" name=\"category\" id=\"cat-column\" placeholder=\"Select a Category\">\n            <option [ngValue]=\"category\" class=\"cat-btn\" *ngFor='let category of categories'>{{category}}</option>\n          </select>\n        </div>\n      </div>\n      <div class=\"subcat-column\" [ngClass]=\"{ 'show-subcat': showSubCat, 'hide-cat': !showSubCat }\" >\n        <div class=\"desktop-list btn-group-vertical hide-cat\">\n          <button class=\"list-group-item list-group-item-action cat-btn\" *ngFor=\"let sub of subProducts\" (click)=\"getSubCatName($event)\"><span>{{sub}}</span><i class=\"glyphicon glyphicon-chevron-right\"></i></button>\n          <button class=\"list-group-item list-group-item-action subcat-btn back-to-cat\" (click)=\"backToCat()\">Back to Categories<i class=\"glyphicon glyphicon-chevron-left\"></i></button>\n        </div>\n        <div class=\"mobile-select hide-cat\">\n          <select class=\"form-control\" [ngModel]=\"selectedSubCat\" (ngModelChange)=\"changeSub($event)\" name=\"sub-category\" id=\"sub-cat-column\" placeholder=\"Select a Sub-Category\">\n            <option value=\"\">Select Sub-Category</option>\n            <option class=\"cat-btn\" *ngFor=\"let sub of subProducts\">{{sub}}</option>\n          </select>\n        </div>\n      </div>\n    </div>\n    <div class=\"product-list-accessories\">\n      <ol class=\"breadcrumb\" *ngIf=\"hasProducts() || showSubCat\">\n        <li class=\"breadcrumb-item bc-link\" (click)=\"backToCat()\" *ngIf=\"showSubCat\">Back to Categories</li>\n        <li class=\"breadcrumb-item\" *ngIf=\"category_name\">{{category_name}}</li>\n        <li class=\"breadcrumb-item\" *ngIf=\"subCategory_name\">{{subCategory_name}}</li>\n      </ol>\n      <ul class=\"items col col-md-12\" *ngIf=\"hasProducts()\" [@productsIntro]=\"products.length\">\n        <li class=\"col col-xs-12 col-sm-12 col-md-4\" *ngFor=\"let product of products\">\n          <div class=\"item\">\n            <a href=\"\" class=\"product-name\">{{product.product_name}}</a>\n            <div class=\"image-and-info col col-xs-8 col-sm-8 col-md-12\">\n              <div class=\"product-thumb\">\n                <img src=\"http://via.placeholder.com/100x100/444444/ffffff?text=Product-Image\" alt=\"{{product.product_name}}\">\n              </div>\n              <div class=\"info\">\n                <div class=\"sku\">SKU: {{product.sku}}</div>\n                <div class=\"price\">Price: {{product.price | currency:'USD':true:'1.2-2'}}</div>\n              </div>\n            </div>\n            <div class=\"product-col col col-xs-4 col-sm-4 col-md-12\">\n              <div class=\"btn-group\" role=\"group\" aria-label=\"Basic example\">\n                <button type=\"button\" class=\"btn btn-solid\" (click)=\"viewProduct(product)\">View Product</button>\n                <button type=\"button\" class=\"btn btn-solid add-to-cart\" (click)=\"addToCart($event)\">Add to Cart</button>\n              </div>\n            </div>\n          </div>\n        </li>\n      </ul>\n    </div>\n  </div>\n</div>\n\n"
+module.exports = "<div role=\"tabpanel\" class=\"tab-pane\" id=\"accessories\">\n  <h1>Product Accessories Finder</h1>\n  <app-spinner></app-spinner>\n  <master-input [powers]=\"powers\" (hasChanged)=\"hasChanged($event)\"></master-input>\n  <div class=\"accessories-wrapper\">\n    <div class=\"category-list-wrapper\" [@fade]=\"categories.length\">\n      <div class=\"cat-column\" [ngClass]=\"{ 'show-cat': !showSubCat, 'hide-cat': showSubCat }\">\n      <div class=\"desktop-list btn-group-vertical show-cat\" >\n            <ng-template ngFor let-category [ngForOf]=\"categories\"> \n                <button class=\"list-group-item list-group-item-action cat-btn\" *ngIf=\"category !=='Select a Category'\" (click)=\"getCatName($event)\"><span>{{category}}</span><i class=\"glyphicon glyphicon-chevron-right\"></i>\n                  </button>\n            </ng-template>\n        </div>\n        <div class=\"mobile-select show-cat\">\n          <select class=\"form-control mobile-select show-cat\" [ngModel]=\"selectedCat\" (ngModelChange)=\"change($event)\" name=\"category\" id=\"cat-column\" placeholder=\"Select a Category\">\n            <option [ngValue]=\"category\" class=\"cat-btn\" *ngFor='let category of categories'>{{category}}</option>\n          </select>\n        </div>\n      </div>\n      <div class=\"subcat-column\" [ngClass]=\"{ 'show-subcat': showSubCat, 'hide-cat': !showSubCat }\" >\n        <div class=\"desktop-list btn-group-vertical hide-cat\">\n          <button class=\"list-group-item list-group-item-action cat-btn\" *ngFor=\"let sub of subProducts\" (click)=\"getSubCatName($event)\"><span>{{sub}}</span><i class=\"glyphicon glyphicon-chevron-right\"></i></button>\n          <button class=\"list-group-item list-group-item-action subcat-btn back-to-cat\" (click)=\"backToCat()\">Back to Categories<i class=\"glyphicon glyphicon-chevron-left\"></i></button>\n        </div>\n        <div class=\"mobile-select hide-cat\">\n          <select class=\"form-control\" [ngModel]=\"selectedSubCat\" (ngModelChange)=\"changeSub($event)\" name=\"sub-category\" id=\"sub-cat-column\" placeholder=\"Select a Sub-Category\">\n            <option value=\"\">Select Sub-Category</option>\n            <option class=\"cat-btn\" *ngFor=\"let sub of subProducts\">{{sub}}</option>\n          </select>\n        </div>\n      </div>\n    </div>\n    <div class=\"product-list-accessories\">\n      <ol class=\"breadcrumb\" *ngIf=\"hasProducts() || showSubCat\">\n        <li class=\"breadcrumb-item bc-link\" (click)=\"backToCat()\" *ngIf=\"showSubCat\">Back to Categories</li>\n        <li class=\"breadcrumb-item\" *ngIf=\"category_name\">{{category_name}}</li>\n        <li class=\"breadcrumb-item\" *ngIf=\"subCategory_name\">{{subCategory_name}}</li>\n      </ol>\n      <ul class=\"items col col-md-12\" *ngIf=\"hasProducts()\" [@productsIntro]=\"products.length\">\n        <li class=\"col col-xs-12 col-sm-12 col-md-4\" *ngFor=\"let product of products\">\n          <div class=\"item\">\n            <a href=\"\" class=\"product-name\">{{product.product_name}}</a>\n            <div class=\"image-and-info col col-xs-8 col-sm-8 col-md-12\">\n              <div class=\"product-thumb\">\n                <img src=\"http://via.placeholder.com/100x100/444444/ffffff?text=Product-Image\" alt=\"{{product.product_name}}\">\n              </div>\n              <div class=\"info\">\n                <div class=\"sku\">SKU: {{product.sku}}</div>\n                <div class=\"price\">Price: {{product.price | currency:'USD':true:'1.2-2'}}</div>\n              </div>\n            </div>\n            <div class=\"product-col col col-xs-4 col-sm-4 col-md-12\">\n              <div class=\"btn-group\" role=\"group\" aria-label=\"Basic example\">\n                <button type=\"button\" class=\"btn btn-solid\" (click)=\"viewProduct(product)\">View Product</button>\n                <button type=\"button\" class=\"btn btn-solid add-to-cart\" (click)=\"addToCart($event)\">Add to Cart</button>\n              </div>\n            </div>\n          </div>\n        </li>\n      </ul>\n    </div>\n  </div>\n</div>\n\n"
 
 /***/ }),
 
@@ -1107,6 +1115,7 @@ module.exports = module.exports.toString();
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__angular_animations__ = __webpack_require__("../../../animations/@angular/animations.es5.js");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__services_products_products_service__ = __webpack_require__("../../../../../src/app/services/products/products.service.ts");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__services_data_data_service__ = __webpack_require__("../../../../../src/app/services/data/data.service.ts");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4_ng4_loading_spinner__ = __webpack_require__("../../../../ng4-loading-spinner/ng4-loading-spinner.esm.js");
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -1120,10 +1129,12 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 
 
 
+
 var AccessoriesComponent = (function () {
-    function AccessoriesComponent(_service, data) {
+    function AccessoriesComponent(_service, data, spinnerService) {
         this._service = _service;
         this.data = data;
+        this.spinnerService = spinnerService;
         this.categories = [];
         this.productFlag = 'false';
         this.subProductFlag = 'false';
@@ -1186,12 +1197,6 @@ var AccessoriesComponent = (function () {
         this.masterProduct = mNumber;
         return mNumber;
     };
-    AccessoriesComponent.prototype.getFields = function (input, field) {
-        var output = [];
-        for (var i = 0; i < input.length; ++i)
-            output.push(input[i][field]);
-        return output;
-    };
     AccessoriesComponent.prototype.getProductsWithAccessories = function (masterList) {
         var productArray = masterList;
         var productsWithAccessories = [];
@@ -1227,12 +1232,14 @@ var AccessoriesComponent = (function () {
     };
     AccessoriesComponent.prototype.getProductsList = function () {
         var _this = this;
+        this.spinnerService.show();
         this._service.getCatgegories()
             .subscribe(function (response) {
             var masterList = _this.getProductsWithAccessories(response);
             _this.powers = masterList;
             _this.masterProductList = response;
             _this.getCatgegories(_this.masterProduct);
+            _this.spinnerService.hide();
         });
     };
     AccessoriesComponent.prototype.getCatgegories = function (masterProduct) {
@@ -1372,10 +1379,10 @@ AccessoriesComponent = __decorate([
             ])
         ]
     }),
-    __metadata("design:paramtypes", [typeof (_a = typeof __WEBPACK_IMPORTED_MODULE_2__services_products_products_service__["a" /* ProductsService */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_2__services_products_products_service__["a" /* ProductsService */]) === "function" && _a || Object, typeof (_b = typeof __WEBPACK_IMPORTED_MODULE_3__services_data_data_service__["a" /* DataService */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_3__services_data_data_service__["a" /* DataService */]) === "function" && _b || Object])
+    __metadata("design:paramtypes", [typeof (_a = typeof __WEBPACK_IMPORTED_MODULE_2__services_products_products_service__["a" /* ProductsService */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_2__services_products_products_service__["a" /* ProductsService */]) === "function" && _a || Object, typeof (_b = typeof __WEBPACK_IMPORTED_MODULE_3__services_data_data_service__["a" /* DataService */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_3__services_data_data_service__["a" /* DataService */]) === "function" && _b || Object, typeof (_c = typeof __WEBPACK_IMPORTED_MODULE_4_ng4_loading_spinner__["b" /* Ng4LoadingSpinnerService */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_4_ng4_loading_spinner__["b" /* Ng4LoadingSpinnerService */]) === "function" && _c || Object])
 ], AccessoriesComponent);
 
-var _a, _b;
+var _a, _b, _c;
 //# sourceMappingURL=accessories.component.js.map
 
 /***/ }),
@@ -1855,8 +1862,14 @@ var _a;
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__angular_core__ = __webpack_require__("../../../core/@angular/core.es5.js");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_rxjs_BehaviorSubject__ = __webpack_require__("../../../../rxjs/BehaviorSubject.js");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_rxjs_BehaviorSubject___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2_rxjs_BehaviorSubject__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_rxjs_add_operator_map__ = __webpack_require__("../../../../rxjs/add/operator/map.js");
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_rxjs_add_operator_map___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3_rxjs_add_operator_map__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_rxjs_add_operator_retry__ = __webpack_require__("../../../../rxjs/add/operator/retry.js");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_rxjs_add_operator_retry___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3_rxjs_add_operator_retry__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4_rxjs_add_operator_timeout__ = __webpack_require__("../../../../rxjs/add/operator/timeout.js");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4_rxjs_add_operator_timeout___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_4_rxjs_add_operator_timeout__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5_rxjs_add_operator_delay__ = __webpack_require__("../../../../rxjs/add/operator/delay.js");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5_rxjs_add_operator_delay___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_5_rxjs_add_operator_delay__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6_rxjs_add_operator_map__ = __webpack_require__("../../../../rxjs/add/operator/map.js");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6_rxjs_add_operator_map___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_6_rxjs_add_operator_map__);
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -1866,6 +1879,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+
+
+
 
 
 
@@ -1900,14 +1916,17 @@ var ProductsService = (function () {
         });
     };
     ProductsService.prototype.getCatgegories = function () {
-        console.log("GET WITH HEADERS");
         var headers = new __WEBPACK_IMPORTED_MODULE_0__angular_http__["a" /* Headers */]();
         headers.append('Access-Control-Allow-Origin', '*');
         var opts = new __WEBPACK_IMPORTED_MODULE_0__angular_http__["d" /* RequestOptions */]();
         opts.headers = headers;
+        console.log('HEADERS', opts.headers);
         var url = "" + this.url;
         return this.http
             .get("/api/products", opts)
+            .retry(2)
+            .timeout(10000)
+            .delay(10)
             .map(function (response) {
             console.log("CHECKING: ", response.json());
             //let productArray = this.getFields(response.json()[0].products, 'product');
@@ -1969,13 +1988,8 @@ var _a;
 
 "use strict";
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return environment; });
-// The file contents for the current environment will overwrite these during build.
-// The build system defaults to the dev environment which uses `environment.ts`, but if you do
-// `ng build --env=prod` then `environment.prod.ts` will be used instead.
-// The list of which env maps to which file can be found in `.angular-cli.json`.
-// The file contents for the current environment will overwrite these during build.
 var environment = {
-    production: false
+    production: true
 };
 //# sourceMappingURL=environment.js.map
 

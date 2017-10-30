@@ -21,7 +21,7 @@ import { ProductViewComponent } from './generator-probe-finder/product-view/prod
 import { ExtraFiltersComponent } from './generator-probe-finder/extra-filters/extra-filters.component';
 import { ProductComponent } from './generator-probe-finder/product-view/product/product.component';
 import { AlertModule } from 'ngx-bootstrap';
-
+import { Ng4LoadingSpinnerModule } from 'ng4-loading-spinner';
 
 @NgModule({
   declarations: [
@@ -45,6 +45,7 @@ import { AlertModule } from 'ngx-bootstrap';
     HttpModule,
     FormsModule,
     BrowserAnimationsModule,
+    Ng4LoadingSpinnerModule,
     AlertModule.forRoot(),
     RouterModule.forRoot([
       {
