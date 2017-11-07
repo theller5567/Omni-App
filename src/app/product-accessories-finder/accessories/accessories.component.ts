@@ -1,4 +1,4 @@
-import { Component, OnInit, EventEmitter } from '@angular/core';
+import { Component, OnInit, EventEmitter, IterableDiffers, DoCheck } from '@angular/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { trigger, state, transition, style, animate, query, stagger, keyframes } from '@angular/animations';
 import { ProductsService } from '../../services/products/products.service';
@@ -25,7 +25,7 @@ import * as _ from 'underscore';
       ])
     ]),
     trigger('productsIntro', [
-      transition('* => *', [
+      transition('* <=> *', [
         query(':enter', style({ opacity: 0 }), {optional: true}),
         query(':enter', stagger('100ms', [
           animate('1s ease-in', keyframes([
@@ -37,9 +37,9 @@ import * as _ from 'underscore';
     ])
   ]
 })
-export class AccessoriesComponent implements OnInit {
+export class AccessoriesComponent implements OnInit, DoCheck {
   categories: string[] = [];
-  private products: IProduct[];
+  products: IProduct[] = [];
   subProducts: any[];
   private productFlag: string = 'false';
   private subProductFlag: string = 'false';
@@ -58,20 +58,35 @@ export class AccessoriesComponent implements OnInit {
   catList: any[];
   powers;
   masterProductList: any[];
+  public iterableDiffer;
+  animationState = 'inactive';
   public loading = false;
 
   constructor(
       private _service: ProductsService,
-      private data: DataService
+      private data: DataService,
+      private _iterableDiffers: IterableDiffers
     ) {
     this.getProductsList();
+    this.iterableDiffer = this._iterableDiffers.find([]).create(null);
+    console.log('testing: ', this.iterableDiffer);
   }
-
   ngOnInit() {
     this.selectedCat = 'Select a Category';
     this.selectedSubCat = 'Select a Sub Category';
     this.data.cart.subscribe(cart => this.cart = cart);
     this.data.currentProduct.subscribe(product => this.productInfo = product);
+  }
+
+  ngDoCheck() {
+    const changes = this.iterableDiffer.diff(this.products);
+    if (changes) {
+      console.log('Changes detected!', changes._length);
+    }
+  }
+  toggleState() {
+    console.log('toggle state: ', this.animationState);
+    this.animationState = this.animationState === 'active' ? 'inactive' : 'active';
   }
 
   addToCart($event) {
@@ -140,6 +155,7 @@ export class AccessoriesComponent implements OnInit {
     if (!flag) {
       this.showSubCat = false;
       this.products = uniqEs6(prodList).reverse();
+      this.toggleState();
     } else {
       this.showSubCat = true;
       this.subProducts = uniqEs6(prodList).reverse();
@@ -165,6 +181,7 @@ export class AccessoriesComponent implements OnInit {
     for (let i = products.length; i--; ) {
       this.products.push(products[i]);
     }
+    this.toggleState();
   }
 
   getSubCatName(value: any) {

@@ -37,7 +37,7 @@
         <li class="breadcrumb-item" *ngIf="category_name">{{category_name}}</li>
         <li class="breadcrumb-item" *ngIf="subCategory_name">{{subCategory_name}}</li>
       </ol>
-      <ul class="items col col-md-12" *ngIf="hasProducts()" [@productsIntro]="products.length">
+      <ul class="items col col-md-12"  [@productsIntro]="animationState">
         <li class="col col-xs-12 col-sm-12 col-md-4" *ngFor="let product of products">
           <div class="item">
             <a href="" class="product-name">{{product.product_name}}</a>
