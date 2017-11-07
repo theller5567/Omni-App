@@ -1,11 +1,12 @@
 import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
-import { GprobeUiService } from "../../services/gprobe-ui/gprobe-ui.service";
+import { GprobeUiService } from '../../services/gprobe-ui/gprobe-ui.service';
 import { DataService } from './../../services/data/data.service';
 // import { Ng4LoadingSpinnerService  } from 'ng4-loading-spinner';
 
 @Component({
   selector: 'gpInput',
   template: `
+    <ngx-loading [show]="loading" [config]="{ backdropBorderRadius: '14px' }"></ngx-loading>
     <form>
       <div class="form-group">
         <label for="Master-Products">Select Product</label>
@@ -29,11 +30,11 @@ export class GpInputComponent implements OnInit {
   showFilters: boolean;
   public loading = false;
 
-  constructor( 
-      private _service:GprobeUiService, 
+  constructor(
+      private _service: GprobeUiService,
       private data: DataService
       // private spinnerService: Ng4LoadingSpinnerService
-    ){
+    ) {
     this.getGeneratprobes();
   }
 
@@ -44,40 +45,37 @@ export class GpInputComponent implements OnInit {
     this.data.hideFilter(false);
   }
 
-  getGeneratprobes(){
-    // this.spinnerService.show();
-    this.loading = true;
+  getGeneratprobes() {
     this._service.getGeneratprobes('Generator Probes')
       .subscribe(response => {
         this.getMasterproducts();
-        this.loading = false;
-        // this.spinnerService.hide();
       });
   }
  
-  ngOnInit(){ 
+  ngOnInit() {
     this.data.cart.subscribe(cart => this.cart = cart);
     this.data.showfilter.subscribe(value => this.showFilters = value);
    }
 
   getMasterproducts() {
+    this.loading = true;
     this._service.getMasterproducts()
       .subscribe(response => {
         this.categories = response;
         this.inputProducts = this.selectObject(this.categories);
         this.selectedValue = this.inputProducts[0];
         this.hasChanged.emit(this.inputProducts[0]);
+        this.loading = false;
       });
   }
-  
-  selectObject(categories){
-    let newArr:any[] = [];
+  selectObject(categories) {
+    const newArr: any[] = [];
     let count = 0;
     categories.forEach(product => {
-      let obj = {
+      const obj = {
         id: count += 1,
         name: product.product_name
-      }
+      };
       newArr.push(product.product_name);
     });
     return newArr;

@@ -1,6 +1,6 @@
 import { Response } from '@angular/http';
 import { Component, OnInit, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
-import { ProductsService } from "../../services/products/products.service";
+import { ProductsService } from '../../services/products/products.service';
 import { IProduct } from '../../product';
 
 @Component({
@@ -24,12 +24,11 @@ export class MasterInputComponent implements OnInit {
   selectedValue: any;
   categoriesListArray: any[];
   masterProduct;
-  
-  constructor(private _service:ProductsService){}
+  constructor(private _service: ProductsService) {}
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['powers']) {
-      if(this.powers !== undefined){
+      if (this.powers !== undefined) {
         this.selectedValue = this.powers[0].id;
       }
     }
@@ -39,6 +38,8 @@ export class MasterInputComponent implements OnInit {
     this.hasChanged.emit(value);
   }
 
-  ngOnInit(){}
+  ngOnInit() {
+
+  }
 
 }

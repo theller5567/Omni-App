@@ -20,14 +20,12 @@ mongoose.connect(db, options, function(err){
 
 
 router.get('/products', function(req,res){
-    console.log('Requesting Products');
     product.find({})
         .exec(function(err, products){
             if(err){
                 console.log('Error getting the products');
             } else {
                 res.json(products);
-                console.log(products);
             }
         });
 });

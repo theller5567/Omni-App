@@ -1,7 +1,7 @@
 import { Component, OnInit, EventEmitter } from '@angular/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { trigger, state, transition, style, animate, query, stagger, keyframes } from '@angular/animations';
-import { ProductsService } from "../../services/products/products.service";
+import { ProductsService } from '../../services/products/products.service';
 import { DataService } from './../../services/data/data.service';
 // import { Ng4LoadingSpinnerService  } from 'ng4-loading-spinner';
 import { IProduct } from '../../product';
@@ -61,9 +61,8 @@ export class AccessoriesComponent implements OnInit {
   public loading = false;
 
   constructor(
-      private _service: ProductsService, 
+      private _service: ProductsService,
       private data: DataService
-      // private spinnerService: Ng4LoadingSpinnerService
     ) {
     this.getProductsList();
   }
@@ -76,14 +75,21 @@ export class AccessoriesComponent implements OnInit {
   }
 
   addToCart($event) {
-    let item = $event.target.parentElement.parentElement.parentElement.parentElement.firstChild.nextSibling.childNodes[1].text;
-    let product: any[] = [];
+    const item = $event.target.parentElement.parentElement.parentElement.parentElement.firstChild.nextSibling.childNodes[1].text;
+    const product: any[] = [];
     this.products.forEach(element => {
       if (element.product_name === item) {
         product.push(element);
         this.data.changCart(product[0]);
       }
     });
+  }
+
+  backToCat() {
+    this.products = [];
+    this.category_name = '';
+    this.subCategory_name = '';
+    this.showSubCat = false;
   }
 
   viewProduct(value) {
@@ -98,28 +104,90 @@ export class AccessoriesComponent implements OnInit {
     this.getSubCatName(value);
   }
 
+  listProducts(cat) {
+    this.category_name = cat;
+    this.products = [];
+    this.subProducts = [];
+    this.subCategory_name = '';
+    const ml = this.catList;
+    const catProductsArr = [];
+    const arr = [];
+    let flag = false;
+    for (let i = 0; i < ml.length; i++) {
+      if (ml[i].cat_name === cat) {
+        catProductsArr.push(ml[i]);
+      }
+    }
+    const products = catProductsArr;
+    const prodList = (function (a) {
+      for (let i = products.length; i--; ) {
+        if (products[i].sub_cat_name) {
+          flag = true;
+          a.push(products[i].sub_cat_name);
+        } else {
+          flag = false;
+          a.push(products[i]);
+        }
+      }
+      return a;
+    })([]);
+
+    const uniqEs6 = (arrArg) => {
+      return arrArg.filter((elem, pos, arr) => {
+        return arr.indexOf(elem) === pos;
+      });
+    };
+    if (!flag) {
+      this.showSubCat = false;
+      this.products = uniqEs6(prodList).reverse();
+    } else {
+      this.showSubCat = true;
+      this.subProducts = uniqEs6(prodList).reverse();
+    }
+  }
+
+  listSubProducts(sub) {
+    this.subCategory_name = sub;
+    const prodObj = {
+      sub: this.subCategory_name,
+      cat: this.category_name
+    };
+    const ml = this.catList;
+    const subProductsArr = [];
+    for (let i = 0; i < ml.length; i++) {
+      if (ml[i].sub_cat_name === prodObj.sub && ml[i].cat_name === prodObj.cat) {
+        subProductsArr.push(ml[i]);
+      }
+    }
+    subProductsArr.reverse();
+    const products = subProductsArr;
+    this.products = [];
+    for (let i = products.length; i--; ) {
+      this.products.push(products[i]);
+    }
+  }
 
   getSubCatName(value: any) {
-    if (typeof value == 'string') {
+    if (typeof value === 'string') {
       this.listSubProducts(value);
     } else {
-      let sub = value.target.innerText;
+      const sub = value.target.innerText;
       this.listSubProducts(sub);
     }
   }
 
   getCatName(value: any) {
-    if (typeof value == 'string') {
+    if (typeof value === 'string') {
       this.listProducts(value);
     } else {
-      let cat = value.target.innerText;
+      const cat = value.target.innerText;
       this.listProducts(cat);
     }
   }
 
   hasChanged(val: number) {
     this.backToCat();
-    let masterNumber = this.masterProductNum(val);
+    const masterNumber = this.masterProductNum(val);
     this.getCatgegories(masterNumber);
   }
 
@@ -129,31 +197,32 @@ export class AccessoriesComponent implements OnInit {
   }
 
   getProductsWithAccessories(masterList) {
-    let productArray = masterList;
+    const productArray = masterList;
     let productsWithAccessories = [];
     productArray.forEach(product => {
       if (product.related_products.length > 0) {
-        let obj = {
+        const obj = {
           id: product.id,
           name: product.product_name
-        }
+        };
         productsWithAccessories.push(obj);
       }
     });
+    productsWithAccessories = _.sortBy(productsWithAccessories, 'name');
     return productsWithAccessories;
   }
 
   MasterAccessories(response: any[], masterProduct: number) {
-    let productArray = response;
+    const productArray = response;
     let selectedProduct;
     productArray.forEach(product => {
       if (product.id === masterProduct) {
         selectedProduct = product;
       }
     });
-    let masterAccessories = selectedProduct.related_products;
+    const masterAccessories = selectedProduct.related_products;
     this.masterName = selectedProduct.product_name;
-    let AccessorieProducts = [];
+    const AccessorieProducts = [];
     for (let i = 0; i < productArray.length; i++) {
       if (masterAccessories.indexOf(productArray[i].id) !== -1) {
         AccessorieProducts.push(productArray[i]);
@@ -169,7 +238,7 @@ export class AccessoriesComponent implements OnInit {
     this.loading = true;
     this._service.getCatgegories()
       .subscribe(response => {
-        let masterList = this.getProductsWithAccessories(response);
+        const masterList = this.getProductsWithAccessories(response);
         this.powers = masterList;
         this.masterProductList = response;
         this.getCatgegories(this.masterProduct);
@@ -179,15 +248,15 @@ export class AccessoriesComponent implements OnInit {
   }
 
   getCatgegories(masterProduct: number) {
-    let response = this.masterProductList;
-    let masterList = this.getProductsWithAccessories(response);
+    const response = this.masterProductList;
+    const masterList = this.getProductsWithAccessories(response);
     this.powers = masterList;
     if (masterProduct === undefined) {
       masterProduct = masterList[0].id;
     }
-    let ml = this.MasterAccessories(response, masterProduct);
-    let catList = (function (a) {
-      for (let i = ml.length; i--;) {
+    const ml = this.MasterAccessories(response, masterProduct);
+    const catList = (function (a) {
+      for (let i = ml.length; i--; ) {
         if (a.indexOf(ml[i].cat_name) < 0) {
           a.push(ml[i].cat_name);
         }
@@ -200,85 +269,19 @@ export class AccessoriesComponent implements OnInit {
 
   hasSub(): boolean {
     if (this.subProducts) {
-      let bln: boolean = this.subProducts.length < 1 || undefined ? false : true;
+      const bln: boolean = this.subProducts.length < 1 || undefined ? false : true;
       return bln;
-    } else return false;
+    } else {
+      return false;
+    }
   }
 
   hasProducts(): boolean {
     if (this.products) {
-      let bln: boolean = this.products.length < 1 || undefined ? false : true;
+      const bln: boolean = this.products.length < 1 || undefined ? false : true;
       return bln;
-    } else return false;
-  }
-
-  backToCat() {
-    this.products = [];
-    this.category_name = '';
-    this.subCategory_name = '';
-    this.showSubCat = false;
-  }
-
-  listProducts(cat) {
-    this.category_name = cat;
-    this.products = [];
-    this.subProducts = [];
-    this.subCategory_name = '';
-    let ml = this.catList;
-    let catProductsArr = [];
-    let arr = [];
-    let flag = false;
-    for (let i = 0; i < ml.length; i++) {
-      if (ml[i].cat_name === cat) {
-        catProductsArr.push(ml[i]);
-      }
-    }
-    let products = catProductsArr;
-    let prodList = (function (a) {
-      for (let i = products.length; i--;) {
-        if (products[i].sub_cat_name) {
-          flag = true;
-          a.push(products[i].sub_cat_name);
-        } else {
-          flag = false;
-          a.push(products[i]);
-        }
-      }
-      return a;
-    })([]);
-    var uniqEs6 = (arrArg) => {
-      return arrArg.filter((elem, pos, arr) => {
-        return arr.indexOf(elem) == pos;
-      });
-    }
-    if (!flag) {
-      this.showSubCat = false;
-      this.products = uniqEs6(prodList).reverse();
     } else {
-      this.showSubCat = true;
-      this.subProducts = uniqEs6(prodList).reverse();
+        return false;
     }
   }
-
-  listSubProducts(sub) {
-    this.subCategory_name = sub;
-    let prodObj = {
-      sub: this.subCategory_name,
-      cat: this.category_name
-    }
-    let ml = this.catList;
-    let subProductsArr = [];
-    for (let i = 0; i < ml.length; i++) {
-      if (ml[i].sub_cat_name === prodObj.sub && ml[i].cat_name === prodObj.cat) {
-        subProductsArr.push(ml[i]);
-      }
-    }
-    subProductsArr.reverse();
-    let products = subProductsArr;
-    this.products = [];
-    for (let i = products.length; i--;) {
-      this.products.push(products[i]);
-    }
-  }
-
 }
