@@ -7,13 +7,12 @@ import { DataService } from './../../services/data/data.service';
   styleUrls: ['./gp-ui.component.scss']
 })
 export class GpUiComponent implements OnInit {
-  
-  showFilters:boolean = false;
+  showFilters: boolean = false;
 
-  constructor(private data:DataService) {
+  constructor(private data: DataService) {
   }
 
-  ngOnInit() { 
+  ngOnInit() {
     this.data.showfilter.subscribe(value => this.showFilters = value);
   }
 

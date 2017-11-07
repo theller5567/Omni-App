@@ -12,89 +12,25 @@ export class ProductsService {
 
   constructor(private http: Http) {
   }
-  
   private productCategoriesList = new BehaviorSubject<any>([]);
   currentList = this.productCategoriesList.asObservable();
-  changeCatList(categoriesList){
+  changeCatList(categoriesList) {
     this.productCategoriesList.next(categoriesList);
   }
 
-  getProductsWithAccessories(){
-    return this.http
-      .get(this.url)
-      .map(response => {
-         let productArray = response.json()[0].products;
-         let productsWithAccessories = [];
-        productArray.forEach(product => {
-           if(product.product.related_products.length > 0){
-             let obj = {
-               id: product.product.id,
-               name: product.product.product_name
-             }
-              productsWithAccessories.push(obj);
-           }
-         });
-        return productsWithAccessories;
-      });
-  }
-
   getCatgegories( ) {
-    let headers = new Headers();
-    headers.append('Access-Control-Allow-Origin','*');
-    let opts = new RequestOptions();
+    const headers = new Headers();
+    headers.append('Access-Control-Allow-Origin', '*');
+    const opts = new RequestOptions();
     opts.headers = headers;
-    let url = `${this.url}`;
+    const url = `${this.url}`;
     return this.http
-      .get("/api/products", opts)
+      .get('/api/products', opts)
       .map(response => {
-        //let productArray = this.getFields(response.json()[0].products, 'product');
-        let productArray = response.json();
-        msg => console.error(`Error: ${msg.status} ${msg.statusText}`)
-        //Master List of Accessories related to the Master Product
+        const productArray = response.json();
+        // Master List of Accessories related to the Master Product
         return productArray;
       });
   }
-
-  listProducts(catName: string) {
-    return this.http
-      .get(this.url)
-      .map(response => {
-        let productArray = response.json()[0].products;
-        //Master List of Accessories related to the Master Product
-        let ml = this.catList;
-        let catProductsArr = [];
-        for (let i = 0; i < ml.length; i++) {
-          if (ml[i].product.cat_name === catName) {
-            catProductsArr.push(ml[i]);
-          }
-        }
-        return catProductsArr;
-      });
-  }
-
-  listSubProducts(prodObj: { sub: string, cat: string }) {
-    return this.http
-      .get(this.url)
-      .map(response => {
-        let productArray = response.json()[0].products;
-        //Master List of Accessories related to the Master Product
-        let ml = this.catList;
-        let subProductsArr = [];
-        for (let i = 0; i < ml.length; i++) {
-          if (ml[i].product.sub_cat_name === prodObj.sub && ml[i].product.cat_name === prodObj.cat) {
-            subProductsArr.push(ml[i]);
-          }
-        }
-        subProductsArr.reverse();
-        return subProductsArr;
-      });
-  }
-
-  // getFields(input, field) {
-  //   var output = [];
-  //   for (var i=0; i < input.length ; ++i)
-  //       output.push(input[i][field]);
-  //   return output;
-  // }
 
 }

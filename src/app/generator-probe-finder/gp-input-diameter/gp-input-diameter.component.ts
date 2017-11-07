@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
-import { GprobeUiService } from "../../services/gprobe-ui/gprobe-ui.service";
+import { GprobeUiService } from '../../services/gprobe-ui/gprobe-ui.service';
 import { DataService } from '../../services/data/data.service';
 import * as _ from 'underscore';
 
@@ -23,13 +23,13 @@ export class GpInputDiameterComponent implements OnInit {
   DiameterCats: string[];
   selectedDiameter: string;
   show: boolean = false;
-  prRange:string = '';
+  prRange: string = '';
   showFilters: boolean;
 
-  constructor(private _service:GprobeUiService, private data:DataService){}
+  constructor(private _service: GprobeUiService, private data: DataService){}
 
-  toggleView(){
-      let bln: boolean = this.show ? true : false;
+  toggleView() {
+      const bln: boolean = this.show ? true : false;
       return bln;
   }
 
@@ -38,25 +38,20 @@ export class GpInputDiameterComponent implements OnInit {
   }
 
   hasChanged(val) {
-    console.log('why hello');
-    
     this.DiameterCats = [];
     this.selectedDiameter = this.DiameterCats[0];
-    let name:string = val;
+    const name: string = val;
     this.getProductsByName(name);
-    
   }
 
   change(value) {
-    console.log('Value: ',value);
     this.processingRange(value);
     this.hasChangedagain.emit(value);
     this.data.hideFilter(true);
   }
 
-  processingRange(value){
-    console.log('SWITCH VALUE: ',value);
-    switch(value) {
+  processingRange(value) {
+    switch (value) {
       case '5 mm':
           this.prRange =  '0.2mL - 5mL';
           break;
@@ -79,8 +74,7 @@ export class GpInputDiameterComponent implements OnInit {
     }
   }
 
-  
-  getProductsByName(name:string){
+  getProductsByName(name: string) {
     this._service.getProductsByName(name)
       .subscribe(response => {
         this.DiameterCats = response;
@@ -90,10 +84,10 @@ export class GpInputDiameterComponent implements OnInit {
       });
   }
 
-  sortDiamters(list){
+  sortDiamters(list) {
     let numArr = [];
     numArr = list.map(function (item, index, array) {
-         item = parseInt(item.split(" mm")[0]);
+         item = parseInt(item.split(' mm')[0], 10);
          return item;
     });
     numArr =  _.sortBy(numArr, function(num){ return Math.min(num); });
@@ -102,5 +96,4 @@ export class GpInputDiameterComponent implements OnInit {
     });
     return numArr;
   }
-  
 }

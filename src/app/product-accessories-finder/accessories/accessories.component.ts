@@ -1,4 +1,4 @@
-import { Component, OnInit, EventEmitter, IterableDiffers, DoCheck } from '@angular/core';
+import { Component, OnInit, EventEmitter } from '@angular/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { trigger, state, transition, style, animate, query, stagger, keyframes } from '@angular/animations';
 import { ProductsService } from '../../services/products/products.service';
@@ -37,39 +37,35 @@ import * as _ from 'underscore';
     ])
   ]
 })
-export class AccessoriesComponent implements OnInit, DoCheck {
-  categories: string[] = [];
-  products: IProduct[] = [];
-  subProducts: any[];
+export class AccessoriesComponent implements OnInit {
+  public categories: string[] = [];
+  public products: IProduct[] = [];
+  public subProducts: any[];
   private productFlag: string = 'false';
   private subProductFlag: string = 'false';
-  category_name: string = '';
-  subCategory_name: string = '';
-  breadcrumbArr: any[];
-  showSubCat: boolean = false;
+  public category_name: string = '';
+  public subCategory_name: string = '';
+  public breadcrumbArr: any[];
+  public showSubCat: boolean = false;
   private masterProduct: number;
-  masterName: string;
-  productsInCart: any[];
-  selectedCat: any;
-  selectedSubCat: any;
-  cart: any[];
+  private masterName: string;
+  private productsInCart: any[];
+  public selectedCat: any;
+  public selectedSubCat: any;
+  private cart: any[];
   productInfo: any[];
   categoriesListArray: any[];
   catList: any[];
   powers;
   masterProductList: any[];
-  public iterableDiffer;
   animationState = 'inactive';
   public loading = false;
 
   constructor(
       private _service: ProductsService,
-      private data: DataService,
-      private _iterableDiffers: IterableDiffers
+      private data: DataService
     ) {
     this.getProductsList();
-    this.iterableDiffer = this._iterableDiffers.find([]).create(null);
-    console.log('testing: ', this.iterableDiffer);
   }
   ngOnInit() {
     this.selectedCat = 'Select a Category';
@@ -78,14 +74,7 @@ export class AccessoriesComponent implements OnInit, DoCheck {
     this.data.currentProduct.subscribe(product => this.productInfo = product);
   }
 
-  ngDoCheck() {
-    const changes = this.iterableDiffer.diff(this.products);
-    if (changes) {
-      console.log('Changes detected!', changes._length);
-    }
-  }
   toggleState() {
-    console.log('toggle state: ', this.animationState);
     this.animationState = this.animationState === 'active' ? 'inactive' : 'active';
   }
 

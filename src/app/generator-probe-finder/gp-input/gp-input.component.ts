@@ -19,7 +19,6 @@ import { DataService } from './../../services/data/data.service';
   styleUrls: ['./gp-input.component.scss']
 })
 export class GpInputComponent implements OnInit {
- 
   categories: any[];
   masterName: string;
   gpProducts: any[];

@@ -23,11 +23,11 @@ export let fadeOutAnimation = animation([
 
 export let fade = trigger('fade', [
 
-  transition(':enter', 
+  transition(':enter',
     useAnimation(fadeInAnimation)
   ),
 
-  transition(':leave', [ 
+  transition(':leave', [
     animate(2000, style({ opacity: 0 }))
   ])
 ]);

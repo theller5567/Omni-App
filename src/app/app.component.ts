@@ -18,11 +18,7 @@ export class AppComponent implements OnInit {
   title = 'Having FUN with Angular';
   posts: any[];
   power: string;
-  
-
   constructor() {
   }
   ngOnInit(): void { }
-
-  
 }

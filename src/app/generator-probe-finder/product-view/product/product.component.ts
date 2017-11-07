@@ -18,15 +18,14 @@ import { DataService } from '../../../services/data/data.service';
   `,
   styleUrls: ['./product.component.scss']
 })
-export class ProductComponent implements OnInit{
+export class ProductComponent implements OnInit {
   productInfo: any[];
-  showProductView:boolean = false;
-  constructor(private data:DataService) { }
-  
+  showProductView: boolean = false;
+  constructor(private data: DataService) { }
 
-  ngOnInit(){
+  ngOnInit() {
     this.data.currentProduct.subscribe(product => {
-      if(product.length < 1){
+      if (product.length < 1) {
         return;
       }else {
         this.showProductView = true;
@@ -34,10 +33,9 @@ export class ProductComponent implements OnInit{
       }
     });
   }
-  
-  close(){
+  close() {
     this.showProductView = false;
-    this.productInfo = []
+    this.productInfo = [];
   }
 
 }

@@ -7,9 +7,9 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./gp.component.scss']
 })
 export class GpComponent implements OnInit {
-  cart:any[];
+  cart: any[];
 
-  constructor(private data:DataService) { }
+  constructor(private data: DataService) { }
 
   ngOnInit() {
     this.data.cart.subscribe(cart => this.cart = cart);

@@ -3,7 +3,6 @@ import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 
 @Injectable()
 export class DataService {
-  
   private shoppingCart = new BehaviorSubject<any>([]);
   cart = this.shoppingCart.asObservable();
 
@@ -14,18 +13,15 @@ export class DataService {
   showfilter = this.showFilter.asObservable();
 
   constructor() { }
-  
-  changCart(cart){
+  changCart(cart) {
     this.shoppingCart.next(cart);
   }
 
-  changeProduct(product){
-    console.log('PRODUCT: ',product);
+  changeProduct(product) {
     this.productSource.next(product);
   }
 
-  hideFilter(value){
-    console.log('Show Filter: ',value);
+  hideFilter(value) {
     this.showFilter.next(value);
   }
 

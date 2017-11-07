@@ -10,18 +10,17 @@ export class GprobeUiService {
   private generatorProbesList: any[];
   private productsByFilteredDiameter: any[];
   private gpByDiameter: any[] = [];
-  
   constructor(private http: Http) {}
 
-  getGeneratprobes(cat){
+  getGeneratprobes(cat) {
     return this.http
       .get(this.url)
       .map(response => {
-        let productArray = response.json();
-        //Find all products with category name Generator Probes
-        let generators = (function (a) {
-          for (let i = productArray.length; i--;) {
-            if(productArray[i].cat_name === 'Generator Probes'){
+        const productArray = response.json();
+        // Find all products with category name Generator Probes
+        const generators = (function (a) {
+          for (let i = productArray.length; i--; ) {
+            if (productArray[i].cat_name === 'Generator Probes') {
               a.push(productArray[i].id);
             }
           }
@@ -36,12 +35,12 @@ export class GprobeUiService {
     return this.http
       .get(this.url)
       .map(response => {
-        let productArray = response.json();
-        //Master List of Accessories related to the Master Product
-        let ml2 = this.generatorProbesList;
-        let catList = (function (a) {
-          for (let i = productArray.length; i--;) {
-            let arrs = _.intersection(productArray[i].related_products, ml2);
+        const productArray = response.json();
+        // Master List of Accessories related to the Master Product
+        const ml2 = this.generatorProbesList;
+        const catList = (function (a) {
+          for (let i = productArray.length; i--; ) {
+            const arrs = _.intersection(productArray[i].related_products, ml2);
             if (_.intersection(productArray[i].related_products, ml2).length > 0) {
               a.push(productArray[i]);
             }
@@ -52,34 +51,34 @@ export class GprobeUiService {
       });
   }
 
-  getProductsByName(name:string){
+  getProductsByName(name: string) {
      return this.http
       .get(this.url)
       .map(response => {
-        let productArray = response.json();
-        let masterProd:any;
-        //Master List of Accessories related to the Master Product
+        const productArray = response.json();
+        let masterProd: any;
+        // Master List of Accessories related to the Master Product
         productArray.forEach(product => {
-          if(product.product_name === name){
+          if (product.product_name === name) {
             masterProd = product;
           }
         });
-        //find all accessories under this product that have a cat name of Generator Probe and retrun
-        let relatedProducts: any[] =  masterProd.related_products;
-        let gp = (function (a) {
+        // find all accessories under this product that have a cat name of Generator Probe and retrun
+        const relatedProducts: any[] =  masterProd.related_products;
+        const gp = (function (a) {
           productArray.forEach(product => {
-            let prodId = [];
+            const prodId = [];
             prodId.push(product.id);
-            if( _.intersection(prodId, relatedProducts).length > 0){
+            if ( _.intersection(prodId, relatedProducts).length > 0) {
               a.push(product);
             }
           });
           return a;
         })([]);
-        //filter through array and create new string array of all diameter lengths and retrun
-        let diameterList = (function (a) {
-          for (let i = gp.length; i--;) {
-            if(gp[i].cat_name === 'Generator Probes'){
+        // filter through array and create new string array of all diameter lengths and retrun
+        const diameterList = (function (a) {
+          for (let i = gp.length; i--; ) {
+            if (gp[i].cat_name === 'Generator Probes') {
               if (a.indexOf(gp[i].diameter) < 0) {
                 a.push(gp[i].diameter);
               }
@@ -88,8 +87,8 @@ export class GprobeUiService {
           return a;
         })([]);
         this.gpByDiameter = (function (a) {
-          for (let i = gp.length; i--;) {
-            if(gp[i].cat_name === 'Generator Probes'){
+          for (let i = gp.length; i--; ) {
+            if (gp[i].cat_name === 'Generator Probes') {
               if (a.indexOf(gp[i].diameter) < 0) {
                 a.push(gp[i]);
               }
@@ -101,7 +100,7 @@ export class GprobeUiService {
       });
   }
 
-  getCurrentGpList(){
+  getCurrentGpList() {
     return this.http
       .get(this.url)
       .map(response => {
@@ -109,14 +108,14 @@ export class GprobeUiService {
       });
   }
 
-  getProductsByDiameter(diameter:string){
-    let gp = this.gpByDiameter;
+  getProductsByDiameter(diameter: string) {
+    const gp = this.gpByDiameter;
     return this.http
       .get(this.url)
       .map(response => {
-        let prodsByDiameter = (function (a) {
-          for (let i = gp.length; i--;) {
-            if(gp[i].diameter === diameter){
+        const prodsByDiameter = (function (a) {
+          for (let i = gp.length; i--; ) {
+            if (gp[i].diameter === diameter) {
                 a.push(gp[i]);
             }
           }

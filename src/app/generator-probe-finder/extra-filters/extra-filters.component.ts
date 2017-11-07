@@ -1,5 +1,5 @@
 import { Component, OnInit, Output, EventEmitter } from '@angular/core';
-import { GprobeUiService } from "../../services/gprobe-ui/gprobe-ui.service";
+import { GprobeUiService } from '../../services/gprobe-ui/gprobe-ui.service';
 import { DataService } from './../../services/data/data.service';
 import * as _ from 'underscore';
 
@@ -10,7 +10,7 @@ import * as _ from 'underscore';
 })
 export class ExtraFiltersComponent implements OnInit {
   valueSelected: any;
-  selecterArray: string[] = ['window-size','type','length', 'none'];
+  selecterArray: string[] = ['window-size', 'type', 'length', 'none'];
   windowList: string[];
   typeList: string[];
   lengthList: string[];
@@ -21,61 +21,53 @@ export class ExtraFiltersComponent implements OnInit {
   showLength: boolean = false;
   isChecked = false;
   showFilters = false;
-  showFilter:boolean;
+  showFilter: boolean;
   @Output() newList: EventEmitter<any> = new EventEmitter();
 
-  constructor(private _service: GprobeUiService, private data:DataService) { 
+  constructor(private _service: GprobeUiService, private data: DataService) {
   }
 
   ngOnInit() {
     this.data.showfilter.subscribe(value => this.showFilter = value);
   }
 
-  toggleFilters(event){
+  toggleFilters(event) {
     this.showFilters = !this.showFilters;
   }
 
-  removeFilters(){
+  removeFilters() {
     this.isChecked = !this.isChecked;
   }
 
-  showWindowFn(){
-    if(this.windowList.length > 1){
-      let bl = this.showWindow ? true : false;
+  showWindowFn() {
+    if (this.windowList.length > 1) {
+      const bl = this.showWindow ? true : false;
       return bl;
     }
   }
-  showTypeFn(){
-    if(this.typeList.length > 1){
-      let bl = this.showType ? true : false;
+  showTypeFn() {
+    if (this.typeList.length > 1) {
+      const bl = this.showType ? true : false;
       return bl;
     }
   }
-  showLengthFn(){
-    if(this.lengthList.length > 1){
-      let bl = this.showLength ? true : false;
+  showLengthFn() {
+    if (this.lengthList.length > 1){
+      const bl = this.showLength ? true : false;
       return bl;
     }
   }
 
-  hideFilters(){
-
-  }
-
-  hasChangedagain(value){
+  hasChangedagain(value) {
     this.removeFilters();
     this.getCurrentGpList();
   }
 
-  change(value){
-
-  }
-
-  getCurrentGpList(){
+  getCurrentGpList() {
     this._service.getCurrentGpList()
       .subscribe(repsonse => {
         this.list = repsonse;
-        let list = this.list;
+        const list = this.list;
         let lengthList = [];
         lengthList = (function (a) {
         list.forEach(product => {
@@ -103,19 +95,19 @@ export class ExtraFiltersComponent implements OnInit {
         this.lengthList = _.uniq(lengthList);
         this.isChecked = false;
         this.selecterArray = [];
-        if(this.windowList.length > 1){this.selecterArray.push('window-size');}
-        if(this.typeList.length > 1){this.selecterArray.push('type');}
-        if(this.lengthList.length > 1){this.selecterArray.push('length');}
+        if (this.windowList.length > 1) {this.selecterArray.push('window-size'); }
+        if (this.typeList.length > 1) {this.selecterArray.push('type'); }
+        if (this.lengthList.length > 1) {this.selecterArray.push('length'); }
         this.selecterArray.push('none');
     });
   }
 
-  onClick(event){
-    let value = event.target.value;
-    let checked = event.target.checked;
-    let list = this.list;
+  onClick(event) {
+    const value = event.target.value;
+    const checked = event.target.checked;
+    const list = this.list;
     this.newList.emit(list);
-    switch(value) {
+    switch (value) {
       case 'window-size':
           this.showWindow = true;
           this.showType = false;
@@ -141,7 +133,7 @@ export class ExtraFiltersComponent implements OnInit {
     }
   }
 
-  closeFilter(){
+  closeFilter() {
     this.showWindow = false;
     this.showType = false;
     this.showLength = false;
@@ -149,37 +141,37 @@ export class ExtraFiltersComponent implements OnInit {
     this.removeFilters();
   }
 
-  windowClick(value){
-    if(value.target.checked){
-      let filterValue = value.target.value;
+  windowClick(value) {
+    if (value.target.checked) {
+      const filterValue = value.target.value;
       this.filterByWindow(filterValue);
     }else {
       this.filterByWindow('cancleFilter');
     }
   }
 
-  typeClick(value){
-    if(value.target.checked){
-      let filterValue = value.target.value;
+  typeClick(value) {
+    if (value.target.checked) {
+      const filterValue = value.target.value;
       this.filterByType(filterValue);
     }else {
       this.filterByType('cancleFilter');
     }
   }
 
-  lengthClick(value){
-    let filterValue = value;
+  lengthClick(value) {
+    const filterValue = value;
     this.filterByLength(filterValue);
   }
 
-  filterByWindow(filteredValue){
-    if(filteredValue === 'cancleFilter'){
+  filterByWindow(filteredValue) {
+    if (filteredValue === 'cancleFilter') {
       this.newList.emit(this.list);
-    }else{
-      let list = this.list;
+    }else {
+      const list = this.list;
       this.filteredList = (function (a) {
         list.forEach(product => {
-          if(product.window_size === filteredValue){
+          if (product.window_size === filteredValue) {
             a.push(product);
           }
         });
@@ -189,14 +181,14 @@ export class ExtraFiltersComponent implements OnInit {
     }
   }
 
-  filterByType(filteredValue){
-    if(filteredValue === 'cancleFilter'){
+  filterByType(filteredValue) {
+    if (filteredValue === 'cancleFilter') {
       this.newList.emit(this.list);
-    }else{
-      let list = this.list;
+    } else {
+      const list = this.list;
       this.filteredList = (function (a) {
         list.forEach(product => {
-          if(product.type === filteredValue){
+          if (product.type === filteredValue) {
             a.push(product);
           }
         });
@@ -206,14 +198,14 @@ export class ExtraFiltersComponent implements OnInit {
     }
   }
 
-  filterByLength(filteredValue){
-    if(filteredValue === 'cancleFilter'){
+  filterByLength(filteredValue) {
+    if (filteredValue === 'cancleFilter') {
       this.newList.emit(this.list);
-    }else{
-      let list = this.list;
+    } else {
+      const list = this.list;
       this.filteredList = (function (a) {
         list.forEach(product => {
-          if(product.length === filteredValue){
+          if (product.length === filteredValue) {
             a.push(product);
           }
         });

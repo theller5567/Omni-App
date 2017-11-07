@@ -15,16 +15,16 @@ export class CartComponent  {
   cartMessage: string = '';
   count: number = 0;
   products: IProduct[] = [];
-  constructor(private data:DataService) {}
+  constructor(private data: DataService) {}
   
-  closeCart(){
+  closeCart() {
     this.cartOpen = false;
   }
 
-  removeItem(id){
-    let arr = this.products;
-    for(var i = arr.length - 1; i >= 0; i--) {
-        if(arr[i].id === id) {
+  removeItem(id) {
+    const arr = this.products;
+    for (let i = arr.length - 1; i >= 0; i--) {
+        if (arr[i].id === id) {
           arr[i].quantity = 1;
           arr.splice(i, 1);
         }
@@ -33,14 +33,14 @@ export class CartComponent  {
     this.cartTotal = this.totalCartAmount(this.products);
   }
 
-  ngOnInit(){
+  ngOnInit() {
     this.data.cart.subscribe(cart => {
-      if(cart.length < 1){
+      if (cart.length < 1) {
         return;
       }else {
-        let value = cart;
+        const value = cart;
         this.count += 1;
-        if(this.itemsInCart.indexOf(value) !== -1){
+        if (this.itemsInCart.indexOf(value) !== -1) {
           value.quantity += 1;
           this.cartOpen = true;
         }else {
@@ -55,7 +55,7 @@ export class CartComponent  {
     });
   }
 
-  getCartTotalProducts(arr:IProduct[]){
+  getCartTotalProducts(arr: IProduct[]) {
     let count = 0;
     arr.forEach(product => {
       count += product.quantity;
@@ -64,10 +64,9 @@ export class CartComponent  {
     return count;
   }
 
-  totalCartAmount(arr:IProduct[]){
+  totalCartAmount(arr: IProduct[]) {
     let count = 0;
     arr.forEach(product => {
-      console.log('Product-Price: ' + product.price + ' X Product Quantity: ' + product.quantity + '. is equal to: ' + (product.price * product.quantity));
       count += (product.price * product.quantity);
     });
     return count;

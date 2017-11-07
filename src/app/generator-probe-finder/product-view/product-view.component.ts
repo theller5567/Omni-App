@@ -67,7 +67,6 @@ export class ProductViewComponent implements OnInit {
     this._service.getProductsByDiameter(value)
       .subscribe(response => {
         this.products = response;
-        console.log('LOADING FALSE');
         this.loading = false;
       });
   }
