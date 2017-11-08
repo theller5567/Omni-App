@@ -8,7 +8,7 @@
       <div class="cat-column" [ngClass]="{ 'show-cat': !showSubCat, 'hide-cat': showSubCat }">
       <div class="desktop-list btn-group-vertical show-cat" >
             <ng-template ngFor let-category [ngForOf]="categories"> 
-                <button class="list-group-item list-group-item-action cat-btn" *ngIf="category !=='Select a Category'" (click)="getCatName($event)"><span>{{category}}</span><i class="glyphicon glyphicon-chevron-right"></i>
+                <button class="list-group-item list-group-item-action cat-btn" *ngIf="category !=='Select a Category'" (click)="getCatName(category)" ><span>{{category}}</span><i class="glyphicon glyphicon-chevron-right"></i>
                   </button>
             </ng-template>
         </div>
@@ -20,7 +20,7 @@
       </div>
       <div class="subcat-column" [ngClass]="{ 'show-subcat': showSubCat, 'hide-cat': !showSubCat }" >
         <div class="desktop-list btn-group-vertical hide-cat">
-          <button class="list-group-item list-group-item-action cat-btn" *ngFor="let sub of subProducts" (click)="getSubCatName($event)"><span>{{sub}}</span><i class="glyphicon glyphicon-chevron-right"></i></button>
+          <button class="list-group-item list-group-item-action cat-btn" *ngFor="let sub of subProducts" (click)="getSubCatName(sub)" ><span>{{sub}}</span><i class="glyphicon glyphicon-chevron-right"></i></button>
           <button class="list-group-item list-group-item-action subcat-btn back-to-cat" (click)="backToCat()">Back to Categories<i class="glyphicon glyphicon-chevron-left"></i></button>
         </div>
         <div class="mobile-select hide-cat">

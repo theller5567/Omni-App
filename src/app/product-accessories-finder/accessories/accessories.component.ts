@@ -177,7 +177,7 @@ export class AccessoriesComponent implements OnInit {
     if (typeof value === 'string') {
       this.listSubProducts(value);
     } else {
-      const sub = value.target.innerText;
+      const sub = value;
       this.listSubProducts(sub);
     }
   }
@@ -186,7 +186,7 @@ export class AccessoriesComponent implements OnInit {
     if (typeof value === 'string') {
       this.listProducts(value);
     } else {
-      const cat = value.target.innerText;
+      const cat = value;
       this.listProducts(cat);
     }
   }
