@@ -3,7 +3,6 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { trigger, state, transition, style, animate, query, stagger, keyframes } from '@angular/animations';
 import { ProductsService } from '../../services/products/products.service';
 import { DataService } from './../../services/data/data.service';
-// import { Ng4LoadingSpinnerService  } from 'ng4-loading-spinner';
 import { IProduct } from '../../product';
 import * as _ from 'underscore';
 
@@ -27,8 +26,8 @@ import * as _ from 'underscore';
     trigger('productsIntro', [
       transition('* <=> *', [
         query(':enter', style({ opacity: 0 }), {optional: true}),
-        query(':enter', stagger('100ms', [
-          animate('1s ease-in', keyframes([
+        query(':enter', stagger('50ms', [
+          animate('800ms ease-in', keyframes([
             style({opacity: 0, transform: 'translateY(-10%)', offset: 0}),
             style({opacity: .5, transform: 'translateY(10px)',  offset: 0.3}),
             style({opacity: 1, transform: 'translateY(0)',     offset: 1.0}),

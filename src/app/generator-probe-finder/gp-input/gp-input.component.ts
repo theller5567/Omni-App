@@ -1,20 +1,18 @@
-import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
-import { GprobeUiService } from '../../services/gprobe-ui/gprobe-ui.service';
+import { Component, OnInit, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
 import { DataService } from './../../services/data/data.service';
-// import { Ng4LoadingSpinnerService  } from 'ng4-loading-spinner';
 
 @Component({
   selector: 'gpInput',
   template: `
-    <ngx-loading [show]="loading" [config]="{ backdropBorderRadius: '14px' }"></ngx-loading>
     <form>
       <div class="form-group">
         <label for="Master-Products">Select Product</label>
         <select [ngModel]="selectedValue" name="product" (ngModelChange)="change($event)" class="form-control" id="Master-Products">
-          <option *ngFor="let product of inputProducts" [ngValue]="product">{{product}}</option>
+          <option *ngFor="let product of testing" [ngValue]="product.master">{{product.master}}</option>
         </select>
       </div>
     </form>
+    <gpInputDiameter [testing]="testing" [selectedValue]="selectedValue"></gpInputDiameter>
   `,
   styleUrls: ['./gp-input.component.scss']
 })
@@ -27,57 +25,25 @@ export class GpInputComponent implements OnInit {
   selectedValue: any;
   cart: any[];
   showFilters: boolean;
-  public loading = false;
-
-  constructor(
-      private _service: GprobeUiService,
-      private data: DataService
-      // private spinnerService: Ng4LoadingSpinnerService
-    ) {
-    this.getGeneratprobes();
-  }
-
- @Output() hasChanged: EventEmitter<any> = new EventEmitter();
+  @Output() hasChanged: EventEmitter<any> = new EventEmitter();
+  @Input() testing: any[];
+  constructor(private data: DataService ) {}
 
   change(value) {
-    this.hasChanged.emit(value);
-    this.data.hideFilter(false);
+    this.selectedValue = value;
   }
 
-  getGeneratprobes() {
-    this._service.getGeneratprobes('Generator Probes')
-      .subscribe(response => {
-        this.getMasterproducts();
-      });
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['testing']) {
+      if (changes['testing'].currentValue) {
+        this.selectedValue = this.testing[0].master;
+      }
+    }
   }
- 
+
   ngOnInit() {
     this.data.cart.subscribe(cart => this.cart = cart);
     this.data.showfilter.subscribe(value => this.showFilters = value);
    }
-
-  getMasterproducts() {
-    this.loading = true;
-    this._service.getMasterproducts()
-      .subscribe(response => {
-        this.categories = response;
-        this.inputProducts = this.selectObject(this.categories);
-        this.selectedValue = this.inputProducts[0];
-        this.hasChanged.emit(this.inputProducts[0]);
-        this.loading = false;
-      });
-  }
-  selectObject(categories) {
-    const newArr: any[] = [];
-    let count = 0;
-    categories.forEach(product => {
-      const obj = {
-        id: count += 1,
-        name: product.product_name
-      };
-      newArr.push(product.product_name);
-    });
-    return newArr;
-  }
 
 }

@@ -1,5 +1,5 @@
-<ngx-loading [show]="loading" [config]="{ backdropBorderRadius: '14px' }"></ngx-loading>
-<ul class="items col col-md-12"  *ngIf="toggleView()">
+<extraFilters [products]="products" #extraFilters (newList)="productView.notify($event)"></extraFilters>
+<ul class="items col col-md-12"  *ngIf="showProducts">
     <li class="col col-xs-12 col-sm-12 col-md-4" *ngFor="let product of products">
         <div class="item">
         <a href="" class="product-name">{{product.product_name}}</a>

@@ -27,7 +27,19 @@ export class GprobeUiService {
           return a;
         })([]);
         this.generatorProbesList = generators;
-        return generators;
+        const ml2 = this.generatorProbesList;
+
+        const catList = (function (a) {
+          for (let i = productArray.length; i--; ) {
+            const arrs = _.intersection(productArray[i].related_products, ml2);
+            if (_.intersection(productArray[i].related_products, ml2).length > 0) {
+              a.push(productArray[i]);
+            }
+          }
+          return a;
+        })([]);
+        const gpArray = this.checking(productArray, catList);
+        return gpArray;
       });
   }
 
@@ -96,6 +108,7 @@ export class GprobeUiService {
           }
           return a;
         })([]);
+        console.log('service gpByDiameter: ', this.gpByDiameter);
         return diameterList;
       });
   }
@@ -125,5 +138,69 @@ export class GprobeUiService {
         return prodsByDiameter;
       });
   }
+
+  checking = function(productsArr, names) {
+      const masterProds: any[] = [];
+      // Master List of Accessories related to the Master Product
+      const nameList = [];
+      names.forEach(product => {
+        nameList.push(product.product_name);
+      });
+
+      productsArr.forEach(product => {
+        nameList.forEach(name => {
+          if (product.product_name === name) {
+            masterProds.push(product);
+          }
+        });
+      });
+      // find all accessories under this product that have a cat name of Generator Probe and retrun
+      const relatedProducts: any[] = [];
+      masterProds.forEach(product => {
+        const obj = {
+          product: product.product_name,
+          related: product.related_products
+        };
+        relatedProducts.push(obj);
+      });
+      const gp = (function (a) {
+        productsArr.forEach(product => {
+          const prodId = [];
+          prodId.push(product.id);
+          relatedProducts.forEach(arr => {
+            if (_.intersection(prodId, arr.related).length > 0) {
+              if (product.cat_name === 'Generator Probes') {
+                const allArr = [];
+                const obj = {
+                  master: arr.product,
+                  related: [product]
+                };
+                a.push(obj);
+              }
+            }
+          });
+        });
+        return a;
+      })([]);
+      const masterArray = this.process(gp);
+      return masterArray;
+  };
+
+  process = function(objects) {
+    const results = [];
+    objects.forEach(object => { // iterate through array
+      const result = results.find(x => x.master === object.master);
+      if (result) { // if item with "master" exists
+        object.related.forEach(item => { // add all realted items to existing items "related" array
+          if (!result.related.find(x => x === item)) {
+            result.related.push(item);
+          }
+        });
+      } else { // otherwise add an item to "results" array
+        results.push(object);
+      }
+    });
+    return results;
+  };
 
 }

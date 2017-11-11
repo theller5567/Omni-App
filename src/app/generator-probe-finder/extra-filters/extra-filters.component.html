@@ -1,7 +1,7 @@
-<span class="toggle-filter" *ngIf="list?.length > 0 && selecterArray?.length > 1 && showFilter" (click)="toggleFilters($event)">Extra Filters <i [ngClass]="{ 'glyphicon-chevron-down': !showFilters, 'glyphicon-chevron-up': showFilters }" class="glyphicon"></i></span> 
-<section *ngIf="showFilters && showFilter">
+<span class="toggle-filter" *ngIf="products?.length > 0 && selecterArray?.length > 1 && showFilter" (click)="toggleFilters($event)">Extra Filters <i [ngClass]="{ 'glyphicon-chevron-down': !showFilters, 'glyphicon-chevron-up': showFilters }" class="glyphicon"></i></span> 
+<section>
   <hr>
-  <form *ngIf="list?.length > 0 && selecterArray?.length > 1" class="Filtered-inputs">
+  <form *ngIf="products?.length > 0 && selecterArray?.length > 1" class="Filtered-inputs">
     <div *ngFor="let selecter of selecterArray" class="form-check form-check-inline">
       <label class="form-check-label">
         <input class="form-check-input" type="radio" name="filter-radio" (click)="onClick($event)" [checked]="isChecked" value="{{selecter}}"> {{selecter}}
