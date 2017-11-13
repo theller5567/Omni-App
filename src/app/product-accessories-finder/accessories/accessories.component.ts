@@ -3,7 +3,6 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { trigger, state, transition, style, animate, query, stagger, keyframes } from '@angular/animations';
 import { ProductsService } from '../../services/products/products.service';
 import { DataService } from './../../services/data/data.service';
-// import { Ng4LoadingSpinnerService  } from 'ng4-loading-spinner';
 import { IProduct } from '../../product';
 import * as _ from 'underscore';
 
@@ -27,8 +26,8 @@ import * as _ from 'underscore';
     trigger('productsIntro', [
       transition('* <=> *', [
         query(':enter', style({ opacity: 0 }), {optional: true}),
-        query(':enter', stagger('100ms', [
-          animate('1s ease-in', keyframes([
+        query(':enter', stagger('50ms', [
+          animate('800ms ease-in', keyframes([
             style({opacity: 0, transform: 'translateY(-10%)', offset: 0}),
             style({opacity: .5, transform: 'translateY(10px)',  offset: 0.3}),
             style({opacity: 1, transform: 'translateY(0)',     offset: 1.0}),
@@ -48,15 +47,18 @@ export class AccessoriesComponent implements OnInit {
   public breadcrumbArr: any[];
   public showSubCat: boolean = false;
   private masterProduct: number;
-  private masterName: string;
+  public masterName: string;
   private productsInCart: any[];
   public selectedCat: any;
+  public masterProductArray: any;
+  public masterProductBanner: string;
   public selectedSubCat: any;
   private cart: any[];
   productInfo: any[];
   categoriesListArray: any[];
   catList: any[];
   powers;
+  catbanners: boolean = false;
   masterProductList: any[];
   animationState = 'inactive';
   public loading = false;
@@ -94,6 +96,7 @@ export class AccessoriesComponent implements OnInit {
     this.category_name = '';
     this.subCategory_name = '';
     this.showSubCat = false;
+    this.catbanners = true;
   }
 
   viewProduct(value) {
@@ -109,6 +112,7 @@ export class AccessoriesComponent implements OnInit {
   }
 
   listProducts(cat) {
+    this.catbanners = false;
     this.category_name = cat;
     this.products = [];
     this.subProducts = [];
@@ -240,7 +244,6 @@ export class AccessoriesComponent implements OnInit {
 
 
   getProductsList() {
-    // this.spinnerService.show();
     this.loading = true;
     this._service.getCatgegories()
       .subscribe(response => {
@@ -249,7 +252,7 @@ export class AccessoriesComponent implements OnInit {
         this.masterProductList = response;
         this.getCatgegories(this.masterProduct);
         this.loading = false;
-        // this.spinnerService.hide();
+        this.catbanners = true;
       });
   }
 
@@ -260,6 +263,9 @@ export class AccessoriesComponent implements OnInit {
     if (masterProduct === undefined) {
       masterProduct = masterList[0].id;
     }
+    this.masterProductArray = _.findWhere(this.masterProductList, { id: masterProduct });
+    this.masterProductBanner = '../../' + this.masterProductArray.images[0].banner;
+    console.log('Master product2', _.findWhere(this.masterProductList, { id: masterProduct }));
     const ml = this.MasterAccessories(response, masterProduct);
     const catList = (function (a) {
       for (let i = ml.length; i--; ) {

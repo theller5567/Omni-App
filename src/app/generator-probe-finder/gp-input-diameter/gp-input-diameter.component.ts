@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, Input, OnInit, Output, EventEmitter, SimpleChanges, OnChanges } from '@angular/core';
 import { GprobeUiService } from '../../services/gprobe-ui/gprobe-ui.service';
 import { DataService } from '../../services/data/data.service';
 import * as _ from 'underscore';
@@ -10,44 +10,73 @@ import * as _ from 'underscore';
       <div class="form-group">
         <label for="Master-Products">Select Diameter</label>
         <select [ngModel]="selectedDiameter" name="diameter" (ngModelChange)="change($event)" class="form-control" id="Master-Products">
-          <option *ngFor="let diameter of DiameterCats" [ngValue]="diameter">{{diameter}}</option>
+          <option *ngFor="let diameter of diameterArray" [ngValue]="diameter">{{diameter}}</option>
         </select>
         <p *ngIf="prRange !== '' && showFilters" class="pr-range"><em><strong>Processing Range: {{prRange}}</strong></em></p>
       </div>
     </form>
+    <productView [testing]="testing" [diameterProduct]="diameterProduct" [selectedValue]="selectedValue"  #productView></productView>
   `,
   styleUrls: ['./gp-input-diameter.component.scss']
 })
-export class GpInputDiameterComponent implements OnInit {
+export class GpInputDiameterComponent implements OnInit, OnChanges {
   @Output() hasChangedagain: EventEmitter<any> = new EventEmitter();
-  DiameterCats: string[];
   selectedDiameter: string;
+  diameterArray: any[] = [];
   show: boolean = false;
   prRange: string = '';
   showFilters: boolean;
-
-  constructor(private _service: GprobeUiService, private data: DataService){}
+  diameterProduct: any;
+  @Input() selectedValue;
+  @Input() testing;
+  constructor(private _service: GprobeUiService, private data: DataService) { }
 
   toggleView() {
       const bln: boolean = this.show ? true : false;
       return bln;
   }
 
-  ngOnInit(){
-    this.data.showfilter.subscribe(value => this.showFilters = value);
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes) {
+      if (changes['selectedValue']) {
+        this.selectedValue = changes.selectedValue.currentValue;
+        this.diameterArray = ['Select a Diameter'];
+        this.selectedDiameter = this.diameterArray[0];
+        if (this.selectedValue) {
+          this.diameterArray = [];
+          this.testing.forEach(item => {
+            if (item.master === this.selectedValue) {
+              item.related.forEach(product => {
+                this.diameterArray.push(product.diameter);
+              });
+            }
+          });
+          this.diameterArray.pop();
+          this.diameterArray = _.uniq(this.diameterArray);
+          this.show = true;
+        }
+      }
+      if (changes['testing']) {
+        this.testing = [];
+        this.testing = changes.testing.currentValue;
+      }
+    }
   }
 
-  hasChanged(val) {
-    this.DiameterCats = [];
-    this.selectedDiameter = this.DiameterCats[0];
-    const name: string = val;
-    this.getProductsByName(name);
+  ngOnInit() {
+    this.data.showfilter.subscribe(value => this.showFilters = value);
   }
 
   change(value) {
     this.processingRange(value);
-    this.hasChangedagain.emit(value);
-    this.data.hideFilter(true);
+    if (this.selectedValue) {
+      const obj = {
+        selectedProduct: this.selectedValue,
+        diameterSelected: value
+      };
+      this.diameterProduct = obj;
+      this.data.hideFilter(true);
+    }
   }
 
   processingRange(value) {
@@ -72,16 +101,6 @@ export class GpInputDiameterComponent implements OnInit {
           break;
       default:
     }
-  }
-
-  getProductsByName(name: string) {
-    this._service.getProductsByName(name)
-      .subscribe(response => {
-        this.DiameterCats = response;
-        this.selectedDiameter = '';
-        this.DiameterCats = this.sortDiamters(this.DiameterCats);
-        this.show = true;
-      });
   }
 
   sortDiamters(list) {

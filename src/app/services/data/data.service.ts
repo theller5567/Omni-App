@@ -12,6 +12,12 @@ export class DataService {
   private showFilter = new BehaviorSubject<any>([]);
   showfilter = this.showFilter.asObservable();
 
+  private productList = new BehaviorSubject<any>([]);
+  prodList = this.productList.asObservable();
+
+  private filterState = new BehaviorSubject<any>([]);
+  fState = this.filterState.asObservable();
+
   constructor() { }
   changCart(cart) {
     this.shoppingCart.next(cart);
@@ -23,6 +29,15 @@ export class DataService {
 
   hideFilter(value) {
     this.showFilter.next(value);
+  }
+
+  productListChanged(list) {
+    console.log('service_change-productList: ', list);
+    this.productList.next(list);
+  }
+
+  filterStateChanged(list) {
+    this.filterState.next(list);
   }
 
 }
