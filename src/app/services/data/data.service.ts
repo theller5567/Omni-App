@@ -32,7 +32,6 @@ export class DataService {
   }
 
   productListChanged(list) {
-    console.log('service_change-productList: ', list);
     this.productList.next(list);
   }
 

@@ -52,7 +52,6 @@ export class ExtraFiltersComponent implements OnInit {
   }
 
   startFiltering(list) {
-    console.log('start filtering', list);
     this.selecterArray = [];
     let lengthList = [];
     let windowList = [];
@@ -71,9 +70,6 @@ export class ExtraFiltersComponent implements OnInit {
     lengthList = _.uniq(lengthList);
     windowList = _.uniq(windowList);
     typeList = _.uniq(typeList);
-    console.log('lengthList:', lengthList);
-    console.log('windowList:', windowList);
-    console.log('typeList:', typeList);
     if (this.allowFilter(lengthList, list)) {
       this.selecterArray.push('length');
     }
@@ -84,7 +80,6 @@ export class ExtraFiltersComponent implements OnInit {
       this.selecterArray.push('type');
     }
     if (!this.allowFilter(lengthList, list) && !this.allowFilter(windowList, list) && !this.allowFilter(typeList, list)) {
-      console.log('no filters needed');
       this.selecterArray = [];
       this.showFilters = false;
       this.toggleFilter = false;

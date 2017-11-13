@@ -139,19 +139,13 @@ export class AccessoriesComponent implements OnInit {
       }
       return a;
     })([]);
-
-    const uniqEs6 = (arrArg) => {
-      return arrArg.filter((elem, pos, arr) => {
-        return arr.indexOf(elem) === pos;
-      });
-    };
     if (!flag) {
       this.showSubCat = false;
-      this.products = uniqEs6(prodList).reverse();
+      this.products = _.uniq(prodList).reverse();
       this.toggleState();
     } else {
       this.showSubCat = true;
-      this.subProducts = uniqEs6(prodList).reverse();
+      this.subProducts = _.uniq(prodList).reverse();
     }
   }
 
@@ -265,7 +259,6 @@ export class AccessoriesComponent implements OnInit {
     }
     this.masterProductArray = _.findWhere(this.masterProductList, { id: masterProduct });
     this.masterProductBanner = '../../' + this.masterProductArray.images[0].banner;
-    console.log('Master product2', _.findWhere(this.masterProductList, { id: masterProduct }));
     const ml = this.MasterAccessories(response, masterProduct);
     const catList = (function (a) {
       for (let i = ml.length; i--; ) {

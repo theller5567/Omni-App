@@ -62,7 +62,6 @@ export class ProductViewComponent implements OnInit, OnChanges {
             this.data.filterStateChanged(true);
             this.products = this.getProducts1();
             this.showProducts = true;
-            console.log('DIAMETER CHANGED, change filter state');
             this.data.productListChanged(this.products);
           }
         }
