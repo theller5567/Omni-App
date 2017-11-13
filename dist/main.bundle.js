@@ -197,7 +197,7 @@ AppModule = __decorate([
 /***/ "../../../../../src/app/generator-probe-finder/extra-filters/extra-filters.component.html":
 /***/ (function(module, exports) {
 
-module.exports = "<span class=\"toggle-filter\" *ngIf=\"products?.length > 0 && selecterArray?.length > 1 && showFilter\" (click)=\"toggleFilters($event)\">Extra Filters <i [ngClass]=\"{ 'glyphicon-chevron-down': !showFilters, 'glyphicon-chevron-up': showFilters }\" class=\"glyphicon\"></i></span> \n<section>\n  <hr>\n  <form *ngIf=\"products?.length > 0 && selecterArray?.length > 1\" class=\"Filtered-inputs\">\n    <div *ngFor=\"let selecter of selecterArray\" class=\"form-check form-check-inline\">\n      <label class=\"form-check-label\">\n        <input class=\"form-check-input\" type=\"radio\" name=\"filter-radio\" (click)=\"onClick($event)\" [checked]=\"isChecked\" value=\"{{selecter}}\"> {{selecter}}\n      </label>\n    </div>\n    <div *ngIf=\"showWindowFn()\" class=\"filter window-filter\">\n      <div class=\"close-btn\"><i class=\"glyphicon glyphicon-remove\" (click)=\"closeFilter()\"></i></div>\n      <div *ngFor=\"let window of windowList\">\n        <div class=\"form-check form-check-inline\">\n          <label class=\"form-check-label\">\n            <input class=\"form-check-input\" type=\"radio\" name=\"filter-radio\" (click)=\"windowClick($event)\" value=\"{{window}}\"> {{window}}\n          </label>\n        </div>\n      </div>\n    </div>\n    <div *ngIf=\"showTypeFn()\" class=\"filter type-filter\">\n      <div class=\"close-btn\"><i class=\"glyphicon glyphicon-remove\" (click)=\"closeFilter()\"></i></div>\n      <div *ngFor=\"let type of typeList\">\n        <div class=\"form-check form-check-inline\">\n          <label class=\"form-check-label\">\n            <input class=\"form-check-input\" type=\"radio\" name=\"filter-radio\" (click)=\"typeClick($event)\" value=\"{{type}}\"> {{type}}\n          </label>\n        </div>\n      </div>\n    </div>\n    <div *ngIf=\"showLengthFn()\" class=\"filter length-filter\">\n      <div class=\"close-btn\"><i class=\"glyphicon glyphicon-remove\" (click)=\"closeFilter()\"></i></div>\n      <div>\n        <div class=\"form-group\">\n          <label for=\"Master-Products\">Select Length</label>\n          <select [ngModel]=\"lengthSelected\" name=\"length\" (ngModelChange)=\"lengthClick($event)\" class=\"form-control\" id=\"filter-length\">\n            <option *ngFor=\"let length of lengthList\" [ngValue]=\"length\">{{length}}</option>\n          </select>\n        </div>\n      </div>\n    </div>\n  </form>\n</section>\n  "
+module.exports = "<section *ngIf=\"showFilters && toggleFilter\" >\n  <hr>\n  <form  class=\"Filtered-inputs\">\n    <div *ngFor=\"let selecter of selecterArray\" class=\"form-check form-check-inline\">\n      <label class=\"form-check-label\">\n        <input class=\"form-check-input\" type=\"radio\" name=\"filter-radio\" (click)=\"onClick(selecter)\" [checked]=\"isChecked\" value=\"{{selecter}}\"> {{selecter}}\n      </label>\n    </div>\n    <div *ngIf=\"windowState\" class=\"filter window-filter\">\n      <div class=\"close-btn\"><i class=\"glyphicon glyphicon-remove\" (click)=\"closeFilter()\"></i></div>\n      <div *ngFor=\"let window of windowList\">\n        <div class=\"form-check form-check-inline\">\n          <label class=\"form-check-label\">\n            <input class=\"form-check-input\" type=\"radio\" name=\"filter-radio\" (click)=\"windowClick(window)\" value=\"{{window}}\"> {{window}}\n          </label>\n        </div>\n      </div>\n    </div>\n    <div *ngIf=\"typeState\" class=\"filter type-filter\">\n      <div class=\"close-btn\"><i class=\"glyphicon glyphicon-remove\" (click)=\"closeFilter()\"></i></div>\n      <div *ngFor=\"let type of typeList\">\n        <div class=\"form-check form-check-inline\">\n          <label class=\"form-check-label\">\n            <input class=\"form-check-input\" type=\"radio\" name=\"filter-radio\" (click)=\"typeClick(type)\" value=\"{{type}}\"> {{type}}\n          </label>\n        </div>\n      </div>\n    </div>\n    <div  *ngIf=\"lengthState\" class=\"filter length-filter\">\n      <div class=\"close-btn\"><i class=\"glyphicon glyphicon-remove\" (click)=\"closeFilter()\"></i></div>\n      <div>\n        <div class=\"form-group\">\n          <label for=\"Master-Products\">Select Length</label>\n          <select [ngModel]=\"lengthSelected\" name=\"length\" (ngModelChange)=\"lengthClick($event)\" class=\"form-control\" id=\"filter-length\">\n            <option *ngFor=\"let length of lengthList\" [ngValue]=\"length\">{{length}}</option>\n          </select>\n        </div>\n      </div>\n    </div>\n  </form>\n</section>\n  "
 
 /***/ }),
 
@@ -227,6 +227,8 @@ module.exports = module.exports.toString();
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__angular_core__ = __webpack_require__("../../../core/@angular/core.es5.js");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__services_gprobe_ui_gprobe_ui_service__ = __webpack_require__("../../../../../src/app/services/gprobe-ui/gprobe-ui.service.ts");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__services_data_data_service__ = __webpack_require__("../../../../../src/app/services/data/data.service.ts");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_underscore__ = __webpack_require__("../../../../underscore/underscore.js");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_underscore___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3_underscore__);
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -239,199 +241,195 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 
 
 
+
 var ExtraFiltersComponent = (function () {
     function ExtraFiltersComponent(_service, data) {
+        var _this = this;
         this._service = _service;
         this.data = data;
         this.selecterArray = ['window-size', 'type', 'length', 'none'];
-        this.showWindow = false;
-        this.showType = false;
-        this.showLength = false;
+        this.windowState = false;
+        this.typeState = false;
+        this.lengthState = false;
+        this.toggleFilter = false;
         this.isChecked = false;
         this.showFilters = false;
         this.newList = new __WEBPACK_IMPORTED_MODULE_0__angular_core__["x" /* EventEmitter */]();
-    }
-    ExtraFiltersComponent.prototype.ngOnChanges = function (changes) {
-        if (changes) {
-            if (changes['products']) {
-                console.log('products changed', changes.products);
-                this.products = changes.products.currentValue;
-                this.removeFilters();
-                this.getCurrentGpList();
+        this.data.prodList.subscribe(function (product) {
+            if (_this.filterState) {
+                _this.filteredList = product;
+                _this.startFiltering(_this.filteredList);
+                if (!_this.filterhide) {
+                    _this.closeFilter();
+                    _this.removeFilters();
+                }
             }
-        }
-    };
+        });
+        this.data.fState.subscribe(function (state) {
+            _this.filterState = state;
+        });
+    }
     ExtraFiltersComponent.prototype.ngOnInit = function () {
         var _this = this;
         this.data.showfilter.subscribe(function (value) { return _this.showFilter = value; });
     };
-    ExtraFiltersComponent.prototype.toggleFilters = function (event) {
-        this.showFilters = !this.showFilters;
+    ExtraFiltersComponent.prototype.startFiltering = function (list) {
+        console.log('start filtering', list);
+        this.selecterArray = [];
+        var lengthList = [];
+        var windowList = [];
+        var typeList = [];
+        list.forEach(function (product) {
+            if (product.length) {
+                lengthList.push(product.length);
+            }
+            if (product.window_size) {
+                windowList.push(product.window_size);
+            }
+            if (product.type) {
+                typeList.push(product.type);
+            }
+        });
+        lengthList = __WEBPACK_IMPORTED_MODULE_3_underscore__["uniq"](lengthList);
+        windowList = __WEBPACK_IMPORTED_MODULE_3_underscore__["uniq"](windowList);
+        typeList = __WEBPACK_IMPORTED_MODULE_3_underscore__["uniq"](typeList);
+        console.log('lengthList:', lengthList);
+        console.log('windowList:', windowList);
+        console.log('typeList:', typeList);
+        if (this.allowFilter(lengthList, list)) {
+            this.selecterArray.push('length');
+        }
+        if (this.allowFilter(windowList, list)) {
+            this.selecterArray.push('window-size');
+        }
+        if (this.allowFilter(typeList, list)) {
+            this.selecterArray.push('type');
+        }
+        if (!this.allowFilter(lengthList, list) && !this.allowFilter(windowList, list) && !this.allowFilter(typeList, list)) {
+            console.log('no filters needed');
+            this.selecterArray = [];
+            this.showFilters = false;
+            this.toggleFilter = false;
+        }
+        else {
+            this.showFilters = true;
+            this.toggleFilter = true;
+            this.selecterArray.push('none');
+        }
+    };
+    ExtraFiltersComponent.prototype.allowFilter = function (filterlist, list) {
+        if (filterlist.length > 1) {
+            if ((list.length - filterlist.length) > 2) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+    };
+    ExtraFiltersComponent.prototype.toggleFilters = function () {
+        this.toggleFilter = !this.toggleFilter;
+    };
+    ExtraFiltersComponent.prototype.onClick = function (value) {
+        if (this.filterhide) {
+            this.hideFilters(value);
+        }
+        else {
+            this.closeFilter();
+        }
+        this.hideFilters(value);
+    };
+    ExtraFiltersComponent.prototype.closeFilter = function () {
+        this.hideFilters('none');
+    };
+    ExtraFiltersComponent.prototype.windowClick = function (value) {
+        var list = [];
+        this.filteredList.forEach(function (product) {
+            if (product.window_size === value) {
+                list.push(product);
+            }
+        });
+        this.data.productListChanged(list);
+    };
+    ExtraFiltersComponent.prototype.typeClick = function (value) {
+        var list = [];
+        this.filteredList.forEach(function (product) {
+            if (product.type === value) {
+                list.push(product);
+            }
+        });
+        this.data.productListChanged(list);
+    };
+    ExtraFiltersComponent.prototype.lengthClick = function (value) {
+        var list = [];
+        this.filteredList.forEach(function (product) {
+            if (product.length === value) {
+                list.push(product);
+            }
+        });
+        this.data.productListChanged(list);
     };
     ExtraFiltersComponent.prototype.removeFilters = function () {
         this.isChecked = !this.isChecked;
     };
-    ExtraFiltersComponent.prototype.showWindowFn = function () {
-        if (this.windowList.length > 1) {
-            var bl = this.showWindow ? true : false;
-            return bl;
-        }
-    };
-    ExtraFiltersComponent.prototype.showTypeFn = function () {
-        if (this.typeList.length > 1) {
-            var bl = this.showType ? true : false;
-            return bl;
-        }
-    };
-    ExtraFiltersComponent.prototype.showLengthFn = function () {
-        if (this.lengthList.length > 1) {
-            var bl = this.showLength ? true : false;
-            return bl;
-        }
-    };
-    ExtraFiltersComponent.prototype.getCurrentGpList = function () {
-        var list = this.products;
-        var lengthList = [];
-        console.log('lengthList', this.products);
-        lengthList = (function (a) {
-            list.forEach(function (product) {
-                console.log('hre', product);
-                a.push(product.length);
-            });
-        });
-        //   return a;
-        // })([]);
-        // let typeList = [];
-        // typeList = (function (a) {
-        // list.forEach(product => {
-        //     a.push(product.type);
-        // });
-        //   return a;
-        // })([]);
-        // let windowList = [];
-        // windowList = (function (a) {
-        // list.forEach(product => {
-        //     a.push(product.window_size);
-        // });
-        //   return a;
-        // })([]);
-        // this.isChecked = false;
-        // this.selecterArray = [];
-        // if (this.windowList.length > 1) {this.selecterArray.push('window-size'); }
-        // if (this.typeList.length > 1) {this.selecterArray.push('type'); }
-        // if (this.lengthList.length > 1) {this.selecterArray.push('length'); }
-        // this.selecterArray.push('none');
-    };
-    ExtraFiltersComponent.prototype.onClick = function (event) {
-        var value = event.target.value;
-        var checked = event.target.checked;
-        var list = this.products;
-        this.newList.emit(list);
-        switch (value) {
+    ExtraFiltersComponent.prototype.hideFilters = function (filter) {
+        this.filterhide = false;
+        this.data.filterStateChanged(false);
+        var filteredListCat = [];
+        var filteredList = [];
+        var list = this.filteredList;
+        switch (filter) {
             case 'window-size':
-                this.showWindow = true;
-                this.showType = false;
-                this.showLength = false;
+                list.forEach(function (product) {
+                    if (product.window_size) {
+                        filteredListCat.push(product.window_size);
+                        filteredList.push(product);
+                    }
+                });
+                this.windowList = __WEBPACK_IMPORTED_MODULE_3_underscore__["uniq"](filteredListCat);
+                this.filteredList = filteredList;
+                this.windowState = true;
+                this.typeState = false;
+                this.lengthState = false;
                 break;
             case 'type':
-                this.showWindow = false;
-                this.showType = true;
-                this.showLength = false;
+                list.forEach(function (product) {
+                    if (product.type) {
+                        filteredListCat.push(product.type);
+                        filteredList.push(product);
+                    }
+                });
+                this.typeList = __WEBPACK_IMPORTED_MODULE_3_underscore__["uniq"](filteredListCat);
+                this.filteredList = filteredList;
+                this.windowState = false;
+                this.typeState = true;
+                this.lengthState = false;
                 break;
             case 'length':
-                this.showWindow = false;
-                this.showType = false;
-                this.showLength = true;
+                list.forEach(function (product) {
+                    if (product.length) {
+                        filteredListCat.push(product.length);
+                        filteredList.push(product);
+                    }
+                });
+                this.lengthList = __WEBPACK_IMPORTED_MODULE_3_underscore__["uniq"](filteredListCat);
+                this.filteredList = filteredList;
+                this.windowState = false;
+                this.typeState = false;
+                this.lengthState = true;
                 break;
             case 'none':
-                this.showWindow = false;
-                this.showType = false;
-                this.showLength = false;
-                this.newList.emit(this.products);
+                this.data.productListChanged(this.filteredList);
+                this.windowState = false;
+                this.typeState = false;
+                this.lengthState = false;
+                this.filterhide = true;
                 break;
             default:
-        }
-    };
-    ExtraFiltersComponent.prototype.closeFilter = function () {
-        this.showWindow = false;
-        this.showType = false;
-        this.showLength = false;
-        this.newList.emit(this.products);
-        this.removeFilters();
-    };
-    ExtraFiltersComponent.prototype.windowClick = function (value) {
-        if (value.target.checked) {
-            var filterValue = value.target.value;
-            console.log('window click', filterValue);
-            this.filterByWindow(filterValue);
-        }
-        else {
-            this.filterByWindow('cancleFilter');
-        }
-    };
-    ExtraFiltersComponent.prototype.typeClick = function (value) {
-        if (value.target.checked) {
-            var filterValue = value.target.value;
-            this.filterByType(filterValue);
-        }
-        else {
-            this.filterByType('cancleFilter');
-        }
-    };
-    ExtraFiltersComponent.prototype.lengthClick = function (value) {
-        var filterValue = value;
-        this.filterByLength(filterValue);
-    };
-    ExtraFiltersComponent.prototype.filterByWindow = function (filteredValue) {
-        if (filteredValue === 'cancleFilter') {
-            this.newList.emit(this.products);
-        }
-        else {
-            var list_1 = this.products;
-            console.log('window click', list_1);
-            this.filteredList = (function (a) {
-                list_1.forEach(function (product) {
-                    if (product.window_size === filteredValue) {
-                        a.push(product);
-                    }
-                });
-                return a;
-            })([]);
-            this.newList.emit(this.filteredList);
-        }
-    };
-    ExtraFiltersComponent.prototype.filterByType = function (filteredValue) {
-        if (filteredValue === 'cancleFilter') {
-            this.newList.emit(this.products);
-        }
-        else {
-            var list_2 = this.products;
-            this.filteredList = (function (a) {
-                list_2.forEach(function (product) {
-                    if (product.type === filteredValue) {
-                        a.push(product);
-                    }
-                });
-                return a;
-            })([]);
-            this.newList.emit(this.filteredList);
-        }
-    };
-    ExtraFiltersComponent.prototype.filterByLength = function (filteredValue) {
-        if (filteredValue === 'cancleFilter') {
-            this.newList.emit(this.products);
-        }
-        else {
-            var list_3 = this.products;
-            this.filteredList = (function (a) {
-                list_3.forEach(function (product) {
-                    if (product.length === filteredValue) {
-                        a.push(product);
-                    }
-                });
-                return a;
-            })([]);
-            this.newList.emit(this.filteredList);
+                this.windowState = false;
+                this.typeState = false;
+                this.lengthState = false;
+                break;
         }
     };
     return ExtraFiltersComponent;
@@ -440,10 +438,6 @@ __decorate([
     Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["F" /* Input */])(),
     __metadata("design:type", Object)
 ], ExtraFiltersComponent.prototype, "diameterProduct", void 0);
-__decorate([
-    Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["F" /* Input */])(),
-    __metadata("design:type", Object)
-], ExtraFiltersComponent.prototype, "products", void 0);
 __decorate([
     Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["T" /* Output */])(),
     __metadata("design:type", typeof (_a = typeof __WEBPACK_IMPORTED_MODULE_0__angular_core__["x" /* EventEmitter */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_0__angular_core__["x" /* EventEmitter */]) === "function" && _a || Object)
@@ -523,7 +517,6 @@ var GpInputDiameterComponent = (function () {
                 this.selectedValue = changes.selectedValue.currentValue;
                 this.diameterArray = ['Select a Diameter'];
                 this.selectedDiameter = this.diameterArray[0];
-                console.log('selectedValue: ', this.selectedDiameter);
                 if (this.selectedValue) {
                     this.diameterArray = [];
                     this.testing.forEach(function (item) {
@@ -535,11 +528,11 @@ var GpInputDiameterComponent = (function () {
                     });
                     this.diameterArray.pop();
                     this.diameterArray = __WEBPACK_IMPORTED_MODULE_3_underscore__["uniq"](this.diameterArray);
-                    console.log('selectedValue@: ', this.selectedDiameter);
                     this.show = true;
                 }
             }
             if (changes['testing']) {
+                this.testing = [];
                 this.testing = changes.testing.currentValue;
             }
         }
@@ -877,7 +870,7 @@ var _a;
 /***/ "../../../../../src/app/generator-probe-finder/product-view/product-view.component.html":
 /***/ (function(module, exports) {
 
-module.exports = "<extraFilters [products]=\"products\" #extraFilters (newList)=\"productView.notify($event)\"></extraFilters>\n<ul class=\"items col col-md-12\"  *ngIf=\"showProducts\">\n    <li class=\"col col-xs-12 col-sm-12 col-md-4\" *ngFor=\"let product of products\">\n        <div class=\"item\">\n        <a href=\"\" class=\"product-name\">{{product.product_name}}</a>\n        <div class=\"image-and-info col col-xs-8 col-sm-8 col-md-12\">\n            <div class=\"product-thumb\">\n            <img src=\"../../assets/img-filler.png\" alt=\"{{product.product_name}}\">\n            </div>\n            <div class=\"info\">\n            <div class=\"sku\">SKU: {{product.sku}}</div>\n            <div class=\"price\">Price: {{product.price | currency:'USD':true:'1.2-2'}}</div>\n            </div>\n        </div>\n        <div class=\"product-col col col-xs-4 col-sm-4 col-md-12\">\n            <div class=\"btn-group\" role=\"group\" aria-label=\"Basic example\">\n            <button type=\"button\" class=\"btn btn-solid\" (click)=\"viewProduct(product)\">View Product</button>\n            <button type=\"button\" class=\"btn btn-solid add-to-cart\" (click)=\"addToCart($event)\">Add to Cart</button>\n            </div>\n        </div>\n        </div>\n    </li>\n</ul>\n"
+module.exports = "<extraFilters #extraFilters (newList)=\"productView.notify(value)\"></extraFilters>\n<ul class=\"items col col-md-12\"  *ngIf=\"showProducts\">\n    <li class=\"col col-xs-12 col-sm-12 col-md-4\" *ngFor=\"let product of products\">\n        <div class=\"item\">\n        <a href=\"\" class=\"product-name\">{{product.product_name}}</a>\n        <div class=\"image-and-info col col-xs-8 col-sm-8 col-md-12\">\n            <div class=\"product-thumb\">\n            <img src=\"../../assets/img-filler.png\" alt=\"{{product.product_name}}\">\n            </div>\n            <div class=\"info\">\n            <div class=\"sku\">SKU: {{product.sku}}</div>\n            <div class=\"price\">Price: {{product.price | currency:'USD':true:'1.2-2'}}</div>\n            </div>\n        </div>\n        <div class=\"product-col col col-xs-4 col-sm-4 col-md-12\">\n            <div class=\"btn-group\" role=\"group\" aria-label=\"Basic example\">\n            <button type=\"button\" class=\"btn btn-solid\" (click)=\"viewProduct(product)\">View Product</button>\n            <button type=\"button\" class=\"btn btn-solid add-to-cart\" (click)=\"addToCart($event)\">Add to Cart</button>\n            </div>\n        </div>\n        </div>\n    </li>\n</ul>\n"
 
 /***/ }),
 
@@ -926,6 +919,7 @@ var ProductViewComponent = (function () {
         this._service = _service;
         this.data = data;
         this.showProducts = false;
+        this.filterState = true;
         this.getProducts1 = function () {
             var _this = this;
             var selectProdArr = [];
@@ -947,10 +941,12 @@ var ProductViewComponent = (function () {
         var _this = this;
         this.data.cart.subscribe(function (cart) { return _this.cart = cart; });
         this.data.currentProduct.subscribe(function (product) { return _this.productInfo = product; });
-    };
-    ProductViewComponent.prototype.notify = function (value) {
-        console.log('notify', value);
-        // this.products = value;
+        this.data.prodList.subscribe(function (product) {
+            _this.products = product;
+        });
+        this.data.fState.subscribe(function (state) {
+            _this.filterState = state;
+        });
     };
     ProductViewComponent.prototype.ngOnChanges = function (changes) {
         if (changes) {
@@ -967,10 +963,11 @@ var ProductViewComponent = (function () {
                     if (changes.diameterProduct.currentValue !== undefined) {
                         this.diameterSelected = changes.diameterProduct.currentValue.diameterSelected;
                         this.selectedProduct = changes.diameterProduct.currentValue.selectedProduct;
+                        this.data.filterStateChanged(true);
                         this.products = this.getProducts1();
-                        if (this.diameterSelected !== undefined) {
-                            this.showProducts = true;
-                        }
+                        this.showProducts = true;
+                        console.log('DIAMETER CHANGED, change filter state');
+                        this.data.productListChanged(this.products);
                     }
                 }
             }
@@ -1102,7 +1099,7 @@ var _a;
 /***/ "../../../../../src/app/product-accessories-finder/accessories/accessories.component.html":
 /***/ (function(module, exports) {
 
-module.exports = "<div role=\"tabpanel\" class=\"tab-pane\" id=\"accessories\">\n  <h1>Product Accessories Finder</h1>\n  <!-- <app-spinner></app-spinner> -->\n  <ngx-loading [show]=\"loading\" [config]=\"{ backdropBorderRadius: '14px' }\"></ngx-loading>\n  <master-input [powers]=\"powers\" (hasChanged)=\"hasChanged($event)\"></master-input>\n  <div class=\"accessories-wrapper\">\n    <div class=\"category-list-wrapper\" [@fade]=\"categories.length\">\n      <div class=\"cat-column\" [ngClass]=\"{ 'show-cat': !showSubCat, 'hide-cat': showSubCat }\">\n      <div class=\"desktop-list btn-group-vertical show-cat\" >\n            <ng-template ngFor let-category [ngForOf]=\"categories\"> \n                <button class=\"list-group-item list-group-item-action cat-btn\" *ngIf=\"category !=='Select a Category'\" (click)=\"getCatName(category)\" ><span>{{category}}</span><i class=\"glyphicon glyphicon-chevron-right\"></i>\n                  </button>\n            </ng-template>\n        </div>\n        <div class=\"mobile-select show-cat\">\n          <select class=\"form-control mobile-select show-cat\" [ngModel]=\"selectedCat\" (ngModelChange)=\"change($event)\" name=\"category\" id=\"cat-column\" placeholder=\"Select a Category\">\n            <option [ngValue]=\"category\" class=\"cat-btn\" *ngFor='let category of categories'>{{category}}</option>\n          </select>\n        </div>\n      </div>\n      <div class=\"subcat-column\" [ngClass]=\"{ 'show-subcat': showSubCat, 'hide-cat': !showSubCat }\" >\n        <div class=\"desktop-list btn-group-vertical hide-cat\">\n          <button class=\"list-group-item list-group-item-action cat-btn\" *ngFor=\"let sub of subProducts\" (click)=\"getSubCatName(sub)\" ><span>{{sub}}</span><i class=\"glyphicon glyphicon-chevron-right\"></i></button>\n          <button class=\"list-group-item list-group-item-action subcat-btn back-to-cat\" (click)=\"backToCat()\">Back to Categories<i class=\"glyphicon glyphicon-chevron-left\"></i></button>\n        </div>\n        <div class=\"mobile-select hide-cat\">\n          <select class=\"form-control\" [ngModel]=\"selectedSubCat\" (ngModelChange)=\"changeSub($event)\" name=\"sub-category\" id=\"sub-cat-column\" placeholder=\"Select a Sub-Category\">\n            <option value=\"\">Select Sub-Category</option>\n            <option class=\"cat-btn\" *ngFor=\"let sub of subProducts\">{{sub}}</option>\n          </select>\n        </div>\n      </div>\n    </div>\n    <div class=\"product-list-accessories\">\n      <ol class=\"breadcrumb\" *ngIf=\"hasProducts() || showSubCat\">\n        <li class=\"breadcrumb-item bc-link\" (click)=\"backToCat()\" *ngIf=\"showSubCat\">Back to Categories</li>\n        <li class=\"breadcrumb-item\" *ngIf=\"category_name\">{{category_name}}</li>\n        <li class=\"breadcrumb-item\" *ngIf=\"subCategory_name\">{{subCategory_name}}</li>\n      </ol>\n      <ul class=\"items col col-md-12\"  [@productsIntro]=\"animationState\">\n        <li class=\"col col-xs-12 col-sm-12 col-md-4\" *ngFor=\"let product of products\">\n          <div class=\"item\">\n            <a href=\"\" class=\"product-name\">{{product.product_name}}</a>\n            <div class=\"image-and-info col col-xs-8 col-sm-8 col-md-12\">\n              <div class=\"product-thumb\">\n                <img src=\"../../assets/img-filler.png\" alt=\"{{product.product_name}}\">\n              </div>\n              <div class=\"info\">\n                <div class=\"sku\">SKU: {{product.sku}}</div>\n                <div class=\"price\">Price: {{product.price | currency:'USD':true:'1.2-2'}}</div>\n              </div>\n            </div>\n            <div class=\"product-col col col-xs-4 col-sm-4 col-md-12\">\n              <div class=\"btn-group\" role=\"group\" aria-label=\"Basic example\">\n                <button type=\"button\" class=\"btn btn-solid\" (click)=\"viewProduct(product)\">View Product</button>\n                <button type=\"button\" class=\"btn btn-solid add-to-cart\" (click)=\"addToCart($event)\">Add to Cart</button>\n              </div>\n            </div>\n          </div>\n        </li>\n      </ul>\n    </div>\n  </div>\n</div>\n\n"
+module.exports = "<div role=\"tabpanel\" class=\"tab-pane\" id=\"accessories\">\n  <h1>Product Accessories Finder</h1>\n  <!-- <app-spinner></app-spinner> -->\n  <ngx-loading [show]=\"loading\" [config]=\"{ backdropBorderRadius: '14px' }\"></ngx-loading>\n  <master-input [powers]=\"powers\" (hasChanged)=\"hasChanged($event)\"></master-input>\n  <div class=\"accessories-wrapper\">\n    <div class=\"category-list-wrapper\" [@fade]=\"categories.length\">\n      <div class=\"cat-column\" [ngClass]=\"{ 'show-cat': !showSubCat, 'hide-cat': showSubCat }\">\n      <div class=\"desktop-list btn-group-vertical show-cat\" >\n            <ng-template ngFor let-category [ngForOf]=\"categories\"> \n                <button class=\"list-group-item list-group-item-action cat-btn\" *ngIf=\"category !=='Select a Category'\" (click)=\"getCatName(category)\" ><span>{{category}}</span><i class=\"glyphicon glyphicon-chevron-right\"></i>\n                  </button>\n            </ng-template>\n        </div>\n        <div class=\"mobile-select show-cat\">\n          <select class=\"form-control mobile-select show-cat\" [ngModel]=\"selectedCat\" (ngModelChange)=\"change($event)\" name=\"category\" id=\"cat-column\" placeholder=\"Select a Category\">\n            <option [ngValue]=\"category\" class=\"cat-btn\" *ngFor='let category of categories'>{{category}}</option>\n          </select>\n        </div>\n      </div>\n      <div class=\"subcat-column\" [ngClass]=\"{ 'show-subcat': showSubCat, 'hide-cat': !showSubCat }\" >\n        <div class=\"desktop-list btn-group-vertical hide-cat\">\n          <button class=\"list-group-item list-group-item-action cat-btn\" *ngFor=\"let sub of subProducts\" (click)=\"getSubCatName(sub)\" ><span>{{sub}}</span><i class=\"glyphicon glyphicon-chevron-right\"></i></button>\n          <button class=\"list-group-item list-group-item-action subcat-btn back-to-cat\" (click)=\"backToCat()\">Back to Categories<i class=\"glyphicon glyphicon-chevron-left\"></i></button>\n        </div>\n        <div class=\"mobile-select hide-cat\">\n          <select class=\"form-control\" [ngModel]=\"selectedSubCat\" (ngModelChange)=\"changeSub($event)\" name=\"sub-category\" id=\"sub-cat-column\" placeholder=\"Select a Sub-Category\">\n            <option value=\"\">Select Sub-Category</option>\n            <option class=\"cat-btn\" *ngFor=\"let sub of subProducts\">{{sub}}</option>\n          </select>\n        </div>\n      </div>\n    </div>\n    <div class=\"category-banners\" *ngIf=\"catbanners\">\n      <img [src]=\"masterProductBanner\" alt=\"{{masterProductBanner}}\">\n    </div>\n    <div class=\"product-list-accessories\">\n      <ol class=\"breadcrumb\" *ngIf=\"hasProducts() || showSubCat\">\n        <li class=\"breadcrumb-item bc-link\" (click)=\"backToCat()\" *ngIf=\"showSubCat\">Back to Categories</li>\n        <li class=\"breadcrumb-item\" *ngIf=\"category_name\">{{category_name}}</li>\n        <li class=\"breadcrumb-item\" *ngIf=\"subCategory_name\">{{subCategory_name}}</li>\n      </ol>\n      <ul class=\"items col col-md-12\"  [@productsIntro]=\"animationState\">\n        <li class=\"col col-xs-12 col-sm-12 col-md-4\" *ngFor=\"let product of products\">\n          <div class=\"item\">\n            <a href=\"\" class=\"product-name\">{{product.product_name}}</a>\n            <div class=\"image-and-info col col-xs-8 col-sm-8 col-md-12\">\n              <div class=\"product-thumb\">\n                <img src=\"../../assets/img-filler.png\" alt=\"{{product.product_name}}\">\n              </div>\n              <div class=\"info\">\n                <div class=\"sku\">SKU: {{product.sku}}</div>\n                <div class=\"price\">Price: {{product.price | currency:'USD':true:'1.2-2'}}</div>\n              </div>\n            </div>\n            <div class=\"product-col col col-xs-4 col-sm-4 col-md-12\">\n              <div class=\"btn-group\" role=\"group\" aria-label=\"Basic example\">\n                <button type=\"button\" class=\"btn btn-solid\" (click)=\"viewProduct(product)\">View Product</button>\n                <button type=\"button\" class=\"btn btn-solid add-to-cart\" (click)=\"addToCart($event)\">Add to Cart</button>\n              </div>\n            </div>\n          </div>\n        </li>\n      </ul>\n    </div>\n  </div>\n</div>\n\n"
 
 /***/ }),
 
@@ -1114,7 +1111,7 @@ exports = module.exports = __webpack_require__("../../../../css-loader/lib/css-b
 
 
 // module
-exports.push([module.i, "/* COLOR VARIABLES */\nul.items {\n  margin: 5px 0;\n  padding: 0;\n  border-top: 1px solid #ffffff;\n  display: inline-block;\n  width: 100%; }\n  ul.items li {\n    display: inline-block;\n    overflow: hidden;\n    vertical-align: bottom;\n    float: none;\n    padding: 10px;\n    font-size: 1em;\n    border-bottom: 1px solid #ffffff; }\n    ul.items li .item {\n      position: relative;\n      box-sizing: border-box;\n      padding: 0 10px;\n      overflow: hidden;\n      text-align: center;\n      padding-bottom: 5%; }\n      @media only screen and (max-width: 992px) {\n        ul.items li .item {\n          text-align: left;\n          padding: 0; } }\n      ul.items li .item .col {\n        padding: 0; }\n      ul.items li .item .image-and-info {\n        display: inline-block; }\n      ul.items li .item .product-thumb {\n        display: block;\n        max-width: 100px;\n        margin: 0 auto; }\n        @media only screen and (max-width: 992px) {\n          ul.items li .item .product-thumb {\n            margin: 0;\n            display: inline-block;\n            vertical-align: top; } }\n      @media only screen and (max-width: 992px) {\n        ul.items li .item .info {\n          display: inline-block;\n          vertical-align: top;\n          padding-left: 10px; } }\n      ul.items li .item a.product-name {\n        margin: 0 0 10px 0;\n        padding: 0;\n        display: block;\n        font-size: 1em;\n        text-decoration: underline; }\n      ul.items li .item .options span {\n        padding: 1px 3px;\n        margin: 0 2px;\n        background: #78777a;\n        border-radius: 4px;\n        display: inline-block;\n        color: #ffffff;\n        font-family: myriadpro_light;\n        font-size: 12px; }\n      ul.items li .item .qty {\n        display: block; }\n        ul.items li .item .qty input {\n          width: 20px;\n          margin: 0 0 0 10px;\n          line-height: 0.8em;\n          border: none;\n          font-size: 0.6em;\n          text-align: center;\n          border-radius: 5px; }\n      ul.items li .item .product-col {\n        margin-top: 5px; }\n      ul.items li .item .btn-group {\n        display: block;\n        width: 100%;\n        position: relative;\n        margin-top: 0; }\n        ul.items li .item .btn-group .btn {\n          font-size: 1em;\n          font-size: 0.8vw; }\n          @media only screen and (max-width: 992px) {\n            ul.items li .item .btn-group .btn {\n              font-size: 1em;\n              font-size: 2vw;\n              width: 100%;\n              padding: 10px 12px; } }\n          @media only screen and (max-width: 500px) {\n            ul.items li .item .btn-group .btn {\n              font-size: 3vw; } }\n          ul.items li .item .btn-group .btn:first-child {\n            border-right: 1px solid #ffffff;\n            width: 50%; }\n            @media only screen and (max-width: 992px) {\n              ul.items li .item .btn-group .btn:first-child {\n                width: 100%;\n                border: 1px solid #4eb4d0;\n                border-radius: 4px; } }\n          ul.items li .item .btn-group .btn:last-child {\n            border-left: 1px solid rgba(255, 255, 255, 0.4);\n            width: 50%; }\n            @media only screen and (max-width: 992px) {\n              ul.items li .item .btn-group .btn:last-child {\n                width: 100%;\n                border: 1px solid #4eb4d0;\n                border-radius: 4px;\n                margin-top: 5px; } }\n  @media (max-width: 750px) {\n    ul.items {\n      text-align: center; }\n      ul.items li .item .product-thumb {\n        max-width: 100%;\n        float: none; } }\n\n.accessories-wrapper {\n  position: relative;\n  font-size: 0; }\n  .accessories-wrapper ol {\n    font-size: 16px; }\n\n.category-list-wrapper {\n  position: relative;\n  display: inline-block;\n  font-size: 14px;\n  width: 25%;\n  overflow: hidden;\n  min-height: 300px; }\n  .category-list-wrapper .mobile-select {\n    display: none;\n    width: 100%; }\n    .category-list-wrapper .mobile-select select {\n      width: 100%;\n      padding: 5px;\n      margin: 10px 0; }\n      .category-list-wrapper .mobile-select select.focused {\n        border-color: #66afe9;\n        box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(102, 175, 233, 0.6); }\n  @media only screen and (max-width: 992px) {\n    .category-list-wrapper {\n      display: block;\n      width: 100%;\n      min-height: 60px; }\n      .category-list-wrapper .desktop-list {\n        display: none; }\n      .category-list-wrapper .mobile-select {\n        display: block;\n        width: 100%; }\n        .category-list-wrapper .mobile-select select {\n          font-size: 16px; } }\n  .category-list-wrapper button.list-group-item:focus {\n    outline: none; }\n  .category-list-wrapper .cat-column {\n    position: relative;\n    width: 100%;\n    transition: all 300ms; }\n    @media only screen and (max-width: 992px) {\n      .category-list-wrapper .cat-column {\n        display: inline-block;\n        vertical-align: top; } }\n    .category-list-wrapper .cat-column.show-cat {\n      left: 0;\n      opacity: 1; }\n    .category-list-wrapper .cat-column.hide-cat {\n      left: 100%;\n      opacity: 0; }\n  .category-list-wrapper .subcat-column {\n    position: absolute;\n    top: 0;\n    left: 100%;\n    z-index: 1;\n    width: 100%;\n    transition: all 300ms; }\n    @media only screen and (max-width: 992px) {\n      .category-list-wrapper .subcat-column {\n        display: inline-block;\n        vertical-align: top; } }\n    .category-list-wrapper .subcat-column.show-subcat {\n      left: 0;\n      opacity: 1; }\n    .category-list-wrapper .subcat-column.hide-subcat {\n      left: 100%;\n      opacity: 0; }\n  .category-list-wrapper .btn-group-vertical {\n    width: 100%; }\n    .category-list-wrapper .btn-group-vertical .list-group-item i {\n      float: right; }\n    .category-list-wrapper .btn-group-vertical .list-group-item.back-to-cat {\n      background-color: #19468d;\n      color: #ffffff; }\n      .category-list-wrapper .btn-group-vertical .list-group-item.back-to-cat i {\n        color: #ffffff; }\n\n.product-list-accessories {\n  font-size: 14px;\n  position: relative;\n  display: inline-block;\n  vertical-align: top;\n  left: 3%;\n  width: 72%; }\n  @media only screen and (max-width: 992px) {\n    .product-list-accessories {\n      display: block;\n      width: 100%;\n      min-height: auto;\n      left: 0; } }\n  .product-list-accessories .loading {\n    position: absolute;\n    width: 100%;\n    top: 50%;\n    display: none; }\n  .product-list-accessories ol.breadcrumb {\n    position: relative;\n    margin-bottom: 0; }\n    .product-list-accessories ol.breadcrumb li a {\n      padding: 5px 0; }\n    .product-list-accessories ol.breadcrumb li.bc-link {\n      color: #4eb4d0;\n      cursor: pointer; }\n      @media only screen and (max-width: 500px) {\n        .product-list-accessories ol.breadcrumb li.bc-link {\n          display: block;\n          background-color: #4eb4d0;\n          color: white;\n          padding: 10px;\n          border-radius: 4px;\n          cursor: pointer;\n          text-align: center; } }\n  .product-list-accessories .bc-back-button {\n    position: absolute;\n    top: 50%;\n    right: 5px;\n    -webkit-transform: translateY(-50%);\n            transform: translateY(-50%);\n    color: #78777a;\n    cursor: pointer; }\n", ""]);
+exports.push([module.i, "/* COLOR VARIABLES */\nul.items {\n  margin: 5px 0;\n  padding: 0;\n  border-top: 1px solid #ffffff;\n  display: inline-block;\n  width: 100%; }\n  ul.items li {\n    display: inline-block;\n    overflow: hidden;\n    vertical-align: bottom;\n    float: none;\n    padding: 10px;\n    font-size: 1em;\n    border-bottom: 1px solid #ffffff; }\n    ul.items li .item {\n      position: relative;\n      box-sizing: border-box;\n      padding: 0 10px;\n      overflow: hidden;\n      text-align: center;\n      padding-bottom: 5%; }\n      @media only screen and (max-width: 992px) {\n        ul.items li .item {\n          text-align: left;\n          padding: 0; } }\n      ul.items li .item .col {\n        padding: 0; }\n      ul.items li .item .image-and-info {\n        display: inline-block; }\n      ul.items li .item .product-thumb {\n        display: block;\n        max-width: 100px;\n        margin: 0 auto; }\n        @media only screen and (max-width: 992px) {\n          ul.items li .item .product-thumb {\n            margin: 0;\n            display: inline-block;\n            vertical-align: top; } }\n      @media only screen and (max-width: 992px) {\n        ul.items li .item .info {\n          display: inline-block;\n          vertical-align: top;\n          padding-left: 10px; } }\n      ul.items li .item a.product-name {\n        margin: 0 0 10px 0;\n        padding: 0;\n        display: block;\n        font-size: 1em;\n        text-decoration: underline; }\n      ul.items li .item .options span {\n        padding: 1px 3px;\n        margin: 0 2px;\n        background: #78777a;\n        border-radius: 4px;\n        display: inline-block;\n        color: #ffffff;\n        font-family: myriadpro_light;\n        font-size: 12px; }\n      ul.items li .item .qty {\n        display: block; }\n        ul.items li .item .qty input {\n          width: 20px;\n          margin: 0 0 0 10px;\n          line-height: 0.8em;\n          border: none;\n          font-size: 0.6em;\n          text-align: center;\n          border-radius: 5px; }\n      ul.items li .item .product-col {\n        margin-top: 5px; }\n      ul.items li .item .btn-group {\n        display: block;\n        width: 100%;\n        position: relative;\n        margin-top: 0; }\n        ul.items li .item .btn-group .btn {\n          font-size: 1em;\n          font-size: 0.8vw; }\n          @media only screen and (max-width: 992px) {\n            ul.items li .item .btn-group .btn {\n              font-size: 1em;\n              font-size: 2vw;\n              width: 100%;\n              padding: 10px 12px; } }\n          @media only screen and (max-width: 500px) {\n            ul.items li .item .btn-group .btn {\n              font-size: 3vw; } }\n          ul.items li .item .btn-group .btn:first-child {\n            border-right: 1px solid #ffffff;\n            width: 50%; }\n            @media only screen and (max-width: 992px) {\n              ul.items li .item .btn-group .btn:first-child {\n                width: 100%;\n                border: 1px solid #4eb4d0;\n                border-radius: 4px; } }\n          ul.items li .item .btn-group .btn:last-child {\n            border-left: 1px solid rgba(255, 255, 255, 0.4);\n            width: 50%; }\n            @media only screen and (max-width: 992px) {\n              ul.items li .item .btn-group .btn:last-child {\n                width: 100%;\n                border: 1px solid #4eb4d0;\n                border-radius: 4px;\n                margin-top: 5px; } }\n  @media (max-width: 750px) {\n    ul.items {\n      text-align: center; }\n      ul.items li .item .product-thumb {\n        max-width: 100%;\n        float: none; } }\n\n.accessories-wrapper {\n  position: relative;\n  font-size: 0; }\n  .accessories-wrapper ol {\n    font-size: 16px; }\n\n.category-list-wrapper {\n  position: relative;\n  display: inline-block;\n  font-size: 14px;\n  width: 25%;\n  overflow: hidden;\n  min-height: 300px; }\n  .category-list-wrapper .mobile-select {\n    display: none;\n    width: 100%; }\n    .category-list-wrapper .mobile-select select {\n      width: 100%;\n      padding: 5px;\n      margin: 10px 0; }\n      .category-list-wrapper .mobile-select select.focused {\n        border-color: #66afe9;\n        box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(102, 175, 233, 0.6); }\n  @media only screen and (max-width: 992px) {\n    .category-list-wrapper {\n      display: block;\n      width: 100%;\n      min-height: 60px; }\n      .category-list-wrapper .desktop-list {\n        display: none; }\n      .category-list-wrapper .mobile-select {\n        display: block;\n        width: 100%; }\n        .category-list-wrapper .mobile-select select {\n          font-size: 16px; } }\n  .category-list-wrapper button.list-group-item:focus {\n    outline: none; }\n  .category-list-wrapper .cat-column {\n    position: relative;\n    width: 100%;\n    transition: all 300ms; }\n    @media only screen and (max-width: 992px) {\n      .category-list-wrapper .cat-column {\n        display: inline-block;\n        vertical-align: top; } }\n    .category-list-wrapper .cat-column.show-cat {\n      left: 0;\n      opacity: 1; }\n    .category-list-wrapper .cat-column.hide-cat {\n      left: 100%;\n      opacity: 0; }\n  .category-list-wrapper .subcat-column {\n    position: absolute;\n    top: 0;\n    left: 100%;\n    z-index: 1;\n    width: 100%;\n    transition: all 300ms; }\n    @media only screen and (max-width: 992px) {\n      .category-list-wrapper .subcat-column {\n        display: inline-block;\n        vertical-align: top; } }\n    .category-list-wrapper .subcat-column.show-subcat {\n      left: 0;\n      opacity: 1; }\n    .category-list-wrapper .subcat-column.hide-subcat {\n      left: 100%;\n      opacity: 0; }\n  .category-list-wrapper .btn-group-vertical {\n    width: 100%; }\n    .category-list-wrapper .btn-group-vertical .list-group-item i {\n      float: right; }\n    .category-list-wrapper .btn-group-vertical .list-group-item.back-to-cat {\n      background-color: #19468d;\n      color: #ffffff; }\n      .category-list-wrapper .btn-group-vertical .list-group-item.back-to-cat i {\n        color: #ffffff; }\n\n.product-list-accessories {\n  font-size: 14px;\n  position: relative;\n  display: inline-block;\n  vertical-align: top;\n  left: 3%;\n  width: 72%; }\n  @media only screen and (max-width: 992px) {\n    .product-list-accessories {\n      display: block;\n      width: 100%;\n      min-height: auto;\n      left: 0; } }\n  .product-list-accessories .loading {\n    position: absolute;\n    width: 100%;\n    top: 50%;\n    display: none; }\n  .product-list-accessories ol.breadcrumb {\n    position: relative;\n    margin-bottom: 0; }\n    .product-list-accessories ol.breadcrumb li a {\n      padding: 5px 0; }\n    .product-list-accessories ol.breadcrumb li.bc-link {\n      color: #4eb4d0;\n      cursor: pointer; }\n      @media only screen and (max-width: 500px) {\n        .product-list-accessories ol.breadcrumb li.bc-link {\n          display: block;\n          background-color: #4eb4d0;\n          color: white;\n          padding: 10px;\n          border-radius: 4px;\n          cursor: pointer;\n          text-align: center; } }\n  .product-list-accessories .bc-back-button {\n    position: absolute;\n    top: 50%;\n    right: 5px;\n    -webkit-transform: translateY(-50%);\n            transform: translateY(-50%);\n    color: #78777a;\n    cursor: pointer; }\n\n.category-banners {\n  font-size: 14px;\n  position: relative;\n  display: inline-block;\n  vertical-align: top;\n  left: 3%;\n  width: 72%; }\n  @media only screen and (max-width: 992px) {\n    .category-banners {\n      display: block;\n      width: 100%;\n      min-height: auto;\n      left: 0; } }\n  .category-banners img {\n    width: 100%;\n    height: auto; }\n", ""]);
 
 // exports
 
@@ -1160,6 +1157,7 @@ var AccessoriesComponent = (function () {
         this.category_name = '';
         this.subCategory_name = '';
         this.showSubCat = false;
+        this.catbanners = false;
         this.animationState = 'inactive';
         this.loading = false;
         this.getProductsList();
@@ -1190,6 +1188,7 @@ var AccessoriesComponent = (function () {
         this.category_name = '';
         this.subCategory_name = '';
         this.showSubCat = false;
+        this.catbanners = true;
     };
     AccessoriesComponent.prototype.viewProduct = function (value) {
         this.data.changeProduct(value);
@@ -1201,6 +1200,7 @@ var AccessoriesComponent = (function () {
         this.getSubCatName(value);
     };
     AccessoriesComponent.prototype.listProducts = function (cat) {
+        this.catbanners = false;
         this.category_name = cat;
         this.products = [];
         this.subProducts = [];
@@ -1327,7 +1327,6 @@ var AccessoriesComponent = (function () {
     };
     AccessoriesComponent.prototype.getProductsList = function () {
         var _this = this;
-        // this.spinnerService.show();
         this.loading = true;
         this._service.getCatgegories()
             .subscribe(function (response) {
@@ -1336,7 +1335,7 @@ var AccessoriesComponent = (function () {
             _this.masterProductList = response;
             _this.getCatgegories(_this.masterProduct);
             _this.loading = false;
-            // this.spinnerService.hide();
+            _this.catbanners = true;
         });
     };
     AccessoriesComponent.prototype.getCatgegories = function (masterProduct) {
@@ -1346,6 +1345,9 @@ var AccessoriesComponent = (function () {
         if (masterProduct === undefined) {
             masterProduct = masterList[0].id;
         }
+        this.masterProductArray = __WEBPACK_IMPORTED_MODULE_4_underscore__["findWhere"](this.masterProductList, { id: masterProduct });
+        this.masterProductBanner = '../../' + this.masterProductArray.images[0].banner;
+        console.log('Master product2', __WEBPACK_IMPORTED_MODULE_4_underscore__["findWhere"](this.masterProductList, { id: masterProduct }));
         var ml = this.MasterAccessories(response, masterProduct);
         var catList = (function (a) {
             for (var i = ml.length; i--;) {
@@ -1606,7 +1608,7 @@ __decorate([
 MasterInputComponent = __decorate([
     Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["o" /* Component */])({
         selector: 'master-input',
-        template: "\n    <form>\n      <div class=\"form-group\">\n        <label for=\"Master-Products\">Select Master Product</label>\n        <select [ngModel]=\"selectedValue\" name=\"pow.name\" (ngModelChange)=\"change($event)\" class=\"form-control\" id=\"Master-Products\">\n          <option *ngFor=\"let pow of powers\" [ngValue]=\"pow.id\">{{pow.name}}</option>\n        </select>\n      </div>\n    </form>\n  ",
+        template: "\n    <form>\n      <div class=\"form-group\">\n        <label for=\"Master-Products\">Select Product</label>\n        <select [ngModel]=\"selectedValue\" name=\"pow.name\" (ngModelChange)=\"change($event)\" class=\"form-control\" id=\"Master-Products\">\n          <option *ngFor=\"let pow of powers\" [ngValue]=\"pow.id\">{{pow.name}}</option>\n        </select>\n      </div>\n    </form>\n  ",
         styles: [__webpack_require__("../../../../../src/app/product-accessories-finder/master-input/master-input.component.scss")]
     }),
     __metadata("design:paramtypes", [typeof (_b = typeof __WEBPACK_IMPORTED_MODULE_1__services_products_products_service__["a" /* ProductsService */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_1__services_products_products_service__["a" /* ProductsService */]) === "function" && _b || Object])
@@ -1705,6 +1707,10 @@ var DataService = (function () {
         this.currentProduct = this.productSource.asObservable();
         this.showFilter = new __WEBPACK_IMPORTED_MODULE_1_rxjs_BehaviorSubject__["BehaviorSubject"]([]);
         this.showfilter = this.showFilter.asObservable();
+        this.productList = new __WEBPACK_IMPORTED_MODULE_1_rxjs_BehaviorSubject__["BehaviorSubject"]([]);
+        this.prodList = this.productList.asObservable();
+        this.filterState = new __WEBPACK_IMPORTED_MODULE_1_rxjs_BehaviorSubject__["BehaviorSubject"]([]);
+        this.fState = this.filterState.asObservable();
     }
     DataService.prototype.changCart = function (cart) {
         this.shoppingCart.next(cart);
@@ -1714,6 +1720,13 @@ var DataService = (function () {
     };
     DataService.prototype.hideFilter = function (value) {
         this.showFilter.next(value);
+    };
+    DataService.prototype.productListChanged = function (list) {
+        console.log('service_change-productList: ', list);
+        this.productList.next(list);
+    };
+    DataService.prototype.filterStateChanged = function (list) {
+        this.filterState.next(list);
     };
     return DataService;
 }());

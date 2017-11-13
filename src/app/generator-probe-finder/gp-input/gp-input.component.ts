@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter, SimpleChanges, OnChanges } from '@angular/core';
 import { DataService } from './../../services/data/data.service';
 
 @Component({
@@ -16,7 +16,7 @@ import { DataService } from './../../services/data/data.service';
   `,
   styleUrls: ['./gp-input.component.scss']
 })
-export class GpInputComponent implements OnInit {
+export class GpInputComponent implements OnInit, OnChanges {
   categories: any[];
   masterName: string;
   gpProducts: any[];

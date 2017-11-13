@@ -8,214 +8,215 @@ import * as _ from 'underscore';
   templateUrl: './extra-filters.component.html',
   styleUrls: ['./extra-filters.component.scss']
 })
+
 export class ExtraFiltersComponent implements OnInit {
   valueSelected: any;
   selecterArray: string[] = ['window-size', 'type', 'length', 'none'];
   windowList: string[];
   typeList: string[];
-  lengthList: string[];
+  lengthList: any[];
   filteredList: any[];
-  showWindow: boolean = false;
-  showType: boolean = false;
-  showLength: boolean = false;
+  windowState: boolean = false;
+  typeState: boolean = false;
+  lengthState: boolean = false;
+  toggleFilter: boolean = false;
+  filterState: boolean;
   isChecked = false;
   showFilters = false;
+  filterhide: boolean;
   showFilter: boolean;
+  lengthSelected: string;
+  oldProducts: any[];
+  products: any[];
   @Input() diameterProduct;
-  @Input() products;
   @Output() newList: EventEmitter<any> = new EventEmitter();
 
   constructor(private _service: GprobeUiService, private data: DataService) {
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes) {
-      if (changes['products']) {
-        console.log('products changed', changes.products);
-        this.products = changes.products.currentValue;
-        this.removeFilters();
-        this.getCurrentGpList();
+    this.data.prodList.subscribe(product => {
+      if (this.filterState) {
+        this.filteredList = product;
+        this.startFiltering(this.filteredList);
+        if (!this.filterhide) {
+          this.closeFilter();
+          this.removeFilters();
+        }
       }
-    }
+    });
+    this.data.fState.subscribe(state => {
+      this.filterState = state;
+    });
   }
 
   ngOnInit() {
     this.data.showfilter.subscribe(value => this.showFilter = value);
   }
 
-  toggleFilters(event) {
-    this.showFilters = !this.showFilters;
+  startFiltering(list) {
+    console.log('start filtering', list);
+    this.selecterArray = [];
+    let lengthList = [];
+    let windowList = [];
+    let typeList = [];
+    list.forEach(product => {
+      if (product.length) {
+        lengthList.push(product.length);
+      }
+      if (product.window_size) {
+        windowList.push(product.window_size);
+      }
+      if (product.type) {
+        typeList.push(product.type);
+      }
+    });
+    lengthList = _.uniq(lengthList);
+    windowList = _.uniq(windowList);
+    typeList = _.uniq(typeList);
+    console.log('lengthList:', lengthList);
+    console.log('windowList:', windowList);
+    console.log('typeList:', typeList);
+    if (this.allowFilter(lengthList, list)) {
+      this.selecterArray.push('length');
+    }
+    if (this.allowFilter(windowList, list)) {
+      this.selecterArray.push('window-size');
+    }
+    if (this.allowFilter(typeList, list)) {
+      this.selecterArray.push('type');
+    }
+    if (!this.allowFilter(lengthList, list) && !this.allowFilter(windowList, list) && !this.allowFilter(typeList, list)) {
+      console.log('no filters needed');
+      this.selecterArray = [];
+      this.showFilters = false;
+      this.toggleFilter = false;
+    } else {
+      this.showFilters = true;
+      this.toggleFilter = true;
+      this.selecterArray.push('none');
+    }
+  }
+
+  allowFilter(filterlist, list) {
+    if (filterlist.length > 1) {
+      if ((list.length - filterlist.length) > 2) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+
+  toggleFilters() {
+    this.toggleFilter = !this.toggleFilter;
+  }
+
+  onClick(value) {
+    if (this.filterhide) {
+      this.hideFilters(value);
+    } else {
+      this.closeFilter();
+    }
+    this.hideFilters(value);
+  }
+
+  closeFilter() {
+    this.hideFilters('none');
+  }
+
+  windowClick(value) {
+    const list = [];
+    this.filteredList.forEach(product => {
+      if (product.window_size === value) {
+        list.push(product);
+      }
+    });
+    this.data.productListChanged(list);
+  }
+
+  typeClick(value) {
+    const list = [];
+    this.filteredList.forEach(product => {
+      if (product.type === value) {
+        list.push(product);
+      }
+    });
+    this.data.productListChanged(list);
+  }
+
+  lengthClick(value) {
+    const list = [];
+    this.filteredList.forEach(product => {
+      if (product.length === value) {
+        list.push(product);
+      }
+    });
+    this.data.productListChanged(list);
   }
 
   removeFilters() {
     this.isChecked = !this.isChecked;
   }
 
-  showWindowFn() {
-    if (this.windowList.length > 1) {
-      const bl = this.showWindow ? true : false;
-      return bl;
-    }
-  }
-  showTypeFn() {
-    if (this.typeList.length > 1) {
-      const bl = this.showType ? true : false;
-      return bl;
-    }
-  }
-  showLengthFn() {
-    if (this.lengthList.length > 1) {
-      const bl = this.showLength ? true : false;
-      return bl;
-    }
-  }
-
-  getCurrentGpList() {
-    const list = this.products;
-    let lengthList: any = [];
-    console.log('lengthList', this.products);
-    lengthList = (function (a) {
-      list.forEach(product => {
-        console.log('hre', product);
-          a.push(product.length);
-      });
-    });
-    //   return a;
-    // })([]);
-    // let typeList = [];
-    // typeList = (function (a) {
-    // list.forEach(product => {
-    //     a.push(product.type);
-    // });
-    //   return a;
-    // })([]);
-    // let windowList = [];
-    // windowList = (function (a) {
-    // list.forEach(product => {
-    //     a.push(product.window_size);
-    // });
-    //   return a;
-    // })([]);
-    // this.isChecked = false;
-    // this.selecterArray = [];
-    // if (this.windowList.length > 1) {this.selecterArray.push('window-size'); }
-    // if (this.typeList.length > 1) {this.selecterArray.push('type'); }
-    // if (this.lengthList.length > 1) {this.selecterArray.push('length'); }
-    // this.selecterArray.push('none');
-  }
-
-  onClick(event) {
-    const value = event.target.value;
-    const checked = event.target.checked;
-    const list = this.products;
-    this.newList.emit(list);
-    switch (value) {
+  hideFilters(filter) {
+    this.filterhide = false;
+    this.data.filterStateChanged(false);
+    const filteredListCat = [];
+    const filteredList = [];
+    const list = this.filteredList;
+    switch (filter) {
       case 'window-size':
-          this.showWindow = true;
-          this.showType = false;
-          this.showLength = false;
-          break;
+        list.forEach(product => {
+          if (product.window_size) {
+            filteredListCat.push(product.window_size);
+            filteredList.push(product);
+          }
+        });
+        this.windowList = _.uniq(filteredListCat);
+        this.filteredList = filteredList;
+        this.windowState = true;
+        this.typeState = false;
+        this.lengthState = false;
+      break;
       case 'type':
-          this.showWindow = false;
-          this.showType = true;
-          this.showLength = false;
-          break;
+        list.forEach(product => {
+          if (product.type) {
+            filteredListCat.push(product.type);
+            filteredList.push(product);
+          }
+        });
+        this.typeList = _.uniq(filteredListCat);
+        this.filteredList = filteredList;
+        this.windowState = false;
+        this.typeState = true;
+        this.lengthState = false;
+      break;
       case 'length':
-          this.showWindow = false;
-          this.showType = false;
-          this.showLength = true;
-          break;
+        list.forEach(product => {
+          if (product.length) {
+            filteredListCat.push(product.length);
+            filteredList.push(product);
+          }
+        });
+        this.lengthList = _.uniq(filteredListCat);
+        this.filteredList = filteredList;
+        this.windowState = false;
+        this.typeState = false;
+        this.lengthState = true;
+      break;
       case 'none':
-          this.showWindow = false;
-          this.showType = false;
-          this.showLength = false;
-          this.newList.emit(this.products);
-          break;
+        this.data.productListChanged(this.filteredList);
+        this.windowState = false;
+        this.typeState = false;
+        this.lengthState = false;
+        this.filterhide = true;
+      break;
       default:
+        this.windowState = false;
+        this.typeState = false;
+        this.lengthState = false;
+      break;
     }
+
   }
 
-  closeFilter() {
-    this.showWindow = false;
-    this.showType = false;
-    this.showLength = false;
-    this.newList.emit(this.products);
-    this.removeFilters();
-  }
 
-  windowClick(value) {
-    if (value.target.checked) {
-      const filterValue = value.target.value;
-      console.log('window click', filterValue);
-      this.filterByWindow(filterValue);
-    }else {
-      this.filterByWindow('cancleFilter');
-    }
-  }
-
-  typeClick(value) {
-    if (value.target.checked) {
-      const filterValue = value.target.value;
-      this.filterByType(filterValue);
-    }else {
-      this.filterByType('cancleFilter');
-    }
-  }
-
-  lengthClick(value) {
-    const filterValue = value;
-    this.filterByLength(filterValue);
-  }
-
-  filterByWindow(filteredValue) {
-    if (filteredValue === 'cancleFilter') {
-      this.newList.emit(this.products);
-    }else {
-      const list = this.products;
-      console.log('window click', list);
-      this.filteredList = (function (a) {
-        list.forEach(product => {
-          if (product.window_size === filteredValue) {
-            a.push(product);
-          }
-        });
-        return a;
-      })([]);
-      this.newList.emit(this.filteredList);
-    }
-  }
-
-  filterByType(filteredValue) {
-    if (filteredValue === 'cancleFilter') {
-      this.newList.emit(this.products);
-    } else {
-      const list = this.products;
-      this.filteredList = (function (a) {
-        list.forEach(product => {
-          if (product.type === filteredValue) {
-            a.push(product);
-          }
-        });
-        return a;
-      })([]);
-      this.newList.emit(this.filteredList);
-    }
-  }
-
-  filterByLength(filteredValue) {
-    if (filteredValue === 'cancleFilter') {
-      this.newList.emit(this.products);
-    } else {
-      const list = this.products;
-      this.filteredList = (function (a) {
-        list.forEach(product => {
-          if (product.length === filteredValue) {
-            a.push(product);
-          }
-        });
-        return a;
-      })([]);
-      this.newList.emit(this.filteredList);
-    }
-  }
 }

@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, Output, EventEmitter, SimpleChanges } from '@angular/core';
+import { Component, Input, OnInit, Output, EventEmitter, SimpleChanges, OnChanges } from '@angular/core';
 import { GprobeUiService } from '../../services/gprobe-ui/gprobe-ui.service';
 import { DataService } from '../../services/data/data.service';
 import * as _ from 'underscore';
@@ -19,7 +19,7 @@ import * as _ from 'underscore';
   `,
   styleUrls: ['./gp-input-diameter.component.scss']
 })
-export class GpInputDiameterComponent implements OnInit {
+export class GpInputDiameterComponent implements OnInit, OnChanges {
   @Output() hasChangedagain: EventEmitter<any> = new EventEmitter();
   selectedDiameter: string;
   diameterArray: any[] = [];
@@ -42,7 +42,6 @@ export class GpInputDiameterComponent implements OnInit {
         this.selectedValue = changes.selectedValue.currentValue;
         this.diameterArray = ['Select a Diameter'];
         this.selectedDiameter = this.diameterArray[0];
-        console.log('selectedValue: ', this.selectedDiameter);
         if (this.selectedValue) {
           this.diameterArray = [];
           this.testing.forEach(item => {
@@ -54,11 +53,11 @@ export class GpInputDiameterComponent implements OnInit {
           });
           this.diameterArray.pop();
           this.diameterArray = _.uniq(this.diameterArray);
-          console.log('selectedValue@: ', this.selectedDiameter);
           this.show = true;
         }
       }
       if (changes['testing']) {
+        this.testing = [];
         this.testing = changes.testing.currentValue;
       }
     }

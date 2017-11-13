@@ -1,4 +1,4 @@
-<extraFilters [products]="products" #extraFilters (newList)="productView.notify($event)"></extraFilters>
+<extraFilters #extraFilters (newList)="productView.notify(value)"></extraFilters>
 <ul class="items col col-md-12"  *ngIf="showProducts">
     <li class="col col-xs-12 col-sm-12 col-md-4" *ngFor="let product of products">
         <div class="item">

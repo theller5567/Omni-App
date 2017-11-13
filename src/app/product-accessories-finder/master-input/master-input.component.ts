@@ -1,5 +1,5 @@
 import { Response } from '@angular/http';
-import { Component, OnInit, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter, SimpleChanges, OnChanges } from '@angular/core';
 import { ProductsService } from '../../services/products/products.service';
 import { IProduct } from '../../product';
 
@@ -8,7 +8,7 @@ import { IProduct } from '../../product';
   template: `
     <form>
       <div class="form-group">
-        <label for="Master-Products">Select Master Product</label>
+        <label for="Master-Products">Select Product</label>
         <select [ngModel]="selectedValue" name="pow.name" (ngModelChange)="change($event)" class="form-control" id="Master-Products">
           <option *ngFor="let pow of powers" [ngValue]="pow.id">{{pow.name}}</option>
         </select>
@@ -18,7 +18,7 @@ import { IProduct } from '../../product';
   styleUrls: ['./master-input.component.scss']
 })
 
-export class MasterInputComponent implements OnInit {
+export class MasterInputComponent implements OnInit, OnChanges {
   @Output() hasChanged: EventEmitter<number> = new EventEmitter();
   @Input() powers: any[];
   selectedValue: any;

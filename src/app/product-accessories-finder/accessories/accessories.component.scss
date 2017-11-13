@@ -305,3 +305,24 @@ ul.items {
   }
 }
 
+.category-banners {
+  font-size: 14px;
+  position: relative;
+  display: inline-block;
+  vertical-align: top;
+  left: 3%;
+  width: 72%;
+  @media only screen and(max-width:992px) {
+    display: block;
+    width: 100%;
+    min-height: auto;
+    left: 0;
+  }
+
+  img {
+    width: 100%;
+    height: auto;
+  }
+}
+
+

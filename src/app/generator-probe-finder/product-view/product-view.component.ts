@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, SimpleChanges } from '@angular/core';
+import { Component, OnInit, Input, SimpleChanges, OnChanges } from '@angular/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { trigger, state, transition, style, animate } from '@angular/animations';
 import { GprobeUiService } from '../../services/gprobe-ui/gprobe-ui.service';
@@ -17,9 +17,10 @@ import { DataService } from './../../services/data/data.service';
     ])
   ]
 })
-export class ProductViewComponent implements OnInit {
+export class ProductViewComponent implements OnInit, OnChanges {
   products: any[];
   showProducts: boolean = false;
+  filterState: boolean = true;
   productInfo: any[];
   cart: any[];
   productsByFilteredDiameter: any;
@@ -31,14 +32,16 @@ export class ProductViewComponent implements OnInit {
   diameterSelected: string;
 
   constructor(private _service: GprobeUiService, private data: DataService) { }
+
   ngOnInit() {
     this.data.cart.subscribe(cart => this.cart = cart);
     this.data.currentProduct.subscribe(product => this.productInfo = product);
-  }
-
-  notify(value) {
-    console.log('notify', value);
-    // this.products = value;
+    this.data.prodList.subscribe(product => {
+        this.products = product;
+    });
+    this.data.fState.subscribe(state => {
+      this.filterState = state;
+    });
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -56,10 +59,11 @@ export class ProductViewComponent implements OnInit {
           if (changes.diameterProduct.currentValue !== undefined) {
             this.diameterSelected = changes.diameterProduct.currentValue.diameterSelected;
             this.selectedProduct = changes.diameterProduct.currentValue.selectedProduct;
+            this.data.filterStateChanged(true);
             this.products = this.getProducts1();
-            if (this.diameterSelected !== undefined) {
-              this.showProducts = true;
-            }
+            this.showProducts = true;
+            console.log('DIAMETER CHANGED, change filter state');
+            this.data.productListChanged(this.products);
           }
         }
       }
