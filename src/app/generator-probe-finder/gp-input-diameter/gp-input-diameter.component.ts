@@ -15,7 +15,7 @@ import * as _ from 'underscore';
         <p *ngIf="prRange !== '' && showFilters" class="pr-range"><em><strong>Processing Range: {{prRange}}</strong></em></p>
       </div>
     </form>
-    <productView [testing]="testing" [diameterProduct]="diameterProduct" [selectedValue]="selectedValue"  #productView></productView>
+    <productView [testing]="testing" [diameterProduct]="diameterProduct" [selectedValue]="selectedValue"></productView>
   `,
   styleUrls: ['./gp-input-diameter.component.scss']
 })
