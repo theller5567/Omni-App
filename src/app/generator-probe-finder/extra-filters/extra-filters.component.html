@@ -1,6 +1,6 @@
-<section *ngIf="showFilters && toggleFilter" >
+<section *ngIf="showFilters">
   <hr>
-  <form  class="Filtered-inputs">
+  <form class="Filtered-inputs">
     <div *ngFor="let selecter of selecterArray" class="form-check form-check-inline">
       <label class="form-check-label">
         <input class="form-check-input" type="radio" name="filter-radio" (click)="onClick(selecter)" [checked]="isChecked" value="{{selecter}}"> {{selecter}}
@@ -11,7 +11,7 @@
       <div *ngFor="let window of windowList">
         <div class="form-check form-check-inline">
           <label class="form-check-label">
-            <input class="form-check-input" type="radio" name="filter-radio" (click)="windowClick(window)" value="{{window}}"> {{window}}
+            <input class="form-check-input" type="radio" name="filter-radio" (click)="filterClick('window_size', window)" value="{{window}}"> {{window}}
           </label>
         </div>
       </div>
@@ -21,17 +21,17 @@
       <div *ngFor="let type of typeList">
         <div class="form-check form-check-inline">
           <label class="form-check-label">
-            <input class="form-check-input" type="radio" name="filter-radio" (click)="typeClick(type)" value="{{type}}"> {{type}}
+            <input class="form-check-input" type="radio" name="filter-radio" (click)="filterClick('type', type)" value="{{type}}">{{type}}
           </label>
         </div>
       </div>
     </div>
-    <div  *ngIf="lengthState" class="filter length-filter">
+    <div *ngIf="lengthState" class="filter length-filter">
       <div class="close-btn"><i class="glyphicon glyphicon-remove" (click)="closeFilter()"></i></div>
       <div>
         <div class="form-group">
           <label for="Master-Products">Select Length</label>
-          <select [ngModel]="lengthSelected" name="length" (ngModelChange)="lengthClick($event)" class="form-control" id="filter-length">
+          <select [ngModel]="lengthSelected" name="length" (ngModelChange)="filterClick('length', $event)" class="form-control" id="filter-length">
             <option *ngFor="let length of lengthList" [ngValue]="length">{{length}}</option>
           </select>
         </div>
@@ -39,4 +39,3 @@
     </div>
   </form>
 </section>
-  

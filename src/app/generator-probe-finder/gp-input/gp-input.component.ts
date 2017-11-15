@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, Output, EventEmitter, SimpleChanges, OnChanges } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
 import { DataService } from './../../services/data/data.service';
 
 @Component({
@@ -8,15 +8,15 @@ import { DataService } from './../../services/data/data.service';
       <div class="form-group">
         <label for="Master-Products">Select Product</label>
         <select [ngModel]="selectedValue" name="product" (ngModelChange)="change($event)" class="form-control" id="Master-Products">
-          <option *ngFor="let product of testing" [ngValue]="product.master">{{product.master}}</option>
+          <option *ngFor="let product of masterProductList" [ngValue]="product.master">{{product.master}}</option>
         </select>
       </div>
     </form>
-    <gpInputDiameter [testing]="testing" [selectedValue]="selectedValue"></gpInputDiameter>
+    <gpInputDiameter [masterProductList]="masterProductList"></gpInputDiameter>
   `,
   styleUrls: ['./gp-input.component.scss']
 })
-export class GpInputComponent implements OnInit, OnChanges {
+export class GpInputComponent implements OnInit {
   categories: any[];
   masterName: string;
   gpProducts: any[];
@@ -26,19 +26,13 @@ export class GpInputComponent implements OnInit, OnChanges {
   cart: any[];
   showFilters: boolean;
   @Output() hasChanged: EventEmitter<any> = new EventEmitter();
-  @Input() testing: any[];
+  @Input() masterProductList: any[];
   constructor(private data: DataService ) {}
 
   change(value) {
     this.selectedValue = value;
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['testing']) {
-      if (changes['testing'].currentValue) {
-        this.selectedValue = this.testing[0].master;
-      }
-    }
+    this.data.productSelected(value);
+    this.data.diameterChanged('');
   }
 
   ngOnInit() {

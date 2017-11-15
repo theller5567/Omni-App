@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { IProduct } from '../../product';
 import { DataService } from './../../services/data/data.service';
 
@@ -7,16 +7,16 @@ import { DataService } from './../../services/data/data.service';
   templateUrl: './cart.component.html',
   styleUrls: ['./cart.component.scss']
 })
-export class CartComponent  {
-  itemsInCart: IProduct[] = [];
-  cartTotal: number;
-  cartOpen: boolean = false;
-  numberOfItemsInCart: number = 0;
-  cartMessage: string = '';
-  count: number = 0;
-  products: IProduct[] = [];
+export class CartComponent implements OnInit  {
+  public itemsInCart: IProduct[] = [];
+  public cartTotal: number;
+  public cartOpen: boolean;
+  public numberOfItemsInCart: number;
+  public cartMessage: string;
+  public count: number;
+  public products: IProduct[] = [];
   constructor(private data: DataService) {}
-  
+
   closeCart() {
     this.cartOpen = false;
   }
@@ -34,6 +34,8 @@ export class CartComponent  {
   }
 
   ngOnInit() {
+    this.numberOfItemsInCart = 0;
+    this.count = 0;
     this.data.cart.subscribe(cart => {
       if (cart.length < 1) {
         return;

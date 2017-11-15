@@ -18,6 +18,12 @@ export class DataService {
   private filterState = new BehaviorSubject<any>([]);
   fState = this.filterState.asObservable();
 
+  private selectedInput = new BehaviorSubject<any>([]);
+  selectedProduct = this.selectedInput.asObservable();
+
+  private selectedDiameter = new BehaviorSubject<any>([]);
+  diameter = this.selectedDiameter.asObservable();
+
   constructor() { }
   changCart(cart) {
     this.shoppingCart.next(cart);
@@ -37,6 +43,14 @@ export class DataService {
 
   filterStateChanged(list) {
     this.filterState.next(list);
+  }
+
+  productSelected(product) {
+    this.selectedInput.next(product);
+  }
+
+  diameterChanged(diameter) {
+    this.selectedDiameter.next(diameter);
   }
 
 }

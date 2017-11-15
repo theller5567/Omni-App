@@ -7,13 +7,12 @@ import { HttpModule } from '@angular/http';
 import { ProductsService } from './services/products/products.service';
 import { GprobeUiService } from './services/gprobe-ui/gprobe-ui.service';
 import { AccessoriesComponent } from './product-accessories-finder/accessories/accessories.component';
-import { FormsModule }   from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { MasterInputComponent } from './product-accessories-finder/master-input/master-input.component';
 import { CartComponent } from './product-accessories-finder/cart/cart.component';
 import { GpUiComponent } from './generator-probe-finder/gp-ui/gp-ui.component';
 import { GpComponent } from './generator-probe-finder/gp/gp.component';
 import { RouterModule } from '@angular/router';
-import { ProductPageComponent } from './product-accessories-finder/product-page/product-page.component';
 import { GpInputComponent } from './generator-probe-finder/gp-input/gp-input.component';
 import { GpInputDiameterComponent } from './generator-probe-finder/gp-input-diameter/gp-input-diameter.component';
 import { ProductViewComponent } from './generator-probe-finder/product-view/product-view.component';
@@ -21,7 +20,6 @@ import { ExtraFiltersComponent } from './generator-probe-finder/extra-filters/ex
 import { ProductComponent } from './generator-probe-finder/product-view/product/product.component';
 import { AlertModule } from 'ngx-bootstrap';
 import { LoadingModule } from 'ngx-loading';
-// import { Ng4LoadingSpinnerModule } from 'ng4-loading-spinner';
 
 @NgModule({
   declarations: [
@@ -31,7 +29,6 @@ import { LoadingModule } from 'ngx-loading';
     CartComponent,
     GpUiComponent,
     GpComponent,
-    ProductPageComponent,
     GpInputComponent,
     GpInputDiameterComponent,
     ProductViewComponent,
@@ -44,12 +41,11 @@ import { LoadingModule } from 'ngx-loading';
     FormsModule,
     BrowserAnimationsModule,
     LoadingModule,
-    // Ng4LoadingSpinnerModule,
     AlertModule.forRoot(),
     RouterModule.forRoot([
       {
-        path: 'product-page',
-        component: ProductPageComponent
+        path: 'accessories',
+        component: AccessoriesComponent
       },
       {
         path: 'gp-finder',
@@ -57,7 +53,7 @@ import { LoadingModule } from 'ngx-loading';
       },
       {
         path: '',
-        component: ProductPageComponent
+        component: AccessoriesComponent
       }
     ]),
   ],

@@ -40,25 +40,19 @@ export class AccessoriesComponent implements OnInit {
   public categories: string[] = [];
   public products: IProduct[] = [];
   public subProducts: any[];
-  private productFlag: string = 'false';
-  private subProductFlag: string = 'false';
-  public category_name: string = '';
-  public subCategory_name: string = '';
-  public breadcrumbArr: any[];
-  public showSubCat: boolean = false;
+  public category_name: string;
+  public subCategory_name: string;
+  public showSubCat: boolean;
   private masterProduct: number;
   public masterName: string;
-  private productsInCart: any[];
   public selectedCat: any;
   public masterProductArray: any;
   public masterProductBanner: string;
   public selectedSubCat: any;
-  private cart: any[];
   productInfo: any[];
-  categoriesListArray: any[];
   catList: any[];
   powers;
-  catbanners: boolean = false;
+  catbanners: boolean;
   masterProductList: any[];
   animationState = 'inactive';
   public loading = false;
@@ -72,23 +66,28 @@ export class AccessoriesComponent implements OnInit {
   ngOnInit() {
     this.selectedCat = 'Select a Category';
     this.selectedSubCat = 'Select a Sub Category';
-    this.data.cart.subscribe(cart => this.cart = cart);
     this.data.currentProduct.subscribe(product => this.productInfo = product);
+  }
+
+  getProductsList() {
+    this.loading = true;
+    this._service.getCatgegories()
+      .subscribe(response => {
+        const masterList = this.getProductsWithAccessories(response);
+        this.powers = masterList;
+        this.masterProductList = response;
+        this.getCatgegories(this.masterProduct);
+        this.loading = false;
+        this.catbanners = true;
+      });
   }
 
   toggleState() {
     this.animationState = this.animationState === 'active' ? 'inactive' : 'active';
   }
 
-  addToCart($event) {
-    const item = $event.target.parentElement.parentElement.parentElement.parentElement.firstChild.nextSibling.childNodes[1].text;
-    const product: any[] = [];
-    this.products.forEach(element => {
-      if (element.product_name === item) {
-        product.push(element);
-        this.data.changCart(product[0]);
-      }
-    });
+  addToCart(product) {
+    this.data.changCart(product);
   }
 
   backToCat() {
@@ -103,12 +102,22 @@ export class AccessoriesComponent implements OnInit {
     this.data.changeProduct(value);
   }
 
-  change(value) {
-    this.getCatName(value);
+  changeCat(value) {
+    if (typeof value === 'string') {
+      this.listProducts(value);
+    } else {
+      const cat = value;
+      this.listProducts(cat);
+    }
   }
 
   changeSub(value) {
-    this.getSubCatName(value);
+    if (typeof value === 'string') {
+      this.listSubProducts(value);
+    } else {
+      const sub = value;
+      this.listSubProducts(sub);
+    }
   }
 
   listProducts(cat) {
@@ -119,7 +128,6 @@ export class AccessoriesComponent implements OnInit {
     this.subCategory_name = '';
     const ml = this.catList;
     const catProductsArr = [];
-    const arr = [];
     let flag = false;
     for (let i = 0; i < ml.length; i++) {
       if (ml[i].cat_name === cat) {
@@ -171,24 +179,6 @@ export class AccessoriesComponent implements OnInit {
     this.toggleState();
   }
 
-  getSubCatName(value: any) {
-    if (typeof value === 'string') {
-      this.listSubProducts(value);
-    } else {
-      const sub = value;
-      this.listSubProducts(sub);
-    }
-  }
-
-  getCatName(value: any) {
-    if (typeof value === 'string') {
-      this.listProducts(value);
-    } else {
-      const cat = value;
-      this.listProducts(cat);
-    }
-  }
-
   hasChanged(val: number) {
     this.backToCat();
     const masterNumber = this.masterProductNum(val);
@@ -236,20 +226,6 @@ export class AccessoriesComponent implements OnInit {
     return AccessorieProducts;
   }
 
-
-  getProductsList() {
-    this.loading = true;
-    this._service.getCatgegories()
-      .subscribe(response => {
-        const masterList = this.getProductsWithAccessories(response);
-        this.powers = masterList;
-        this.masterProductList = response;
-        this.getCatgegories(this.masterProduct);
-        this.loading = false;
-        this.catbanners = true;
-      });
-  }
-
   getCatgegories(masterProduct: number) {
     const response = this.masterProductList;
     const masterList = this.getProductsWithAccessories(response);
@@ -258,7 +234,7 @@ export class AccessoriesComponent implements OnInit {
       masterProduct = masterList[0].id;
     }
     this.masterProductArray = _.findWhere(this.masterProductList, { id: masterProduct });
-    this.masterProductBanner = '../../' + this.masterProductArray.images[0].banner;
+    this.masterProductBanner = this.bannerExist();
     const ml = this.MasterAccessories(response, masterProduct);
     const catList = (function (a) {
       for (let i = ml.length; i--; ) {
@@ -268,16 +244,15 @@ export class AccessoriesComponent implements OnInit {
       }
       return a;
     })([]);
-    this.categories = catList;
+    this.categories = _.sortBy(catList);
     this.categories.splice(0, 0, 'Select a Category');
   }
-
-  hasSub(): boolean {
-    if (this.subProducts) {
-      const bln: boolean = this.subProducts.length < 1 || undefined ? false : true;
-      return bln;
+  
+  bannerExist() {
+    if (this.masterProductArray.images[0].banner !== undefined) {
+      return '../../' + this.masterProductArray.images[0].banner;
     } else {
-      return false;
+      return undefined;
     }
   }
 

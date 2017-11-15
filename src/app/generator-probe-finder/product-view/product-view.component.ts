@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, SimpleChanges, OnChanges } from '@angular/core';
+import { Component, Input, SimpleChanges, OnChanges } from '@angular/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { trigger, state, transition, style, animate } from '@angular/animations';
 import { GprobeUiService } from '../../services/gprobe-ui/gprobe-ui.service';
@@ -17,62 +17,41 @@ import { DataService } from './../../services/data/data.service';
     ])
   ]
 })
-export class ProductViewComponent implements OnInit, OnChanges {
+export class ProductViewComponent {
   products: any[];
-  showProducts: boolean = false;
-  filterState: boolean = true;
+  showProducts: boolean;
   productInfo: any[];
   cart: any[];
-  productsByFilteredDiameter: any;
-  @Input() diameterProduct;
-  @Input() testing;
-  @Input() selectedValue;
-
   selectedProduct: string;
   diameterSelected: string;
+  @Input() masterProductList;
 
-  constructor(private _service: GprobeUiService, private data: DataService) { }
-
-  ngOnInit() {
+  constructor(private _service: GprobeUiService, private data: DataService) {
     this.data.cart.subscribe(cart => this.cart = cart);
     this.data.currentProduct.subscribe(product => this.productInfo = product);
-    this.data.prodList.subscribe(product => {
-        this.products = product;
-    });
-    this.data.fState.subscribe(state => {
-      this.filterState = state;
-    });
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes) {
-      if (changes['testing']) {
-        this.testing = changes.testing.currentValue;
-      }
-      if (changes['selectedValue']) {
-        this.products = [];
-        this.diameterSelected = undefined;
-        this.showProducts = false;
-      }
-      if (this.testing) {
-        if (changes['diameterProduct']) {
-          if (changes.diameterProduct.currentValue !== undefined) {
-            this.diameterSelected = changes.diameterProduct.currentValue.diameterSelected;
-            this.selectedProduct = changes.diameterProduct.currentValue.selectedProduct;
-            this.data.filterStateChanged(true);
-            this.products = this.getProducts1();
-            this.showProducts = true;
-            this.data.productListChanged(this.products);
-          }
+    this.data.diameter.subscribe(diameter => {
+      if (this.masterProductList !== undefined) {
+        if (diameter !== 'Select Diameter' && diameter !== '') {
+          this.diameterSelected = diameter;
+          this.products = this.getProducts1();
+          this.showProducts = true;
+          this.data.productListChanged(this.products);
         }
       }
-    }
+    });
+    this.data.prodList.subscribe(product => {
+      this.products = product;
+    });
+    this.data.selectedProduct.subscribe(product => {
+      this.selectedProduct = product;
+      this.showProducts = false;
+    });
   }
 
   getProducts1 = function(){
     let selectProdArr = [];
     const coco = [];
-    this.testing.forEach(item => {
+    this.masterProductList.forEach(item => {
       if (item.master === this.selectedProduct) {
         selectProdArr = item.related;
       }
@@ -85,15 +64,8 @@ export class ProductViewComponent implements OnInit, OnChanges {
     return coco;
   };
 
-  addToCart($event) {
-    const item = $event.target.parentElement.parentElement.parentElement.parentElement.firstChild.nextSibling.childNodes[1].text;
-    const product: any[] = [];
-    this.products.forEach(element => {
-      if (element.product_name === item) {
-        product.push(element);
-        this.data.changCart(product[0]);
-      }
-    });
+  addToCart(product) {
+    this.data.changCart(product);
   }
 
   viewProduct(value) {

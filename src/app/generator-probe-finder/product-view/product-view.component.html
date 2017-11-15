@@ -1,4 +1,4 @@
-<extraFilters></extraFilters>
+<extraFilters  *ngIf="showProducts"></extraFilters>
 <ul class="items col col-md-12"  *ngIf="showProducts">
     <li class="col col-xs-12 col-sm-12 col-md-4" *ngFor="let product of products">
         <div class="item">
@@ -15,7 +15,7 @@
         <div class="product-col col col-xs-4 col-sm-4 col-md-12">
             <div class="btn-group" role="group" aria-label="Basic example">
             <button type="button" class="btn btn-solid" (click)="viewProduct(product)">View Product</button>
-            <button type="button" class="btn btn-solid add-to-cart" (click)="addToCart($event)">Add to Cart</button>
+            <button type="button" class="btn btn-solid add-to-cart" (click)="addToCart(product)">Add to Cart</button>
             </div>
         </div>
         </div>

@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, SimpleChanges } from '@angular/core';
 import { GprobeUiService } from '../../services/gprobe-ui/gprobe-ui.service';
 import { DataService } from './../../services/data/data.service';
 import * as _ from 'underscore';
@@ -9,46 +9,34 @@ import * as _ from 'underscore';
   styleUrls: ['./extra-filters.component.scss']
 })
 
-export class ExtraFiltersComponent implements OnInit {
-  valueSelected: any;
+export class ExtraFiltersComponent {
   selecterArray: string[] = ['window-size', 'type', 'length', 'none'];
   windowList: string[];
   typeList: string[];
   lengthList: any[];
   filteredList: any[];
-  windowState: boolean = false;
-  typeState: boolean = false;
-  lengthState: boolean = false;
-  toggleFilter: boolean = false;
+  windowState: boolean;
+  typeState: boolean;
+  lengthState: boolean;
   filterState: boolean;
-  isChecked = false;
-  showFilters = false;
-  filterhide: boolean;
-  showFilter: boolean;
-  lengthSelected: string;
-  oldProducts: any[];
-  products: any[];
-  @Input() diameterProduct;
-  @Output() newList: EventEmitter<any> = new EventEmitter();
+  isChecked: boolean;
+  showFilters: boolean;
 
   constructor(private _service: GprobeUiService, private data: DataService) {
-    this.data.prodList.subscribe(product => {
+    this.data.showfilter.subscribe(value => {
+      this.showFilters = value;
+    });
+    this.data.fState.subscribe(state => this.filterState = state);
+    this.data.selectedProduct.subscribe(product => {
+      this.removeFilters();
+    });
+    this.data.prodList.subscribe(products => {
       if (this.filterState) {
-        this.filteredList = product;
-        this.startFiltering(this.filteredList);
-        if (!this.filterhide) {
-          this.closeFilter();
-          this.removeFilters();
-        }
+        this.removeFilters();
+        this.filteredList = products;
       }
+      this.startFiltering(this.filteredList);
     });
-    this.data.fState.subscribe(state => {
-      this.filterState = state;
-    });
-  }
-
-  ngOnInit() {
-    this.data.showfilter.subscribe(value => this.showFilter = value);
   }
 
   startFiltering(list) {
@@ -82,10 +70,8 @@ export class ExtraFiltersComponent implements OnInit {
     if (!this.allowFilter(lengthList, list) && !this.allowFilter(windowList, list) && !this.allowFilter(typeList, list)) {
       this.selecterArray = [];
       this.showFilters = false;
-      this.toggleFilter = false;
     } else {
       this.showFilters = true;
-      this.toggleFilter = true;
       this.selecterArray.push('none');
     }
   }
@@ -100,47 +86,15 @@ export class ExtraFiltersComponent implements OnInit {
     }
   }
 
-  toggleFilters() {
-    this.toggleFilter = !this.toggleFilter;
-  }
-
   onClick(value) {
-    if (this.filterhide) {
-      this.hideFilters(value);
-    } else {
-      this.closeFilter();
-    }
     this.hideFilters(value);
   }
 
-  closeFilter() {
-    this.hideFilters('none');
-  }
-
-  windowClick(value) {
+  filterClick(type, value) {
+    this.filterState = false;
     const list = [];
     this.filteredList.forEach(product => {
-      if (product.window_size === value) {
-        list.push(product);
-      }
-    });
-    this.data.productListChanged(list);
-  }
-
-  typeClick(value) {
-    const list = [];
-    this.filteredList.forEach(product => {
-      if (product.type === value) {
-        list.push(product);
-      }
-    });
-    this.data.productListChanged(list);
-  }
-
-  lengthClick(value) {
-    const list = [];
-    this.filteredList.forEach(product => {
-      if (product.length === value) {
+      if (product[type] === value) {
         list.push(product);
       }
     });
@@ -149,11 +103,12 @@ export class ExtraFiltersComponent implements OnInit {
 
   removeFilters() {
     this.isChecked = !this.isChecked;
+    this.windowState = false;
+    this.typeState = false;
+    this.lengthState = false;
   }
 
   hideFilters(filter) {
-    this.filterhide = false;
-    this.data.filterStateChanged(false);
     const filteredListCat = [];
     const filteredList = [];
     const list = this.filteredList;
@@ -198,11 +153,11 @@ export class ExtraFiltersComponent implements OnInit {
         this.lengthState = true;
       break;
       case 'none':
+      console.log('none');
         this.data.productListChanged(this.filteredList);
         this.windowState = false;
         this.typeState = false;
         this.lengthState = false;
-        this.filterhide = true;
       break;
       default:
         this.windowState = false;
@@ -212,6 +167,5 @@ export class ExtraFiltersComponent implements OnInit {
     }
 
   }
-
 
 }

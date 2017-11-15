@@ -1,5 +1,5 @@
 import { Response } from '@angular/http';
-import { Component, OnInit, Input, Output, EventEmitter, SimpleChanges, OnChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, SimpleChanges, OnChanges } from '@angular/core';
 import { ProductsService } from '../../services/products/products.service';
 import { IProduct } from '../../product';
 
@@ -18,7 +18,7 @@ import { IProduct } from '../../product';
   styleUrls: ['./master-input.component.scss']
 })
 
-export class MasterInputComponent implements OnInit, OnChanges {
+export class MasterInputComponent implements OnChanges {
   @Output() hasChanged: EventEmitter<number> = new EventEmitter();
   @Input() powers: any[];
   selectedValue: any;
@@ -36,10 +36,6 @@ export class MasterInputComponent implements OnInit, OnChanges {
 
   change(value: number) {
     this.hasChanged.emit(value);
-  }
-
-  ngOnInit() {
-
   }
 
 }
