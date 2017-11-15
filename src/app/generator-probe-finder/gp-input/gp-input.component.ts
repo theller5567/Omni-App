@@ -7,7 +7,8 @@ import { DataService } from './../../services/data/data.service';
     <form>
       <div class="form-group">
         <label for="Master-Products">Select Product</label>
-        <select [ngModel]="selectedValue" name="product" (ngModelChange)="change($event)" class="form-control" id="Master-Products">
+        <select [(ngModel)]="selectedValue" name="product" (ngModelChange)="change($event)" class="form-control" id="Master-Products">
+          <option disabled selected>Select Product</option>
           <option *ngFor="let product of masterProductList" [ngValue]="product.master">{{product.master}}</option>
         </select>
       </div>
@@ -32,12 +33,13 @@ export class GpInputComponent implements OnInit {
   change(value) {
     this.selectedValue = value;
     this.data.productSelected(value);
-    this.data.diameterChanged('');
+    this.data.diameterChanged('Select Product');
   }
 
   ngOnInit() {
     this.data.cart.subscribe(cart => this.cart = cart);
     this.data.showfilter.subscribe(value => this.showFilters = value);
+    this.selectedValue = 'Select Product';
    }
 
 }

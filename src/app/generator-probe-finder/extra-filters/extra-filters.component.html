@@ -8,34 +8,23 @@
     </div>
     <div *ngIf="windowState" class="filter window-filter">
       <div class="close-btn"><i class="glyphicon glyphicon-remove" (click)="closeFilter()"></i></div>
-      <div *ngFor="let window of windowList">
-        <div class="form-check form-check-inline">
-          <label class="form-check-label">
-            <input class="form-check-input" type="radio" name="filter-radio" (click)="filterClick('window_size', window)" value="{{window}}"> {{window}}
-          </label>
-        </div>
-      </div>
+      <ng-template ngFor let-window [ngForOf]="windowList">
+        <button class="list-group-item list-group-item-action" (click)="filterClick('window_size', window)" [ngClass]="{ 'filterActive': filterActive === window}"><span>{{window}}</span></button>
+      </ng-template>
     </div>
     <div *ngIf="typeState" class="filter type-filter">
       <div class="close-btn"><i class="glyphicon glyphicon-remove" (click)="closeFilter()"></i></div>
-      <div *ngFor="let type of typeList">
-        <div class="form-check form-check-inline">
-          <label class="form-check-label">
-            <input class="form-check-input" type="radio" name="filter-radio" (click)="filterClick('type', type)" value="{{type}}">{{type}}
-          </label>
-        </div>
-      </div>
+      <ng-template ngFor let-type [ngForOf]="typeList">
+        <button class="list-group-item list-group-item-action" (click)="filterClick('type', type)" [ngClass]="{ 'filterActive': filterActive === type}"><span>{{type}}</span></button>
+      </ng-template>
     </div>
     <div *ngIf="lengthState" class="filter length-filter">
       <div class="close-btn"><i class="glyphicon glyphicon-remove" (click)="closeFilter()"></i></div>
-      <div>
-        <div class="form-group">
-          <label for="Master-Products">Select Length</label>
-          <select [ngModel]="lengthSelected" name="length" (ngModelChange)="filterClick('length', $event)" class="form-control" id="filter-length">
-            <option *ngFor="let length of lengthList" [ngValue]="length">{{length}}</option>
-          </select>
-        </div>
-      </div>
+      <ng-template ngFor let-length [ngForOf]="lengthList">
+        <button class="list-group-item list-group-item-action" (click)="filterClick('length', length)" [ngClass]="{ 'filterActive': filterActive === length}"><span>{{length}}</span></button>
+      </ng-template>
     </div>
   </form>
 </section>
+
+

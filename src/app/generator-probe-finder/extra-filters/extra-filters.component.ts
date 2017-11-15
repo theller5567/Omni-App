@@ -21,6 +21,7 @@ export class ExtraFiltersComponent {
   filterState: boolean;
   isChecked: boolean;
   showFilters: boolean;
+  filterActive: string;
 
   constructor(private _service: GprobeUiService, private data: DataService) {
     this.data.showfilter.subscribe(value => {
@@ -90,8 +91,13 @@ export class ExtraFiltersComponent {
     this.hideFilters(value);
   }
 
+  closeFilter() {
+    this.hideFilters('none');
+  }
+
   filterClick(type, value) {
     this.filterState = false;
+    this.filterActive = value;
     const list = [];
     this.filteredList.forEach(product => {
       if (product[type] === value) {
@@ -99,7 +105,11 @@ export class ExtraFiltersComponent {
       }
     });
     this.data.productListChanged(list);
+    console.log('filter class: ', this.filterActive);
   }
+
+  // activeClass(filter) {
+  // }
 
   removeFilters() {
     this.isChecked = !this.isChecked;

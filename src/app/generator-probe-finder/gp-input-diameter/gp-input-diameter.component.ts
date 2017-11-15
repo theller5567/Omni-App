@@ -10,6 +10,7 @@ import * as _ from 'underscore';
       <div class="form-group">
         <label for="Master-Products">Select Diameter</label>
         <select [(ngModel)]="selectedDiameter" name="diameter" (ngModelChange)="change($event)" class="form-control" id="Master-Products">
+          <option disabled selected>Select a Diameter</option>
           <option *ngFor="let diameter of diameterArray" [ngValue]="diameter">{{diameter}}</option>
         </select>
         <p *ngIf="prRange !== '' && showFilters" class="pr-range"><em><strong>Processing Range: {{prRange}}</strong></em></p>
@@ -45,7 +46,7 @@ export class GpInputDiameterComponent implements OnInit, OnChanges {
       this.data.hideFilter(false);
       this.processingRange('');
       this.diameterArray = [];
-      this.selectedDiameter = this.diameterArray[0];
+      this.selectedDiameter = 'Select a Diameter';
       if (this.masterProductList !== undefined) {
         this.masterProductList.forEach(item => {
           if (item.master === this.selectedValue) {
@@ -54,7 +55,6 @@ export class GpInputDiameterComponent implements OnInit, OnChanges {
             });
           }
         });
-        this.diameterArray.unshift('Select a Diameter');
         this.diameterArray = _.uniq(this.diameterArray);
         this.show = true;
       }

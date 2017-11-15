@@ -25,7 +25,7 @@
         </div>
         <div class="mobile-select hide-cat">
           <select class="form-control" [ngModel]="selectedSubCat" (ngModelChange)="changeSub($event)" name="sub-category" id="sub-cat-column" placeholder="Select a Sub-Category">
-            <option value="">Select Sub-Category</option>
+            <option value="" disabled selected>Select Sub-Category</option>
             <option class="cat-btn" *ngFor="let sub of subProducts">{{sub}}</option>
           </select>
         </div>
