@@ -1,28 +1,30 @@
 <section *ngIf="showFilters">
   <hr>
-  <form class="Filtered-inputs">
+  <form class="filtered-inputs">
     <div *ngFor="let selecter of selecterArray" class="form-check form-check-inline">
       <label class="form-check-label">
         <input class="form-check-input" type="radio" name="filter-radio" (click)="onClick(selecter)" [checked]="isChecked" value="{{selecter}}"> {{selecter}}
       </label>
     </div>
-    <div *ngIf="windowState" class="filter window-filter">
-      <div class="close-btn"><i class="glyphicon glyphicon-remove" (click)="closeFilter()"></i></div>
-      <ng-template ngFor let-window [ngForOf]="windowList">
-        <button class="list-group-item list-group-item-action" (click)="filterClick('window_size', window)" [ngClass]="{ 'filterActive': filterActive === window}"><span>{{window}}</span></button>
-      </ng-template>
-    </div>
-    <div *ngIf="typeState" class="filter type-filter">
-      <div class="close-btn"><i class="glyphicon glyphicon-remove" (click)="closeFilter()"></i></div>
-      <ng-template ngFor let-type [ngForOf]="typeList">
-        <button class="list-group-item list-group-item-action" (click)="filterClick('type', type)" [ngClass]="{ 'filterActive': filterActive === type}"><span>{{type}}</span></button>
-      </ng-template>
-    </div>
-    <div *ngIf="lengthState" class="filter length-filter">
-      <div class="close-btn"><i class="glyphicon glyphicon-remove" (click)="closeFilter()"></i></div>
-      <ng-template ngFor let-length [ngForOf]="lengthList">
-        <button class="list-group-item list-group-item-action" (click)="filterClick('length', length)" [ngClass]="{ 'filterActive': filterActive === length}"><span>{{length}}</span></button>
-      </ng-template>
+    <div class="row">
+      <div *ngIf="windowState" class="filter window-filter">
+        <div class="close-btn"><i class="glyphicon glyphicon-remove" (click)="closeFilter()"></i></div>
+        <ng-template ngFor let-window [ngForOf]="windowList">
+          <button class="list-group-item list-group-item-action" (click)="filterClick('window_size', window)" [ngClass]="{ 'filterActive': filterActive === window}"><span>{{window}}</span></button>
+        </ng-template>
+      </div>
+      <div *ngIf="typeState" class="filter type-filter">
+        <div class="close-btn"><i class="glyphicon glyphicon-remove" (click)="closeFilter()"></i></div>
+        <ng-template ngFor let-type [ngForOf]="typeList">
+          <button class="list-group-item list-group-item-action" (click)="filterClick('type', type)" [ngClass]="{ 'filterActive': filterActive === type}"><span>{{type}}</span></button>
+        </ng-template>
+      </div>
+      <div *ngIf="lengthState" class="filter length-filter">
+        <div class="close-btn"><i class="glyphicon glyphicon-remove" (click)="closeFilter()"></i></div>
+        <ng-template ngFor let-length [ngForOf]="lengthList">
+          <button class="list-group-item list-group-item-action" (click)="filterClick('length', length)" [ngClass]="{ 'filterActive': filterActive === length}"><span>{{length}}</span></button>
+        </ng-template>
+      </div>
     </div>
   </form>
 </section>

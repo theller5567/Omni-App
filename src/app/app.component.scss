@@ -9,8 +9,10 @@ button {
     width: 50%;
     font-size: 1.2rem;
     border-radius: 0;
+    padding: 15px 0;
+    background-color: #00B4CC;
     &.active-link {
-        background-color: #66D2E1;
+        background-color: darken(#00B4CC, 5%);
         cursor: default;
         &:hover, &:focus {
             color: white;
