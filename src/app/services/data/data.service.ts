@@ -24,7 +24,6 @@ export class DataService {
   private selectedDiameter = new BehaviorSubject<any>([]);
   diameter = this.selectedDiameter.asObservable();
 
-  constructor() { }
   changCart(cart) {
     this.shoppingCart.next(cart);
   }

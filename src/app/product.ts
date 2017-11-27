@@ -1,6 +1,7 @@
 export interface IProduct {
     id: number;
     product_name: string;
+    sku: string;
     name: string;
     description: string;
     product_link: string;

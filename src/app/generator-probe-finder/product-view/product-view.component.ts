@@ -1,7 +1,6 @@
 import { Component, Input, SimpleChanges, OnChanges } from '@angular/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { trigger, state, transition, style, animate } from '@angular/animations';
-import { GprobeUiService } from '../../services/gprobe-ui/gprobe-ui.service';
 import { DataService } from './../../services/data/data.service';
 
 @Component({
@@ -26,7 +25,7 @@ export class ProductViewComponent {
   diameterSelected: string;
   @Input() masterProductList;
 
-  constructor(private _service: GprobeUiService, private data: DataService) {
+  constructor(private data: DataService) {
     this.data.cart.subscribe(cart => this.cart = cart);
     this.data.currentProduct.subscribe(product => this.productInfo = product);
     this.data.diameter.subscribe(diameter => {

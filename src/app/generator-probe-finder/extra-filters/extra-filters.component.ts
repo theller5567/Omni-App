@@ -1,10 +1,9 @@
 import { Component, EventEmitter, SimpleChanges } from '@angular/core';
-import { GprobeUiService } from '../../services/gprobe-ui/gprobe-ui.service';
 import { DataService } from './../../services/data/data.service';
 import * as _ from 'underscore';
 
 @Component({
-  selector: 'extraFilters',
+  selector: 'omni-extraFilters',
   templateUrl: './extra-filters.component.html',
   styleUrls: ['./extra-filters.component.scss']
 })
@@ -23,9 +22,10 @@ export class ExtraFiltersComponent {
   showFilters: boolean;
   filterActive: string;
 
-  constructor(private _service: GprobeUiService, private data: DataService) {
+  constructor(private data: DataService) {
     this.data.showfilter.subscribe(value => {
       this.showFilters = value;
+      console.log('filters: ', this.showFilters);
     });
     this.data.fState.subscribe(state => this.filterState = state);
     this.data.selectedProduct.subscribe(product => {
@@ -105,11 +105,7 @@ export class ExtraFiltersComponent {
       }
     });
     this.data.productListChanged(list);
-    console.log('filter class: ', this.filterActive);
   }
-
-  // activeClass(filter) {
-  // }
 
   removeFilters() {
     this.isChecked = !this.isChecked;
@@ -163,7 +159,6 @@ export class ExtraFiltersComponent {
         this.lengthState = true;
       break;
       case 'none':
-      console.log('none');
         this.data.productListChanged(this.filteredList);
         this.windowState = false;
         this.typeState = false;
@@ -175,7 +170,6 @@ export class ExtraFiltersComponent {
         this.lengthState = false;
       break;
     }
-
   }
 
 }

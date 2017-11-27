@@ -34,6 +34,7 @@ export class GpInputComponent implements OnInit {
     this.selectedValue = value;
     this.data.productSelected(value);
     this.data.diameterChanged('Select Product');
+    this.data.hideFilter(false);
   }
 
   ngOnInit() {

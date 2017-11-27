@@ -1,0 +1,52 @@
+<div class="container">
+  <h1>Add New Product</h1>
+  <div class="row">
+    <div class="col-sm-12">
+      <form (ngSubmit)="saveProduct()" #productForm="ngForm" enctype="multipart/form-data">
+        <div class="col-md-6 col-sm-12">
+          <div class="form-group">
+            <label for="product_name">Product Name</label>
+            <input type="text" class="form-control" [(ngModel)]="product.product_name" name="product_name" required>
+          </div>
+          <div class="form-group">
+            <label for="sku">SKU</label>
+            <input type="text" class="form-control" [(ngModel)]="product.sku" name="sku" required>
+          </div>
+          <div class="form-group">
+            <label for="description">Description</label>
+            <input type="text" class="form-control" [(ngModel)]="product.description" name="description" required>
+          </div>
+          <div class="form-group">
+            <label for="product_link">Productc Link</label>
+            <input type="text" class="form-control" [(ngModel)]="product.product_link" name="product_link">
+          </div>
+          <div class="form-group">
+            <label for="cat_name">Category Name</label>
+            <input type="text" class="form-control" [(ngModel)]="product.cat_name" name="cat_name" required>
+          </div>
+          <div class="form-group">
+            <label for="related_products">Related Products</label>
+            <input type="text" class="form-control" [(ngModel)]="product.related_products" name="related_products">
+          </div>
+        </div>
+        <div class="col-md-6 col-sm-12">
+          <div class="form-group">
+            <label for="sub_cat_name">Sub Category Name</label>
+            <input type="text" class="form-control" [(ngModel)]="product.sub_cat_name" name="sub_cat_name">
+          </div>
+          <div class="form-group">
+            <label for="price">Price</label>
+            <input type="number" class="form-control" [(ngModel)]="product.price" name="price" required>
+          </div>
+          <div class="form-group">
+            <label for="thumbnail">Thumbnail Image</label>
+            <input type="file" name="thumbnail" class="form-control" [(ngModel)]="product.thumbnail">
+          </div>
+        </div>
+        <div class="form-group">
+          <button type="submit" class="btn btn-success" [disabled]="!productForm.form.valid">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

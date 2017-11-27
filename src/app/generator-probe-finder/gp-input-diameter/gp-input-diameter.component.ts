@@ -1,5 +1,4 @@
 import { Component, Input, OnInit, SimpleChanges, OnChanges } from '@angular/core';
-import { GprobeUiService } from '../../services/gprobe-ui/gprobe-ui.service';
 import { DataService } from '../../services/data/data.service';
 import * as _ from 'underscore';
 
@@ -13,7 +12,7 @@ import * as _ from 'underscore';
           <option disabled selected>Select a Diameter</option>
           <option *ngFor="let diameter of diameterArray" [ngValue]="diameter">{{diameter}}</option>
         </select>
-        <p *ngIf="prRange !== '' && showFilters" class="pr-range"><em><strong>Processing Range: {{prRange}}</strong></em></p>
+        <p *ngIf="prRange !== ''" class="pr-range"><em><strong>Processing Range: {{prRange}}</strong></em></p>
       </div>
     </form>
     <productView [masterProductList]="masterProductList"></productView>
@@ -28,7 +27,7 @@ export class GpInputDiameterComponent implements OnInit, OnChanges {
   selectedValue;
   @Input() masterProductList;
 
-  constructor(private _service: GprobeUiService, private data: DataService) { }
+  constructor(private data: DataService) { }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes) {

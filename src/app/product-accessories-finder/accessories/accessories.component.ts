@@ -1,7 +1,7 @@
+import { ProductService } from '../../services/product/product.service';
 import { Component, OnInit, EventEmitter } from '@angular/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { trigger, state, transition, style, animate, query, stagger, keyframes } from '@angular/animations';
-import { ProductsService } from '../../services/products/products.service';
 import { DataService } from './../../services/data/data.service';
 import { IProduct } from '../../product';
 import * as _ from 'underscore';
@@ -58,8 +58,8 @@ export class AccessoriesComponent implements OnInit {
   public loading = false;
 
   constructor(
-      private _service: ProductsService,
-      private data: DataService
+      private data: DataService,
+      private prodService: ProductService
     ) {
     this.getProductsList();
   }
@@ -71,7 +71,7 @@ export class AccessoriesComponent implements OnInit {
 
   getProductsList() {
     this.loading = true;
-    this._service.getCatgegories()
+    this.prodService.getAllProducts()
       .subscribe(response => {
         const masterList = this.getProductsWithAccessories(response);
         this.powers = masterList;

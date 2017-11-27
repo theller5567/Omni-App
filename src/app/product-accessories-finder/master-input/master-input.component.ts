@@ -1,6 +1,5 @@
 import { Response } from '@angular/http';
 import { Component, Input, Output, EventEmitter, SimpleChanges, OnChanges } from '@angular/core';
-import { ProductsService } from '../../services/products/products.service';
 import { IProduct } from '../../product';
 
 @Component({
@@ -24,7 +23,6 @@ export class MasterInputComponent implements OnChanges {
   selectedValue: any;
   categoriesListArray: any[];
   masterProduct;
-  constructor(private _service: ProductsService) {}
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['powers']) {

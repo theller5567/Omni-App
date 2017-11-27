@@ -1,33 +1,45 @@
+const productRouter = require('express').Router();
+const Product = require('../models/product');
 
-const express = require('express');
-const router = express.Router()
-const mongoose = require('mongoose');
-const product = require('../models/product');
 
-const db = "mongodb://theller5567:Noel1124#$@ds147377.mlab.com:47377/heroku_pwwmd9c8";
-
-mongoose.Promise = global.Promise;
-
-const options = {
-  useMongoClient: true
-}
-
-mongoose.connect(db, options, function(err){
-    if(err){
-        console.log('Connection Error');
-    }
+/* GET PRODUCTS */
+productRouter.get('/', function(req,res){
+    Product.find(function (err, data) {
+        if (err) return next(err);
+        return res.json(data);
+    });
 });
 
-
-router.get('/products', function(req,res){
-    product.find({})
-        .exec(function(err, products){
-            if(err){
-                console.log('Error getting the products');
-            } else {
-                res.json(products);
-            }
-        });
+/* SAVE PRODUCT */
+productRouter.post('/', function (req, res, next) {
+    Product.create(req.body, function (err, post) {
+        if (err) return next(err);
+        return res.json(post); 
+    });
 });
 
-module.exports = router;
+/* GET SINGLE BOOK BY ID */
+productRouter.get('/:id', function (req, res, next) {
+    Product.findById(req.params.id, function (err, post) {
+        if (err) return next(err);
+        return res.json(post);
+    });
+});
+
+/* UPDATE PRODUCT */
+productRouter.put('/:id', function (req, res, next) {
+    Product.findByIdAndUpdate(req.params.id, req.body, function (err, post) {
+        if (err) return next(err);
+        res.json(post);
+    });
+});
+
+/* DELETE PRODUCT */
+productRouter.delete('/:id', function (req, res, next) {
+    Product.findByIdAndRemove(req.params.id, req.body, function (err, post) {
+        if (err) return next(err);
+        res.json(post);
+    });
+});
+
+module.exports = productRouter;

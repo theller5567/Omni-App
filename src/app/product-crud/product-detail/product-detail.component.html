@@ -1,0 +1,37 @@
+<div class="container">
+  <h1>{{ product.product_name }}</h1>
+  <dl class="list">
+    <dt>Product Name</dt>
+    <dd>{{ product.product_name }}</dd>
+    <dt>SKU</dt>
+    <dd>{{ product.sku }}</dd>
+    <dt>Price</dt>
+    <dd>{{ product.price }}</dd>
+    <dt>Description</dt>
+    <dd>{{ product.description }}</dd>
+    <dt>Productc Link</dt>
+    <dd>{{ product.product_link }}</dd>
+    <dt>Category Name</dt>
+    <dd>{{ product.cat_name }}</dd>
+    <dt>Related Products</dt>
+    <dd>{{ product.related_products }}</dd>
+    <dt>Sub Category Name</dt>
+    <dd>{{ product.sub_cat_name }}</dd>
+    <dt>Thumbnail Image</dt>
+    <dd>{{ product.images[0].thumbnail }}</dd>
+    <dt>Small Image</dt>
+    <dd>{{ product.images[0].small }}</dd>
+    <dt>Large Image</dt>
+    <dd>{{ product.images[0].large }}</dd>
+    <dt>Banner Image</dt>
+    <dd>{{ product.images[0].banner }}</dd>
+    <dt>Length</dt>
+    <dd>{{ product.length }}</dd>
+    <dt>Type</dt>
+    <dd>{{ product.type }}</dd>
+    <dt>Window-Size</dt>
+    <dd>{{ product.window_size }}</dd>
+    <dt>Update Date</dt>
+    <dd>{{ product.updated_at }}</dd>
+  </dl>
+</div>

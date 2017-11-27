@@ -4,10 +4,9 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { NgModule } from '@angular/core';
 import { AppComponent } from './app.component';
 import { HttpModule } from '@angular/http';
-import { ProductsService } from './services/products/products.service';
-import { GprobeUiService } from './services/gprobe-ui/gprobe-ui.service';
+import { ProductService } from './services/product/product.service';
 import { AccessoriesComponent } from './product-accessories-finder/accessories/accessories.component';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, FormBuilder } from '@angular/forms';
 import { MasterInputComponent } from './product-accessories-finder/master-input/master-input.component';
 import { CartComponent } from './product-accessories-finder/cart/cart.component';
 import { GpUiComponent } from './generator-probe-finder/gp-ui/gp-ui.component';
@@ -20,6 +19,10 @@ import { ExtraFiltersComponent } from './generator-probe-finder/extra-filters/ex
 import { ProductComponent } from './generator-probe-finder/product-view/product/product.component';
 import { AlertModule } from 'ngx-bootstrap';
 import { LoadingModule } from 'ngx-loading';
+import { NewProductComponent } from './product-crud/new-product/new-product.component';
+import { HashLocationStrategy, LocationStrategy } from '@angular/common';
+import { ProductDetailComponent } from './product-crud/product-detail/product-detail.component';
+import { ProductCreateComponent } from './product-crud/product-create/product-create.component';
 
 @NgModule({
   declarations: [
@@ -33,7 +36,10 @@ import { LoadingModule } from 'ngx-loading';
     GpInputDiameterComponent,
     ProductViewComponent,
     ExtraFiltersComponent,
-    ProductComponent
+    ProductComponent,
+    NewProductComponent,
+    ProductDetailComponent,
+    ProductCreateComponent,
   ],
   imports: [
     BrowserModule,
@@ -52,12 +58,28 @@ import { LoadingModule } from 'ngx-loading';
         component: GpComponent
       },
       {
+        path: 'new-product',
+        component: NewProductComponent
+      },
+      {
+        path: 'product-details/:id',
+        component: ProductDetailComponent
+      },
+      {
+        path: 'product-create',
+        component: ProductCreateComponent
+      },
+      {
         path: '',
         component: AccessoriesComponent
       }
     ]),
   ],
-  providers: [ ProductsService, GprobeUiService, DataService ],
+  providers: [
+    DataService,
+    ProductService,
+    FormBuilder
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
