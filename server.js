@@ -4,10 +4,8 @@ const path = require('path');
 const http = require('http');
 const app = express();
 var mongoose = require('mongoose');
-var multer = require('multer');
 const db = "mongodb://theller5567:Noel1124#$@ds147377.mlab.com:47377/heroku_pwwmd9c8";
 const productsApi = require('./server/routes/api');
-var config = require('./server/config/config');
 
 mongoose.Promise = global.Promise;
 const options = {
@@ -31,7 +29,7 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist/index.html'));
 });
 
-const port = config.port;
+const port = process.env.PORT || '3000';
 app.set('port', port);
 
 const server = http.createServer(app);
