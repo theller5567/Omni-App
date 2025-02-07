@@ -8,6 +8,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+.env
+config.json
+credentials.yml
 dist
 dist-ssr
 *.local
