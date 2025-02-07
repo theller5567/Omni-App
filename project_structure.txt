@@ -1,0 +1,43 @@
+.
+├── backend
+│   ├── logs
+│   │   └── combined.log
+│   ├── models
+│   │   └── User.js
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── routes
+│   │   ├── fileRoutes.js
+│   │   └── userRoutes.js
+│   ├── server.js
+│   └── utils
+│       └── logger.js
+├── frontend
+│   ├── README.md
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── project-structure.txt
+│   ├── public
+│   │   └── vite.svg
+│   ├── src
+│   │   ├── App.css
+│   │   ├── App.tsx
+│   │   ├── assets
+│   │   │   └── react.svg
+│   │   ├── index.css
+│   │   ├── main.tsx
+│   │   ├── pages
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Home.tsx
+│   │   │   └── Login.tsx
+│   │   └── vite-env.d.ts
+│   ├── tsconfig.app.json
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   └── vite.config.ts
+├── project-structure.txt
+└── project_structure.txt
+
+11 directories, 30 files
