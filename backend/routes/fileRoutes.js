@@ -1,15 +1,10 @@
-const express = require('express');
+import express from "express";
+import { uploadFile, getFiles, deleteFile } from "../controllers/fileController.js";
+
 const router = express.Router();
 
-// Define your file routes here
-router.post('/upload', (req, res) => {
-  // Handle file upload
-  res.send('File upload');
-});
+router.post("/upload", uploadFile);
+router.get("/", getFiles);
+router.delete("/:id", deleteFile);
 
-router.get('/search', (req, res) => {
-  // Handle file search
-  res.send('File search');
-});
-
-module.exports = router;
+export default router; 
