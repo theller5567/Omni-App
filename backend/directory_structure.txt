@@ -1,0 +1,42 @@
+.
+├── README.md
+├── config
+│   ├── db.js
+│   └── s3Config.js
+├── constants
+│   ├── errorMessages.js
+│   └── roles.js
+├── controllers
+│   ├── authController.js
+│   ├── fileController.js
+│   └── userController.js
+├── directory_structure.txt
+├── logs
+│   └── combined.log
+├── middleware
+│   ├── authMiddleware.js
+│   ├── errorHandler.js
+│   └── multerUpload.js
+├── models
+│   ├── ActivityLog.js
+│   ├── File.js
+│   └── User.js
+├── package-lock.json
+├── package.json
+├── routes
+│   ├── authRoutes.js
+│   ├── fileRoutes.js
+│   └── userRoutes.js
+├── server.js
+├── services
+│   ├── activityLogger.js
+│   ├── awsService.js
+│   └── searchService.js
+├── tests
+│   ├── auth.test.js
+│   └── file.test.js
+└── utils
+    ├── logger.js
+    └── responseHandler.js
+
+11 directories, 29 files

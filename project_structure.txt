@@ -1,94 +1,95 @@
 OMNI-APP
+├── Startup.txt
 ├── backend
-│   ├── README.md
-│   ├── config
-│   │   ├── db.js
-│   │   └── s3Config.js
-│   ├── constants
-│   │   ├── errorMessages.js
-│   │   └── roles.js
-│   ├── controllers
-│   │   ├── authController.js
-│   │   ├── fileController.js
-│   │   └── userController.js
-│   ├── logs
-│   │   └── combined.log
-│   ├── middleware
-│   │   ├── authMiddleware.js
-│   │   ├── errorHandler.js
-│   │   └── multerUpload.js
-│   ├── models
-│   │   ├── ActivityLog.js
-│   │   ├── File.js
-│   │   └── User.js
-│   ├── package-lock.json
-│   ├── package.json
-│   ├── routes
-│   │   ├── authRoutes.js
-│   │   ├── fileRoutes.js
-│   │   └── userRoutes.js
-│   ├── server.js
-│   ├── services
-│   │   ├── activityLogger.js
-│   │   ├── awsService.js
-│   │   └── searchService.js
-│   ├── tests
-│   │   ├── auth.test.js
-│   │   └── file.test.js
-│   └── utils
-│       ├── logger.js
-│       └── responseHandler.js
-├── env.example
+│   ├── README.md
+│   ├── config
+│   │   ├── db.js
+│   │   └── s3Config.js
+│   ├── constants
+│   │   ├── errorMessages.js
+│   │   └── roles.js
+│   ├── controllers
+│   │   ├── authController.js
+│   │   ├── fileController.js
+│   │   └── userController.js
+│   ├── directory_structure.txt
+│   ├── logs
+│   │   └── combined.log
+│   ├── middleware
+│   │   ├── authMiddleware.js
+│   │   ├── errorHandler.js
+│   │   └── multerUpload.js
+│   ├── models
+│   │   ├── ActivityLog.js
+│   │   ├── File.js
+│   │   └── User.js
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── routes
+│   │   ├── authRoutes.js
+│   │   ├── fileRoutes.js
+│   │   └── userRoutes.js
+│   ├── server.js
+│   ├── services
+│   │   ├── activityLogger.js
+│   │   ├── awsService.js
+│   │   └── searchService.js
+│   ├── tests
+│   │   ├── auth.test.js
+│   │   └── file.test.js
+│   └── utils
+│       ├── logger.js
+│       └── responseHandler.js
 ├── frontend
-│   ├── README.md
-│   ├── eslint.config.js
-│   ├── index.html
-│   ├── package-lock.json
-│   ├── package.json
-│   ├── project-structure.txt
-│   ├── public
-│   │   ├── favicon.ico
-│   │   └── vite.svg
-│   ├── src
-│   │   ├── App.css
-│   │   ├── App.tsx
-│   │   ├── assets
-│   │   │   ├── logo.png
-│   │   │   └── react.svg
-│   │   ├── components
-│   │   │   ├── Breadcrumbs.tsx
-│   │   │   ├── FileDetails.tsx
-│   │   │   ├── FileGrid.tsx
-│   │   │   ├── FileTable.tsx
-│   │   │   ├── Sidebar.tsx
-│   │   │   ├── TopBar.tsx
-│   │   │   └── UploadModal.tsx
-│   │   ├── index.css
-│   │   ├── interfaces
-│   │   │   ├── File.ts
-│   │   │   └── User.ts
-│   │   ├── layouts
-│   │   │   └── DashboardLayout.tsx
-│   │   ├── main.tsx
-│   │   ├── pages
-│   │   │   ├── Dashboard.tsx
-│   │   │   ├── Home.tsx
-│   │   │   ├── Login.tsx
-│   │   │   └── Profile.tsx
-│   │   ├── store
-│   │   │   ├── slices
-│   │   │   │   ├── authSlice.ts
-│   │   │   │   └── fileSlice.ts
-│   │   │   └── store.ts
-│   │   ├── utils
-│   │   │   ├── api.ts
-│   │   │   ├── authHelper.ts
-│   │   │   └── formatDate.ts
-│   │   └── vite-env.d.ts
-│   ├── tsconfig.app.json
-│   ├── tsconfig.json
-│   ├── tsconfig.node.json
-│   └── vite.config.ts
+│   ├── README.md
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── public
+│   │   ├── favicon.ico
+│   │   └── vite.svg
+│   ├── src
+│   │   ├── App.scss
+│   │   ├── App.tsx
+│   │   ├── assets
+│   │   │   ├── logo.png
+│   │   │   └── react.svg
+│   │   ├── components
+│   │   │   ├── Breadcrumbs.tsx
+│   │   │   ├── FileDetails.tsx
+│   │   │   ├── FileGrid.tsx
+│   │   │   ├── FileTable.tsx
+│   │   │   ├── Sidebar.tsx
+│   │   │   ├── TopBar.tsx
+│   │   │   └── UploadModal.tsx
+│   │   ├── index.scss
+│   │   ├── interfaces
+│   │   │   ├── File.ts
+│   │   │   └── User.ts
+│   │   ├── layouts
+│   │   │   └── DashboardLayout.tsx
+│   │   ├── main.tsx
+│   │   ├── pages
+│   │   │   ├── AuthPage.tsx
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Home.tsx
+│   │   │   ├── Login.tsx
+│   │   │   └── Profile.tsx
+│   │   ├── store
+│   │   │   ├── slices
+│   │   │   │   ├── authSlice.ts
+│   │   │   │   └── fileSlice.ts
+│   │   │   └── store.ts
+│   │   ├── utils
+│   │   │   ├── api.ts
+│   │   │   ├── authHelper.ts
+│   │   │   └── formatDate.ts
+│   │   └── vite-env.d.ts
+│   ├── tsconfig.app.json
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   └── vite.config.ts
 └── project_structure.txt
 
-23 directories, 69 files
+23 directories, 70 files
