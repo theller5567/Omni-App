@@ -1,0 +1,34 @@
+.media-library {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    padding: 2rem;
+    box-sizing: border-box;
+    margin: auto;
+    padding-left: calc(250px + 2rem);
+    h6 {
+        margin-bottom: 2rem;
+    }
+  .folder, .folder-content {
+    transition: opacity 0.3s ease;
+    cursor: pointer;
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+  .subfolder {
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .media-library {
+    .folder {
+      flex-direction: column;
+    }
+  }
+}

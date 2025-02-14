@@ -32,23 +32,20 @@ The Omni Media Library Project provides a modern, intuitive interface for managi
 - **Auto-Detection:** Automatically recognizes file types.
 - **Metadata Input:**
   - Set tags and descriptions during upload.
-  - **New:** Includes an “altText” field for improved image accessibility.
+  - **New:** Includes an "altText" field for improved image accessibility.
 - **Quick Preview:** Hover to preview file details before upload.
 
 ### 2. File Browsing & Organization
-- **View Modes:** Toggle between grid and table views.
-- **Advanced Search & Filtering:**
-  - Search by name, tags, uploader, file type, and date.
-  - Autocomplete suggestions enhance the search experience.
-- **Sorting & Organization:**
-  - Sort by date, name, size, and favorites.
-  - Organize files using a virtual folder structure (`folderPath`).
-- **Bulk Actions:** Easily delete, move, or bulk-edit metadata.
-- **Visual Enhancements:**
-  - Redesigned thumbnails with hover previews.
-  - Updated file details panel with contextual actions.
-- **Breadcrumb Navigation:** Clean display of file hierarchy.
-- **Regex Folder Search:** Query all files under a parent folder using regex.
+- **Default State**: 
+  - Initially displays only the main root folders in a grid view.
+  - Users can navigate through folders to access media files.
+
+- **Folder Navigation**:
+  - Clickable folders with breadcrumb navigation to track the current path.
+  - Dynamic loading of folder contents as users navigate deeper.
+
+- **File Count Display**:
+  - Each folder shows the number of files it contains, providing quick insights into folder contents.
 
 ### 3. File Actions
 - **Editing:** Rename files and update tags, descriptions, and visibility.

@@ -1,0 +1,27 @@
+@import './variables.scss';
+
+// Add any truly global styles here
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.media-library {
+  padding: 20px;
+  .folder {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 10px;
+    &:hover {
+      background-color: #f0f0f0;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .media-library {
+    .folder {
+      flex-direction: column;
+    }
+  }
+}

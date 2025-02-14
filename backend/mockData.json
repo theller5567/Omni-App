@@ -1,0 +1,26 @@
+{
+    "folders": [
+      {
+        "id": 1,
+        "name": "Folder 1",
+        "fileCount": 5,
+        "subfolders": [
+          {
+            "id": 11,
+            "name": "Subfolder 1-1",
+            "fileCount": 2,
+            "images": [
+              { "id": 111, "name": "Image 1-1-1", "thumbnail": "thumb1.jpg" },
+              { "id": 112, "name": "Image 1-1-2", "thumbnail": "thumb2.jpg" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "name": "Folder 2",
+        "fileCount": 8,
+        "subfolders": []
+      }
+    ]
+  }

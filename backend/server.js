@@ -6,26 +6,30 @@ import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 // Load environment variables from .env file
 dotenv.config();
-// Import the cors package
 
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Use CORS to allow all requests
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);  // Log every incoming request
-  next();  // Pass to the next middleware/route handler
-});
-
-
+// Enable CORS
 app.use(cors({
-  origin: 'http://localhost:5173', // Replace this with your frontend's URL (for local development)
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
-  credentials: true, // Allow cookies or credentials (if needed)
+  origin: 'http://localhost:5173', // Replace with your frontend's URL
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true,
 }));
 
+// Read mock data from JSON file
+const mockData = JSON.parse(fs.readFileSync(path.join(__dirname, 'mockData.json'), 'utf-8'));
+
+app.get('/api/folders', (req, res) => {
+  res.json(mockData.folders);
+});
 
 // Middleware
 app.use(bodyParser.json());
@@ -48,7 +52,7 @@ if (!mongoUri) {
   process.exit(1);
 }
 
-mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(mongoUri)
   .then(() => {
     console.log('MongoDB connected');
     const PORT = process.env.PORT || 5002;

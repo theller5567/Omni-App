@@ -1,22 +1,28 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom'; // For navigation links
 import { motion } from 'framer-motion'; // Import motion from framer-motion
-import './component_styles/sidebar.scss'; // Import the CSS file for styling
 import { FaSignOutAlt, FaAtlassian, FaHome, FaUser, FaFilm, FaBars } from 'react-icons/fa';  // Import icons for links
+import './sidebar.scss';
 
-const Sidebar: React.FC = () => {
-  const [isVisible, setIsVisible] = useState(true); // Sidebar visibility state
+interface SidebarProps {
+  isVisible: boolean;
+  toggleSidebar: () => void;
+}
 
-  const toggleSidebar = () => {
-    setIsVisible(!isVisible); // Toggle the sidebar visibility
-  };
-
+const Sidebar: React.FC<SidebarProps> = ({ isVisible, toggleSidebar }) => {
   return (
     <motion.div
       className={`sidebar ${isVisible ? 'visible' : 'hidden'}`}
       initial={{ width: '80px' }} // Initial width when collapsed
       animate={{ width: isVisible ? '250px' : '80px' }} // Animate width change
       transition={{ duration: 0.3 }} // Sidebar animation duration
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        bottom: 0,
+        zIndex: 1000,
+      }}
     >
       <div className="sidebar-content">
         {/* Logo */}
