@@ -1,17 +1,14 @@
 import express from "express";
-import { registerUser, loginUser, verifyEmail } from "../controllers/authController.js"; // ✅ Add .js
-
+import { registerUser, loginUser, verifyEmail } from "../controllers/authController.js";  // ✅ Import the functions
 const router = express.Router();
 
-// Define your routes here
-
-// Route for user registration (Sign-Up)
+// Route for user sign-up
 router.post("/signup", registerUser);
 
-// Route for user login (Sign-In)
+// Route for user login
 router.post("/login", loginUser);
 
 // Route for email verification
-router.get("/verify/:token", verifyEmail);
+router.get("/verify-email/:token", verifyEmail);  // This handles the token passed in the URL
 
 export default router;

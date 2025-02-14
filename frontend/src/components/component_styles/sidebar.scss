@@ -1,0 +1,108 @@
+/* Sidebar styling */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh; /* Full height of the viewport */
+    width: 250px;
+    background-color: #333;
+    color: white;
+    z-index: 1000;
+    padding-bottom: 1rem; /* Add padding to ensure content is not cut off */
+  }
+
+  
+  .sidebar.hidden {
+    width: 80px; /* Shrink the sidebar to the width of the icons */
+  }
+  
+  .sidebar.visible {
+    width: 250px; /* Full width when the sidebar is open */
+  }
+  
+  .sidebar-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Ensure it takes full height */
+    padding: 1rem;
+  }
+  
+  .sidebar-logo {
+    display: flex;
+    margin-bottom: 30px;
+  }
+  
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    flex-grow: 1; /* Allow the nav to grow and fill space */
+  }
+  
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    transition: none;
+  }
+  
+
+  
+  .link-item {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: white;
+    gap: 10px;
+  }
+  
+  .icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #444;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 20px;
+    transition: none;
+    margin-right: 10px;
+  }
+  
+  /* Hide the text links when the sidebar is collapsed */
+  .text-link {
+    white-space: nowrap;
+    overflow: hidden; // Hide any overflow text
+    text-overflow: ellipsis; // Add ellipsis for overflow text
+    opacity: 1;
+    transition: opacity 0.3s ease 0.3s;
+  }
+  
+  .sidebar.hidden .text-link {
+    opacity: 0;
+  }
+  
+  .sidebar-signout {
+    margin-top: auto; /* Push the signout button to the bottom */
+    margin-bottom: 3rem; /* Add margin to bring it up slightly */
+    white-space: nowrap;
+    overflow: hidden; // Hide any overflow text
+    text-overflow: ellipsis; // Add ellipsis for overflow text
+    opacity: 1;
+    transition: opacity 0.3s ease 0.3s;
+  }
+  
+
+  
+  /* Menu button for mobile or small screens */
+  .sidebar-toggle {
+    display: flex;
+    background-color: transparent;
+    border: none;
+    font-size: 30px;
+    color: white;
+    cursor: pointer;
+    z-index: 1050; /* To keep the toggle button on top of sidebar */
+  }

@@ -1,27 +1,18 @@
 import mongoose from "mongoose";
 
-const UserSchema = new mongoose.Schema(
+// User schema
+const userSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
-    verificationToken: {
-      type: String,
-      default: null,
-    },
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },  // email must be unique
+    username: { type: String, unique: true, sparse: true },  // Make username optional and unique
+    isVerified: { type: Boolean, default: false },
+    verificationToken: { type: String },
   },
   { timestamps: true }
 );
 
-const User = mongoose.model("User", UserSchema);
+// Create a model from the schema
+const User = mongoose.model("User", userSchema);
+
 export default User;
