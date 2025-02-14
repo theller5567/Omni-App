@@ -28,11 +28,11 @@
   }
   
   .sidebar-logo {
-    display: flex;
     margin-bottom: 30px;
+    font-size: 3rem;
   }
   
-
+  
   .sidebar-nav {
     display: flex;
     flex-direction: column;
@@ -97,12 +97,38 @@
 
   
   /* Menu button for mobile or small screens */
-  .sidebar-toggle {
-    display: flex;
-    background-color: transparent;
-    border: none;
-    font-size: 30px;
-    color: white;
-    cursor: pointer;
-    z-index: 1050; /* To keep the toggle button on top of sidebar */
+.sidebar-toggle {
+  position: absolute;
+  top: 1.25rem; /* Adjust as needed */
+  right: -1.875rem;
+  width: 1.875rem; /* Match the icon's width */
+  height: 1.875rem; /* Match the icon's height */
+  background-color: transparent;
+  border: none;
+  font-size: 1.5625rem;
+  color: white;
+  cursor: pointer;
+  z-index: 1050; /* Ensure the toggle button is on top */
+  box-sizing: border-box; /* Include padding and border in the element's total size */
+  padding: 0; /* Remove any padding */
+  margin: 0; /* Remove any margin */
+  svg {
+      padding-left: 0.5rem;
   }
+  
+  &::before {
+    content: ''; /* Add content for the pseudo-element */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2.1875rem; /* Match the icon's width */
+    height: 1.875rem; /* Match the icon's height */
+    background-color: green; /* Example background color */
+    z-index: 1040; /* Lower than the toggle button */
+    pointer-events: none; /* Ensure it doesn't interfere with button clicks */
+    display: block; /* Ensure it is displayed */
+    border-top-right-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+    z-index: -1;
+  }
+}

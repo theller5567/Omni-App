@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom'; // For navigation links
 import { motion } from 'framer-motion'; // Import motion from framer-motion
 import './component_styles/sidebar.scss'; // Import the CSS file for styling
-import { FaSignOutAlt, FaAtlassian, FaHome, FaUser, FaFilm } from 'react-icons/fa';  // Import icons for links
+import { FaSignOutAlt, FaAtlassian, FaHome, FaUser, FaFilm, FaBars } from 'react-icons/fa';  // Import icons for links
 
 const Sidebar: React.FC = () => {
   const [isVisible, setIsVisible] = useState(true); // Sidebar visibility state
@@ -19,10 +19,6 @@ const Sidebar: React.FC = () => {
       transition={{ duration: 0.3 }} // Sidebar animation duration
     >
       <div className="sidebar-content">
-        {/* Menu Button (to toggle sidebar visibility) */}
-      <button className="sidebar-toggle" onClick={toggleSidebar}>
-        ☰ {/* Hamburger icon */}
-      </button>
         {/* Logo */}
         <div className="sidebar-logo">
           <FaAtlassian />
@@ -66,6 +62,11 @@ const Sidebar: React.FC = () => {
           </Link>
         </div>
       </div>
+
+      {/* Menu Button (to toggle sidebar visibility) */}
+      <button className="sidebar-toggle" onClick={toggleSidebar}>
+      <FaBars /> {/* Hamburger icon */}
+      </button>
     </motion.div>
   );
 };

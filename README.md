@@ -1,155 +1,230 @@
-# Omni-App
+# Omni Media Library Project
 
-Omni-App is a powerful file management and media storage platform designed for efficient media upload, organization, and user management. It leverages modern technologies to provide an intuitive UI/UX, robust security, and seamless performance for managing images, videos, documents, and more.
+## Overview
 
-## Core Features
+The Omni Media Library Project provides a modern, intuitive interface for managing, organizing, and sharing media files. This document outlines our latest features, UI updates, and technical details.
 
-### File & Media Management
-- **File Uploading:** Supports drag & drop, bulk uploads, file type auto-detection, and metadata storage in MongoDB.
-- **File Browsing & Organization:** Flexible file viewing (Grid & Table), powerful search & filter, and virtual folder-based organization.
-- **File Actions:** Edit metadata, delete, versioning, download/preview, and generate shareable links.
-- **File Metadata:** Store and manage metadata for images, PDFs, videos, and Word documents, with custom fields for each type.
+---
 
-### User Management & Authentication
-- **Roles & Permissions:** Four roles: Admin, Manager, User, and Distributor with role-based UI adjustments.
-- **Authentication:** JWT-based login, registration, password hashing, email verification, and optional two-factor authentication.
-- **User Profiles:** Customizable avatars, profile details, and activity logs.
+## Table of Contents
 
-### Activity Tracking & Security
-- **Action Logs:** Track file uploads, edits, deletions, and login attempts with exportable logs.
-- **Security Best Practices:** Includes middleware for protected routes, input validation, role-based access control (RBAC), and dependency audits.
+- [Core Functionality](#core-functionality)
+- [User Management & Authentication](#user-management--authentication)
+- [Activity Tracking & Security](#activity-tracking--security)
+- [UI & User Experience Enhancements](#ui--user-experience-enhancements)
+- [Technical Stack](#technical-stack)
+- [File Metadata Examples](#file-metadata-examples)
+- [Installation](#installation)
+- [Running Tests](#running-tests)
+- [Contributing](#contributing)
+- [License](#license)
 
-### UI & User Experience
-- **Responsive Dashboard:** A fully responsive layout for desktop and mobile, with a top bar, file management options, and an easy-to-navigate sidebar.
-- **Real-Time Updates:** In-app notifications for file actions and WebSocket support for real-time updates.
-- **Bulk Actions & File Details Panel:** Manage files in bulk with action buttons and a dedicated panel for file details.
+---
 
-### Technical Stack
-- **Backend:** Node.js, Express, MongoDB, AWS S3, JWT, Winston, Bcrypt, Multer.
-- **Frontend:** React, TypeScript, Redux Toolkit, MUI (Material UI), Axios, Vite.
-- **Security:** Authentication middleware, role-based access control, and input validation.
+## Core Functionality
 
-## File Metadata Example
+### 1. File & Media Management
+- **Upload Files:** Supports images, videos, documents, and more.
+- **Storage & Handling:**
+  - Metadata is stored in MongoDB and files in AWS S3.
+  - Drag & drop uploading with real-time file previews.
+- **Bulk Upload:** Modern progress indicator for multiple files.
+- **Auto-Detection:** Automatically recognizes file types.
+- **Metadata Input:**
+  - Set tags and descriptions during upload.
+  - **New:** Includes an “altText” field for improved image accessibility.
+- **Quick Preview:** Hover to preview file details before upload.
 
-Here’s how metadata is structured for different file types:
+### 2. File Browsing & Organization
+- **View Modes:** Toggle between grid and table views.
+- **Advanced Search & Filtering:**
+  - Search by name, tags, uploader, file type, and date.
+  - Autocomplete suggestions enhance the search experience.
+- **Sorting & Organization:**
+  - Sort by date, name, size, and favorites.
+  - Organize files using a virtual folder structure (`folderPath`).
+- **Bulk Actions:** Easily delete, move, or bulk-edit metadata.
+- **Visual Enhancements:**
+  - Redesigned thumbnails with hover previews.
+  - Updated file details panel with contextual actions.
+- **Breadcrumb Navigation:** Clean display of file hierarchy.
+- **Regex Folder Search:** Query all files under a parent folder using regex.
 
-### Image Metadata
-```json
-{
-  "_id": "65b9f0c3d5b8a3",
-  "fileName": "sunset.jpg",
-  "fileType": "image/jpeg",
-  "folderPath": "/Nature/Landscapes",
-  "tags": ["sunset", "nature", "landscape"],
-  "uploadedBy": "user_123",
-  "uploadDate": "2025-02-11T14:30:00Z",
-  "s3Url": "https://s3.amazonaws.com/your-bucket/sunset.jpg",
-  "visibility": "public",
-  "size": 2048000,
-  "width": 1920,
-  "height": 1080,
-  "description": "A beautiful sunset over the mountains.",
-  "views": 15
-}
+### 3. File Actions
+- **Editing:** Rename files and update tags, descriptions, and visibility.
+- **Deletion:** Soft deletion for easy recovery.
+- **Versioning:** Retain previous file versions with rollback options.
+- **Download & Preview:** Enhanced UI for file previews.
+- **Sharing & Access Control:**
+  - Generate secure, shareable links.
+  - Toggle between public and private visibility.
+- **Favorites:** **New:** Bookmark files for quick access.
 
-### PDF Metadata
-{
-  "_id": "65b9f0c3d5b8a4",
-  "fileName": "business_report.pdf",
-  "fileType": "application/pdf",
-  "folderPath": "/Documents/Reports",
-  "tags": ["business", "report", "Q1"],
-  "uploadedBy": "user_456",
-  "uploadDate": "2025-02-11T15:00:00Z",
-  "s3Url": "https://s3.amazonaws.com/your-bucket/business_report.pdf",
-  "visibility": "private",
-  "size": 5242880,
-  "pageCount": 15,
-  "author": "John Doe",
-  "extractedText": "Quarterly business report for Q1 2025...",
-  "description": "A comprehensive analysis of business performance in Q1 2025.",
-  "views": 8
-}
+### 4. Metadata Structure Enhancements
+- **Image Metadata:** Now includes width, height, description, tags, `folderPath`, and `altText`.
+- **PDF Metadata:** Stores page count, author, extracted text, and description.
+- **Video Metadata:** Contains duration, resolution, frame rate, bitrate, thumbnail URL, captions, and description.
+- **Word Document Metadata:** Includes page count, author, extracted text, and description.
 
-### Video Metadata
-{
-  "_id": "65b9f0c3d5b8a5",
-  "fileName": "travel_vlog.mp4",
-  "fileType": "video/mp4",
-  "folderPath": "/Videos/Travel",
-  "tags": ["travel", "vlog", "adventure"],
-  "uploadedBy": "user_789",
-  "uploadDate": "2025-02-11T16:00:00Z",
-  "s3Url": "https://s3.amazonaws.com/your-bucket/travel_vlog.mp4",
-  "visibility": "public",
-  "size": 104857600,
-  "duration": 300,
-  "resolution": "1920x1080",
-  "frameRate": 30,
-  "bitrate": 5000000,
-  "thumbnailUrl": "https://s3.amazonaws.com/your-bucket/thumbnails/travel_vlog.jpg",
-  "description": "A travel vlog exploring the beautiful landscapes of Iceland.",
-  "views": 22
-}
+---
 
-Installation
-Prerequisites
+## User Management & Authentication
 
-    Backend: Node.js, MongoDB, AWS S3 account.
-    Frontend: Node.js, Vite.
-    Optional: Email service for verification and notification features.
+### 5. User Roles & Permissions
+- **Roles:**
+  - **Admin:** Full access (user management, logs).
+  - **Manager:** Can upload/edit files but cannot delete files uploaded by others.
+  - **User:** Limited to uploading and viewing their own files.
+  - **Distributor:** Focused on media distribution.
+- **Role-Based UI:** Displays controls based on the user's role.
 
-Setup Instructions
+### 6. User Authentication
+- **Security:** JWT-based authentication with Bcrypt password hashing.
+- **Sessions:** Streamlined login/logout system.
+- **Registration:** Requires name and email with enhanced verification.
+- **Planned Enhancements:** Optional email verification and two-factor authentication.
 
-    Clone the repository:
+### 7. User Profiles
+- **Customization:**
+  - Default avatars with an option for custom profile pictures.
+  - **New:** Option to customize profile backgrounds/themes.
+- **Editable Information:** Users can update their name and password.
+- **Activity Log:** Tracks each user's actions.
 
-git clone https://github.com/yourusername/omni-app.git
+---
 
-Install backend dependencies:
+## Activity Tracking & Security
 
-cd omni-app/backend
-npm install
+### 8. Action Logging & History
+- **Comprehensive Logging:** Records uploads, edits, deletions, and failed logins.
+- **Admin Panel:** Filter and view an enhanced activity feed.
+- **Export Logs:** Download logs as CSV for audits.
 
-Set up environment variables:
+### 9. Security Best Practices
+- **Access Control:** Uses middleware and RBAC to protect routes.
+- **Input Validation:** Prevents injection attacks.
+- **Sensitive Data:** Managed via environment variables.
+- **Maintenance:** Regular dependency audits and security updates.
 
-    Create a .env file in the backend directory.
-    Add necessary keys: MONGO_URI, S3_BUCKET, JWT_SECRET, etc.
+---
 
-Run the backend server:
+## UI & User Experience Enhancements
 
-npm start
+### 10. Dashboard & Layout
+- **Sidebar Navigation:** Collapsible menus with clear icons.
+- **Top Bar:** Updated search bar with autocomplete and notifications.
+- **View Toggle:** Smooth switching between grid and table views.
+- **File Details Panel:** Modern design with contextual actions.
+- **Upload Modal:** Real-time progress bar and file preview.
+- **Bulk Actions:** Streamlined multi-file operations.
+- **Responsive Design:** Optimized for both desktop and mobile (hamburger menu on mobile).
+- **Dark Mode:** Fully implemented with smooth transitions.
 
-Install frontend dependencies:
+### 11. Notifications & Real-Time Updates
+- **In-App Notifications:** Toast messages for actions (e.g., uploads, errors).
+- **Notifications Center:** **New:** Top bar section for viewing past notifications.
+- **Real-Time Updates:** WebSocket-based live updates and push notifications.
 
-cd omni-app/frontend
-npm install
+---
 
-Run the frontend app:
+## Technical Stack
 
+### 12. Backend Stack
+- **Server & API:** Node.js and Express.
+- **Database:** MongoDB (using Mongoose).
+- **File Storage:** AWS S3.
+- **File Uploads:** Handled by Multer.
+- **Authentication:** JWT-based with Bcrypt.
+- **Logging:** Managed with Winston.
+
+### 13. Frontend Stack
+- **Framework:** React (TypeScript).
+- **State Management:** Redux Toolkit.
+- **Routing:** React Router.
+- **UI Library:** Material UI (MUI).
+- **API Requests:** Axios.
+
+---
+
+## File Metadata Examples
+
+### Image Metadata Example
+    {
+      "_id": "65b9f0c3d5b8a3",
+      "fileName": "sunset.jpg",
+      "fileType": "image/jpeg",
+      "folderPath": "/Nature/Landscapes",
+      "tags": ["sunset", "nature", "landscape"],
+      "uploadedBy": "user_123",
+      "uploadDate": "2025-02-11T14:30:00Z",
+      "s3Url": "https://s3.amazonaws.com/your-bucket/sunset.jpg",
+      "visibility": "public",
+      "size": 2048000,
+      "width": 1920,
+      "height": 1080,
+      "altText": "Sunset over mountains",
+      "description": "A beautiful sunset over the mountains.",
+      "views": 15
+    }
+
+*Similar examples exist for PDF, Video, and Word Document metadata.*
+
+---
+
+## Installation
+
+### Prerequisites
+- **Backend:** Node.js, MongoDB, AWS S3 account.
+- **Frontend:** Node.js, Vite.
+- **Optional:** Email service for verification and notifications.
+
+### Setup Instructions
+
+1. **Clone the Repository:**
+    git clone https://github.com/yourusername/omni-app.git
+
+2. **Backend Setup:**
+    cd omni-app/backend
+    npm install
+
+    - Create a `.env` file with keys such as `MONGO_URI`, `S3_BUCKET`, `JWT_SECRET`, etc.
+    - Start the backend server:
+      npm start
+
+3. **Frontend Setup:**
+    cd omni-app/frontend
+    npm install
     npm run dev
 
-Running Tests
+---
 
-Backend and frontend tests are handled using Jest. To run tests:
+## Running Tests
 
-cd omni-app/backend
-npm test
+- **Backend Tests:**
+    cd omni-app/backend
+    npm test
 
-For frontend tests:
+- **Frontend Tests:**
+    cd omni-app/frontend
+    npm test
 
-cd omni-app/frontend
-npm test
+---
 
-Contributing
+## Contributing
 
-We welcome contributions! Here’s how you can help:
+We welcome contributions! To contribute:
 
-    Fork the repository.
-    Create your feature branch (git checkout -b feature-name).
-    Commit your changes (git commit -m 'Add new feature').
-    Push to the branch (git push origin feature-name).
-    Create a new Pull Request.
+1. Fork the repository.
+2. Create your feature branch:
+    git checkout -b feature-name
+3. Commit your changes:
+    git commit -m "Add new feature"
+4. Push the branch:
+    git push origin feature-name
+5. Open a Pull Request.
 
-License
+---
 
-This project is licensed under the MIT License - see the LICENSE.md file for details.
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
