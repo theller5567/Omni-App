@@ -1,3 +1,4 @@
+
 .media-library {
     display: flex;
     flex-direction: column;
@@ -23,6 +24,13 @@
     justify-content: center;
     gap: 1rem;
   }
+}
+
+label.css-1kfabtt-MuiFormLabel-root-MuiInputLabel-root {
+    color: var(--text-color);
+}
+.MuiGrid-root {
+  padding: 2rem 1rem;
 }
 
 @media (max-width: 768px) {

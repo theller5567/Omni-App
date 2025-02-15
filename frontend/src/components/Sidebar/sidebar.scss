@@ -13,7 +13,7 @@
 
   
   .sidebar.hidden {
-    width: 80px; /* Shrink the sidebar to the width of the icons */
+    width: 100px; /* Shrink the sidebar to the width of the icons */
   }
   
   .sidebar.visible {
@@ -99,36 +99,21 @@
   /* Menu button for mobile or small screens */
 .sidebar-toggle {
   position: absolute;
-  top: 1.25rem; /* Adjust as needed */
-  right: -1.875rem;
-  width: 1.875rem; /* Match the icon's width */
-  height: 1.875rem; /* Match the icon's height */
-  background-color: transparent;
+  top: 1rem;
+  right: -15px;
+  background-color: #333;
   border: none;
-  font-size: 1.5625rem;
-  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  z-index: 1050; /* Ensure the toggle button is on top */
-  box-sizing: border-box; /* Include padding and border in the element's total size */
-  padding: 0; /* Remove any padding */
-  margin: 0; /* Remove any margin */
-  svg {
-      padding-left: 0.5rem;
-  }
-  
-  &::before {
-    content: ''; /* Add content for the pseudo-element */
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 2.1875rem; /* Match the icon's width */
-    height: 1.875rem; /* Match the icon's height */
-    background-color: green; /* Example background color */
-    z-index: 1040; /* Lower than the toggle button */
-    pointer-events: none; /* Ensure it doesn't interfere with button clicks */
-    display: block; /* Ensure it is displayed */
-    border-top-right-radius: 0.5rem;
-    border-bottom-right-radius: 0.5rem;
-    z-index: -1;
-  }
+  aspect-ratio: 1;
+  z-index: 1001;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+  padding: 0.8rem;
+}
+
+.toggle-icon {
+  color: #fff;
 }

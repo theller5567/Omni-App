@@ -1,0 +1,57 @@
+.theme-toggle {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  cursor: pointer;
+  z-index: 1000;
+}
+
+.toggle-switch {
+  width: 60px;
+  height: 30px;
+  background-color: #ccc;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px;
+  transition: background-color 0.3s ease;
+  position: relative;
+}
+
+.toggle-switch.light {
+  background-color: #f0e68c;
+}
+
+.toggle-switch.dark {
+  background-color: #333;
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.sun {
+  left: 5px;
+  transform: translateX(0);
+  color: #fff;
+}
+
+.moon {
+  right: 5px;
+  transform: translateX(0);
+  color: black;
+}
+
+.toggle-switch.dark .sun {
+  transform: translateX(30px);
+  color: black;
+}
+
+.toggle-switch.dark .moon {
+  transform: translateX(-30px);
+  color: #fff;
+}

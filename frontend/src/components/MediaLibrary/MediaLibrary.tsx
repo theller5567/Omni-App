@@ -1,8 +1,10 @@
 // MediaLibrary.tsx
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Grid, Card, CardContent, CardActionArea } from '@mui/material';
+import { Box, Typography, Grid, Card, CardContent, CardActionArea, Button } from '@mui/material';
 import axios from 'axios';
 import './MediaLibrary.scss';
+import SearchInput from '../SearchInput/SearchInput';
+import HeaderComponent from './HeaderComponent';
 
 interface Folder {
   id: number;
@@ -16,6 +18,8 @@ const MediaLibrary: React.FC = () => {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
   const [selectedSubfolder, setSelectedSubfolder] = useState<Folder | null>(null);
+  const [view, setView] = useState<'list' | 'grid'>('grid');
+  //const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     axios.get<Folder[]>('http://localhost:5002/api/folders')
@@ -44,13 +48,35 @@ const MediaLibrary: React.FC = () => {
     }
   };
 
+  const toggleView = () => {
+    setView(view === 'grid' ? 'list' : 'grid');
+  };
+
+  // const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   setSearchTerm(event.target.value);
+  // };
+
   return (
     <Box className="media-library">
-      <Typography variant="h6" align="center">Media Library</Typography>
-      {/* Breadcrumbs component will go here */}
-
+      <Typography variant="h2" align="left" sx={{paddingBottom: '2rem'}}>Media Library</Typography>
+      <Box display="flex" justifyContent="space-between" gap={12} alignItems="center" mb={2}>
+        <Box>
+          <Button variant="contained" color="primary">View all</Button>
+          <Button variant="outlined" color="primary">Images</Button>
+          <Button variant="outlined" color="primary">Videos</Button>
+          <Button variant="outlined" color="primary">Documents</Button>
+          <Button variant="outlined" color="primary">PDFs</Button>
+          <Button variant="outlined" color="primary">App notes</Button>
+          
+        </Box>
+        <Box display="flex" alignItems="center" gap={2}>
+          <SearchInput />
+          <Button variant="outlined" color="primary">Filters</Button>
+        </Box>
+      </Box>
+      <HeaderComponent view={view} toggleView={toggleView} />
       {/* Folder Grid */}
-      <Grid container spacing={2} justifyContent="center">
+      <Grid container spacing={2} justifyContent="left">
         {selectedSubfolder ? (
           <Grid item xs={12} className="folder-content">
             <button onClick={handleBackClick}>Back</button>
@@ -72,7 +98,7 @@ const MediaLibrary: React.FC = () => {
           <Grid item xs={12} className="folder-content">
             <button onClick={handleBackClick}>Back</button>
             <Typography variant="h6">{selectedFolder.name}</Typography>
-            <Grid container spacing={2} justifyContent="center">
+            <Grid container spacing={2} justifyContent="left">
               {selectedFolder.subfolders?.map((subfolder) => (
                 <Grid item xs={12} sm={6} md={4} lg={1.5} key={subfolder.id}>
                   <Card className="subfolder">
@@ -88,7 +114,7 @@ const MediaLibrary: React.FC = () => {
           </Grid>
         ) : (
           folders.map((folder) => (
-            <Grid item xs={12} sm={6} md={4} lg={1.5} key={folder.id}>
+            <Grid item xs={12} sm={6} md={4} lg={view === 'grid' ? 1.5 : 12} key={folder.id}>
               <Card className="folder">
                 <CardActionArea onClick={() => handleFolderClick(folder)}>
                   <CardContent>

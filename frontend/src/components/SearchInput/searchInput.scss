@@ -1,0 +1,32 @@
+
+
+.css-1pzfmz2-MuiInputBase-input-MuiOutlinedInput-input {
+    accent-color: var(--accent-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+    &:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 2px rgba(var(--accent-color), 0.2);
+    }
+}
+.css-1ll44ll-MuiOutlinedInput-notchedOutline {
+    border-color: var(--accent-color);
+}
+.css-1ll44ll-MuiOutlinedInput-notchedOutline:hover {
+    border-color: var(--accent-color);
+}
+.css-1ll44ll-MuiOutlinedInput-notchedOutline.Mui-focused {
+    border-color: var(--accent-color);
+}
+
+
+.MuiInputBase-input {
+    accent-color: var(--accent-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+    &:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 2px rgba(var(--accent-color), 0.2);
+    }
+}
+
