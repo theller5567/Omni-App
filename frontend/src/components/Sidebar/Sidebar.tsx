@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom'; // For navigation links
 import { motion } from 'framer-motion'; // Import motion from framer-motion
-import { FaSignOutAlt, FaAtlassian, FaHome, FaUser, FaFilm, FaChevronLeft, FaChevronRight } from 'react-icons/fa';  // Import icons for links
+import { FaSignOutAlt, FaHome, FaUser, FaFilm, FaChevronLeft, FaChevronRight } from 'react-icons/fa';  // Import icons for links
 import './sidebar.scss';
+// eslint-disable-next-line
+import omnilogo from '../../assets/omni-circle-logo.svg';
 
 interface SidebarProps {
   isVisible: boolean;
@@ -27,7 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isVisible, toggleSidebar }) => {
       <div className="sidebar-content">
         {/* Logo */}
         <div className="sidebar-logo">
-          <FaAtlassian />
+          <img src={omnilogo} alt="Omni Logo" />
         </div>
 
         {/* Navigation Links */}

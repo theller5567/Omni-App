@@ -1,4 +1,5 @@
 OMNI-APP
+├── README.md
 ├── Startup.txt
 ├── backend
 │   ├── README.md
@@ -11,6 +12,7 @@ OMNI-APP
 │   ├── controllers
 │   │   ├── authController.js
 │   │   ├── fileController.js
+│   │   ├── updateUsername.js
 │   │   └── userController.js
 │   ├── directory_structure.txt
 │   ├── logs
@@ -19,6 +21,7 @@ OMNI-APP
 │   │   ├── authMiddleware.js
 │   │   ├── errorHandler.js
 │   │   └── multerUpload.js
+│   ├── mockData.json
 │   ├── models
 │   │   ├── ActivityLog.js
 │   │   ├── File.js
@@ -54,16 +57,38 @@ OMNI-APP
 │   │   ├── App.tsx
 │   │   ├── assets
 │   │   │   ├── logo.png
+│   │   │   ├── omni-circle-logo.svg
 │   │   │   └── react.svg
 │   │   ├── components
+│   │   │   ├── Account.tsx
 │   │   │   ├── Breadcrumbs.tsx
 │   │   │   ├── FileDetails.tsx
 │   │   │   ├── FileGrid.tsx
 │   │   │   ├── FileTable.tsx
-│   │   │   ├── Sidebar.tsx
+│   │   │   ├── Home.tsx
+│   │   │   ├── MediaLibrary
+│   │   │   │   ├── HeaderComponent.scss
+│   │   │   │   ├── HeaderComponent.tsx
+│   │   │   │   ├── MediaCard.scss
+│   │   │   │   ├── MediaCard.tsx
+│   │   │   │   ├── MediaLibrary.tsx
+│   │   │   │   └── mediaLibrary.scss
+│   │   │   ├── MediaUploader
+│   │   │   │   ├── MediaUploader.scss
+│   │   │   │   └── MediaUploader.tsx
+│   │   │   ├── SearchInput
+│   │   │   │   ├── SearchInput.tsx
+│   │   │   │   └── searchInput.scss
+│   │   │   ├── Sidebar
+│   │   │   │   ├── Sidebar.tsx
+│   │   │   │   └── sidebar.scss
+│   │   │   ├── ThemeToggle
+│   │   │   │   ├── ThemeToggle.tsx
+│   │   │   │   └── themeToggle.scss
 │   │   │   ├── TopBar.tsx
 │   │   │   └── UploadModal.tsx
-│   │   ├── index.scss
+│   │   ├── contexts
+│   │   │   └── UserContext.tsx
 │   │   ├── interfaces
 │   │   │   ├── File.ts
 │   │   │   └── User.ts
@@ -75,12 +100,19 @@ OMNI-APP
 │   │   │   ├── Dashboard.tsx
 │   │   │   ├── Home.tsx
 │   │   │   ├── Login.tsx
-│   │   │   └── Profile.tsx
+│   │   │   ├── Profile.tsx
+│   │   │   └── VerifyEmailPage.tsx
+│   │   ├── services
+│   │   │   └── UserService.ts
 │   │   ├── store
 │   │   │   ├── slices
 │   │   │   │   ├── authSlice.ts
 │   │   │   │   └── fileSlice.ts
 │   │   │   └── store.ts
+│   │   ├── styles
+│   │   │   ├── global.scss
+│   │   │   ├── index.scss
+│   │   │   └── variables.scss
 │   │   ├── utils
 │   │   │   ├── api.ts
 │   │   │   ├── authHelper.ts
@@ -90,6 +122,8 @@ OMNI-APP
 │   ├── tsconfig.json
 │   ├── tsconfig.node.json
 │   └── vite.config.ts
+├── package-lock.json
+├── package.json
 └── project_structure.txt
 
-23 directories, 70 files
+31 directories, 96 files

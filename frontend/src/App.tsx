@@ -26,28 +26,28 @@ const App: React.FC = () => {
   };
 
   return (
-    <Router>
-      <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-        <Sidebar isVisible={isSidebarVisible} toggleSidebar={toggleSidebar} />
-        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: '100vw',
-            overflow: 'auto',
-          }}
-        >
-          <Routes>
-            <Route path="/media-library" element={<MediaLibrary />} />
-            <Route path="/account" element={<Account />} />
-            <Route path="/home" element={<Home />} />
-          </Routes>
+      <Router>
+        <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+          <Sidebar isVisible={isSidebarVisible} toggleSidebar={toggleSidebar} />
+          <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              overflow: 'auto',
+            }}
+          >
+            <Routes>
+              <Route path="/media-library" element={<MediaLibrary />} />
+              <Route path="/account" element={<Account />} />
+              <Route path="/home" element={<Home />} />
+            </Routes>
+          </div>
         </div>
-      </div>
-    </Router>
+      </Router>
   );
 };
 

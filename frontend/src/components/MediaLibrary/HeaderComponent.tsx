@@ -1,29 +1,83 @@
 import React from 'react';
-import { Box, Typography, Switch, FormControlLabel } from '@mui/material';
-import { FaListAlt, FaGripHorizontal } from 'react-icons/fa';
+import { Box, Typography, Button, Switch, FormGroup, FormControlLabel, styled } from '@mui/material';
+import { FaArrowLeft } from 'react-icons/fa';
+import './HeaderComponent.scss';
+
+const gridIcon = encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>'
+);
+
+const listIcon = encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M3 4h18v2H3V9zm0 6h18v2H3v-2zm0 6h18v2H3v-2z"/></svg>'
+);
 
 interface HeaderComponentProps {
+  folderName: string;
+  onBack: () => void;
   view: 'list' | 'grid';
   toggleView: () => void;
+  isRoot: boolean;
 }
+const Android12Switch = styled(Switch)({
+  padding: 8,
+  '& .MuiSwitch-track': {
+    borderRadius: 22 / 2,
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      top: '50%',
+      left: 12,
+      transform: 'translateY(-50%)',
+      width: 14,
+      height: 14,
+      backgroundImage: `url('data:image/svg+xml;utf8,${gridIcon}')`,
+    },
+    '&::after': {
+      content: '""',
+      position: 'absolute',
+      top: '50%',
+      right: 12,
+      transform: 'translateY(-50%)',
+      width: 14,
+      height: 14,
+      backgroundImage: `url('data:image/svg+xml;utf8,${listIcon}')`,
+    },
+  },
+  '& .MuiSwitch-thumb': {
+    boxShadow: 'none',
+    width: 16,
+    height: 16,
+    margin: 2,
+    border: '1px solid',
+  },
+});
 
-const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView }) => {
+const HeaderComponent: React.FC<HeaderComponentProps> = ({ folderName, onBack, view, toggleView, isRoot }) => {
   return (
-    <Box display="flex" justifyContent="space-between" alignItems="center" padding="1rem" bgcolor="var(--secondary-color)">
-      <Typography variant="body1" color="var(--text-color)">File name</Typography>
-      <Typography variant="body1" color="var(--text-color)">Uploaded by</Typography>
-      <Typography variant="body1" color="var(--text-color)">Last modified</Typography>
-      <FormControlLabel
-        control={
-          <Switch
-            checked={view === 'list'}
-            onChange={toggleView}
-            name="viewToggle"
-            color="primary"
+    <Box display="flex" alignItems="center" justifyContent="space-between" padding="1rem" bgcolor="var(--secondary-color)">
+      <Box display="flex" alignItems="center">
+        {!isRoot && (
+          <Button onClick={onBack} startIcon={<FaArrowLeft />} style={{ marginRight: '1rem' }}>
+            Back
+          </Button>
+        )}
+        <Typography color="var(--text-color)">
+          {folderName}
+        </Typography>
+      </Box>
+      <Box display="flex" alignItems="center">
+        <FormGroup>
+          <FormControlLabel
+            control={
+              <Android12Switch
+                checked={view === 'grid'}
+                onChange={toggleView}
+              />
+            }
+            label={view === 'grid' ? 'Grid' : 'List'}
           />
-        }
-        label={view === 'grid' ? <FaGripHorizontal /> : <FaListAlt />}
-      />
+        </FormGroup>
+      </Box>
     </Box>
   );
 };

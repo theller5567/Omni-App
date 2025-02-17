@@ -1,132 +1,188 @@
-// MediaLibrary.tsx
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Grid, Card, CardContent, CardActionArea, Button } from '@mui/material';
+import { Box, Typography, Grid, Button, Modal, Paper, ButtonGroup } from '@mui/material';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 import './MediaLibrary.scss';
-import SearchInput from '../SearchInput/SearchInput';
 import HeaderComponent from './HeaderComponent';
+import MediaCard from './MediaCard';
+import { styled } from '@mui/material/styles';
+import SearchInput from '../SearchInput/SearchInput';
+import MediaUploader from '../MediaUploader/MediaUploader';
+import { FaPlus } from 'react-icons/fa';
 
-interface Folder {
+const CustomGrid = styled(Grid)({
+  '&.grid-view': {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+    gap: '16px',
+  },
+  '&.list-view': {
+    display: 'block',
+    gap: '2px'
+  },
+});
+
+interface Image {
   id: number;
   name: string;
-  fileCount: number;
+  thumbnail: string;
+}
+
+interface Folder {
+  id: string;
+  name: string;
   subfolders?: Folder[];
-  images?: { id: number; name: string; thumbnail: string }[];
+  images?: Image[];
 }
 
 const MediaLibrary: React.FC = () => {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
-  const [selectedSubfolder, setSelectedSubfolder] = useState<Folder | null>(null);
   const [view, setView] = useState<'list' | 'grid'>('grid');
-  //const [searchTerm, setSearchTerm] = useState('');
+  const [folderHistory, setFolderHistory] = useState<Folder[]>([]);
+  const [open, setOpen] = useState(false);
+  const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
-    axios.get<Folder[]>('http://localhost:5002/api/folders')
+    axios.get<Folder[]>('/api/folders')
       .then((response) => {
-        setFolders(response.data);
+        if (Array.isArray(response.data)) {
+          setFolders(response.data);
+        } else {
+          console.error('Expected an array but got:', response.data);
+        }
       })
       .catch((error) => {
         console.error('Error fetching folders:', error);
       });
   }, []);
 
-  const handleFolderClick = (folder: Folder) => {
-    setSelectedFolder(folder);
-    setSelectedSubfolder(null);
-  };
-
-  const handleSubfolderClick = (subfolder: Folder) => {
-    setSelectedSubfolder(subfolder);
-  };
-
-  const handleBackClick = () => {
-    if (selectedSubfolder) {
-      setSelectedSubfolder(null);
-    } else {
-      setSelectedFolder(null);
-    }
-  };
-
   const toggleView = () => {
-    setView(view === 'grid' ? 'list' : 'grid');
+    setView((prevView) => (prevView === 'grid' ? 'list' : 'grid'));
   };
 
-  // const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-  //   setSearchTerm(event.target.value);
-  // };
+  const handleFolderClick = (folder: Folder) => {
+    setFolderHistory((prevHistory) => {
+      const newHistory = [...prevHistory, folder];
+      console.log('Navigating to folder:', folder.name);
+      console.log('Updated history:', newHistory);
+      return newHistory;
+    });
+    setSelectedFolder(folder);
+  };
+
+  const handleBack = () => {
+    setFolderHistory((prevHistory) => {
+      const newHistory = [...prevHistory];
+      newHistory.pop();
+      const previousFolder = newHistory[newHistory.length - 1] || null;
+      setSelectedFolder(previousFolder);
+      console.log('Navigating back to:', previousFolder ? previousFolder.name : 'root');
+      console.log('Updated history:', newHistory);
+      return newHistory;
+    });
+  };
+
+  const handleOpen = () => {
+    setFadeOut(false);
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setFadeOut(true);
+    setTimeout(() => setOpen(false), 300); // Match the duration of the CSS transition
+  };
 
   return (
     <Box className="media-library">
       <Typography variant="h2" align="left" sx={{paddingBottom: '2rem'}}>Media Library</Typography>
-      <Box display="flex" justifyContent="space-between" gap={12} alignItems="center" mb={2}>
-        <Box>
-          <Button variant="contained" color="primary">View all</Button>
-          <Button variant="outlined" color="primary">Images</Button>
-          <Button variant="outlined" color="primary">Videos</Button>
-          <Button variant="outlined" color="primary">Documents</Button>
-          <Button variant="outlined" color="primary">PDFs</Button>
-          <Button variant="outlined" color="primary">App notes</Button>
-          
+      <Box display="flex" justifyContent="start" gap={12} alignItems="center" mb={2}>
+      <ButtonGroup variant="outlined" aria-label="Basic button group">
+          <Button variant="contained"color="primary">View all</Button>
+          <Button color="primary">Images</Button>
+          <Button color="primary">Videos</Button>
+          <Button color="primary">Documents</Button>
+          <Button color="primary">PDFs</Button>
+          <Button color="primary">App notes</Button>
+          <Button variant="contained" color="secondary" onClick={handleOpen} startIcon={<FaPlus />}>Add Media</Button>
+        </ButtonGroup>
+        <Box display="flex" alignItems="center" gap={2}>
+        
+      <Modal open={open} onClose={handleClose}>
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          height="100vh"
+          style={{
+            opacity: fadeOut ? 0 : 1,
+            transition: 'opacity 300ms ease-in-out',
+          }}
+        >
+          <Paper
+            style={{
+              padding: '20px',
+              maxWidth: '600px',
+              width: '100%',
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+            }}
+          >
+            <MediaUploader onDone={handleClose} onCancel={handleClose} />
+          </Paper>
+        </Box>
+      </Modal>
         </Box>
         <Box display="flex" alignItems="center" gap={2}>
           <SearchInput />
           <Button variant="outlined" color="primary">Filters</Button>
         </Box>
       </Box>
-      <HeaderComponent view={view} toggleView={toggleView} />
-      {/* Folder Grid */}
-      <Grid container spacing={2} justifyContent="left">
-        {selectedSubfolder ? (
-          <Grid item xs={12} className="folder-content">
-            <button onClick={handleBackClick}>Back</button>
-            <Typography variant="h6">{selectedSubfolder.name}</Typography>
-            <Grid container spacing={2} justifyContent="center">
-              {selectedSubfolder.images?.map((image) => (
-                <Grid item xs={12} sm={6} md={4} lg={1.5} key={image.id}>
-                  <Card>
-                    <CardContent>
-                      <img src={image.thumbnail} alt={image.name} style={{ width: '100%' }} />
-                      <Typography variant="body2" align="center">{image.name}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
+      <HeaderComponent
+        folderName={selectedFolder ? selectedFolder.name : 'Media Library'}
+        onBack={handleBack}
+        view={view}
+        toggleView={toggleView}
+        isRoot={folderHistory.length === 0}
+      />
+      <CustomGrid container spacing={2} justifyContent="start" className={view === 'grid' ? 'grid-view' : 'list-view'}>
+        {selectedFolder ? (
+          selectedFolder.subfolders?.map((subfolder) => (
+            <Grid item key={subfolder.id}>
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+                transition={{ duration: 0.5 }}
+              >
+                <MediaCard title={subfolder.name} onClick={() => handleFolderClick(subfolder)} />
+              </motion.div>
             </Grid>
-          </Grid>
-        ) : selectedFolder ? (
-          <Grid item xs={12} className="folder-content">
-            <button onClick={handleBackClick}>Back</button>
-            <Typography variant="h6">{selectedFolder.name}</Typography>
-            <Grid container spacing={2} justifyContent="left">
-              {selectedFolder.subfolders?.map((subfolder) => (
-                <Grid item xs={12} sm={6} md={4} lg={1.5} key={subfolder.id}>
-                  <Card className="subfolder">
-                    <CardActionArea onClick={() => handleSubfolderClick(subfolder)}>
-                      <CardContent>
-                        <Typography variant="body2">{subfolder.name}</Typography>
-                      </CardContent>
-                    </CardActionArea>
-                  </Card>
-                </Grid>
-              ))}
+          )) || selectedFolder.images?.map((image) => (
+            <Grid item key={image.id}>
+              <img src={image.thumbnail} alt={image.name} style={{ width: '100%' }} />
             </Grid>
-          </Grid>
+          ))
         ) : (
           folders.map((folder) => (
-            <Grid item xs={12} sm={6} md={4} lg={view === 'grid' ? 1.5 : 12} key={folder.id}>
-              <Card className="folder">
-                <CardActionArea onClick={() => handleFolderClick(folder)}>
-                  <CardContent>
-                    <Typography variant="body1">{folder.name}</Typography>
-                    <Typography variant="body2">{folder.fileCount} files</Typography>
-                  </CardContent>
-                </CardActionArea>
-              </Card>
+            <Grid item key={folder.id}>
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+                transition={{ duration: 0.5 }}
+              >
+                <MediaCard title={folder.name} onClick={() => handleFolderClick(folder)} />
+              </motion.div>
             </Grid>
           ))
         )}
-      </Grid>
+      </CustomGrid>
     </Box>
   );
 };

@@ -9,19 +9,23 @@
   
   [data-theme='dark'] {
     --primary-color: #1a1a1a;
-    --secondary-color: #2a2a2a;
+    --secondary-color: #3a3a3a;
+    --neutral-color: #b3b2b0;
     --text-color: #ffffff;
     --accent-color: #1565c0;
     --border-color: #3a3a3a;
     --background-color: #242424;
+    --folder-color: lightblue;
   }
 
   [data-theme='light'] {
     --primary-color: #ffffff;
     --secondary-color: #f0f0f0;
+    --neutral-color: #444444;
     --text-color: #000000;
     --accent-color: #4caf50;
     --border-color: #e0e0e0;
     --background-color: #f3f3f3;
+    --folder-color: lightblue;
   }
   
