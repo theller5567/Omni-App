@@ -1,3 +1,16 @@
+#media-uploader {
+    display: block;
+    height: 100%;
+    width: 100%;
+    padding: 2rem;
+    background-color: var(--background-color);
+    border-radius: 0.5rem;
+    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+    color: var(--text-color);
+}
+
+
+
 .cta-group {
     display: flex;
     justify-content: space-between;

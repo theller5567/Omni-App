@@ -77,21 +77,25 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
   };
 
   return (
-    <Box>
+    <Box id="media-uploader">
+        <Button onClick={onCancel} color="secondary" sx={{ float: 'right' }}><FaTimes /></Button>
       {!uploadComplete ? (
         <>
           <Box textAlign="center" mb={2}>
-            <Button onClick={onCancel} color="secondary" sx={{ float: 'right' }}><FaTimes /></Button>
+            
             <Typography variant="subtitle1">Step {step} of 3</Typography>
           </Box>
           {step === 1 && (
             <Box>
-              <div {...getRootProps()} style={{ border: '2px dashed #ccc', padding: '20px', textAlign: 'center' }}>
+              <div {...getRootProps()} style={{ border: '2px dashed var(--accent-color)', padding: '20px', textAlign: 'center' }}>
                 <input {...getInputProps()} />
                 <p>Drag & drop files here, or click to select files</p>
               </div>
               {file && <p>Selected file: {file.name}</p>}
+              <div className="cta-group">
+              <Button onClick={handleBack} disabled={true}></Button>
               <Button onClick={handleNext} disabled={!file}>Next</Button>
+              </div>
             </Box>
           )}
           {step === 2 && (
