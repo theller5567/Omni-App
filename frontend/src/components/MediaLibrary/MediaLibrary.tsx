@@ -95,8 +95,8 @@ const MediaLibrary: React.FC = () => {
 
   return (
     <Box className="media-library">
-      <Typography variant="h2" align="left" sx={{paddingBottom: '2rem'}}>Media Library</Typography>
-      <Box display="flex" justifyContent="start" gap={12} alignItems="center" mb={2}>
+      <Typography variant="h2" align="left" sx={{paddingBottom: '2rem'}}>Omni Media Library</Typography>
+      <Box display="flex" justifyContent="space-between" gap={12} alignItems="center" mb={2}>
       <ButtonGroup variant="outlined" aria-label="Basic button group">
           <Button variant="contained"color="primary">View all</Button>
           <Button color="primary">Images</Button>
@@ -108,7 +108,7 @@ const MediaLibrary: React.FC = () => {
         </ButtonGroup>
         <Box display="flex" alignItems="center" gap={2}>
         
-      <Modal open={open} onClose={handleClose}>
+      <Modal id="media-uploader-modal" open={open} onClose={handleClose}>
         <Box
           display="flex"
           justifyContent="center"

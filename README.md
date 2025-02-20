@@ -4,7 +4,13 @@
 
 The Omni Media Library Project provides a modern, intuitive interface for managing, organizing, and sharing media files. This document outlines our latest features, UI updates, and technical details.
 
----
+The main idea behind this project is to require specific data for each media type depending on how the media will be used.
+This makes sure that there are restraints and guidelines for every media that is uploaded, allowing the user to come back to the library and find what they need at an extremely granular level. We will also be able to show n hide specific media depending on the Users permission Role.
+
+This app will also have an approval process for new media, allowing the admin to approve or reject new media.
+(this will prevent multiple variations of the same file from existing and clogging our systems and make sure that all outward facing media is approved and up to date.)
+
+
 
 ## Table of Contents
 

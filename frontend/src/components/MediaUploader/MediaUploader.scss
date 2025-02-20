@@ -1,5 +1,14 @@
+#media-uploader-modal {
+    border: 1px solid var(--neutral-color);
+    min-width: 900px;
+    .MuiPaper-root {
+        border: 1px solid var(--accent-color);
+    }
+}
 #media-uploader {
-    display: block;
+    position: relative;
+    display: flex;
+    flex-direction: column;
     height: 100%;
     width: 100%;
     padding: 2rem;
@@ -7,14 +16,52 @@
     border-radius: 0.5rem;
     box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
     color: var(--text-color);
-}
-
+    min-height: 300px;
+    justify-content: stretch;
+    .step {
+        display: flex;
+        width: 100%;
+        flex-direction: column;
+        align-items: center;
+        justify-content: stretch;
+        height: 100%;
+        gap: 1rem;
+        flex-grow: 1;
+        }
+        .progress-bar {
+            width: 100%;
+        }
+        .MuiLinearProgress-root {
+            background-color: var(--neutral-color);
+            opacity: 0.5;
+        }
+        .MuiStepper-root {
+            margin-bottom: 2rem;
+            span.MuiStepLabel-labelContainer span {
+                font-size: 0.7rem;
+            }
+        }
+    
+    }
+    button.close-modal {
+        position: absolute;
+        width: 1.2rem;
+        height: 1.2rem;
+        top: 1rem;
+        right: 1rem;
+        min-width: auto;
+        padding: 0;
+        margin: 0;
+        background-color: transparent;
+    }
+    
 
 
 .cta-group {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    margin-top: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  width: 100%;
+  margin-top: 1rem;
+  flex-grow: 1;
 }

@@ -6,30 +6,34 @@ import MediaLibrary from './components/MediaLibrary/MediaLibrary';
 import Account from './components/Account';
 import Home from './components/Home';
 import ThemeToggle from './components/ThemeToggle/ThemeToggle';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { lightTheme, darkTheme } from './theme';
 import './App.scss';
 
 const App: React.FC = () => {
   const [isSidebarVisible, setSidebarVisible] = useState(true);
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+    document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+  }, [isDarkMode]);
 
   const toggleSidebar = () => {
     setSidebarVisible(!isSidebarVisible);
   };
 
   const toggleTheme = () => {
-    console.log('toggleTheme');
-    setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
+    setIsDarkMode((prevMode) => !prevMode);
   };
 
   return (
+    <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
+      <CssBaseline />
       <Router>
         <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
           <Sidebar isVisible={isSidebarVisible} toggleSidebar={toggleSidebar} />
-          <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+          <ThemeToggle theme={isDarkMode ? 'dark' : 'light'} toggleTheme={toggleTheme} />
           <div
             style={{
               position: 'absolute',
@@ -48,6 +52,7 @@ const App: React.FC = () => {
           </div>
         </div>
       </Router>
+    </ThemeProvider>
   );
 };
 

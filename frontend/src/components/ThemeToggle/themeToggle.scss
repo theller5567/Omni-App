@@ -19,16 +19,16 @@
 }
 
 .toggle-switch.light {
-  background-color: #f0e68c;
+  background: linear-gradient(to left, #a59e5d 15%, #f0e68c 85%);
 }
 
 .toggle-switch.dark {
-  background-color: #333;
+  background: linear-gradient(to right, #181818 15%, #333 85%);
 }
 
 .icon {
-  width: 20px;
-  height: 20px;
+  width: 1rem;
+  height: 1rem;
   position: absolute;
   transition: transform 0.3s ease, color 0.3s ease;
 }
