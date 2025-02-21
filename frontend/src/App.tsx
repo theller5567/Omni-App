@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Sidebar from './components/Sidebar/Sidebar';
 import MediaLibrary from './components/MediaLibrary/MediaLibrary';
+import MediaDetail from './components/MediaDetail/MediaDetail';
 import Account from './components/Account';
 import Home from './components/Home';
 import ThemeToggle from './components/ThemeToggle/ThemeToggle';
@@ -45,6 +46,7 @@ const App: React.FC = () => {
             }}
           >
             <Routes>
+              <Route path="/media-library/media/:slug" element={<MediaDetail />} />
               <Route path="/media-library" element={<MediaLibrary />} />
               <Route path="/account" element={<Account />} />
               <Route path="/home" element={<Home />} />

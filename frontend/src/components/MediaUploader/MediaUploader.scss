@@ -1,6 +1,5 @@
 #media-uploader-modal {
     border: 1px solid var(--neutral-color);
-    min-width: 900px;
     .MuiPaper-root {
         border: 1px solid var(--accent-color);
     }
@@ -64,4 +63,36 @@
   width: 100%;
   margin-top: 1rem;
   flex-grow: 1;
+}
+
+.dropzone {
+  transition: border-color 0.3s, background-color 0.3s;
+  border: 2px dashed #ccc;
+  width: 80%;
+  padding: 1rem;
+  text-align: center;
+  margin: 0 auto;
+}
+
+.dropzone.active {
+  border-color: #3f51b5; /* Change to your active color */
+}
+
+.dropzone.reject, .dropzone.file-selected.reject {
+  border-color: #f44336; /* Red color for rejected files */
+}
+
+.dropzone.file-selected {
+  border-color: #4caf50; /* Green color for selected files */
+}
+
+.file-preview {
+  opacity: 0;
+  animation: fadeIn 0.5s forwards;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
 }

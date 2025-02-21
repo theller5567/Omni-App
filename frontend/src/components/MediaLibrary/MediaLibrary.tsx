@@ -44,7 +44,7 @@ const MediaLibrary: React.FC = () => {
   const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
-    axios.get<Folder[]>('/api/folders')
+    axios.get<Folder[]>('http://localhost:5002/api/folders')
       .then((response) => {
         if (Array.isArray(response.data)) {
           setFolders(response.data);
@@ -53,7 +53,7 @@ const MediaLibrary: React.FC = () => {
         }
       })
       .catch((error) => {
-        console.error('Error fetching folders:', error);
+        console.error('Error fetching folders:', error.message);
       });
   }, []);
 

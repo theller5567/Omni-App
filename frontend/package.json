@@ -17,6 +17,7 @@
     "@types/react-icons": "^2.2.7",
     "axios": "^1.7.9",
     "framer-motion": "^12.4.2",
+    "nanoid": "^5.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.5",

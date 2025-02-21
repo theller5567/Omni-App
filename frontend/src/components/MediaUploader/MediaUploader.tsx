@@ -6,6 +6,8 @@ import { FaTimes } from 'react-icons/fa';
 import './MediaUploader.scss';
 import useFileUpload from '../../hooks/useFileUpload';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+
 
 interface MediaUploaderProps {
   onDone: () => void;
@@ -15,40 +17,74 @@ interface MediaUploaderProps {
 // Define the expected response type
 interface UploadResponse {
   location: string;
+  slug: string;
 }
 
 const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
   const { user } = useUser();
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<{ [key: string]: string | number | string[] }>({});
-  const { uploadProgress, setUploadProgress, uploadComplete, resetUploadComplete } = useFileUpload();
+  const {uploadProgress, setUploadProgress, uploadComplete, resetUploadComplete } = useFileUpload();
   const [selectedMediaType, setSelectedMediaType] = useState('');
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [fileSelected, setFileSelected] = useState(false);
+  const [slug, setSlug] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  const onDrop = async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
+
+  const onDrop = (acceptedFiles: File[]) => {
+    if (acceptedFiles.length === 0) {
+      console.error('No files were accepted.');
+      return;
+    }
+
+    const selectedFile = acceptedFiles[0];
+    if (!selectedFile) {
+      console.error('Selected file is not valid.');
+      return;
+    }
+
+    setFile(selectedFile);
+    setFileSelected(true);
+
+    // Generate a local preview URL
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFilePreview(reader.result as string);
+    };
+    reader.readAsDataURL(selectedFile);
+  };
+
+  const handleMetadataChange = (key: string, value: string | number | string[]) => {
+    setMetadata((prevMetadata) => ({ ...prevMetadata, [key]: value }));
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
     const formData = new FormData();
     formData.append('file', file);
-
-    const config = {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (progressEvent: ProgressEvent) => {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        setUploadProgress(percentCompleted);
-      },
-    };
-
+    formData.append('metadata', JSON.stringify(metadata));
+    formData.append('title', file.name);
+    console.log(formData, 'formData');
     try {
-      const response = await axios.post<UploadResponse>('http://localhost:5002/media/upload', formData, config);
+      const response = await axios.post<UploadResponse>('http://localhost:5002/media/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent: ProgressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          console.log(`Upload Progress: ${percentCompleted}%`);
+          setUploadProgress(percentCompleted);
+        },
+      } as any);
 
       if (response.status === 200) {
-        console.log('File uploaded successfully', response.data);
-        setFileUrl(response.data.location);
         resetUploadComplete();
+        setFileUrl(response.data.location);
+        setSlug(response.data.slug);
       } else {
         console.error('Upload failed');
       }
@@ -57,14 +93,11 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
     }
   };
 
-  const { getRootProps, getInputProps } = useDropzone({ onDrop });
-
-  const handleNext = () => setStep((prev) => prev + 1);
-  const handleBack = () => setStep((prev) => (prev === 1 ? 1 : prev - 1));
-
-  const handleMetadataChange = (key: string, value: string | number | string[]) => {
-    setMetadata((prevMetadata) => ({ ...prevMetadata, [key]: value }));
+  const handleNext = () => {
+    setStep((prev) => prev + 1);
   };
+
+  const handleBack = () => setStep((prev) => (prev === 1 ? 1 : prev - 1));
 
   useEffect(() => {
     if (user) {
@@ -89,6 +122,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
   const handleAddMore = () => {
     console.log('handleAddMore');
     setUploadProgress(0);
+    setFilePreview(null);
     setStep(1);
     setFile(null);
     setMetadata({});
@@ -102,6 +136,33 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
   };
 
   const steps = ['Select Media Type', 'Upload File', 'Add Metadata', 'Completion'];
+
+  const {
+    getRootProps,
+    getInputProps,
+    isDragActive,
+    isDragReject,
+  } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': [],
+      'video/*': []
+    },
+    maxSize: 5000000,
+    minSize: 1000,
+  });
+
+  useEffect(() => {
+    if (step === 4) {
+      handleUpload(); // Start upload when reaching step 4
+    }
+  }, [step]);
+
+  const handleViewMedia = () => {
+    if (slug) {
+      navigate(`/media-library/media/${slug}`);
+    }
+  };
 
   return (
     <Box id="media-uploader">
@@ -140,24 +201,28 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
         )}
         {step === 2 && (
           <Box className="step step-2">
-            <div {...getRootProps()} style={{ border: '2px dashed var(--accent-color2)', padding: '20px', textAlign: 'center' }}>
+            <div
+              {...getRootProps()}
+              className={`dropzone ${fileSelected ? 'file-selected' : ''} ${isDragActive ? 'active' : ''} ${isDragReject ? 'reject' : ''}`}
+            >
               <input {...getInputProps()} />
-              <p>Drag & drop files here, or click to select files</p>
+              <p>
+                {isDragReject
+                  ? 'File type not supported'
+                  : isDragActive
+                  ? 'Drop files here'
+                  : 'Drag & drop files here, or click to select files'}
+              </p>
             </div>
-            {showSuccessMessage ? (
-              <Typography variant="h6" color="primary">Upload Successful!</Typography>
-            ) : (
-              <LinearProgress color="secondary" style={{ margin: '1rem', padding: '0.2rem', borderRadius: '10px' }} className="progress-bar" variant="determinate" value={uploadProgress} />
+            
+            {filePreview && (
+              <Box mt={2}>
+                <img src={filePreview} alt="File preview" style={{ maxWidth: '150px', height: 'auto' }} />
+              </Box>
             )}
-            {fileUrl && (
-                  <Box mt={2}>
-                    <img src={fileUrl} alt="Uploaded file" style={{ maxWidth: '100px', height: 'auto' }} />
-                  </Box>
-                )}
-            {file && <p>Selected file: {file.name}</p>}
             <div className="cta-group">
               <Button variant="outlined" onClick={handleBack}>Back</Button>
-              <Button variant="contained" onClick={handleNext} disabled={!showSuccessMessage}>Next</Button>
+              <Button variant="contained" onClick={handleNext} disabled={!filePreview}>Next</Button>
             </div>
           </Box>
         )}
@@ -225,13 +290,20 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
         )}
         {step === 4 && (
           <Box className="step step-4">
+            {showSuccessMessage ? (
+              <Typography variant="h6" color="primary">Media uploaded successfully!</Typography>
+            ) : (
+              <LinearProgress color="secondary" style={{ margin: '1rem', padding: '0.2rem', borderRadius: '10px' }} className="progress-bar" variant="determinate" value={uploadProgress} />
+            )}
             {uploadComplete && (
               <>
-                <Typography variant="h6">Media uploaded successfully!</Typography>
                 {fileUrl && (
                   <Box mt={2}>
                     <img src={fileUrl} alt="Uploaded file" style={{ maxWidth: '100%', height: 'auto' }} />
                   </Box>
+                )}
+                {slug && (
+                  <Button variant="contained" onClick={handleViewMedia}>View Media</Button>
                 )}
               </>
             )}
