@@ -6,6 +6,7 @@ const generateSlug = (title) => {
   return `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${uuidv4()}`;
 };
 
+// Save media to database MongoDB
 const saveMediaToDatabase = async (mediaData) => {
   const db = await getDatabaseConnection();
   await db.collection('media').insertOne(mediaData);
@@ -19,13 +20,13 @@ export const uploadMedia = async (req, res) => {
     if (!file || !title) {
       return res.status(400).json({ error: 'File and title are required' });
     }
-
+    const id = uuidv4();
     const slug = generateSlug(title);
-    const location = await uploadFileToS3(file);
+    const location = await uploadFileToS3(file, id);
     const parsedMetadata = metadata ? JSON.parse(metadata) : {};
 
     const mediaData = {
-      id: uuidv4(),
+      id: id,
       title,
       slug,
       metadata: parsedMetadata,

@@ -3,10 +3,11 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 // Configure AWS SDK
 const s3 = new S3Client({ region: process.env.AWS_REGION });
 
-export const uploadFileToS3 = async (file) => {
+export const uploadFileToS3 = async (file, uniqueId) => {
+  const key = `${uniqueId}/${file.originalname}`;
   const params = {
     Bucket: process.env.AWS_S3_BUCKET_NAME,
-    Key: file.originalname,
+    Key: key,
     Body: file.buffer,
     ContentType: file.mimetype
   };
