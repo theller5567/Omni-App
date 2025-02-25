@@ -1,3 +1,5 @@
+@use "sass:color";
+
 .media-library {
     display: flex;
     flex-direction: column;
@@ -36,6 +38,15 @@ label {
     }
   }
 }
+#media-library-container {
+  display: flex;
+  &.grid-view {
+    gap: 2rem;
+  }
+  &.list-view {
+    gap: 0.2rem;
+  }
+}
 
 .grid-view {
   display: grid;
@@ -48,6 +59,12 @@ label {
 .list-view {
   display: flex;
   flex-direction: column;
+  .media-card {
+    box-shadow: none; 
+    &:nth-child(even) {
+      background-color: color.adjust(#3a3a3a, $lightness: -5%);
+    }
+  }
   .MuiGrid-item {
     &:first-child {
       margin-top: 1rem;

@@ -7,20 +7,24 @@ import './MediaUploader.scss';
 import useFileUpload from '../../hooks/useFileUpload';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-
+import MediaFile from '../../interfaces/MediaFile';
 
 interface MediaUploaderProps {
-  onDone: () => void;
-  onCancel: () => void;
+  open: boolean;
+  onClose: () => void;
+  onUploadComplete: (newFile: MediaFile) => void;
 }
 
 // Define the expected response type
 interface UploadResponse {
   location: string;
   slug: string;
+  title: string;
 }
 
-const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
+const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadComplete }) => {
+  if (!open) return null; // Render nothing if not open
+
   const { user } = useUser();
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
@@ -33,7 +37,6 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
   const [fileSelected, setFileSelected] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
   const navigate = useNavigate();
-
 
   const onDrop = (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) {
@@ -62,13 +65,13 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
     setMetadata((prevMetadata) => ({ ...prevMetadata, [key]: value }));
   };
 
-  const handleUpload = async () => {
-    if (!file) return;
+  const handleUpload = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('metadata', JSON.stringify(metadata));
     formData.append('title', file.name);
-    console.log(formData, 'formData');
+    formData.append('fileExtension', file.name.split('.').pop()?.toUpperCase() || 'UNKNOWN');
+    formData.append('metadata', JSON.stringify(metadata));
+
     try {
       const response = await axios.post<UploadResponse>('http://localhost:5002/media/upload', formData, {
         headers: {
@@ -85,11 +88,32 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
         resetUploadComplete();
         setFileUrl(response.data.location);
         setSlug(response.data.slug);
+        const modifiedDate = new Date(file.lastModified);
+        const newFile: MediaFile = {
+          id: response.data.slug,
+          location: response.data.location,
+          slug: response.data.slug,
+          title: response.data.title,
+          metadata: {
+            fileName: file.name,
+            altText: typeof metadata.altText === 'string' ? metadata.altText : '',
+            description: typeof metadata.description === 'string' ? metadata.description : '',
+            tags: typeof metadata.tags === 'string' ? metadata.tags.split(',').map(tag => tag.trim()) : [],
+          },
+          fileSize: file.size,
+          modifiedDate,
+          fileExtension: file.name.split('.').pop() || '',
+        };
+        onUploadComplete(newFile);
       } else {
         console.error('Upload failed');
       }
     } catch (error) {
-      console.error('Error uploading file:', error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        console.error('Error uploading file:', (error as any).response?.data);
+      } else {
+        console.error('Error uploading file:', error);
+      }
     }
   };
 
@@ -134,6 +158,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
     setSelectedMediaType(mediaType);
     console.log(mediaType, 'mediaType');
   };
+  
 
   const steps = ['Select Media Type', 'Upload File', 'Add Metadata', 'Completion'];
 
@@ -154,9 +179,9 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
 
   useEffect(() => {
     if (step === 4) {
-      handleUpload(); // Start upload when reaching step 4
+      handleUpload(file as File); // Start upload when reaching step 4
     }
-  }, [step]);
+  }, [step, file]);
 
   const handleViewMedia = () => {
     if (slug) {
@@ -166,7 +191,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
 
   return (
     <Box id="media-uploader">
-      <Button className="close-modal" onClick={onCancel} color="primary"><FaTimes /></Button>
+      <Button className="close-modal" onClick={onClose} color="primary"><FaTimes /></Button>
       <Stepper alternativeLabel activeStep={step - 1}>
         {steps.map((label) => (
           <Step key={label}>
@@ -309,7 +334,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ onDone, onCancel }) => {
             )}
             <div className="cta-group">
               <Button variant="outlined" onClick={handleAddMore}>Add More</Button>
-              <Button variant="contained" onClick={onDone}>Done</Button>
+              <Button variant="contained" onClick={onClose}>Done</Button>
             </div>
           </Box>
         )}

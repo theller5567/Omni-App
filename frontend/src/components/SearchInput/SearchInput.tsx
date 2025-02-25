@@ -1,91 +1,47 @@
 import React from 'react';
 import TextField from '@mui/material/TextField';
 import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete';
+import './searchInput.scss';
 
-interface MediaOptionType {
-  inputValue?: string;
+interface MediaFile {
+  id: string;
+  location: string;
+  metadata: {
+    fileName: string;
+    altText: string;
+    description: string;
+  };
   title: string;
 }
 
-const filter = createFilterOptions<MediaOptionType>();
+interface SearchInputProps {
+  mediaFiles: MediaFile[];
+  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+}
 
-const mockData: readonly MediaOptionType[] = [
-  { title: 'Image 1' },
-  { title: 'Document 1' },
-  { title: 'Spreadsheet 1' },
-  // Add more mock data as needed
-];
+const filter = createFilterOptions<MediaFile>();
 
-const SearchInput: React.FC = () => {
-  const [value, setValue] = React.useState<MediaOptionType | null>(null);
+const SearchInput: React.FC<SearchInputProps> = ({ mediaFiles, setSearchQuery }) => {
+  const [value, setValue] = React.useState<MediaFile | null>(null);
 
   return (
     <Autocomplete
       className="ml-search-input"
+      options={mediaFiles}
+      getOptionLabel={(option) => option.metadata.fileName}
       value={value}
       onChange={(_, newValue) => {
-        if (typeof newValue === 'string') {
-          setValue({
-            title: newValue,
-          });
-        } else if (newValue && newValue.inputValue) {
-          setValue({
-            title: newValue.inputValue,
-          });
-        } else {
+        if (newValue) {
           setValue(newValue);
+          setSearchQuery(newValue.metadata.fileName);
+        } else {
+          setValue(null);
+          setSearchQuery('');
         }
       }}
-      filterOptions={(options, params) => {
-        const filtered = filter(options, params);
-        const { inputValue } = params;
-        const isExisting = options.some((option) => inputValue === option.title);
-        if (inputValue !== '' && !isExisting) {
-          filtered.push({
-            inputValue,
-            title: `Add "${inputValue}"`,
-          });
-        }
-        return filtered;
-      }}
-      selectOnFocus
-      clearOnBlur
-      handleHomeEndKeys
-      options={mockData}
-      getOptionLabel={(option) => {
-        if (typeof option === 'string') {
-          return option;
-        }
-        if (option.inputValue) {
-          return option.inputValue;
-        }
-        return option.title;
-      }}
-      renderOption={(props, option) => (
-        <li {...props}>{option.title}</li>
-      )}
-      sx={{
-        width: 300,
-        '& .MuiOutlinedInput-root': {
-          backgroundColor: 'var(--primary-color)',
-          '&::placeholder': {
-            color: 'var(--accent-color)',
-          },
-          color: 'var(--accent-color)',
-          '& fieldset': {
-            borderColor: 'var(--accent-color)',
-          },
-          '&:hover fieldset': {
-            borderColor: 'var(--accent-color)',
-          },
-          '&.Mui-focused fieldset': {
-            borderColor: 'var(--accent-color)',
-          },
-        },
-      }}
-      freeSolo
+      filterOptions={filter}
       renderInput={(params) => (
-        <TextField {...params} label="Search Media" variant="outlined" size="small" className="ml-search-input" />
+        <TextField {...params} label="Search media..." variant="outlined" />
       )}
     />
   );

@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Typography, Grid, Button, Modal, Paper, ButtonGroup } from '@mui/material';
-import axios from 'axios';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { Box, Typography, Grid, Button, ButtonGroup } from '@mui/material';
+// import { motion } from 'framer-motion';
 import './MediaLibrary.scss';
 import HeaderComponent from './HeaderComponent';
 import MediaCard from './MediaCard';
+import { useNavigate } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import SearchInput from '../SearchInput/SearchInput';
-import MediaUploader from '../MediaUploader/MediaUploader';
 import { FaPlus } from 'react-icons/fa';
+import MediaFile from '../../interfaces/MediaFile';
 
 const CustomGrid = styled(Grid)({
   '&.grid-view': {
@@ -22,77 +22,31 @@ const CustomGrid = styled(Grid)({
   },
 });
 
-interface Image {
-  id: number;
-  name: string;
-  thumbnail: string;
+interface MediaLibraryProps {
+  mediaFilesData: MediaFile[];
+  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+  onAddMedia: () => void;
 }
 
-interface Folder {
-  id: string;
-  name: string;
-  subfolders?: Folder[];
-  images?: Image[];
-}
-
-const MediaLibrary: React.FC = () => {
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
+const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQuery, onAddMedia }) => {
   const [view, setView] = useState<'list' | 'grid'>('grid');
-  const [folderHistory, setFolderHistory] = useState<Folder[]>([]);
-  const [open, setOpen] = useState(false);
-  const [fadeOut, setFadeOut] = useState(false);
+  //const [isModalOpen, setIsModalOpen] = useState(false);
+  // Explicitly type the state as an array of MediaFile
+  //const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    axios.get<Folder[]>('http://localhost:5002/api/folders')
-      .then((response) => {
-        if (Array.isArray(response.data)) {
-          setFolders(response.data);
-        } else {
-          console.error('Expected an array but got:', response.data);
-        }
-      })
-      .catch((error) => {
-        console.error('Error fetching folders:', error.message);
-      });
-  }, []);
-
+  // const filteredMediaFiles = mediaFilesData.filter(file => {
+  //   return file.metadata.fileName.toLowerCase().includes(searchQuery.toLowerCase());
+  // });
   const toggleView = () => {
     setView((prevView) => (prevView === 'grid' ? 'list' : 'grid'));
   };
 
-  const handleFolderClick = (folder: Folder) => {
-    setFolderHistory((prevHistory) => {
-      const newHistory = [...prevHistory, folder];
-      console.log('Navigating to folder:', folder.name);
-      console.log('Updated history:', newHistory);
-      return newHistory;
-    });
-    setSelectedFolder(folder);
+  const handleFileClick = (file: MediaFile) => {
+    navigate(`/media/slug/${file.slug}`);
   };
 
-  const handleBack = () => {
-    setFolderHistory((prevHistory) => {
-      const newHistory = [...prevHistory];
-      newHistory.pop();
-      const previousFolder = newHistory[newHistory.length - 1] || null;
-      setSelectedFolder(previousFolder);
-      console.log('Navigating back to:', previousFolder ? previousFolder.name : 'root');
-      console.log('Updated history:', newHistory);
-      return newHistory;
-    });
-  };
-
-  const handleOpen = () => {
-    setFadeOut(false);
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setFadeOut(true);
-    setTimeout(() => setOpen(false), 300); // Match the duration of the CSS transition
-  };
-
+  
   return (
     <Box className="media-library">
       <Typography variant="h2" align="left" sx={{paddingBottom: '2rem'}}>Omni Media Library</Typography>
@@ -104,84 +58,22 @@ const MediaLibrary: React.FC = () => {
           <Button color="primary">Documents</Button>
           <Button color="primary">PDFs</Button>
           <Button color="primary">App notes</Button>
-          <Button variant="contained" color="secondary" onClick={handleOpen} startIcon={<FaPlus />}>Add Media</Button>
+          <Button variant="contained" color="secondary" onClick={onAddMedia} startIcon={<FaPlus />}>Add Media</Button>
         </ButtonGroup>
         <Box display="flex" alignItems="center" gap={2}>
-        
-      <Modal id="media-uploader-modal" open={open} onClose={handleClose}>
-        <Box
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          height="100vh"
-          style={{
-            opacity: fadeOut ? 0 : 1,
-            transition: 'opacity 300ms ease-in-out',
-          }}
-        >
-          <Paper
-            style={{
-              padding: '20px',
-              maxWidth: '600px',
-              width: '100%',
-              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-            }}
-          >
-            <MediaUploader onDone={handleClose} onCancel={handleClose} />
-          </Paper>
-        </Box>
-      </Modal>
-        </Box>
-        <Box display="flex" alignItems="center" gap={2}>
-          <SearchInput />
+          <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
           <Button variant="outlined" color="primary">Filters</Button>
         </Box>
       </Box>
       <HeaderComponent
-        folderName={selectedFolder ? selectedFolder.name : 'Media Library'}
-        onBack={handleBack}
         view={view}
         toggleView={toggleView}
-        isRoot={folderHistory.length === 0}
       />
-      <CustomGrid container spacing={2} justifyContent="start" className={view === 'grid' ? 'grid-view' : 'list-view'}>
-        {selectedFolder ? (
-          selectedFolder.subfolders?.map((subfolder) => (
-            <Grid item key={subfolder.id}>
-              <motion.div
-                initial="hidden"
-                animate="visible"
-                variants={{
-                  hidden: { opacity: 0, y: 10 },
-                  visible: { opacity: 1, y: 0 },
-                }}
-                transition={{ duration: 0.5 }}
-              >
-                <MediaCard title={subfolder.name} onClick={() => handleFolderClick(subfolder)} />
-              </motion.div>
-            </Grid>
-          )) || selectedFolder.images?.map((image) => (
-            <Grid item key={image.id}>
-              <img src={image.thumbnail} alt={image.name} style={{ width: '100%' }} />
-            </Grid>
-          ))
-        ) : (
-          folders.map((folder) => (
-            <Grid item key={folder.id}>
-              <motion.div
-                initial="hidden"
-                animate="visible"
-                variants={{
-                  hidden: { opacity: 0, y: 10 },
-                  visible: { opacity: 1, y: 0 },
-                }}
-                transition={{ duration: 0.5 }}
-              >
-                <MediaCard title={folder.name} onClick={() => handleFolderClick(folder)} />
-              </motion.div>
-            </Grid>
-          ))
-        )}
+      <CustomGrid id="media-library-container" container spacing={2} justifyContent="start" className={view === 'grid' ? 'grid-view '  : 'list-view'}>
+      {mediaFilesData.map((file) => (
+        <MediaCard key={file.id} file={file} onClick={() => handleFileClick(file)} />
+          
+        ))}
       </CustomGrid>
     </Box>
   );

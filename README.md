@@ -184,7 +184,7 @@ This app will also have an approval process for new media, allowing the admin to
 ### Setup Instructions
 
 1. **Clone the Repository:**
-    git clone https://github.com/yourusername/omni-app.git
+    git clone https://github.com/theller5567/Omni-App/tree/master
 
 2. **Backend Setup:**
     cd omni-app/backend

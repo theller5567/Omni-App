@@ -1,12 +1,13 @@
 import mongoose from 'mongoose';
 
 const mediaSchema = new mongoose.Schema({
-  id: String,
-  title: String,
-  slug: String,
-  metadata: Object,
   location: String,
-  // Add other fields as needed
+  metadata: {
+    title: String,
+    altText: String,
+    description: String,
+  },
+  // Add other fields as necessary
 });
 
 const Media = mongoose.model('Media', mediaSchema);

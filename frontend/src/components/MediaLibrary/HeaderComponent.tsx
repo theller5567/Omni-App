@@ -1,6 +1,5 @@
 import React from 'react';
-import { Box, Typography, Button, Switch, FormGroup, FormControlLabel, styled } from '@mui/material';
-import { FaArrowLeft } from 'react-icons/fa';
+import { Box, Switch, FormGroup, FormControlLabel, styled } from '@mui/material';
 import './HeaderComponent.scss';
 
 const gridIcon = encodeURIComponent(
@@ -12,11 +11,8 @@ const listIcon = encodeURIComponent(
 );
 
 interface HeaderComponentProps {
-  folderName: string;
-  onBack: () => void;
   view: 'list' | 'grid';
   toggleView: () => void;
-  isRoot: boolean;
 }
 const Android12Switch = styled(Switch)({
   padding: 8,
@@ -52,18 +48,12 @@ const Android12Switch = styled(Switch)({
   },
 });
 
-const HeaderComponent: React.FC<HeaderComponentProps> = ({ folderName, onBack, view, toggleView, isRoot }) => {
+const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView }) => {
   return (
-    <Box display="flex" alignItems="center" justifyContent="space-between" padding="1rem" bgcolor="var(--secondary-color)">
+    <Box className="header-component" display="flex" alignItems="center" justifyContent="space-between" padding="1rem" bgcolor="var(--secondary-color)">
       <Box display="flex" alignItems="center">
-        {!isRoot && (
-          <Button onClick={onBack} startIcon={<FaArrowLeft />} style={{ marginRight: '1rem' }}>
-            Back
-          </Button>
-        )}
-        <Typography color="var(--text-color)">
-          {folderName}
-        </Typography>
+        
+        
       </Box>
       <Box display="flex" alignItems="center">
         <FormGroup>

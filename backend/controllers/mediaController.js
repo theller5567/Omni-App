@@ -20,22 +20,29 @@ export const uploadMedia = async (req, res) => {
     if (!file || !title) {
       return res.status(400).json({ error: 'File and title are required' });
     }
+
     const id = uuidv4();
     const slug = generateSlug(title);
     const location = await uploadFileToS3(file, id);
     const parsedMetadata = metadata ? JSON.parse(metadata) : {};
 
+    // Extract fileExtension
+    const fileExtension = file.originalname.split('.').pop()?.toUpperCase() || 'UNKNOWN';
+
     const mediaData = {
       id: id,
       title,
       slug,
+      fileSize: file.size,
+      fileExtension,
+      modifiedDate: new Date(),
       metadata: parsedMetadata,
       location,
     };
 
     await saveMediaToDatabase(mediaData);
 
-    res.status(200).json({ location, slug, mediaData });
+    res.status(200).json({ location, slug, mediaData, fileSize: file.size, modifiedDate: new Date(), title, fileExtension });
   } catch (error) {
     console.error('Error uploading media:', error);
     res.status(500).json({ error: 'Upload failed' });
