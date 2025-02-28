@@ -33,7 +33,7 @@
 }
 
 
-.grid-view {
+.list-view {
     .media-card {
         position: relative;
         width: 150px;
@@ -46,7 +46,6 @@
         padding: 10px;
         transition: transform 0.2s ease;
         cursor: pointer;
-        //background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="rgb(144, 202, 249)" viewBox="0 0 24 24"><path d="M10 4H2v16h20V6H12l-2-2z"/></svg>');
         background-size: cover;
         background-position: center;
         background-color: var(--secondary-color);
@@ -73,33 +72,4 @@
             }
         }
       }
-}
-
-.list-view {
-  .media-card {
-    background-image: none;
-    background-color: var(--secondary-color);
-    color: var(--accent-color);
-    width: 100%;
-    height: auto;
-    padding: 10px;
-    margin: 0;
-    justify-content: flex-start;
-    
-    .content {
-        display: flex;
-        flex-direction: row;
-        gap: 1rem;
-        img {
-          border-radius: 5px;
-          height: 30px;
-          width: 30px;
-        }
-        h3 {
-          padding: 0.5rem 0;
-          font-weight: 400;
-          font-size: 0.8rem;
-        }
-      }
-  }
 }

@@ -5,12 +5,25 @@
     flex-direction: column;
     height: 100%;
     width: 100%;
-    padding: 2rem;
     box-sizing: border-box;
     margin: auto;
     padding-left: calc(250px + 2rem);
     h6 {
         margin-bottom: 2rem;
+    }
+    .MuiDataGrid-cell[data-field="image"] {
+        padding: 0.3rem;
+        align-self: center;
+        img {
+          padding: 0;
+          border: 1px solid black;
+          object-fit: cover;
+          margin: 0;
+        }
+    }
+    .MuiDataGrid-cell[data-field="fileName"] a {
+        color: var(--accent-color);
+        text-decoration: none;
     }
   .folder, .folder-content {
     transition: opacity 0.3s ease;
@@ -39,12 +52,13 @@ label {
   }
 }
 #media-library-container {
+  font-size: 16px;
   display: flex;
   &.grid-view {
     gap: 2rem;
   }
-  &.list-view {
-    gap: 0.2rem;
+  &.card-view {
+    gap: 2rem;
   }
 }
 
@@ -56,7 +70,7 @@ label {
   }
 }
 
-.list-view {
+.card-view {
   display: flex;
   flex-direction: column;
   .media-card {

@@ -1,10 +1,48 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, createContext } from 'react';
 import MediaUploader from './MediaUploader/MediaUploader';
 import MediaLibrary from './MediaLibrary/MediaLibrary';
 import axios from 'axios';
 import MediaFile from '../interfaces/MediaFile';
 import './mediaContainer.scss';
+import User from '../interfaces/User';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../store/store';
+import { signInUser, logout } from '../store/slices/authSlice';
+
+interface UserContextType {
+  user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+}
+
+const UserContext = createContext<UserContextType | undefined>(undefined);
+
+export const UserProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const userId = 'user-id-from-auth'; // Replace with actual user ID from authentication
+    const fetchUserInfo = async (userId: string) => {
+      try {
+        const response = await axios.get<User>(`/api/users/${userId}`);
+        setUser(response.data);
+      } catch (error) {
+        console.error('Error fetching user information:', error);
+      }
+    };
+
+    fetchUserInfo(userId);
+  }, []);
+
+  return (
+    <UserContext.Provider value={{ user, setUser }}>
+      {children}
+    </UserContext.Provider>
+  );
+};
+
 const MediaContainer: React.FC = () => {
+  const user = useSelector((state: RootState) => state.auth.user);
+  const dispatch: AppDispatch = useDispatch();
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,7 +58,7 @@ const MediaContainer: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchMediaFiles();
+    fetchMediaFiles(); // Call the function when the component mounts
   }, []);
 
   const handleOpen = () => {
@@ -44,8 +82,29 @@ const MediaContainer: React.FC = () => {
     file.metadata.fileName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleLogin = () => {
+    // Replace with actual login form data
+    const loginData = { username: 'johndoe', password: 'password123' };
+    dispatch(signInUser(loginData));
+  };
+
+  const handleLogout = () => {
+    dispatch(logout());
+  };
+
   return (
     <div id="media-container">
+      {user ? (
+        <h1>
+          Welcome, {user.name}!
+          <button onClick={handleLogout}>Logout</button>
+        </h1>
+      ) : (
+        <p>
+          Please log in.
+          <button onClick={handleLogin}>Login</button>
+        </p>
+      )}
       <MediaLibrary
         mediaFilesData={filteredMediaFiles}
         setSearchQuery={setSearchQuery}

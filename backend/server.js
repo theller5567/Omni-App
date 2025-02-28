@@ -38,7 +38,7 @@ app.use(bodyParser.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/user', userRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/media', mediaRoutes);
 

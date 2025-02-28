@@ -11,7 +11,7 @@ const listIcon = encodeURIComponent(
 );
 
 interface HeaderComponentProps {
-  view: 'list' | 'grid';
+  view: 'card' | 'grid';
   toggleView: () => void;
 }
 const Android12Switch = styled(Switch)({
@@ -64,7 +64,7 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView }) =
                 onChange={toggleView}
               />
             }
-            label={view === 'grid' ? 'Grid' : 'List'}
+            label={view === 'grid' ? 'Grid' : 'card'}
           />
         </FormGroup>
       </Box>

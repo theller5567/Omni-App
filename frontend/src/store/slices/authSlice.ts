@@ -57,12 +57,12 @@ export const signUpUser = createAsyncThunk<SignUpResponse, UserData, AsyncThunkC
 );
 
 // Async thunk for signing in a user
-export const signInUser = createAsyncThunk<SignInResponse, { email: string }, AsyncThunkConfig>(
+export const signInUser = createAsyncThunk<SignInResponse, { username: string; password: string }, AsyncThunkConfig>(
   "auth/signInUser",
   async (userData, thunkAPI) => {
     try {
       const response = await axios.post<SignInResponse>("http://localhost:5002/api/auth/login", userData);
-      return response.data;
+      return response.data; // This should include both token and user data
     } catch (error: any) {
       if (error.response) {
         return thunkAPI.rejectWithValue(error.response.data); // Reject with error response

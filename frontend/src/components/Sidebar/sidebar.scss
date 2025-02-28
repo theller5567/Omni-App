@@ -1,4 +1,40 @@
 /* Sidebar styling */
+#sidebar {
+  height: 100vh;
+  width: 250px;
+  background-color: #333;
+  color: white;
+  z-index: 1000;
+  padding: 0; /* Add padding to ensure content is not cut off */
+  border: none;
+  .ps-sidebar-container {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--secondary-color);
+  }
+  .ps-menu-button {
+    background-color: var(--secondary-color);
+    span {
+      display: flex;
+      justify-content: left;
+      align-items: center;
+    }
+  }
+  .sidebar-menu {
+    a {
+      text-decoration: none;
+      color: var(--accent-color);
+    }
+  }
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 1rem;
+  }
+}
+
+
+
+
 .sidebar {
     position: fixed;
     top: 0;

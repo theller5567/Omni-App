@@ -23,7 +23,7 @@ const Login: React.FC = () => {
   return (
     <form onSubmit={handleLogin}>
       <div>
-        <label>Username</label>
+        <label>Username or email</label>
         <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} />
       </div>
       <div>
