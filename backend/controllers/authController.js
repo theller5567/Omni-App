@@ -19,7 +19,6 @@ dotenv.config({ path: envPath });
 
 // Log environment variables to verify they are loaded
 console.log('Email User:', process.env.EMAIL_USER);
-console.log('Email Pass:', process.env.EMAIL_PASS ? 'Loaded' : 'Not Loaded');
 
 // Email Transporter Configuration
 const transporter = nodemailer.createTransport({
@@ -56,11 +55,9 @@ export const registerUser = async (req, res) => {
     });
     await user.save();
 
-    console.log("New user created:", user.email); // Log newly created user
 
     // Generate the verification URL
     const verificationUrl = `http://localhost:5002/api/auth/verify-email/${verificationToken}`;
-    console.log("Verification URL:", verificationUrl); // Log the verification URL for debugging
 
     // Send the verification email
     await sendVerificationEmail(user.email, user.verificationToken);
@@ -87,6 +84,7 @@ export const loginUser = async (req, res) => {
     }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    console.log('AUTH controller -Token:', token);
     res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
   } catch (error) {
     console.error("Error in loginUser:", error);
@@ -139,4 +137,8 @@ export const sendVerificationEmail = async (email, token) => {
     console.error('Error sending email:', error);
     throw error; // Ensure you handle this error in your route
   }
+};
+
+export const generateVerificationToken = () => {
+  return crypto.randomBytes(32).toString('hex');
 };

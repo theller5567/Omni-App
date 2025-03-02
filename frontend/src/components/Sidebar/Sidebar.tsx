@@ -8,7 +8,10 @@ import { Link } from 'react-router-dom';
 const CustomSidebar: React.FC = () => {
   const handleSignOut = () => {
     // Implement signout logic here, e.g., clearing tokens, redirecting, etc.
+
     console.log('User signed out');
+    localStorage.removeItem('authToken');
+    window.location.href = '/';
   };
 
   return (

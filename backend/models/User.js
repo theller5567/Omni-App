@@ -7,9 +7,10 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },  // email must be unique
     username: { type: String, unique: true, sparse: true },  // Make username optional and unique
-    password: { type: String }, // Add password field
+    password: { type: String },
     isVerified: { type: Boolean, default: false },
     verificationToken: { type: String },
+    avatar: { type: String, default: null },
   },
   { timestamps: true }
 );

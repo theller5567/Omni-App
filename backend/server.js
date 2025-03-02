@@ -29,9 +29,6 @@ app.use(cors({
 // Read mock data from JSON file
 const mockData = JSON.parse(fs.readFileSync(path.join(__dirname, 'mockData.json'), 'utf-8'));
 
-app.get('/api/folders', (req, res) => {
-  res.json(mockData.folders);
-});
 
 // Middleware
 app.use(bodyParser.json());
@@ -39,7 +36,6 @@ app.use(bodyParser.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
-app.use('/api/files', fileRoutes);
 app.use('/media', mediaRoutes);
 
 // Root route

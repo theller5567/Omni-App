@@ -1,66 +1,90 @@
 // cSpell:ignore Toastify
 
-import { useState } from "react";
-import { TextField, Button, Typography, Box, Paper, CircularProgress } from "@mui/material";
-import { useDispatch, useSelector } from "react-redux";
-import { signUpUser } from "../store/slices/authSlice";
-import { RootState } from "../store/store"; // Import the root state type
-import { useNavigate } from "react-router-dom"; // Import useNavigate
-import { AppDispatch } from "../store/store"; // Import AppDispatch to get the correct type for dispatch
-import { toast, ToastContainer } from 'react-toastify';  // Import react-toastify
-import 'react-toastify/dist/ReactToastify.css';  // Import the CSS for Toast notifications
+import React, { useState } from 'react';
+import { TextField, Button, Typography, Box, Paper, CircularProgress } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { signUpUser } from '../store/slices/authSlice';
+import { RootState } from '../store/store';
+import { useNavigate } from 'react-router-dom';
+import { AppDispatch } from '../store/store';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import axios from 'axios';
+
+interface LoginResponse {
+  token: string;
+  // Add other fields if necessary
+}
 
 const AuthPage: React.FC = () => {
-  const dispatch = useDispatch<AppDispatch>(); // Use the correct dispatch type
-  const navigate = useNavigate(); // Use the useNavigate hook
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [formData, setFormData] = useState({ name: "", email: "" });
-  const [showForm, setShowForm] = useState(true); // State to show/hide the form
+  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [showForm, setShowForm] = useState(true);
 
-  const { loading, error } = useSelector((state: RootState) => state.auth); // Access loading and error from Redux state
+  const { loading, error } = useSelector((state: RootState) => state.auth);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    console.log('handleSubmit:', 'TESTING!!!!');
     e.preventDefault();
-    console.log("Form Data:", formData); // Log form data before dispatching
     if (isSignUp) {
-      console.log("Dispatching sign-up..."); // Log that the sign-up is being dispatched
       dispatch(signUpUser({ name: formData.name, email: formData.email }))
         .unwrap()
         .then((response) => {
-          console.log("Sign-up successful:", response); // Log the successful sign-up response
-          // After sign-up, hide the form and show the message
+          console.log('Test:', response);
           setShowForm(false);
-          toast.success("Check your email for the verification link!");
+          toast.success('Check your email for the verification link!');
         })
         .catch((err) => {
-          console.error("Sign up failed:", err); // Log if sign-up fails
+          console.error('Sign up failed:', err);
         });
     } else {
-      console.log("Dispatching sign-in..."); // Log that the sign-in is being dispatched
-      // You can add your sign-in logic here if necessary
+      // Handle sign-in logic
+      handleLogin();
     }
   };
 
-  // If the email is verified, show a success message
+  const handleLogin = async () => {
+    try {
+      const response = await axios.post<LoginResponse>('/api/auth/login', { email: formData.email, password: formData.password });
+      console.log('Login successful:', response.data);
+      const token = response.data.token;
+      console.log('Token received:', token);
+      localStorage.setItem('authToken', token);
+      toast.success('Logged in successfully');
+      navigate('/home');
+    } catch (error) {
+      if (error instanceof Error && error.hasOwnProperty('response')) {
+        const errResponse = (error as any).response;
+        console.error('Error logging in:', errResponse);
+        toast.error(errResponse?.data?.message || 'An error occurred');
+      } else {
+        console.error('Unexpected error:', error);
+        toast.error('An unexpected error occurred');
+      }
+    }
+  };
+
   const params = new URLSearchParams(window.location.search);
-  const emailVerified = params.get("emailVerified");
+  const emailVerified = params.get('emailVerified');
 
   if (emailVerified) {
-    toast.success("Your email has been successfully verified!");
-    navigate("/home"); // Redirect to home page after email verification
+    toast.success('Your email has been successfully verified!');
+    navigate('/home');
   }
 
   return (
     <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-      <Paper elevation={3} sx={{ padding: 4, width: "400px" }}>
+      <Paper elevation={3} sx={{ padding: 4, width: '400px' }}>
         {showForm ? (
           <>
             <Typography variant="h5" align="center" gutterBottom>
-              {isSignUp ? "Create an Account" : "Sign In"}
+              {isSignUp ? 'Create an Account' : 'Sign In'}
             </Typography>
             <form onSubmit={handleSubmit}>
               {isSignUp && (
@@ -83,20 +107,31 @@ const AuthPage: React.FC = () => {
                 margin="normal"
                 required
               />
+              {!isSignUp && (
+                <TextField
+                  fullWidth
+                  label="Password"
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  margin="normal"
+                  required
+                />
+              )}
               <Button
                 variant="contained"
                 color="primary"
                 fullWidth
                 type="submit"
                 sx={{ marginTop: 2 }}
-                disabled={loading} // Disable button when loading
+                disabled={loading}
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : isSignUp ? "Sign Up" : "Sign In"}
+                {loading ? <CircularProgress size={24} color="inherit" /> : isSignUp ? 'Sign Up' : 'Sign In'}
               </Button>
             </form>
           </>
         ) : (
-          // This part will be hidden after sign-up, user will see success message instead
           <Box>
             <Typography variant="h6" align="center" gutterBottom>
               Check your email for the verification link!
@@ -104,10 +139,9 @@ const AuthPage: React.FC = () => {
           </Box>
         )}
 
-        {/* Display error if exists */}
         {error && (
           <Typography variant="body2" color="error" align="center" sx={{ marginTop: 2 }}>
-            {typeof error === "string" ? error : (error as { message?: string }).message || "An unexpected error occurred"}
+            {typeof error === 'string' ? error : (error as { message?: string }).message || 'An unexpected error occurred'}
           </Typography>
         )}
 
@@ -115,14 +149,13 @@ const AuthPage: React.FC = () => {
           <Typography
             component="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            sx={{ textDecoration: "underline", cursor: "pointer" }}
+            sx={{ textDecoration: 'underline', cursor: 'pointer' }}
           >
-            {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
+            {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
           </Typography>
         </Box>
       </Paper>
 
-      {/* Toast Notifications */}
       <ToastContainer />
     </Box>
   );

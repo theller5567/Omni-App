@@ -3,9 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Sidebar from './components/Sidebar/Sidebar';
 import MediaDetail from './components/MediaDetail/MediaDetail';
-import Account from './components/Account';
+import Account from './pages/Account';
 import Home from './components/Home';
-import Login from './pages/Login';
 import PasswordSetup from './pages/PasswordSetup';
 import AuthPage from './pages/AuthPage';
 import ThemeToggle from './components/ThemeToggle/ThemeToggle';
@@ -16,7 +15,7 @@ import './App.scss';
 import MediaContainer from './components/MediaContainer';
 import { Provider } from 'react-redux';
 import store from './store/store';
-
+import ProtectedRoute from './components/ProtectedRoute';
 
 const App: React.FC = () => {
   //const [isSidebarVisible, setSidebarVisible] = useState(true);
@@ -56,10 +55,10 @@ const App: React.FC = () => {
                 <Route path="/media/slug/:slug" element={<MediaDetail />} />
                 <Route path="/media-library" element={<MediaContainer />} />
                 <Route path="/account" element={<Account />} />
-                <Route path="/home" element={<Home />} />
+                <Route path="/home" element={<ProtectedRoute path="/home" element={<Home />} />} />
                 <Route path="/password-setup" element={<PasswordSetup />} />
-                <Route path="/" element={<Login />} />
-                <Route path="/auth-page" element={<AuthPage />} />
+                <Route path="/" element={<AuthPage />} />
+                <Route path="/auth" element={<Account />} />
               </Routes>
             </div>
           </div>

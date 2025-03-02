@@ -1,5 +1,6 @@
 import express from 'express';
 import User from '../models/User.js';
+import { authenticate } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -7,15 +8,19 @@ const router = express.Router();
 router.use(express.json());
 
 // Route to get user profile
-router.get('/profile', async (req, res) => {
+router.get('/profile', authenticate, async (req, res) => {
   try {
-    const userId = req.user.id; // Assuming user ID is available in req.user
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    res.status(200).json(user);
+    // Assuming req.user contains the authenticated user's info
+    console.log(req.user, 'req.user');
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) {
+      console.log('User not found');
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(user);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching user profile:', error); // Log the error for debugging
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
