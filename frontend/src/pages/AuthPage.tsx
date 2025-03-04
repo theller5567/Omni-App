@@ -3,73 +3,54 @@
 import React, { useState } from 'react';
 import { TextField, Button, Typography, Box, Paper, CircularProgress } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
-import { signUpUser } from '../store/slices/authSlice';
+import { registerUser, loginUser } from '../store/slices/authSlice';
 import { RootState } from '../store/store';
 import { useNavigate } from 'react-router-dom';
 import { AppDispatch } from '../store/store';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import axios from 'axios';
-
-interface LoginResponse {
-  token: string;
-  // Add other fields if necessary
-}
+import { setUser } from '../store/slices/userSlice';
 
 const AuthPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
-  const [showForm, setShowForm] = useState(true);
+  const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '' });
+  const [showForm] = useState(true);
 
-  const { loading, error } = useSelector((state: RootState) => state.auth);
+  const { loading, error, message } = useSelector((state: RootState) => state.auth);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    console.log('handleSubmit:', 'TESTING!!!!');
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (isSignUp) {
-      dispatch(signUpUser({ name: formData.name, email: formData.email }))
-        .unwrap()
-        .then((response) => {
-          console.log('Test:', response);
-          setShowForm(false);
-          toast.success('Check your email for the verification link!');
-        })
-        .catch((err) => {
-          console.error('Sign up failed:', err);
-        });
-    } else {
-      // Handle sign-in logic
-      handleLogin();
-    }
-  };
-
-  const handleLogin = async () => {
+    console.log('Form Data:', formData);
     try {
-      const response = await axios.post<LoginResponse>('/api/auth/login', { email: formData.email, password: formData.password });
-      console.log('Login successful:', response.data);
-      const token = response.data.token;
-      console.log('Token received:', token);
-      localStorage.setItem('authToken', token);
-      toast.success('Logged in successfully');
-      navigate('/home');
-    } catch (error) {
-      if (error instanceof Error && error.hasOwnProperty('response')) {
-        const errResponse = (error as any).response;
-        console.error('Error logging in:', errResponse);
-        toast.error(errResponse?.data?.message || 'An error occurred');
+      if (isSignUp) {
+        const response = await dispatch(registerUser({ firstName: formData.firstName, lastName: formData.lastName, email: formData.email }));
+        console.log('Registration response:', response);
+        // Handle registration response if needed
       } else {
-        console.error('Unexpected error:', error);
-        toast.error('An unexpected error occurred');
+        const response = await dispatch(loginUser({ email: formData.email, password: formData.password }));
+        if (response.payload && typeof response.payload === 'object' && 'token' in response.payload && 'user' in response.payload) {
+          const { token, user } = response.payload as { token: string, user: any }; // Type assertion to specify the structure of response.payload
+          localStorage.setItem('authToken', token); // Store token in localStorage
+          dispatch(setUser(user)); // Update Redux store with user information
+          console.log('User logged in successfully:', user);
+          navigate('/media-library'); // Redirect to home or another page
+        } else {
+          console.error('Invalid login response:', response.payload);
+        }
       }
+    } catch (error) {
+      console.error('Error during authentication:', error);
     }
   };
 
+  
   const params = new URLSearchParams(window.location.search);
   const emailVerified = params.get('emailVerified');
 
@@ -88,15 +69,26 @@ const AuthPage: React.FC = () => {
             </Typography>
             <form onSubmit={handleSubmit}>
               {isSignUp && (
-                <TextField
-                  fullWidth
-                  label="Name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  margin="normal"
-                  required
-                />
+                <>
+                  <TextField
+                    fullWidth
+                    label="First Name"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    margin="normal"
+                    required
+                  />
+                  <TextField
+                    fullWidth
+                    label="Last Name"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    margin="normal"
+                    required
+                  />
+                </>
               )}
               <TextField
                 fullWidth
@@ -142,6 +134,12 @@ const AuthPage: React.FC = () => {
         {error && (
           <Typography variant="body2" color="error" align="center" sx={{ marginTop: 2 }}>
             {typeof error === 'string' ? error : (error as { message?: string }).message || 'An unexpected error occurred'}
+          </Typography>
+        )}
+
+        {message && (
+          <Typography variant="body2" color="success" align="center" sx={{ marginTop: 2 }}>
+            {message}
           </Typography>
         )}
 

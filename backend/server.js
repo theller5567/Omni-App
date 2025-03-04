@@ -5,7 +5,6 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
-import fileRoutes from './routes/fileRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
 import path from 'path';
 import { fileURLToPath } from 'url';

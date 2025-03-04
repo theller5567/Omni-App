@@ -1,76 +1,21 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 
-// Define the type for the user
-interface User {
-  name: string;
-  email: string;
-  // Add any other fields you expect for the user
-}
-
-// Define the type for the response from the sign-up API
-interface SignUpResponse {
-    message: string;          // Success message returned from the backend
-    verificationToken?: string;  // Include the verificationToken as part of the response
-    user?: User;             // Optionally, include the user data in the response
-}
-
-// Define the type for the response from the sign-in API
-interface SignInResponse {
-  user: User; // Return user data after sign-in
-}
-
-// Define the type for user data that is passed into the API request
+// Define the type for user data
 interface UserData {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
 }
 
-// Define the type for the rejected error value (error message)
-interface AsyncThunkConfig {
-  rejectValue: string;  // This will be used to type the rejected error message
-}
-
-// AuthState with a more specific `user` type
+// Define the type for the authentication state
 interface AuthState {
-  user: User | null;  // User data or null if not logged in
+  user: UserData | null;
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
   message: string | null;
 }
-
-// Async thunk for signing up a user
-export const signUpUser = createAsyncThunk<SignUpResponse, UserData, AsyncThunkConfig>(
-  "auth/signUpUser",
-  async (userData, thunkAPI) => {
-    try {
-      const response = await axios.post<SignUpResponse>("http://localhost:5002/api/auth/signup", userData);
-      return response.data;  // Return the successful response (message and user data)
-    } catch (error: any) {
-      if (error.response) {
-        return thunkAPI.rejectWithValue(error.response.data); // Reject with error response
-      }
-      return thunkAPI.rejectWithValue("An unexpected error occurred.");
-    }
-  }
-);
-
-// Async thunk for signing in a user
-export const signInUser = createAsyncThunk<SignInResponse, { username: string; password: string }, AsyncThunkConfig>(
-  "auth/signInUser",
-  async (userData, thunkAPI) => {
-    try {
-      const response = await axios.post<SignInResponse>("http://localhost:5002/api/auth/login", userData);
-      return response.data; // This should include both token and user data
-    } catch (error: any) {
-      if (error.response) {
-        return thunkAPI.rejectWithValue(error.response.data); // Reject with error response
-      }
-      return thunkAPI.rejectWithValue("An unexpected error occurred.");
-    }
-  }
-);
 
 const initialState: AuthState = {
   user: null,
@@ -80,44 +25,69 @@ const initialState: AuthState = {
   message: null,
 };
 
+// Async thunk for registering a user
+export const registerUser = createAsyncThunk(
+  'auth/registerUser',
+  async (userData: UserData, thunkAPI) => {
+    try {
+      const response = await axios.post("http://localhost:5002/api/auth/register", userData);
+      return response.data;  // Return the successful response (message and user data)
+    } catch (error: any) {
+      return thunkAPI.rejectWithValue(error.response.data);
+    }
+  }
+  
+);
+
+// Async thunk for logging in a user
+export const loginUser = createAsyncThunk(
+  'auth/loginUser',
+  async (credentials: { email: string; password: string }, thunkAPI) => {
+    try {
+      const response = await axios.post('http://localhost:5002/api/auth/login', credentials);
+      return response.data;
+    } catch (error: any) {
+      return thunkAPI.rejectWithValue(error.response.data);
+    }
+  }
+);
+
 const authSlice = createSlice({
-  name: "auth",
+  name: 'auth',
   initialState,
   reducers: {
     logout: (state) => {
       state.user = null;
       state.isAuthenticated = false;
-      state.message = null;  // Clear message on logout
+      state.message = null;
     },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(signUpUser.pending, (state) => {
+      .addCase(registerUser.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(signUpUser.fulfilled, (state, action: PayloadAction<SignUpResponse>) => {
+      .addCase(registerUser.fulfilled, (state, action: PayloadAction<any>) => {
         state.loading = false;
-        state.message = action.payload.message;  // Set success message in state
-        state.user = action.payload.user || null;  // Store user data from backend
-        state.isAuthenticated = false;  // Wait for email verification
+        state.message = action.payload.message;
       })
-      .addCase(signUpUser.rejected, (state, action: PayloadAction<string | undefined>) => {
+      .addCase(registerUser.rejected, (state, action: PayloadAction<any>) => {
         state.loading = false;
-        state.error = action.payload || "An unknown error occurred."; // Handle undefined payload
+        state.error = action.payload.message;
       })
-      .addCase(signInUser.pending, (state) => {
+      .addCase(loginUser.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(signInUser.fulfilled, (state, action: PayloadAction<SignInResponse>) => {
+      .addCase(loginUser.fulfilled, (state, action: PayloadAction<any>) => {
         state.loading = false;
-        state.user = action.payload.user;  // Set user data after successful login
+        state.user = action.payload.user;
         state.isAuthenticated = true;
       })
-      .addCase(signInUser.rejected, (state, action: PayloadAction<string | undefined>) => {
+      .addCase(loginUser.rejected, (state, action: PayloadAction<any>) => {
         state.loading = false;
-        state.error = action.payload || "An unknown error occurred."; // Handle undefined payload
+        state.error = action.payload.message;
       });
   },
 });

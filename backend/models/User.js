@@ -4,7 +4,8 @@ import bcrypt from "bcrypt";
 // User schema
 const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
     email: { type: String, required: true, unique: true },  // email must be unique
     username: { type: String, unique: true, sparse: true },  // Make username optional and unique
     password: { type: String },
