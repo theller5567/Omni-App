@@ -1,50 +1,16 @@
-import React, { useEffect, useState, createContext } from 'react';
+import React, { useEffect, useState } from 'react';
 import MediaUploader from './MediaUploader/MediaUploader';
 import MediaLibrary from './MediaLibrary/MediaLibrary';
 import axios from 'axios';
 import MediaFile from '../interfaces/MediaFile';
 import './mediaContainer.scss';
-import User from '../interfaces/User';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store/store';
 
-interface UserContextType {
-  user: User | null;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
-}
 
-const UserContext = createContext<UserContextType | undefined>(undefined);
-
-export const UserProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const userId = 'user-id-from-auth'; // Replace with actual user ID from authentication
-    const fetchUserInfo = async (userId: string) => {
-      try {
-        const response = await axios.get<User>(`/api/users/${userId}`);
-        setUser(response.data);
-      } catch (error) {
-        console.error('Error fetching user information:', error);
-      }
-    };
-
-    fetchUserInfo(userId);
-  }, []);
-
-  return (
-    <UserContext.Provider value={{ user, setUser }}>
-      {children}
-    </UserContext.Provider>
-  );
-};
 
 const MediaContainer: React.FC = () => {
-  const user = useSelector((state: RootState) => state.auth.user);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-console.log(user, 'user');
   const fetchMediaFiles = async () => {
     try {
       const response = await axios.get<MediaFile[]>('http://localhost:5002/media/all');

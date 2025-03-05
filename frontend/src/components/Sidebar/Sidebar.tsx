@@ -6,9 +6,8 @@ import './sidebar.scss';
 import { Link } from 'react-router-dom';
 
 const CustomSidebar: React.FC = () => {
+  
   const handleSignOut = () => {
-    // Implement signout logic here, e.g., clearing tokens, redirecting, etc.
-
     console.log('User signed out');
     localStorage.removeItem('authToken');
     window.location.href = '/';
@@ -34,7 +33,7 @@ const CustomSidebar: React.FC = () => {
           </Box> */}
           <Menu className="sidebar-menu">
             <MenuItem component={<Link to="/account" />}> <Avatar src="https://via.placeholder.com/150" /></MenuItem>
-            <MenuItem component={<Link to="/" />}> Home</MenuItem>
+            <MenuItem component={<Link to="/home" />}> Home</MenuItem>
             <MenuItem component={<Link to="/media-library" />}> Media Library</MenuItem>
           </Menu>
           <Menu className="sidebar-footer">

@@ -1,6 +1,6 @@
 // App.tsx
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar/Sidebar';
 import MediaDetail from './components/MediaDetail/MediaDetail';
 import Account from './pages/Account';
@@ -14,7 +14,7 @@ import './App.scss';
 import MediaContainer from './components/MediaContainer';
 import { Provider } from 'react-redux';
 import store from './store/store';
-//import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedRoute from './components/ProtectedRoute';
 import PasswordSetupPage from './pages/PasswordSetup';
 
 const App: React.FC = () => {
@@ -37,9 +37,9 @@ const App: React.FC = () => {
     <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
       <CssBaseline />
       <Provider store={store}>
-          <Router>
-            <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-              <Sidebar/>
+        <Router>
+          <div id="app-container" style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+            <Sidebar />
             <ThemeToggle theme={isDarkMode ? 'dark' : 'light'} toggleTheme={toggleTheme} />
             <div
               style={{
@@ -50,15 +50,14 @@ const App: React.FC = () => {
                 width: '100vw',
                 overflow: 'auto',
               }}
-            > 
+            >
               <Routes>
-                <Route path="/media/slug/:slug" element={<MediaDetail />} />
-                <Route path="/media-library" element={<MediaContainer />} />
-                <Route path="/account" element={<Account />} />
-                <Route path="/home" element={<Home />} />
+                <Route path="/media/slug/:slug" element={<ProtectedRoute element={<MediaDetail />} />} />
+                <Route path="/media-library" element={<ProtectedRoute element={<MediaContainer />} />} />
+                <Route path="/account" element={<ProtectedRoute element={<Account />} />} />
+                <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
                 <Route path="/password-setup" element={<PasswordSetupPage />} />
                 <Route path="/" element={<AuthPage />} />
-                <Route path="/auth" element={<Account />} />
               </Routes>
             </div>
           </div>

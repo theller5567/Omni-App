@@ -15,10 +15,7 @@ export const loginUser = async (req, res) => {
     }
 
     // Debugging: Log the plain text password and hashed password
-    console.log('Entered password:', password);
-    console.log('Stored hashed password:', user.password);
     user.password = await bcrypt.hash(password, 10);
-console.log('Hashed password:', user.password);
     // Use bcrypt to compare the plain text password with the hashed password
     const isPasswordValid = await bcrypt.compare(password, user.password);
 

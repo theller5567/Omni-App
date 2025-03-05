@@ -5,11 +5,7 @@ import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Resolve the absolute path to the .env file
 const envPath = path.resolve(__dirname, '../../.env');
-
-// Load environment variables from the absolute path to the .env file
 dotenv.config({ path: envPath });
 
 

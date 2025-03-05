@@ -10,7 +10,8 @@ import { motion } from 'framer-motion';
 // Define a User interface if not already defined elsewhere
 interface User {
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   password?: string;
   avatar?: string | null;
 }
@@ -20,7 +21,8 @@ const Account: React.FC = () => {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [initialValues, setInitialValues] = useState<User>({
     email: '',
-    name: '',
+    firstName: '',
+    lastName: '',
     password: '',
   });
 
@@ -41,9 +43,9 @@ const Account: React.FC = () => {
           },
         });
 
-        const { email, name, avatar } = response.data;
+        const { email, firstName, lastName, avatar } = response.data;
         console.log(response.data, 'response.data');
-        setInitialValues({ email, name, password: '' });
+        setInitialValues({ email, firstName, lastName, password: '' });
         setAvatar(avatar || null);
       } catch (error: any) {
         console.error('Error fetching user data:', error);
@@ -59,7 +61,8 @@ const Account: React.FC = () => {
     enableReinitialize: true,
     validationSchema: Yup.object({
       email: Yup.string().email('Invalid email address').required('Email is required'),
-      name: Yup.string().required('Name is required'),
+      firstName: Yup.string().required('First Name is required'),
+      lastName: Yup.string().required('Last Name is required'),
       password: Yup.string().min(6, 'Password must be at least 6 characters'),
     }),
     onSubmit: async (values) => {
@@ -100,16 +103,7 @@ const Account: React.FC = () => {
     },
   });
 
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatar(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+ 
 
   return (
     <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
@@ -125,22 +119,32 @@ const Account: React.FC = () => {
           <Box display="flex" justifyContent="center" marginBottom={2}>
             <Avatar src={avatar || '/default-avatar.png'} sx={{ width: 100, height: 100 }} />
           </Box>
-          <Button variant="contained" component="label">
-            Upload Avatar
-            <input type="file" hidden onChange={handleAvatarChange} />
-          </Button>
+         
           <TextField
             fullWidth
-            label="Name"
-            name="name"
-            value={formik.values.name}
+            label="First Name"
+            name="firstName"
+            value={formik.values.firstName}
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
             margin="normal"
             required
-            error={formik.touched.name && Boolean(formik.errors.name)}
-            helperText={formik.touched.name && formik.errors.name}
+            error={formik.touched.firstName && Boolean(formik.errors.firstName)}
+            helperText={formik.touched.firstName && formik.errors.firstName}
           />
+           <TextField
+            fullWidth
+            label="Last Name"
+            name="lastName"
+            value={formik.values.lastName}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            margin="normal"
+            required
+            error={formik.touched.lastName && Boolean(formik.errors.lastName)}
+            helperText={formik.touched.lastName && formik.errors.lastName}
+          />
+          
           <TextField
             fullWidth
             label="Email"

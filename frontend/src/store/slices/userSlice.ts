@@ -1,24 +1,23 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  // Add other user fields as needed
-}
-
-interface UserState {
-  user: User | null;
-}
-
-const initialState: UserState = {
-  user: null,
-};
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
 
+interface UserState {
+  email: string;
+  firstName: string;
+  lastName: string;
+  avatar: string;
+}
+
+const initialState: UserState = {
+  email: '',
+  firstName: '',
+  lastName: '',
+  avatar: '',
+};
+
 export const useAuth = () => {
-    const user = useSelector((state: RootState) => state.user.user);
+    const user = useSelector((state: RootState) => state.user);
     return { user, isAuthenticated: !!user };
   };
 
@@ -26,11 +25,14 @@ const userSlice = createSlice({
   name: 'user',
   initialState,
   reducers: {
-    setUser: (state, action: PayloadAction<User>) => {
-      state.user = action.payload;
+    setUser(state, action: PayloadAction<UserState>) {
+      return { ...state, ...action.payload };
     },
-    clearUser: (state) => {
-      state.user = null;
+    clearUser(state) {
+      state.email = '';
+      state.firstName = '';
+      state.lastName = '';
+      state.avatar = '';
     },
   },
 });
