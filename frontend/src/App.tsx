@@ -12,18 +12,54 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { lightTheme, darkTheme } from './theme';
 import './App.scss';
 import MediaContainer from './components/MediaContainer';
-import { Provider } from 'react-redux';
+import { Provider, useDispatch, useSelector } from 'react-redux';
 import store from './store/store';
 import ProtectedRoute from './components/ProtectedRoute';
 import PasswordSetupPage from './pages/PasswordSetup';
+import { setUser } from './store/slices/userSlice';
+import axios from 'axios';
+import { RootState } from './store/store';
+
+interface UserState {
+  email: string;
+  firstName: string;
+  lastName: string;
+  avatar: string;
+  isLoading: boolean;
+}
 
 const App: React.FC = () => {
   //const [isSidebarVisible, setSidebarVisible] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const dispatch = useDispatch();
+  const isLoading = useSelector((state: RootState) => state.user.isLoading);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      axios.get<UserState>('/api/user/profile', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then(response => {
+        dispatch(setUser(response.data));
+      })
+      .catch(error => {
+        console.error('Error fetching user data:', error);
+        localStorage.removeItem('authToken');
+        dispatch(setUser({ email: '', firstName: '', lastName: '', avatar: '', isLoading: false }));
+      });
+    } else {
+      dispatch(setUser({ email: '', firstName: '', lastName: '', avatar: '', isLoading: false }));
+    }
+  }, [dispatch]);
+
+  // Debugging: Check user state
+  const userState = useSelector((state: RootState) => state.user);
+  console.log('User state on app load:', userState);
 
   // const toggleSidebar = () => {
   //   setSidebarVisible(!isSidebarVisible);
@@ -32,6 +68,10 @@ const App: React.FC = () => {
   const toggleTheme = () => {
     setIsDarkMode((prevMode) => !prevMode);
   };
+
+  if (isLoading) {
+    return <div>Loading...</div>; // Show a loading indicator while fetching data
+  }
 
   return (
     <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>

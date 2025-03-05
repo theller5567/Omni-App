@@ -7,6 +7,7 @@ interface UserState {
   firstName: string;
   lastName: string;
   avatar: string;
+  isLoading: boolean;
 }
 
 const initialState: UserState = {
@@ -14,6 +15,7 @@ const initialState: UserState = {
   firstName: '',
   lastName: '',
   avatar: '',
+  isLoading: true,
 };
 
 export const useAuth = () => {
@@ -26,13 +28,14 @@ const userSlice = createSlice({
   initialState,
   reducers: {
     setUser(state, action: PayloadAction<UserState>) {
-      return { ...state, ...action.payload };
+      return { ...state, ...action.payload, isLoading: false };
     },
     clearUser(state) {
       state.email = '';
       state.firstName = '';
       state.lastName = '';
       state.avatar = '';
+      state.isLoading = false;
     },
   },
 });
