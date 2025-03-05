@@ -6,9 +6,11 @@ import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
+import hubspotRoutes from './routes/hubspotRoutes.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import axios from 'axios';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -36,11 +38,25 @@ app.use(bodyParser.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/media', mediaRoutes);
+app.use('/api/hubspot', hubspotRoutes);
 
 // Root route
 app.get('/', (req, res) => {
   res.send('Welcome to the Omni App API');
 });
+
+// app.get('/api/quotes', async (req, res) => {
+//   try {
+//     const response = await axios.get('https://api.hubapi.com/crm/v3/objects/quotes', {
+//       headers: {
+//         Authorization: `Bearer YOUR_ACCESS_TOKEN`,
+//       },
+//     });
+//     res.json(response.data);
+//   } catch (error) {
+//     res.status(500).json({ error: 'Error fetching data from HubSpot' });
+//   }
+// });
 
 // Connect to MongoDB
 const mongoUri = process.env.MONGO_URI;
