@@ -2,7 +2,6 @@
 #sidebar {
   height: 100vh;
   width: 250px;
-  background-color: #333;
   color: white;
   z-index: 1000;
   padding: 0; /* Add padding to ensure content is not cut off */
@@ -10,42 +9,43 @@
   .ps-sidebar-container {
     display: flex;
     flex-direction: column;
-    background-color: var(--secondary-color);
+    background-image: linear-gradient(to bottom, var(--secondary-color), var(--background-color));
   }
   .ps-menu-button {
     background-color: var(--secondary-color);
+    border-bottom: 1px solid var(--background-color);
     span {
       display: flex;
       justify-content: left;
       align-items: center;
+      svg {
+        font-size: 1.5rem;
+        margin-right: 1rem;
+      }
     }
   }
   .sidebar-menu {
     a {
       text-decoration: none;
-      color: var(--accent-color);
+      color: var(--text-color);
     }
   }
   .sidebar-footer {
     margin-top: auto;
-    padding: 1rem;
+  }
+  #sidebar-account {
+    margin-block: 2rem;
+    border: none;
+    span:nth-child(2) {
+      padding-left: 1rem;
+      color: var(--accent-color);
+    }
   }
 }
 
 
 
 
-.sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh; /* Full height of the viewport */
-    width: 250px;
-    background-color: #333;
-    color: white;
-    z-index: 1000;
-    padding-bottom: 1rem; /* Add padding to ensure content is not cut off */
-  }
 
   
   .sidebar.hidden {

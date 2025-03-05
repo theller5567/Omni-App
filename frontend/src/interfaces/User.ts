@@ -6,6 +6,7 @@ export default interface User {
     isVerified: boolean;
     verificationToken: string;
     createdAt: string;
+    role: string;
 }
 
 export interface UserResponse {

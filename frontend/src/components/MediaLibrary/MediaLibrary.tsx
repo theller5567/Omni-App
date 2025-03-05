@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { Box, Typography, Grid, Button, ButtonGroup } from '@mui/material';
-// import { motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import './MediaLibrary.scss';
 import HeaderComponent from './HeaderComponent';
 import MediaCard from './MediaCard';
 import { useNavigate, Link } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import SearchInput from '../SearchInput/SearchInput';
-import { FaPlus } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
 import MediaFile from '../../interfaces/MediaFile';
-import { DataGrid, GridColDef,  } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridToolbar,  } from '@mui/x-data-grid';
 import { formatFileSize } from '../../utils/formatFileSize';
 const CustomGrid = styled(Grid)({
   '&.grid-view': {
@@ -60,14 +60,48 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     { field: 'fileExtension', headerName: 'Extension', flex: 0.5 },
     { 
       field: 'modifiedDate', 
-      headerName: 'Modified Date', 
-      flex: 1, 
+      headerName: 'Modified Date',
+      flex: 0.5,
       valueFormatter: (value: string) => {
         if (!value) return 'N/A';
         return new Date(value).toLocaleDateString();
       }
     },
-    // Add more columns as needed
+    { field: 'tags', headerName: 'Tags', flex: 0.5, renderCell: (params) => (
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+        {params.row.tags.map((tag: string, index: number) => (
+          <span key={index} className="tag">
+            {tag}{index === params.row.tags.length - 1 ? '' : ', '}
+          </span>
+        ))}
+      </div>
+    ), },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      flex: 0.5,
+      sortable: false,
+      renderCell: (params) => (
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button
+            variant="contained"
+            color="primary"
+            size="small"
+            onClick={() => handleEdit(params.row.id)}
+          >
+            <FaEdit />
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            size="small"
+            onClick={() => handleDelete(params.row.id)}
+          >
+            <FaTrash />
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   const rows = mediaFilesData.map((file) => ({
@@ -78,58 +112,86 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     fileSize: file.fileSize,
     fileExtension: file.fileExtension,
     modifiedDate: file.modifiedDate,
-    fileName: file.metadata.fileName
+    fileName: file.metadata.fileName,
+    tags: file.metadata.tags
   }));
 
+  const containerVariants = {
+    hidden: { opacity: 0, x: -350 },
+    visible: { opacity: 1, x: -250, transition: { duration: 0.5 } },
+    exit: { opacity: 0, x: -350, transition: { duration: 0.5 } },
+  };
+
+  const handleEdit = (id: string) => {
+    // Implement edit logic here
+    console.log(`Edit record with id: ${id}`);
+  };
+
+  const handleDelete = (id: string) => {
+    // Implement delete logic here
+    console.log(`Delete record with id: ${id}`);
+  };
+
   return (
-    <Box className="media-library">
-      <Typography variant="h2" align="left" sx={{paddingBottom: '2rem'}}>OMNI Media Library</Typography>
-      <Box display="flex" justifyContent="space-between" gap={12} alignItems="center" mb={2}>
-      <ButtonGroup variant="outlined" aria-label="Basic button group">
-          <Button variant="contained"color="primary">View all</Button>
-          <Button color="primary">Images</Button>
-          <Button color="primary">Videos</Button>
-          <Button color="primary">Documents</Button>
-          <Button color="primary">PDFs</Button>
-          <Button color="primary">App notes</Button>
-          <Button variant="contained" color="secondary" onClick={onAddMedia} startIcon={<FaPlus />}>Add Media</Button>
-        </ButtonGroup>
-        <Box display="flex" alignItems="center" gap={2}>
-          <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
-          <Button variant="outlined" color="primary">Filters</Button>
+    <motion.div
+      className="media-library"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+    >
+      <Box className="media-library">
+        <Typography variant="h2" align="left" sx={{paddingBottom: '2rem'}}>OMNI Media Library</Typography>
+        <Box display="flex" justifyContent="space-between" gap={12} alignItems="center" mb={2}>
+        <ButtonGroup variant="outlined" aria-label="Basic button group">
+            <Button variant="contained"color="primary">View all</Button>
+            <Button color="primary">Images</Button>
+            <Button color="primary">Videos</Button>
+            <Button color="primary">Documents</Button>
+            <Button color="primary">PDFs</Button>
+            <Button color="primary">App notes</Button>
+            <Button variant="contained" color="secondary" onClick={onAddMedia} startIcon={<FaPlus />}>Add Media</Button>
+          </ButtonGroup>
+          <Box display="flex" alignItems="center" gap={2}>
+            <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
+            <Button variant="outlined" color="primary">Filters</Button>
+          </Box>
         </Box>
-      </Box>
-      <HeaderComponent
-        view={viewMode}
-        toggleView={toggleView}
-      />
-      
-      <CustomGrid id="media-library-container" container spacing={2} justifyContent="start" className={viewMode === 'grid' ? 'grid-view '  : 'card-view'}>
-        {viewMode === 'grid' ? (
-          <div style={{ height: 600, width: '100%' }}>
-            <DataGrid
-              rows={rows}
-              columns={columns}
-              pageSizeOptions={[5, 10, 20]}
-              initialState={{
-                pagination: {
-                  paginationModel: { pageSize: 10 },
-                },
-                sorting: {
-                  sortModel: [{ field: 'modifiedDate', sort: 'desc' }],
-                },
+        <HeaderComponent
+          view={viewMode}
+          toggleView={toggleView}
+        />
+        
+        <CustomGrid id="media-library-container" container spacing={2} justifyContent="start" className={viewMode === 'grid' ? 'grid-view '  : 'card-view'}>
+          {viewMode === 'grid' ? (
+            <div style={{ height: 600, width: '100%' }}>
+              <DataGrid
+              slots={{
+                toolbar: GridToolbar,
               }}
-              checkboxSelection
-              disableRowSelectionOnClick
-            />
-          </div>
-        ) : (
-          mediaFilesData.map((file) => (
-            <MediaCard key={file.id} file={file} onClick={() => handleFileClick(file)} />
-          ))
-        )}
-      </CustomGrid>
-    </Box>
+                rows={rows}
+                columns={columns}
+                pageSizeOptions={[5, 10, 20]}
+                initialState={{
+                  pagination: {
+                    paginationModel: { pageSize: 10 },
+                  },
+                  sorting: {
+                    sortModel: [{ field: 'modifiedDate', sort: 'desc' }],
+                  },
+                }}
+                checkboxSelection
+                disableRowSelectionOnClick
+              />
+            </div>
+          ) : (
+            mediaFilesData.map((file) => (
+              <MediaCard key={file.id} file={file} onClick={() => handleFileClick(file)} />
+            ))
+          )}
+        </CustomGrid>
+      </Box>
+    </motion.div>
   );
 };
 

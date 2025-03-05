@@ -1,6 +1,5 @@
 import path from 'path';
 import dotenv from "dotenv";
-import nodemailer from "nodemailer";
 import { fileURLToPath } from 'url';
 export { sendVerificationEmail } from '../utils/sendVerificationEmail.js';
 export { loginUser } from '../utils/loginUser.js';

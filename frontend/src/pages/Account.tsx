@@ -16,6 +16,7 @@ interface User {
   avatar?: string | null;
 }
 
+
 const Account: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [avatar, setAvatar] = useState<string | null>(null);
@@ -30,8 +31,7 @@ const Account: React.FC = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const token = localStorage.getItem('authToken'); // Retrieve the token
-        console.log('Token retrieved from localStorage:', token);
+        const token = localStorage.getItem('authToken');
         if (!token) {
           console.error('No token found in localStorage');
           throw new Error('No token found');
@@ -39,14 +39,15 @@ const Account: React.FC = () => {
 
         const response = await axios.get<User>('http://localhost:5002/api/user/profile', {
           headers: {
-            Authorization: `Bearer ${token}`, // Include the token in the headers
+            Authorization: `Bearer ${token}`,
           },
         });
 
         const { email, firstName, lastName, avatar } = response.data;
-        console.log(response.data, 'response.data');
         setInitialValues({ email, firstName, lastName, password: '' });
         setAvatar(avatar || null);
+        console.log('Token:', token);
+        console.log('Response:', response.data);
       } catch (error: any) {
         console.error('Error fetching user data:', error);
         toast.error('Failed to load user data');

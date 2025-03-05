@@ -23,6 +23,7 @@ export const registerUser = async (req, res) => {
       lastName,
       email,
       isVerified: false,
+      role: 'user',
     });
     await user.save();
 
