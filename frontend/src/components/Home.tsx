@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { toast, ToastContainer } from "react-toastify"; // Import Toastify for success message
+import { ToastContainer } from "react-toastify"; // Import Toastify for success message
 import "react-toastify/dist/ReactToastify.css"; // Import the CSS for Toast notifications
-import { Box, Paper, Typography } from "@mui/material";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { Box, Typography } from "@mui/material";
 import axios from 'axios';
 import { DataGrid, GridColDef, GridPaginationModel, GridToolbar } from '@mui/x-data-grid';
 import './home.scss';
+
 interface ContactProperties {
   createdate: string;
   email: string;
@@ -25,7 +25,6 @@ interface Contact {
 
 interface HubSpotResponse {
   results: Contact[];
-  total: number; // Total number of records
   paging?: {
     next?: {
       after: string;
@@ -35,29 +34,15 @@ interface HubSpotResponse {
 }
 
 const HomePage: React.FC = () => {
-  const navigate = useNavigate();
 
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [nextPage, setNextPage] = useState<string | null>(null);
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
-  const [totalRecords, setTotalRecords] = useState<number>(0);
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 20, page: 0 });
+  const [hasMore, setHasMore] = useState<boolean>(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const emailVerified = params.get("emailVerified");
-      if (emailVerified) {
-        // Show success message
-        toast.success("Your email has been successfully verified!");
-        // Navigate to home page after showing the success message
-        navigate("/home");
-      }
-    };
-
-    fetchData();
-  }, [navigate]); // Ensure this runs only after the component mounts
+  
 
   const fetchContacts = async (after?: string, pageSize: number = paginationModel.pageSize) => {
     try {
@@ -66,7 +51,7 @@ const HomePage: React.FC = () => {
       });
       setContacts(response.data.results);
       setNextPage(response.data.paging?.next?.after || null);
-      setTotalRecords(response.data.total);
+      setHasMore(response.data.results.length === pageSize);
       setLoading(false);
     } catch (err) {
       setError('Failed to fetch contacts');
@@ -76,11 +61,13 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     fetchContacts();
-  }, []);
+  }, [paginationModel.pageSize]);
 
   const handlePaginationChange = (newModel: GridPaginationModel) => {
     setPaginationModel(newModel);
-    fetchContacts(newModel.page > paginationModel.page ? nextPage ?? undefined : undefined, newModel.pageSize);
+    if (newModel.page > paginationModel.page && hasMore) {
+      fetchContacts(nextPage ?? undefined, newModel.pageSize);
+    }
   };
 
   const columns: GridColDef[] = [
@@ -103,7 +90,7 @@ const HomePage: React.FC = () => {
 
   return (
     <Box id="home-page" display="flex" justifyContent="center" alignItems="start" height="100vh" sx={{ marginLeft: '250px' }}>
-      <Paper elevation={3} sx={{ padding: '2rem', width: "100%", height: "100%" }}>
+      <div className="home-page-container">
       <Typography variant="h2" align="left" sx={{paddingBottom: '2rem'}}>HubSpot Contacts</Typography>
         {loading ? (
           <Typography>Loading...</Typography>
@@ -121,12 +108,12 @@ const HomePage: React.FC = () => {
               onPaginationModelChange={handlePaginationChange}
               pageSizeOptions={[5, 10, 20]}
               pagination
-              rowCount={totalRecords}
+              rowCount={hasMore ? -1 : contacts.length}
               paginationMode="server"
             />
           </div>
         )}
-      </Paper>
+      </div>
 
       {/* Toast Notifications */}
       <ToastContainer />
