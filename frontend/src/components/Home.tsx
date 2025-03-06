@@ -50,19 +50,36 @@ const HomePage: React.FC = () => {
       const response = await axios.get<HubSpotResponse>('/api/hubspot/contacts', {
         params: { after, limit: pageSize },
       });
-      setContacts(response.data.results);
+      console.log("API call successful", response.data);
+      const fetchedContacts = response.data.results;
+      setContacts(fetchedContacts);
+      localStorage.setItem('contacts', JSON.stringify(fetchedContacts));
       setNextPage(response.data.paging?.next?.after || null);
-      setHasMore(response.data.results.length === pageSize);
+      setHasMore(fetchedContacts.length === pageSize);
       setLoading(false);
     } catch (err) {
+      console.error('Failed to fetch contacts', err);
       setError('Failed to fetch contacts');
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchContacts();
-  }, [paginationModel.pageSize]);
+    console.log("Component mounted");
+    const cachedContacts = localStorage.getItem('contacts');
+    if (cachedContacts) {
+      const parsedContacts = JSON.parse(cachedContacts);
+      console.log("Cached contacts:", parsedContacts);
+      if (parsedContacts.length > 0) {
+        setContacts(parsedContacts);
+        setLoading(false);
+      } else {
+        fetchContacts();
+      }
+    } else {
+      fetchContacts();
+    }
+  }, []);
 
   const handlePaginationChange = (newModel: GridPaginationModel) => {
     setPaginationModel(newModel);
@@ -116,6 +133,7 @@ const HomePage: React.FC = () => {
               pagination
               rowCount={hasMore ? -1 : contacts.length}
               paginationMode="server"
+              autoHeight
             />
           </div>
         )}

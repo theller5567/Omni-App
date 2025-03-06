@@ -24,6 +24,10 @@
           margin: 0;
         }
     }
+    .MuiDataGrid-cell[data-field="actions"] {
+        display: flex;
+        align-items: center;
+    }
     .MuiDataGrid-cell[data-field="fileName"] a {
         color: var(--accent-color);
         text-decoration: none;
