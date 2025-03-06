@@ -5,17 +5,15 @@ import { sendVerificationEmail } from './sendVerificationEmail.js';
 export const registerUser = async (req, res) => {
   try {
     const { firstName, lastName, email } = req.body;
-
     if (!firstName || !lastName || !email) {
       return res.status(400).json({ message: "All fields are required" });
     }
-
     let user = await User.findOne({ email });
     if (user) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    const verificationToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    const verificationToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: "2d" });
     const verificationLink = `http://localhost:5002/api/auth/verify-email/${verificationToken}`;
 
     user = new User({
