@@ -6,6 +6,8 @@
   display: flex;
   flex-direction: column;
   padding-top: 2rem;
+  justify-content: center;
+  align-items: center;
   [data-field="tags"] {
       display: flex;
       flex-direction: row;
@@ -18,3 +20,4 @@
       }
     }
   }
+

@@ -79,7 +79,7 @@ const App: React.FC = () => {
       <Provider store={store}>
         <Router>
           <div id="app-container" style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-            <Sidebar />
+            {userState.email && <Sidebar />}
             <ThemeToggle theme={isDarkMode ? 'dark' : 'light'} toggleTheme={toggleTheme} />
             <div
               style={{

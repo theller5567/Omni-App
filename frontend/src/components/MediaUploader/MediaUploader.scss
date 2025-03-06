@@ -12,10 +12,10 @@
     padding: 2rem;
     background-color: var(--background-color);
     border-radius: 0.5rem;
-    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
     color: var(--text-color);
     min-height: 400px;
     justify-content: stretch;
+    box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5);
     .step {
         display: flex;
         width: 100%;
