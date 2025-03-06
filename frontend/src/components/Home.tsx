@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { ToastContainer } from "react-toastify"; // Import Toastify for success message
 import "react-toastify/dist/ReactToastify.css"; // Import the CSS for Toast notifications
-import { Box, Typography } from "@mui/material";
+import { Box, Paper, Typography } from "@mui/material";
 import axios from 'axios';
 import { DataGrid, GridColDef, GridPaginationModel, GridToolbar } from '@mui/x-data-grid';
+import { motion } from 'framer-motion';
 import './home.scss';
 
 interface ContactProperties {
@@ -39,7 +40,7 @@ const HomePage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [nextPage, setNextPage] = useState<string | null>(null);
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 20, page: 0 });
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
   const [hasMore, setHasMore] = useState<boolean>(true);
 
   
@@ -89,15 +90,20 @@ const HomePage: React.FC = () => {
   }));
 
   return (
-    <Box id="home-page" display="flex" justifyContent="center" alignItems="start" height="100vh" sx={{ marginLeft: '250px' }}>
-      <div className="home-page-container">
+    <motion.div
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+    <Box id="home-page">
+      <Paper elevation={3}  sx={{ background: 'none', padding: '2rem', width: "100%", height: "100%" }}>
       <Typography variant="h2" align="left" sx={{paddingBottom: '2rem'}}>HubSpot Contacts</Typography>
         {loading ? (
           <Typography>Loading...</Typography>
         ) : error ? (
           <Typography color="error">{error}</Typography>
         ) : (
-          <div style={{ width: '100%' }}>
+          <div className="data-grid-container">
             <DataGrid
               slots={{
                 toolbar: GridToolbar,
@@ -113,11 +119,12 @@ const HomePage: React.FC = () => {
             />
           </div>
         )}
-      </div>
+      </Paper>
 
       {/* Toast Notifications */}
       <ToastContainer />
     </Box>
+    </motion.div>
   );
 };
 

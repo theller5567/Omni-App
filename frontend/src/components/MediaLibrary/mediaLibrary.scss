@@ -1,12 +1,16 @@
 @use "sass:color";
 
+#media-library {
+  width: 100%;
+  
+}
 .media-library {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    box-sizing: border-box;
-    margin: auto;
-    padding-left: calc(250px + 2rem);
+  width: 100%;
+  flex-grow: 1;
+  padding: 1rem;
+  margin: 0;
+  box-sizing: border-box;
+  overflow: hidden;
     h6 {
         margin-bottom: 2rem;
     }

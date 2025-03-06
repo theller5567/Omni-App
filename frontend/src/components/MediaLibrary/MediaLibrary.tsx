@@ -11,6 +11,8 @@ import { FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
 import MediaFile from '../../interfaces/MediaFile';
 import { DataGrid, GridColDef, GridToolbar,  } from '@mui/x-data-grid';
 import { formatFileSize } from '../../utils/formatFileSize';
+
+
 const CustomGrid = styled(Grid)({
   '&.grid-view': {
     display: 'grid',
@@ -118,7 +120,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
 
   const containerVariants = {
     hidden: { opacity: 0, x: -350 },
-    visible: { opacity: 1, x: -250, transition: { duration: 0.5 } },
+    visible: { opacity: 1, x: 0, transition: { duration: 0.5 } },
     exit: { opacity: 0, x: -350, transition: { duration: 0.5 } },
   };
 
@@ -134,7 +136,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
 
   return (
     <motion.div
-      className="media-library"
+      id="media-library"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
@@ -142,7 +144,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     >
       <Box className="media-library">
         <Typography variant="h2" align="left" sx={{paddingBottom: '2rem'}}>OMNI Media Library</Typography>
-        <Box display="flex" justifyContent="space-between" gap={12} alignItems="center" mb={2}>
+        <Box display="flex" justifyContent="space-between" gap={12} alignItems="center">
         <ButtonGroup variant="outlined" aria-label="Basic button group">
             <Button variant="contained"color="primary">View all</Button>
             <Button color="primary">Images</Button>

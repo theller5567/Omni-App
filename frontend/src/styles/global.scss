@@ -10,17 +10,7 @@ body {
   padding: 0;
 }
 
-.media-library {
-  padding: 20px;
-  .folder {
-    border: 1px solid #ccc;
-    padding: 10px;
-    margin-bottom: 10px;
-    &:hover {
-      background-color: #f0f0f0;
-    }
-  }
-}
+
 
 @media (max-width: 768px) {
   .media-library {
