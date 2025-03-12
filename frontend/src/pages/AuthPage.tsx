@@ -15,7 +15,7 @@ const AuthPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '' });
+  const [formData, setFormData] = useState({ id: '', firstName: '', lastName: '', email: '', password: '' });
   const [showForm] = useState(true);
 
   const { loading, error, message } = useSelector((state: RootState) => state.auth);
@@ -27,11 +27,9 @@ const AuthPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log('Form Data:', formData);
     try {
       if (isSignUp) {
-        const response = await dispatch(registerUser({ firstName: formData.firstName, lastName: formData.lastName, email: formData.email }));
-        console.log('Registration response:', response);
+        await dispatch(registerUser({ id: '', firstName: formData.firstName, lastName: formData.lastName, email: formData.email, avatar: '' }));
         // Handle registration response if needed
       } else {
         const response = await dispatch(loginUser({ email: formData.email, password: formData.password }));
@@ -39,7 +37,6 @@ const AuthPage: React.FC = () => {
           const { token, user } = response.payload as { token: string, user: any }; // Type assertion to specify the structure of response.payload
           localStorage.setItem('authToken', token); // Store token in localStorage
           dispatch(setUser(user)); // Update Redux store with user information
-          console.log('User logged in successfully:', user);
           navigate('/media-library'); // Redirect to home or another page
         } else {
           console.error('Invalid login response:', response.payload);

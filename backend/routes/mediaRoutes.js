@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
-import { uploadMedia } from '../controllers/mediaController.js';
-import Media from '../models/Media.js';
+import { uploadMedia, deleteMedia } from '../controllers/mediaController.js';
+import { Media } from '../models/Media.js';
 
 const router = express.Router();
 const upload = multer();
@@ -21,6 +21,7 @@ router.get('/all', async (req, res) => {
 router.get('/slug/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
+    console.log('slug2', slug);
     const mediaFile = await Media.findOne({ slug });
     if (!mediaFile) {
       return res.status(404).json({ error: 'Media not found' });
@@ -32,10 +33,47 @@ router.get('/slug/:slug', async (req, res) => {
   }
 });
 
+router.put('/update/:slug', async (req, res) => {
+  const { slug } = req.params;
+  console.log('slug - mediaRoutes', slug);
+  const { fileName, description, tags } = req.body.metadata; // Ensure metadata is accessed correctly
+  console.log('Request body:', req.body); // Log the request body
+
+  try {
+    const updatedMediaFile = await Media.findOneAndUpdate(
+      { slug }, // Use slug to find the document
+      { 
+        $set: { // Use $set to ensure fields are updated
+          'metadata.fileName': fileName, 
+          'metadata.description': description, 
+          'metadata.tags': tags 
+        }
+      },
+      { new: true }
+    );
+
+    if (!updatedMediaFile) {
+      console.log('Media not found');
+      return res.status(404).json({ error: 'Media not found' });
+    }
+
+    console.log('updatedMediaFile', updatedMediaFile);
+    res.status(200).json(updatedMediaFile);
+  } catch (error) {
+    console.error('Error updating media file:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 router.post('/upload', upload.single('file'), (req, res, next) => {
   console.log('Received upload request');
   next();
 }, uploadMedia);
+
+router.delete('/delete/:id', (req, res, next) => {
+  console.log('Received delete request');
+  next();
+}, deleteMedia);
 
 
 export default router;

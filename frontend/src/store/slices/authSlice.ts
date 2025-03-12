@@ -3,9 +3,11 @@ import axios from "axios";
 
 // Define the type for user data
 interface UserData {
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
+  avatar: string;
 }
 
 // Define the type for the authentication state
@@ -20,7 +22,7 @@ interface AuthState {
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
-  loading: false,
+  loading: false, 
   error: null,
   message: null,
 };

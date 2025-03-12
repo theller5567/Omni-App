@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import MediaUploader from './MediaUploader/MediaUploader';
-import MediaLibrary from './MediaLibrary/MediaLibrary';
+import MediaUploader from '../components/MediaUploader/MediaUploader';
+import MediaLibrary from '../components/MediaLibrary/MediaLibrary';
 import axios from 'axios';
 import MediaFile from '../interfaces/MediaFile';
-import './mediaContainer.scss';
+import '../components/MediaLibrary/MediaContainer.scss';
 
 
 
@@ -41,6 +41,18 @@ const MediaContainer: React.FC = () => {
     handleClose();
   };
 
+  const handleDeleteMedia = async (id: string): Promise<boolean> => {
+    try {
+      await axios.delete(`http://localhost:5002/media/delete/${id}`);
+      setMediaFiles((prevFiles) => prevFiles.filter(file => file.id !== id));
+      console.log('Media file deleted:', id);
+      return true; // Return true on success
+    } catch (error) {
+      console.error('Error deleting media file:', error);
+      return false; // Return false on failure
+    }
+  };
+
   // Filter media files based on search query
   const filteredMediaFiles = mediaFiles.filter(file =>
     file.metadata.fileName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -54,6 +66,7 @@ const MediaContainer: React.FC = () => {
         mediaFilesData={filteredMediaFiles}
         setSearchQuery={setSearchQuery}
         onAddMedia={handleOpen}
+        onDeleteMedia={handleDeleteMedia}
       />
       <MediaUploader
         open={isModalOpen}

@@ -11,6 +11,10 @@ import { FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
 import MediaFile from '../../interfaces/MediaFile';
 import { DataGrid, GridColDef, GridToolbar,  } from '@mui/x-data-grid';
 import { formatFileSize } from '../../utils/formatFileSize';
+import { toast } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import ConfirmationModal from './ConfirmationModal';
 
 
 const CustomGrid = styled(Grid)({
@@ -29,11 +33,15 @@ interface MediaLibraryProps {
   mediaFilesData: MediaFile[];
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   onAddMedia: () => void;
+  onDeleteMedia: (id: string) => Promise<boolean>;
 }
 
-const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQuery, onAddMedia }) => {
+const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQuery, onAddMedia, onDeleteMedia }) => {
   const [viewMode, setViewMode] = useState<'grid' | 'card'>('grid');
   const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+
   const toggleView = () => {
     setViewMode((prevView) => (prevView === 'grid' ? 'card' : 'grid'));
   };
@@ -97,7 +105,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
             variant="contained"
             color="error"
             size="small"
-            onClick={() => handleDelete(params.row.id)}
+            onClick={() => handleDeleteClick(params.row.id)}
           >
             <FaTrash />
           </Button>
@@ -129,9 +137,18 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     console.log(`Edit record with id: ${id}`);
   };
 
-  const handleDelete = (id: string) => {
-    // Implement delete logic here
-    console.log(`Delete record with id: ${id}`);
+  const handleDeleteClick = (id: string) => {
+    setSelectedFileId(id);
+    setIsModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (selectedFileId) {
+      const response: boolean = await onDeleteMedia(selectedFileId);
+      if (response) {
+        toast.success('Media deleted successfully');
+      }
+    }
   };
 
   return (
@@ -173,6 +190,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
               }}
                 rows={rows}
                 columns={columns}
+                getRowId={(row) => row.id}
                 pageSizeOptions={[5, 10, 20]}
                 initialState={{
                   pagination: {
@@ -193,6 +211,12 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
           )}
         </CustomGrid>
       </Box>
+      <ToastContainer />
+      <ConfirmationModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+      />
     </motion.div>
   );
 };

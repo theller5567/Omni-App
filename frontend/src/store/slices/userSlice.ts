@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
 
 interface UserState {
+  id: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -11,6 +12,7 @@ interface UserState {
 }
 
 const initialState: UserState = {
+  id: '',
   email: '',
   firstName: '',
   lastName: '',
@@ -31,6 +33,7 @@ const userSlice = createSlice({
       return { ...state, ...action.payload, isLoading: false };
     },
     clearUser(state) {
+      state.id = '';
       state.email = '';
       state.firstName = '';
       state.lastName = '';

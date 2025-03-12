@@ -18,9 +18,8 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-
   const { user: authUser } = useAuth();
-  const userId = authUser ? authUser.id : '';
+  const userId = authUser ? (authUser as unknown as User).id : '';
 
   useEffect(() => {
     const fetchUserInfo = async (userId: string) => {

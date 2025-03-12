@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Button, TextField, LinearProgress, Typography, FormControl, Select, MenuItem, InputLabel, SelectChangeEvent, Stepper, Step, StepLabel } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import { useUser } from '../../contexts/UserContext';
@@ -8,6 +8,8 @@ import useFileUpload from '../../hooks/useFileUpload';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import MediaFile from '../../interfaces/MediaFile';
+import ProductImageFields from './ProductImageFields';
+import { ProductImageMetadata } from '../../interfaces/ProductImageMetadata';
 
 interface MediaUploaderProps {
   open: boolean;
@@ -17,6 +19,8 @@ interface MediaUploaderProps {
 
 // Define the expected response type
 interface UploadResponse {
+  _id: string;
+  id: string;
   location: string;
   slug: string;
   title: string;
@@ -24,12 +28,22 @@ interface UploadResponse {
 
 const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadComplete }) => {
   if (!open) return null; // Render nothing if not open
-
   const { user } = useUser();
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [metadata, setMetadata] = useState<{ [key: string]: string | number | string[] }>({});
+  const [metadata, setMetadata] = useState<ProductImageMetadata>({
+    companyBrand: '',
+    productSKU: '',
+    uploadedBy: '',
+    modifiedBy: '',
+    sizeRequirements: '',
+    fileName: '',
+    visibility: 'public',
+    altText: '',
+    description: '',
+    tags: [],
+  });
   const {uploadProgress, setUploadProgress, uploadComplete, resetUploadComplete } = useFileUpload();
   const [selectedMediaType, setSelectedMediaType] = useState('');
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -37,34 +51,43 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
   const [fileSelected, setFileSelected] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
+  const [mediaType, setMediaType] = useState<string>('ProductImage');
 
-  const onDrop = (acceptedFiles: File[]) => {
-    if (acceptedFiles.length === 0) {
-      console.error('No files were accepted.');
+  const onDrop = useCallback((acceptedFiles: File[], fileRejections: any[]) => {
+    if (fileRejections.length > 0) {
+      const rejection = fileRejections[0];
+      const fileSizeInMB = (rejection.file.size / (1024 * 1024)).toFixed(2); // Convert bytes to MB
+      const maxFileSizeMB = 200; // Maximum file size in MB
+      const errorMessage = `Error: File is larger than ${maxFileSizeMB} MB. Your file was ${fileSizeInMB} MB. Please use a smaller file.`;
+      setError(errorMessage);
       return;
     }
 
-    const selectedFile = acceptedFiles[0];
-    if (!selectedFile) {
-      console.error('Selected file is not valid.');
-      return;
+    const file = acceptedFiles[0];
+    if (file) {
+      setError(null);
+      setFile(file);
+      setFileSelected(true);
+
+      // Generate a local preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFilePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
+  }, []);
 
-    setFile(selectedFile);
-    setFileSelected(true);
-
-    // Generate a local preview URL
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFilePreview(reader.result as string);
-    };
-    reader.readAsDataURL(selectedFile);
+  const handleMetadataChange = (field: keyof ProductImageMetadata, value: string | string[]) => {
+    setMetadata((prevMetadata) => ({
+      ...prevMetadata,
+      [field]: value,
+    }));
   };
 
-  const handleMetadataChange = (key: string, value: string | number | string[]) => {
-    setMetadata((prevMetadata) => ({ ...prevMetadata, [key]: value }));
-  };
 
+  
   const handleUpload = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -90,15 +113,17 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
         setSlug(response.data.slug);
         const modifiedDate = new Date(file.lastModified);
         const newFile: MediaFile = {
-          id: response.data.slug,
+          _id: response.data._id,
+          id: response.data.id,
           location: response.data.location,
           slug: response.data.slug,
           title: response.data.title,
           metadata: {
             fileName: file.name,
+            visibility: String(metadata.visibility),
             altText: typeof metadata.altText === 'string' ? metadata.altText : '',
             description: typeof metadata.description === 'string' ? metadata.description : '',
-            tags: typeof metadata.tags === 'string' ? metadata.tags.split(',').map(tag => tag.trim()) : [],
+            tags: Array.isArray(metadata.tags) ? metadata.tags : [],
           },
           fileSize: file.size,
           modifiedDate,
@@ -149,7 +174,18 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     setFilePreview(null);
     setStep(1);
     setFile(null);
-    setMetadata({});
+    setMetadata({
+      companyBrand: '',
+      productSKU: '',
+      uploadedBy: '',
+      modifiedBy: '',
+      sizeRequirements: '',
+      fileName: '',
+      visibility: 'public',
+      altText: '',
+      description: '',
+      tags: [],
+    });
     resetUploadComplete();
   };
 
@@ -157,6 +193,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     const mediaType = event.target.value;
     setSelectedMediaType(mediaType);
     console.log(mediaType, 'mediaType');
+    setMediaType(mediaType);
   };
   
 
@@ -173,8 +210,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
       'image/*': [],
       'video/*': []
     },
-    maxSize: 5000000,
-    minSize: 1000,
+    maxSize: 200 * 1024 * 1024, // Ensure this is 200MB in bytes
   });
 
   useEffect(() => {
@@ -186,6 +222,16 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
   const handleViewMedia = () => {
     if (slug) {
       navigate(`/media-library/media/${slug}`);
+    }
+  };
+
+  const renderFields = () => {
+    switch (mediaType) {
+      case 'ProductImage':
+        return <ProductImageFields metadata={metadata} handleMetadataChange={handleMetadataChange} />;
+      // Add cases for other media types
+      default:
+        return null;
     }
   };
 
@@ -213,6 +259,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
                 onChange={handleChange}
               >
                 <MenuItem value={'Image'}>Image</MenuItem>
+                <MenuItem value={'ProductImage'}>Product Image</MenuItem>
                 <MenuItem value={'Video'}>Video</MenuItem>
                 <MenuItem value={'App note'}>App note</MenuItem>
                 <MenuItem value={'PDF'}>PDF</MenuItem>
@@ -238,6 +285,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
                   ? 'Drop files here'
                   : 'Drag & drop files here, or click to select files'}
               </p>
+              {error && <div style={{ color: 'red' }}>{error}</div>}
             </div>
             
             {filePreview && (
@@ -268,7 +316,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
                   label="Tags (comma separated)"
                   required
                   value={Array.isArray(metadata.tags) ? metadata.tags.join(', ') : ''}
-                  onChange={(e) => handleMetadataChange('tags', e.target.value.split(',').map(tag => tag.trim()))}
+                  onChange={(e) => handleMetadataChange('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag))}
                   fullWidth
                   margin="normal"
                 />
@@ -282,14 +330,6 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
                 />
               </Box>
               <Box width="48%">
-                <TextField
-                  label="Folder Path"
-                  required
-                  value={metadata.folderPath || ''}
-                  onChange={(e) => handleMetadataChange('folderPath', e.target.value)}
-                  fullWidth
-                  margin="normal"
-                />
                 <TextField
                   label="Visibility"
                   value={metadata.visibility || ''}
@@ -306,10 +346,11 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
                   margin="normal"
                 />
               </Box>
+              {renderFields()}
             </Box>
             <div className="cta-group">
               <Button variant="outlined" onClick={handleBack}>Back</Button>
-              <Button variant="contained" onClick={handleNext} disabled={!metadata.fileName || !metadata.folderPath || !metadata.tags || !metadata.visibility || !metadata.altText || !metadata.description}>Next</Button>
+              <Button variant="contained" onClick={handleNext} disabled={!metadata.fileName || !metadata.tags || !metadata.visibility || !metadata.altText || !metadata.description}>Next</Button>
             </div>
           </Box>
         )}

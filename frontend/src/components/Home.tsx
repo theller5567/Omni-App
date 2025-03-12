@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { ToastContainer } from "react-toastify"; // Import Toastify for success message
 import "react-toastify/dist/ReactToastify.css"; // Import the CSS for Toast notifications
 import { Box, Paper, Typography } from "@mui/material";
@@ -50,7 +50,6 @@ const HomePage: React.FC = () => {
       const response = await axios.get<HubSpotResponse>('/api/hubspot/contacts', {
         params: { after, limit: pageSize },
       });
-      console.log("API call successful", response.data);
       const fetchedContacts = response.data.results;
       setContacts(fetchedContacts);
       localStorage.setItem('contacts', JSON.stringify(fetchedContacts));
@@ -65,7 +64,6 @@ const HomePage: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log("Component mounted");
     const cachedContacts = localStorage.getItem('contacts');
     if (cachedContacts) {
       const parsedContacts = JSON.parse(cachedContacts);
@@ -81,30 +79,30 @@ const HomePage: React.FC = () => {
     }
   }, []);
 
-  const handlePaginationChange = (newModel: GridPaginationModel) => {
+  const handlePaginationChange = useCallback((newModel: GridPaginationModel) => {
     setPaginationModel(newModel);
     if (newModel.page > paginationModel.page && hasMore) {
       fetchContacts(nextPage ?? undefined, newModel.pageSize);
     }
-  };
+  }, [paginationModel.page, hasMore, nextPage]);
 
-  const columns: GridColDef[] = [
+  const columns: GridColDef[] = useMemo(() => [
     { field: 'id', headerName: 'ID', flex: 0.5 },
     { field: 'firstname', headerName: 'First Name', flex: 1 },
     { field: 'lastname', headerName: 'Last Name', flex: 1 },
     { field: 'email', headerName: 'Email', flex: 1.5 },
     { field: 'createdate', headerName: 'Created Date', flex: 1 },
     { field: 'lastmodifieddate', headerName: 'Last Modified Date', flex: 1 },
-  ];
+  ], []);
 
-  const rows = contacts.map(contact => ({
+  const rows = useMemo(() => contacts.map(contact => ({
     id: contact.id,
     firstname: contact.properties.firstname,
     lastname: contact.properties.lastname,
     email: contact.properties.email,
     createdate: contact.properties.createdate,
     lastmodifieddate: contact.properties.lastmodifieddate,
-  }));
+  })), [contacts]);
 
   return (
     <motion.div

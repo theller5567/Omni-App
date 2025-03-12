@@ -51,6 +51,17 @@
 label {
     color: var(--text-color);
 }
+.confirmation-modal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  .confirmation-modal-box {
+    background-color: var(--background-color);
+    color: var(--text-color);
+  }
+
+}
+
 
 @media (max-width: 768px) {
   .media-library {

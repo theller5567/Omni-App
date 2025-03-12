@@ -11,7 +11,6 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { lightTheme, darkTheme } from './theme';
 import './App.scss';
-import MediaContainer from './components/MediaContainer';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import store from './store/store';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -19,8 +18,11 @@ import PasswordSetupPage from './pages/PasswordSetup';
 import { setUser } from './store/slices/userSlice';
 import axios from 'axios';
 import { RootState } from './store/store';
+import MediaLibraryPage from './pages/MediaLibraryPage';
+
 
 interface UserState {
+  id: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -50,16 +52,15 @@ const App: React.FC = () => {
       .catch(error => {
         console.error('Error fetching user data:', error);
         localStorage.removeItem('authToken');
-        dispatch(setUser({ email: '', firstName: '', lastName: '', avatar: '', isLoading: false }));
+        dispatch(setUser({ id: '', email: '', firstName: '', lastName: '', avatar: '', isLoading: false }));
       });
     } else {
-      dispatch(setUser({ email: '', firstName: '', lastName: '', avatar: '', isLoading: false }));
+      dispatch(setUser({ id: '', email: '', firstName: '', lastName: '', avatar: '', isLoading: false }));
     }
   }, [dispatch]);
 
   // Debugging: Check user state
   const userState = useSelector((state: RootState) => state.user);
-  console.log('User state on app load:', userState);
 
   // const toggleSidebar = () => {
   //   setSidebarVisible(!isSidebarVisible);
@@ -93,7 +94,7 @@ const App: React.FC = () => {
             >
               <Routes>
                 <Route path="/media/slug/:slug" element={<ProtectedRoute element={<MediaDetail />} />} />
-                <Route path="/media-library" element={<ProtectedRoute element={<MediaContainer />} />} />
+                <Route path="/media-library" element={<ProtectedRoute element={<MediaLibraryPage />} />} />
                 <Route path="/account" element={<ProtectedRoute element={<Account />} />} />
                 <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
                 <Route path="/password-setup" element={<PasswordSetupPage />} />
