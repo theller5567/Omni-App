@@ -44,7 +44,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     description: '',
     tags: [],
   });
-  const {uploadProgress, setUploadProgress, uploadComplete, resetUploadComplete } = useFileUpload();
+  const { uploadProgress, setUploadProgress, uploadComplete, resetUploadComplete } = useFileUpload();
   const [selectedMediaType, setSelectedMediaType] = useState('');
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -86,8 +86,12 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     }));
   };
 
+  const handleTagsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    const tags = value.split(',').map(tag => tag.trim());
+    handleMetadataChange('tags', tags);
+  };
 
-  
   const handleUpload = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -195,7 +199,6 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     console.log(mediaType, 'mediaType');
     setMediaType(mediaType);
   };
-  
 
   const steps = ['Select Media Type', 'Upload File', 'Add Metadata', 'Completion'];
 
@@ -266,7 +269,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
               </Select>
             </FormControl>
             <div className="cta-group">
-            <Button variant="outlined" onClick={handleBack} style={{opacity: '0', pointerEvents: 'none'}} disabled={true}>Back</Button>
+              <Button variant="outlined" onClick={handleBack} style={{ opacity: '0', pointerEvents: 'none' }} disabled={true}>Back</Button>
               <Button variant="contained" onClick={handleNext} disabled={!selectedMediaType}>Next</Button>
             </div>
           </Box>
@@ -282,12 +285,12 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
                 {isDragReject
                   ? 'File type not supported'
                   : isDragActive
-                  ? 'Drop files here'
-                  : 'Drag & drop files here, or click to select files'}
+                    ? 'Drop files here'
+                    : 'Drag & drop files here, or click to select files'}
               </p>
               {error && <div style={{ color: 'red' }}>{error}</div>}
             </div>
-            
+
             {filePreview && (
               <Box mt={2}>
                 <img src={filePreview} alt="File preview" style={{ maxWidth: '150px', height: 'auto' }} />
@@ -316,7 +319,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
                   label="Tags (comma separated)"
                   required
                   value={Array.isArray(metadata.tags) ? metadata.tags.join(', ') : ''}
-                  onChange={(e) => handleMetadataChange('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag))}
+                  onChange={handleTagsChange}
                   fullWidth
                   margin="normal"
                 />
