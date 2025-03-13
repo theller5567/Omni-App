@@ -7,14 +7,13 @@ import './MediaUploader.scss';
 import useFileUpload from '../../hooks/useFileUpload';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import MediaFile from '../../interfaces/MediaFile';
+import { MediaFile, ProductImageFile } from '../../interfaces/MediaFile';
 import ProductImageFields from './ProductImageFields';
-import { ProductImageMetadata } from '../../interfaces/ProductImageMetadata';
 
 interface MediaUploaderProps {
   open: boolean;
   onClose: () => void;
-  onUploadComplete: (newFile: MediaFile) => void;
+  onUploadComplete: (newFile: MediaFile | ProductImageFile) => void;
 }
 
 // Define the expected response type
@@ -32,7 +31,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [metadata, setMetadata] = useState<ProductImageMetadata>({
+  const [metadata, setMetadata] = useState<ProductImageFile['metadata']>({
     companyBrand: '',
     productSKU: '',
     uploadedBy: '',
@@ -79,7 +78,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     }
   }, []);
 
-  const handleMetadataChange = (field: keyof ProductImageMetadata, value: string | string[]) => {
+  const handleMetadataChange = (field: keyof ProductImageFile['metadata'], value: string | string[]) => {
     setMetadata((prevMetadata) => ({
       ...prevMetadata,
       [field]: value,
@@ -98,6 +97,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     formData.append('title', file.name);
     formData.append('fileExtension', file.name.split('.').pop()?.toUpperCase() || 'UNKNOWN');
     formData.append('metadata', JSON.stringify(metadata));
+    formData.append('mediaType', mediaType); // Include mediaType in the form data
 
     try {
       const response = await axios.post<UploadResponse>('http://localhost:5002/media/upload', formData, {
@@ -116,23 +116,51 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
         setFileUrl(response.data.location);
         setSlug(response.data.slug);
         const modifiedDate = new Date(file.lastModified);
-        const newFile: MediaFile = {
-          _id: response.data._id,
-          id: response.data.id,
-          location: response.data.location,
-          slug: response.data.slug,
-          title: response.data.title,
-          metadata: {
-            fileName: file.name,
-            visibility: String(metadata.visibility),
-            altText: typeof metadata.altText === 'string' ? metadata.altText : '',
-            description: typeof metadata.description === 'string' ? metadata.description : '',
-            tags: Array.isArray(metadata.tags) ? metadata.tags : [],
-          },
-          fileSize: file.size,
-          modifiedDate,
-          fileExtension: file.name.split('.').pop() || '',
-        };
+        let newFile: MediaFile | ProductImageFile;
+
+        if (mediaType === 'ProductImage') {
+          newFile = {
+            _id: response.data._id,
+            id: response.data.id,
+            location: response.data.location,
+            slug: response.data.slug,
+            title: response.data.title,
+            metadata: {
+              fileName: file.name,
+              visibility: String(metadata.visibility),
+              altText: typeof metadata.altText === 'string' ? metadata.altText : '',
+              description: typeof metadata.description === 'string' ? metadata.description : '',
+              tags: Array.isArray(metadata.tags) ? metadata.tags : [],
+              companyBrand: metadata.companyBrand,
+              productSKU: metadata.productSKU,
+              uploadedBy: metadata.uploadedBy,
+              modifiedBy: metadata.modifiedBy,
+              sizeRequirements: metadata.sizeRequirements,
+            },
+            fileSize: file.size,
+            modifiedDate,
+            fileExtension: file.name.split('.').pop() || '',
+          };
+        } else {
+          newFile = {
+            _id: response.data._id,
+            id: response.data.id,
+            location: response.data.location,
+            slug: response.data.slug,
+            title: response.data.title,
+            metadata: {
+              fileName: file.name,
+              visibility: String(metadata.visibility),
+              altText: typeof metadata.altText === 'string' ? metadata.altText : '',
+              description: typeof metadata.description === 'string' ? metadata.description : '',
+              tags: Array.isArray(metadata.tags) ? metadata.tags : [],
+            },
+            fileSize: file.size,
+            modifiedDate,
+            fileExtension: file.name.split('.').pop() || '',
+          };
+        }
+
         onUploadComplete(newFile);
       } else {
         console.error('Upload failed');
@@ -155,6 +183,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
   useEffect(() => {
     if (user) {
       handleMetadataChange('uploadedBy', user.name);
+      handleMetadataChange('modifiedBy', user.name);
     }
   }, [user]);
 

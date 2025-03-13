@@ -1,7 +1,7 @@
 import { uploadFileToS3, deleteFileFromS3 } from '../services/awsService.js';
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabaseConnection } from '../config/db.js';
-import { Media } from '../models/Media.js';
+import { Media, ProductImage } from '../models/Media.js';
 
 const generateSlug = (title) => {
   return `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${uuidv4()}`;
@@ -13,7 +13,7 @@ const generateMediaFileUrl = (key) => {
 
 export const uploadMedia = async (req, res) => {
   try {
-    const { title, metadata } = req.body;
+    const { title, metadata, mediaType } = req.body;
     const file = req.file;
 
     if (!file || !title) {
@@ -36,7 +36,7 @@ export const uploadMedia = async (req, res) => {
     const mediaData = {
       id, // Use the generated UUID
       title,
-      slug: `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${id}`,
+      slug: generateSlug(title),
       fileSize: file.size,
       fileExtension: file.originalname.split('.').pop()?.toUpperCase() || 'UNKNOWN',
       modifiedDate: new Date(),
@@ -45,7 +45,25 @@ export const uploadMedia = async (req, res) => {
     };
 
     await getDatabaseConnection(); // Ensure the database connection is established
-    const newMedia = new Media(mediaData);
+
+    let newMedia;
+    if (mediaType === 'ProductImage') {
+      const productImageData = {
+        ...mediaData,
+        metadata: {
+          ...mediaData.metadata,
+          companyBrand: mediaData.metadata.companyBrand,
+          productSKU: mediaData.metadata.productSKU,
+          uploadedBy: mediaData.metadata.uploadedBy,
+          modifiedBy: mediaData.metadata.modifiedBy,
+          sizeRequirements: mediaData.metadata.sizeRequirements,
+        },
+      };
+      newMedia = new ProductImage(productImageData);
+    } else {
+      newMedia = new Media(mediaData);
+    }
+
     await newMedia.save();
 
     console.log('Media file saved to database:', newMedia);
@@ -60,7 +78,7 @@ export const deleteMedia = async (req, res) => {
   const { id } = req.params;
   try {
     await getDatabaseConnection(); // Ensure the database connection is established
-    const mediaFile = await Media.findOneAndDelete({ id });
+    const mediaFile = await BaseMedia.findOneAndDelete({ id });
     if (!mediaFile) {
       return res.status(404).json({ error: 'Media not found' });
     }

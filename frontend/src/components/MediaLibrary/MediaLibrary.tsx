@@ -8,14 +8,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import SearchInput from '../SearchInput/SearchInput';
 import { FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
-import MediaFile from '../../interfaces/MediaFile';
-import { DataGrid, GridColDef, GridToolbar,  } from '@mui/x-data-grid';
+import { MediaFile, ProductImageFile } from '../../interfaces/MediaFile';
+import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import { formatFileSize } from '../../utils/formatFileSize';
 import { toast } from 'react-toastify';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ConfirmationModal from './ConfirmationModal';
-
 
 const CustomGrid = styled(Grid)({
   '&.grid-view': {
@@ -30,7 +29,7 @@ const CustomGrid = styled(Grid)({
 });
 
 interface MediaLibraryProps {
-  mediaFilesData: MediaFile[];
+  mediaFilesData: (MediaFile | ProductImageFile)[];
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   onAddMedia: () => void;
   onDeleteMedia: (id: string) => Promise<boolean>;
@@ -45,17 +44,16 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
   const toggleView = () => {
     setViewMode((prevView) => (prevView === 'grid' ? 'card' : 'grid'));
   };
-  const handleFileClick = (file: MediaFile) => {
+
+  const handleFileClick = (file: MediaFile | ProductImageFile) => {
     navigate(`/media/slug/${file.slug}`);
   };
 
   const columns: GridColDef[] = [
     { field: 'image', headerName: 'Image', flex: 0.5, renderCell: (params) => (
-      
       <img src={params.row.location} alt={params.row.title} style={{ width: '40px', height: '40px', padding: '0.3rem', alignSelf: 'center' }} />
     )},
     { field: 'fileName', headerName: 'Title', flex: 0.5, renderCell: (params) => (
-      
       <Link to={`/media/slug/${params.row.slug}`} >{params.row.metadata.fileName}</Link>
     )},
     { 
@@ -79,9 +77,9 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     },
     { field: 'tags', headerName: 'Tags', flex: 0.5, renderCell: (params) => (
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-        {params.row.tags.map((tag: string, index: number) => (
+        {params.row.metadata.tags.map((tag: string, index: number) => (
           <span key={index} className="tag">
-            {tag}{index === params.row.tags.length - 1 ? '' : ', '}
+            {tag}{index === params.row.metadata.tags.length - 1 ? '' : ', '}
           </span>
         ))}
       </div>
