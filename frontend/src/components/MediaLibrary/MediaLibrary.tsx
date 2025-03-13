@@ -8,7 +8,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import SearchInput from '../SearchInput/SearchInput';
 import { FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
-import { MediaFile, ProductImageFile } from '../../interfaces/MediaFile';
+import { MediaFile } from '../../interfaces/MediaFile';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import { formatFileSize } from '../../utils/formatFileSize';
 import { toast } from 'react-toastify';
@@ -29,14 +29,23 @@ const CustomGrid = styled(Grid)({
 });
 
 interface MediaLibraryProps {
-  mediaFilesData: (MediaFile | ProductImageFile)[];
+  mediaFilesData: MediaFile[];
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   onAddMedia: () => void;
   onDeleteMedia: (id: string) => Promise<boolean>;
 }
 
+// Define media types in the frontend
+const mediaTypes = {
+  All: 'All',
+  ProductImage: 'ProductImage',
+  WebinarVideo: 'WebinarVideo',
+  // Add more media types here
+};
+
 const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQuery, onAddMedia, onDeleteMedia }) => {
   const [viewMode, setViewMode] = useState<'grid' | 'card'>('grid');
+  const [selectedMediaType, setSelectedMediaType] = useState<string>('All');
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
@@ -45,7 +54,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     setViewMode((prevView) => (prevView === 'grid' ? 'card' : 'grid'));
   };
 
-  const handleFileClick = (file: MediaFile | ProductImageFile) => {
+  const handleFileClick = (file: MediaFile) => {
     navigate(`/media/slug/${file.slug}`);
   };
 
@@ -149,6 +158,15 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     }
   };
 
+  const handleMediaTypeChange = (type: string) => {
+    setSelectedMediaType(type);
+  };
+
+  // Filter media files based on selected media type
+  const filteredMediaFiles = selectedMediaType === 'All'
+    ? mediaFilesData
+    : mediaFilesData.filter(file => file.metadata.mediaType === selectedMediaType);
+
   return (
     <motion.div
       id="media-library"
@@ -161,12 +179,16 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
         <Typography variant="h2" align="left" sx={{paddingBottom: '2rem'}}>OMNI Media Library</Typography>
         <Box display="flex" justifyContent="space-between" gap={12} alignItems="center">
         <ButtonGroup variant="outlined" aria-label="Basic button group">
-            <Button variant="contained"color="primary">View all</Button>
-            <Button color="primary">Images</Button>
-            <Button color="primary">Videos</Button>
-            <Button color="primary">Documents</Button>
-            <Button color="primary">PDFs</Button>
-            <Button color="primary">App notes</Button>
+            {Object.keys(mediaTypes).map((type) => (
+              <Button
+                key={type}
+                variant={selectedMediaType === type ? 'contained' : 'outlined'}
+                color="primary"
+                onClick={() => handleMediaTypeChange(type)}
+              >
+                {type}
+              </Button>
+            ))}
             <Button variant="contained" color="secondary" onClick={onAddMedia} startIcon={<FaPlus />}>Add Media</Button>
           </ButtonGroup>
           <Box display="flex" alignItems="center" gap={2}>
@@ -203,7 +225,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
               />
             </div>
           ) : (
-            mediaFilesData.map((file) => (
+            filteredMediaFiles.map((file) => (
               <MediaCard key={file.id} file={file} onClick={() => handleFileClick(file)} />
             ))
           )}

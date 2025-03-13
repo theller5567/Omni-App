@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { uploadMedia, deleteMedia } from '../controllers/mediaController.js';
 import { Media } from '../models/Media.js';
-
+import { mediaTypes } from '../config/mediaTypes.js';
 const router = express.Router();
 const upload = multer();
 
@@ -75,5 +75,8 @@ router.delete('/delete/:id', (req, res, next) => {
   next();
 }, deleteMedia);
 
+router.get('/media-types', (req, res) => {
+  res.json(mediaTypes);
+});
 
 export default router;

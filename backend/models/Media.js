@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { mediaTypes } from '../config/mediaTypes.js';
 
 // Base Media Schema
 const baseMediaSchema = new mongoose.Schema({
@@ -18,31 +19,19 @@ const baseMediaSchema = new mongoose.Schema({
   },
 });
 
-// Product Image Schema
-const productImageSchema = new mongoose.Schema({
-  id: { type: String, required: true },
-  title: String,
-  location: String,
-  slug: String,
-  fileSize: Number,
-  fileExtension: String,
-  modifiedDate: Date,
-  metadata: {
-    fileName: String,
-    tags: [String],
-    visibility: String,
-    altText: String,
-    description: String,
-    companyBrand: { type: String, required: true },
-    productSKU: { type: String, required: true },
-    uploadedBy: { type: String, required: true },
-    modifiedBy: { type: String, required: true },
-    sizeRequirements: String,
-  },
+// Create base model
+const Media = mongoose.model('Media', baseMediaSchema);
+
+// Dynamically create and register media type schemas
+Object.keys(mediaTypes).forEach((type) => {
+  const schema = new mongoose.Schema({
+    ...baseMediaSchema.obj,
+    metadata: {
+      ...baseMediaSchema.obj.metadata,
+      ...mediaTypes[type].schema,
+    },
+  });
+  Media.discriminator(type, schema);
 });
 
-// Create models
-const Media = mongoose.model('Media', baseMediaSchema);
-const ProductImage = Media.discriminator('ProductImage', productImageSchema);
-
-export { Media, ProductImage };
+export { Media };

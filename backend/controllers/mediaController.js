@@ -1,7 +1,8 @@
 import { uploadFileToS3, deleteFileFromS3 } from '../services/awsService.js';
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabaseConnection } from '../config/db.js';
-import { Media, ProductImage } from '../models/Media.js';
+import { Media } from '../models/Media.js';
+import { mediaTypes } from '../config/mediaTypes.js';
 
 const generateSlug = (title) => {
   return `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${uuidv4()}`;
@@ -44,26 +45,19 @@ export const uploadMedia = async (req, res) => {
       location: generateMediaFileUrl(key), // Use the function here
     };
 
-    await getDatabaseConnection(); // Ensure the database connection is established
-
-    let newMedia;
-    if (mediaType === 'ProductImage') {
-      const productImageData = {
-        ...mediaData,
-        metadata: {
-          ...mediaData.metadata,
-          companyBrand: mediaData.metadata.companyBrand,
-          productSKU: mediaData.metadata.productSKU,
-          uploadedBy: mediaData.metadata.uploadedBy,
-          modifiedBy: mediaData.metadata.modifiedBy,
-          sizeRequirements: mediaData.metadata.sizeRequirements,
-        },
-      };
-      newMedia = new ProductImage(productImageData);
-    } else {
-      newMedia = new Media(mediaData);
+    // Convert recordedDate to a Date object if it exists
+    if (mediaData.metadata.recordedDate) {
+      mediaData.metadata.recordedDate = new Date(mediaData.metadata.recordedDate);
     }
 
+    await getDatabaseConnection(); // Ensure the database connection is established
+
+    const MediaTypeModel = Media.discriminators[mediaType];
+    if (!MediaTypeModel) {
+      return res.status(400).json({ error: 'Invalid media type' });
+    }
+
+    const newMedia = new MediaTypeModel(mediaData);
     await newMedia.save();
 
     console.log('Media file saved to database:', newMedia);
@@ -78,7 +72,7 @@ export const deleteMedia = async (req, res) => {
   const { id } = req.params;
   try {
     await getDatabaseConnection(); // Ensure the database connection is established
-    const mediaFile = await BaseMedia.findOneAndDelete({ id });
+    const mediaFile = await Media.findOneAndDelete({ id });
     if (!mediaFile) {
       return res.status(404).json({ error: 'Media not found' });
     }

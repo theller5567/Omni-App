@@ -7,13 +7,12 @@ import './MediaUploader.scss';
 import useFileUpload from '../../hooks/useFileUpload';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { MediaFile, ProductImageFile } from '../../interfaces/MediaFile';
-import ProductImageFields from './ProductImageFields';
+import { MediaFile } from '../../interfaces/MediaFile';
 
 interface MediaUploaderProps {
   open: boolean;
   onClose: () => void;
-  onUploadComplete: (newFile: MediaFile | ProductImageFile) => void;
+  onUploadComplete: (newFile: MediaFile) => void;
 }
 
 // Define the expected response type
@@ -31,17 +30,13 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [metadata, setMetadata] = useState<ProductImageFile['metadata']>({
-    companyBrand: '',
-    productSKU: '',
-    uploadedBy: '',
-    modifiedBy: '',
-    sizeRequirements: '',
+  const [metadata, setMetadata] = useState<any>({
     fileName: '',
+    tags: [],
     visibility: 'public',
     altText: '',
     description: '',
-    tags: [],
+    recordedDate: new Date().toISOString().split('T')[0], // Prepopulate with current date
   });
   const { uploadProgress, setUploadProgress, uploadComplete, resetUploadComplete } = useFileUpload();
   const [selectedMediaType, setSelectedMediaType] = useState('');
@@ -51,7 +46,20 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
   const [slug, setSlug] = useState<string | null>(null);
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
-  const [mediaType, setMediaType] = useState<string>('ProductImage');
+  const [mediaTypes, setMediaTypes] = useState<any>({});
+
+  useEffect(() => {
+    const fetchMediaTypes = async () => {
+      try {
+        const response = await axios.get('http://localhost:5002/media/media-types');
+        setMediaTypes(response.data);
+      } catch (error) {
+        console.error('Error fetching media types:', error);
+      }
+    };
+
+    fetchMediaTypes();
+  }, []);
 
   const onDrop = useCallback((acceptedFiles: File[], fileRejections: any[]) => {
     if (fileRejections.length > 0) {
@@ -78,8 +86,8 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     }
   }, []);
 
-  const handleMetadataChange = (field: keyof ProductImageFile['metadata'], value: string | string[]) => {
-    setMetadata((prevMetadata) => ({
+  const handleMetadataChange = (field: string, value: any) => {
+    setMetadata((prevMetadata: any) => ({
       ...prevMetadata,
       [field]: value,
     }));
@@ -97,7 +105,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     formData.append('title', file.name);
     formData.append('fileExtension', file.name.split('.').pop()?.toUpperCase() || 'UNKNOWN');
     formData.append('metadata', JSON.stringify(metadata));
-    formData.append('mediaType', mediaType); // Include mediaType in the form data
+    formData.append('mediaType', selectedMediaType); // Include mediaType in the form data
 
     try {
       const response = await axios.post<UploadResponse>('http://localhost:5002/media/upload', formData, {
@@ -116,50 +124,18 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
         setFileUrl(response.data.location);
         setSlug(response.data.slug);
         const modifiedDate = new Date(file.lastModified);
-        let newFile: MediaFile | ProductImageFile;
 
-        if (mediaType === 'ProductImage') {
-          newFile = {
-            _id: response.data._id,
-            id: response.data.id,
-            location: response.data.location,
-            slug: response.data.slug,
-            title: response.data.title,
-            metadata: {
-              fileName: file.name,
-              visibility: String(metadata.visibility),
-              altText: typeof metadata.altText === 'string' ? metadata.altText : '',
-              description: typeof metadata.description === 'string' ? metadata.description : '',
-              tags: Array.isArray(metadata.tags) ? metadata.tags : [],
-              companyBrand: metadata.companyBrand,
-              productSKU: metadata.productSKU,
-              uploadedBy: metadata.uploadedBy,
-              modifiedBy: metadata.modifiedBy,
-              sizeRequirements: metadata.sizeRequirements,
-            },
-            fileSize: file.size,
-            modifiedDate,
-            fileExtension: file.name.split('.').pop() || '',
-          };
-        } else {
-          newFile = {
-            _id: response.data._id,
-            id: response.data.id,
-            location: response.data.location,
-            slug: response.data.slug,
-            title: response.data.title,
-            metadata: {
-              fileName: file.name,
-              visibility: String(metadata.visibility),
-              altText: typeof metadata.altText === 'string' ? metadata.altText : '',
-              description: typeof metadata.description === 'string' ? metadata.description : '',
-              tags: Array.isArray(metadata.tags) ? metadata.tags : [],
-            },
-            fileSize: file.size,
-            modifiedDate,
-            fileExtension: file.name.split('.').pop() || '',
-          };
-        }
+        const newFile: MediaFile = {
+          _id: response.data._id,
+          id: response.data.id,
+          location: response.data.location,
+          slug: response.data.slug,
+          title: response.data.title,
+          metadata,
+          fileSize: file.size,
+          modifiedDate,
+          fileExtension: file.name.split('.').pop() || '',
+        };
 
         onUploadComplete(newFile);
       } else {
@@ -202,22 +178,17 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
   }, [step]);
 
   const handleAddMore = () => {
-    console.log('handleAddMore');
     setUploadProgress(0);
     setFilePreview(null);
     setStep(1);
     setFile(null);
     setMetadata({
-      companyBrand: '',
-      productSKU: '',
-      uploadedBy: '',
-      modifiedBy: '',
-      sizeRequirements: '',
       fileName: '',
+      tags: [],
       visibility: 'public',
       altText: '',
       description: '',
-      tags: [],
+      recordedDate: new Date().toISOString().split('T')[0], // Reset to the current date
     });
     resetUploadComplete();
   };
@@ -225,8 +196,6 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
   const handleChange = (event: SelectChangeEvent) => {
     const mediaType = event.target.value;
     setSelectedMediaType(mediaType);
-    console.log(mediaType, 'mediaType');
-    setMediaType(mediaType);
   };
 
   const steps = ['Select Media Type', 'Upload File', 'Add Metadata', 'Completion'];
@@ -258,13 +227,20 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
   };
 
   const renderFields = () => {
-    switch (mediaType) {
-      case 'ProductImage':
-        return <ProductImageFields metadata={metadata} handleMetadataChange={handleMetadataChange} />;
-      // Add cases for other media types
-      default:
-        return null;
-    }
+    if (!selectedMediaType) return null;
+
+    const fields = mediaTypes[selectedMediaType]?.schema || {};
+    return Object.keys(fields).map((field) => (
+      <TextField
+        key={field}
+        label={field}
+        required={fields[field].required}
+        value={metadata[field] || ''}
+        onChange={(e) => handleMetadataChange(field, e.target.value)}
+        fullWidth
+        margin="normal"
+      />
+    ));
   };
 
   return (
@@ -290,11 +266,9 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
                 label="Media Type"
                 onChange={handleChange}
               >
-                <MenuItem value={'Image'}>Image</MenuItem>
-                <MenuItem value={'ProductImage'}>Product Image</MenuItem>
-                <MenuItem value={'Video'}>Video</MenuItem>
-                <MenuItem value={'App note'}>App note</MenuItem>
-                <MenuItem value={'PDF'}>PDF</MenuItem>
+                {Object.keys(mediaTypes).map((type) => (
+                  <MenuItem key={type} value={type}>{type}</MenuItem>
+                ))}
               </Select>
             </FormControl>
             <div className="cta-group">
@@ -376,6 +350,17 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
                   onChange={(e) => handleMetadataChange('description', e.target.value)}
                   fullWidth
                   margin="normal"
+                />
+                <TextField
+                  label="Recorded Date"
+                  type="date"
+                  value={metadata.recordedDate}
+                  onChange={(e) => handleMetadataChange('recordedDate', e.target.value)}
+                  fullWidth
+                  margin="normal"
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
                 />
               </Box>
               {renderFields()}

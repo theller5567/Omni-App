@@ -2,20 +2,18 @@ import React, { useEffect, useState } from 'react';
 import MediaUploader from '../components/MediaUploader/MediaUploader';
 import MediaLibrary from '../components/MediaLibrary/MediaLibrary';
 import axios from 'axios';
-import MediaFile from '../interfaces/MediaFile';
+import { MediaFile } from '../interfaces/MediaFile';
 import '../components/MediaLibrary/MediaContainer.scss';
-
-
 
 const MediaContainer: React.FC = () => {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
   const fetchMediaFiles = async () => {
     try {
       const response = await axios.get<MediaFile[]>('http://localhost:5002/media/all');
       setMediaFiles(response.data);
-      console.log(response.data, 'response.data');
     } catch (error) {
       console.error('Error fetching media files:', error);
     }
@@ -35,7 +33,6 @@ const MediaContainer: React.FC = () => {
 
   const handleUploadComplete = (newFile: MediaFile | null) => {
     if (newFile) {
-      console.log('Upload complete, refreshing media files...', newFile);
       setMediaFiles((prevFiles) => [...prevFiles, newFile]);
     }
     handleClose();
@@ -45,7 +42,6 @@ const MediaContainer: React.FC = () => {
     try {
       await axios.delete(`http://localhost:5002/media/delete/${id}`);
       setMediaFiles((prevFiles) => prevFiles.filter(file => file.id !== id));
-      console.log('Media file deleted:', id);
       return true; // Return true on success
     } catch (error) {
       console.error('Error deleting media file:', error);
@@ -57,8 +53,6 @@ const MediaContainer: React.FC = () => {
   const filteredMediaFiles = mediaFiles.filter(file =>
     file.metadata.fileName.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  
 
   return (
     <div id="media-container">
