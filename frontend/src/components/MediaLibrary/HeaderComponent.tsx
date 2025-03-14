@@ -1,7 +1,8 @@
 import React from 'react';
 import { Box, Switch, FormGroup, FormControlLabel, styled } from '@mui/material';
 import './HeaderComponent.scss';
-
+import SearchInput from '../SearchInput/SearchInput';
+import { MediaFile } from '../../interfaces/MediaFile';
 const gridIcon = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>'
 );
@@ -13,6 +14,8 @@ const listIcon = encodeURIComponent(
 interface HeaderComponentProps {
   view: 'card' | 'grid';
   toggleView: () => void;
+  mediaFilesData: MediaFile[];
+  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
 }
 const Android12Switch = styled(Switch)({
   padding: 8,
@@ -48,13 +51,12 @@ const Android12Switch = styled(Switch)({
   },
 });
 
-const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView }) => {
+const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, mediaFilesData, setSearchQuery }) => {
   return (
     <Box className="header-component" display="flex" alignItems="center" justifyContent="space-between" padding="1rem" bgcolor="var(--secondary-color)">
-      <Box display="flex" alignItems="center">
-        
-        
-      </Box>
+       <Box display="flex" alignItems="center" gap={2}>
+            <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
+          </Box>
       <Box display="flex" alignItems="center">
         <FormGroup>
           <FormControlLabel

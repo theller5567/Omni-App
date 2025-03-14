@@ -36,6 +36,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     visibility: 'public',
     altText: '',
     description: '',
+    mediaType: '',
     recordedDate: new Date().toISOString().split('T')[0], // Prepopulate with current date
   });
   const { uploadProgress, setUploadProgress, uploadComplete, resetUploadComplete } = useFileUpload();
@@ -128,10 +129,14 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
         const newFile: MediaFile = {
           _id: response.data._id,
           id: response.data.id,
+          __t: selectedMediaType,
           location: response.data.location,
           slug: response.data.slug,
           title: response.data.title,
-          metadata,
+          metadata: {
+            ...metadata,
+            mediaType: selectedMediaType, // Include mediaType in the metadata
+          },
           fileSize: file.size,
           modifiedDate,
           fileExtension: file.name.split('.').pop() || '',

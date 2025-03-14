@@ -6,7 +6,6 @@ import HeaderComponent from './HeaderComponent';
 import MediaCard from './MediaCard';
 import { useNavigate, Link } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
-import SearchInput from '../SearchInput/SearchInput';
 import { FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
 import { MediaFile } from '../../interfaces/MediaFile';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
@@ -191,14 +190,12 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
             ))}
             <Button variant="contained" color="secondary" onClick={onAddMedia} startIcon={<FaPlus />}>Add Media</Button>
           </ButtonGroup>
-          <Box display="flex" alignItems="center" gap={2}>
-            <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
-            <Button variant="outlined" color="primary">Filters</Button>
-          </Box>
         </Box>
         <HeaderComponent
           view={viewMode}
           toggleView={toggleView}
+          mediaFilesData={mediaFilesData}
+          setSearchQuery={setSearchQuery}
         />
         
         <CustomGrid id="media-library-container" container spacing={2} justifyContent="start" className={viewMode === 'grid' ? 'grid-view '  : 'card-view'}>

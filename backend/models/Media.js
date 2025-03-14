@@ -15,6 +15,7 @@ const baseMediaSchema = new mongoose.Schema({
     tags: [String],
     visibility: String,
     altText: String,
+    mediaType: String,
     description: String,
   },
 });

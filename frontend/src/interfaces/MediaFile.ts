@@ -7,12 +7,14 @@ export interface MediaFile {
   fileSize: number;
   fileExtension: string;
   modifiedDate: Date;
+  __t: string;
   metadata: {
     fileName: string;
     tags: string[];
     visibility: string;
     altText: string;
     description: string;
+    mediaType: string;
     [key: string]: any; // Allow additional fields
   };
 }
