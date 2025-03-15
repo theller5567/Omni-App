@@ -6,8 +6,8 @@ import { Box, Button, CircularProgress, Chip, Dialog, DialogContent, DialogTitle
 import axios from "axios";
 import { MediaFile } from "../../interfaces/MediaFile";
 import { useNavigate } from "react-router-dom";
-import { formatFileSize } from "../../utils/formatFileSize";
-import { nonEditableFields, fieldConfigurations } from "../../config/config";
+// import { formatFileSize } from "../../utils/formatFileSize";
+import { nonEditableFields, fieldConfigurations, fieldLabels } from "../../config/config";
 import "./mediaDetail.scss";
 
 const MediaDetail: React.FC = () => {
@@ -108,10 +108,11 @@ const MediaDetail: React.FC = () => {
             renderedFields.add(field);
 
             const fieldConfig = fieldConfigurations[field as keyof typeof fieldConfigurations] || { type: 'text' };
+            const label = fieldLabels[field as keyof typeof fieldLabels] || field;
 
             return (
               <FormControl className="media-detail-field" key={field} sx={{ mb: 2, gridColumn: fieldConfig.type === 'textarea' ? '1 / -1' : undefined, width: fieldConfig.type === 'textarea' ? '100%' : undefined }}>
-                <FormLabel htmlFor={field}>{field}</FormLabel>
+                <FormLabel htmlFor={field}>{label}</FormLabel>
                 {fieldConfig.type === 'textarea' && 'class' in fieldConfig && (
                   <Field name={field} as="textarea" className={fieldConfig.class || ''} />
                 )}
@@ -140,18 +141,18 @@ const MediaDetail: React.FC = () => {
     );
   };
 
-  const renderMetadataFields = () => {
-    if (!mediaTypes || !mediaFile) return null;
+  // const renderMetadataFields = () => {
+  //   if (!mediaTypes || !mediaFile) return null;
 
-    const mediaTypeSchema = mediaTypes[mediaFile.__t]?.schema;
-    if (!mediaTypeSchema) return null;
+  //   const mediaTypeSchema = mediaTypes[mediaFile.__t]?.schema;
+  //   if (!mediaTypeSchema) return null;
 
-    return Object.keys(mediaTypeSchema).map((field) => (
-      <p key={field}>
-        {field}: <span className="metadata-value">{mediaFile.metadata[field]}</span>
-      </p>
-    ));
-  };
+  //   return Object.keys(mediaTypeSchema).map((field) => (
+  //     <p key={field}>
+  //       {field}: <span className="metadata-value">{mediaFile.metadata[field]}</span>
+  //     </p>
+  //   ));
+  // };
 
   function isFieldEditable(fieldName: string): boolean {
     return !nonEditableFields.hasOwnProperty(fieldName);
@@ -169,29 +170,42 @@ const MediaDetail: React.FC = () => {
           <img src={mediaFile.location} alt={mediaFile.metadata.altText} />
         </div>
         <div className="media-information">
-          <h1>{mediaFile.metadata.fileName}</h1>
-          <p>Media Type: <span>{mediaFile.__t}</span></p>
-          <p>Description: <span>{mediaFile.metadata.description}</span></p>
-          <p>Size: <span>{formatFileSize(mediaFile.fileSize)}</span></p>
-          <p>Created: <span>{new Date(mediaFile.modifiedDate).toLocaleDateString()}</span></p>
-          <p>Extension: <span>{mediaFile.fileExtension}</span></p>
-          <div className="tags">
-            {mediaFile.metadata.tags.map((tag: string) => (
-              <Chip
-                key={tag}
-                className="tag"
-                color="primary"
-                label={tag}
-                size="small"
-              />
-            ))}
-          </div>
-          {renderMetadataFields()}
+          {Object.keys(mediaFile).map((key) => {
+            const value = (mediaFile as Record<string, any>)[key];
+            if (key in fieldLabels && !(nonEditableFields as Record<string, boolean>)[key]) {
+              if (typeof value === 'object' && value !== null) {
+                return (
+                  <div key={key}>
+                    {/* <strong>{fieldLabels[key as keyof typeof fieldLabels]}:</strong> */}
+                    <ul>
+                      {Object.entries(value).map(([subKey, subValue]) =>
+                        subKey === 'tags' ? (
+                          <div className="tags" key={subKey}>
+                            {(subValue as string[]).map((tag: string) => (
+                              <Chip key={tag} label={tag} className="tag" />
+                            ))}
+                          </div>
+                        ) : subKey === 'fileName' ? (
+                          <h1 key={subKey}>{subValue as string}</h1>
+                        ) : (
+                          <li key={subKey} data-name={subKey}>
+                            {fieldLabels[subKey as keyof typeof fieldLabels] || subKey}: <span className="metadata-value">{subValue as string}</span>
+                          </li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                );
+              }
+            }
+            return null;
+          })}
+          
           <Button variant="contained" color="primary" onClick={handleEdit}>
             Edit
           </Button>
         </div>
-        <Dialog open={isEditing} onClose={handleCancel} fullWidth maxWidth="md">
+        <Dialog className="edit-media-dialog" open={isEditing} onClose={handleCancel} fullWidth maxWidth="md">
           <DialogTitle>Edit Media Details</DialogTitle>
           <DialogContent>
             <Formik

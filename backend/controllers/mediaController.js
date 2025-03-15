@@ -2,32 +2,32 @@ import { uploadFileToS3, deleteFileFromS3 } from '../services/awsService.js';
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabaseConnection } from '../config/db.js';
 import { Media } from '../models/Media.js';
-import { mediaTypes } from '../config/mediaTypes.js';
 
 const generateSlug = (title) => {
   return `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${uuidv4()}`;
 };
 
-const generateMediaFileUrl = (key) => {
-  return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
-};
-
 export const uploadMedia = async (req, res) => {
+  console.log('Uploading media', req.body);
   try {
-    const { title, metadata, mediaType } = req.body;
+    const { title, metadata, mediaType, uploadedBy, modifiedBy } = req.body;
     const file = req.file;
-
-    if (!file || !title) {
-      console.error('File or title missing');
-      return res.status(400).json({ error: 'File and title are required' });
+    console.log('uploadedBy:::: ',uploadedBy);
+    console.log('file: ', file, 'title: ', title, 'uploadedBy: ', uploadedBy, 'modifiedBy: ', modifiedBy);
+    console.log('Uploading media with metadata:', metadata);
+    if (!file || !title || !uploadedBy || !modifiedBy) {
+      console.error('File, title, uploadedBy, and modifiedBy are required');
+      return res.status(400).json({ error: 'File, title, uploadedBy, and modifiedBy are required' });
     }
 
     console.log('Received file for upload:', file.originalname);
 
     const id = uuidv4();
-    const key = `${id}/${file.originalname}`;
+    const key = `${uploadedBy}/${Date.now()}_${file.originalname}`;
+    let location;
+
     try {
-      const location = await uploadFileToS3(file, id);
+      location = await uploadFileToS3(file, uploadedBy);
       console.log('File uploaded to S3 at:', location);
     } catch (uploadError) {
       console.error('Failed to upload file to S3:', uploadError);
@@ -35,14 +35,18 @@ export const uploadMedia = async (req, res) => {
     }
 
     const mediaData = {
-      id, // Use the generated UUID
+      id,
       title,
       slug: generateSlug(title),
       fileSize: file.size,
       fileExtension: file.originalname.split('.').pop()?.toUpperCase() || 'UNKNOWN',
       modifiedDate: new Date(),
-      metadata: metadata ? JSON.parse(metadata) : {},
-      location: generateMediaFileUrl(key), // Use the function here
+      uploadedBy,
+      modifiedBy,
+      metadata: {
+        ...metadata,
+      },
+      location,
     };
 
     // Convert recordedDate to a Date object if it exists
@@ -85,3 +89,14 @@ export const deleteMedia = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+async function saveMediaFile(fileId, s3Key, userId, originalFileName) {
+  const mediaFile = new MediaFile({
+    fileId,
+    s3Key,
+    userId,
+    originalFileName,
+    uploadDate: new Date(),
+  });
+  await mediaFile.save();
+}

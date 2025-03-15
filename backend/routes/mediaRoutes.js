@@ -3,6 +3,8 @@ import multer from 'multer';
 import { uploadMedia, deleteMedia } from '../controllers/mediaController.js';
 import { Media } from '../models/Media.js';
 import { mediaTypes } from '../config/mediaTypes.js';
+
+
 const router = express.Router();
 const upload = multer();
 

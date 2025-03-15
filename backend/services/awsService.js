@@ -9,32 +9,36 @@ const s3 = new S3Client({
   }
 });
 
-export const uploadFileToS3 = async (file, uniqueId) => {
+export const uploadFileToS3 = async (file, uploadedBy) => {
   const bucketName = process.env.AWS_S3_BUCKET_NAME;
   if (!bucketName) {
     throw new Error('AWS_S3_BUCKET_NAME environment variable is not set');
   }
-
-  const key = `${uniqueId}/${file.originalname}`;
+  console.log('file2222: ', file);
+  console.log('uploadedBy2222: ', uploadedBy);
+  
+  const timestamp = Date.now();
+  const date = new Date(timestamp);
+  const key = `${file.originalname}_${date}`;
+  console.log('date: ', date.toString());
   console.log('Starting file upload to S3...');
   console.log(`File name: ${file.originalname}, Key: ${key}`);
   const params = {
-    Bucket: bucketName, // Ensure this environment variable is set
+    Bucket: bucketName,
     Key: key,
     Body: file.buffer,
-    ContentType: file.mimetype,
+    Metadata: {
+      userId: uploadedBy,
+      originalFileName: file.originalname,
+    },
+    Tagging: `userId=${uploadedBy}&originalFileName=${file.originalname}`,
   };
-
-  try {
-    const command = new PutObjectCommand(params);
-    await s3.send(command);
-    const fileUrl = generateMediaFileUrl(bucketName, key);
-    console.log('File uploaded successfully:', fileUrl);
-    return fileUrl;
-  } catch (error) {
-    console.error('Error uploading file:', error);
-    throw error;
-  }
+  
+  const command = new PutObjectCommand(params);
+  await s3.send(command);
+  const fileUrl = generateMediaFileUrl(bucketName, key);
+  console.log('File uploaded successfully:', fileUrl);
+  return fileUrl;
 };
 
 export const deleteFileFromS3 = async (key) => {

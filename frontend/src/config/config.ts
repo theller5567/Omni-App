@@ -1,3 +1,26 @@
+export const fieldLabels = {
+  description: 'Description',
+  category: 'Category',
+  isActive: 'Is Active',
+  companyBrand: 'Company Brand',
+  mediaType: 'Media Type',
+  mediaSubType: 'Media Sub Type',
+  fileSize: 'File Size',
+  recordedDate: 'Recorded Date',
+  uploadedBy: 'Uploaded By',
+  modifiedBy: 'Modified By',
+  metadata: 'Metadata',
+  fileName: 'File Name',
+  fileExtension: 'File Extension',
+  modifiedDate: 'Modified Date',
+  tags: 'Tags',
+  title: 'Title',
+  altText: 'Alt Text',
+  productSKU: 'Product SKU',
+  visibility: 'Visibility',
+  // Add more field label mappings as needed
+};
+
 export const nonEditableFields = {
   _id: true,
   id: true,

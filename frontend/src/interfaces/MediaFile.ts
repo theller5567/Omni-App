@@ -7,6 +7,8 @@ export interface MediaFile {
   fileSize: number;
   fileExtension: string;
   modifiedDate: Date;
+  uploadedBy: string;
+  modifiedBy: string;
   __t: string;
   metadata: {
     fileName: string;

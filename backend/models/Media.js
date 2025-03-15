@@ -10,12 +10,14 @@ const baseMediaSchema = new mongoose.Schema({
   fileSize: Number,
   fileExtension: String,
   modifiedDate: Date,
+  uploadedBy: String,
+  modifiedBy: String,
+  mediaType: String,
   metadata: {
     fileName: String,
     tags: [String],
     visibility: String,
     altText: String,
-    mediaType: String,
     description: String,
   },
 });

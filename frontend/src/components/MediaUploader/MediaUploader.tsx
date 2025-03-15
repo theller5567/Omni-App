@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Button, TextField, LinearProgress, Typography, FormControl, Select, MenuItem, InputLabel, SelectChangeEvent, Stepper, Step, StepLabel } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
-import { useUser } from '../../contexts/UserContext';
+//import { useUser } from '../../contexts/UserContext';
 import { FaTimes } from 'react-icons/fa';
 import './MediaUploader.scss';
 import useFileUpload from '../../hooks/useFileUpload';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { MediaFile } from '../../interfaces/MediaFile';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store/store'; // Adjust the import path as necessary
 
 interface MediaUploaderProps {
   open: boolean;
@@ -26,7 +28,10 @@ interface UploadResponse {
 
 const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadComplete }) => {
   if (!open) return null; // Render nothing if not open
-  const { user } = useUser();
+
+  // Access user data from Redux store
+  const user = useSelector((state: RootState) => state.user);
+
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -37,7 +42,9 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     altText: '',
     description: '',
     mediaType: '',
-    recordedDate: new Date().toISOString().split('T')[0], // Prepopulate with current date
+    recordedDate: new Date().toISOString().split('T')[0],
+    uploadedBy: user._id,
+    modifiedBy: user._id,
   });
   const { uploadProgress, setUploadProgress, uploadComplete, resetUploadComplete } = useFileUpload();
   const [selectedMediaType, setSelectedMediaType] = useState('');
@@ -61,6 +68,20 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
 
     fetchMediaTypes();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      setMetadata((prevMetadata: any) => {
+        const updatedMetadata = {
+          ...prevMetadata,
+          uploadedBy: user._id,
+          modifiedBy: user._id,
+        };
+        console.log('Updated Metadata:', updatedMetadata);
+        return updatedMetadata;
+      });
+    }
+  }, [user]);
 
   const onDrop = useCallback((acceptedFiles: File[], fileRejections: any[]) => {
     if (fileRejections.length > 0) {
@@ -105,20 +126,29 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     formData.append('file', file);
     formData.append('title', file.name);
     formData.append('fileExtension', file.name.split('.').pop()?.toUpperCase() || 'UNKNOWN');
-    formData.append('metadata', JSON.stringify(metadata));
-    formData.append('mediaType', selectedMediaType); // Include mediaType in the form data
+    formData.append('uploadedBy', user._id);
+    formData.append('modifiedBy', user._id);
+    formData.append('mediaType', selectedMediaType);
+
+    // Append each metadata field individually
+    Object.entries(metadata).forEach(([key, value]) => {
+      formData.append(`metadata[${key}]`, value as string);
+    });
+
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent: ProgressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        console.log(`Upload Progress: ${percentCompleted}%`);
+        setUploadProgress(percentCompleted);
+      },
+    };
 
     try {
-      const response = await axios.post<UploadResponse>('http://localhost:5002/media/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent: ProgressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          console.log(`Upload Progress: ${percentCompleted}%`);
-          setUploadProgress(percentCompleted);
-        },
-      } as any);
+      console.log('formData: ', formData);
+      const response = await axios.post<UploadResponse>('http://localhost:5002/media/upload', formData, config);
 
       if (response.status === 200) {
         resetUploadComplete();
@@ -133,9 +163,11 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
           location: response.data.location,
           slug: response.data.slug,
           title: response.data.title,
+          uploadedBy: user._id,
+          modifiedBy: user._id,
           metadata: {
             ...metadata,
-            mediaType: selectedMediaType, // Include mediaType in the metadata
+            mediaType: selectedMediaType,
           },
           fileSize: file.size,
           modifiedDate,
@@ -160,13 +192,6 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
   };
 
   const handleBack = () => setStep((prev) => (prev === 1 ? 1 : prev - 1));
-
-  useEffect(() => {
-    if (user) {
-      handleMetadataChange('uploadedBy', user.name);
-      handleMetadataChange('modifiedBy', user.name);
-    }
-  }, [user]);
 
   useEffect(() => {
     if (uploadProgress === 100) {
@@ -194,6 +219,8 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
       altText: '',
       description: '',
       recordedDate: new Date().toISOString().split('T')[0], // Reset to the current date
+      uploadedBy: user._id,
+      modifiedBy: user._id,
     });
     resetUploadComplete();
   };
@@ -235,18 +262,26 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     if (!selectedMediaType) return null;
 
     const fields = mediaTypes[selectedMediaType]?.schema || {};
-    return Object.keys(fields).map((field) => (
-      <TextField
-        key={field}
-        label={field}
-        required={fields[field].required}
-        value={metadata[field] || ''}
-        onChange={(e) => handleMetadataChange(field, e.target.value)}
-        fullWidth
-        margin="normal"
-      />
-    ));
+    return Object.keys(fields).map((field) => {
+      // Exclude 'uploadedBy' and 'modifiedBy' from rendering
+      if (field === 'uploadedBy' || field === 'modifiedBy') {
+        return null;
+      }
+      return (
+        <TextField
+          key={field}
+          label={field}
+          required={fields[field].required}
+          value={metadata[field] || ''}
+          onChange={(e) => handleMetadataChange(field, e.target.value)}
+          fullWidth
+          margin="normal"
+        />
+      );
+    });
   };
+
+  console.log('Accessing metadata.uploadedBy:', metadata.uploadedBy);
 
   return (
     <Box id="media-uploader">
