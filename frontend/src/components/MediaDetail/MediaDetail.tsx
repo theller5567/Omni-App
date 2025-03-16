@@ -6,6 +6,7 @@ import { Box, Button, CircularProgress, Chip, Dialog, DialogContent, DialogTitle
 import axios from "axios";
 import { MediaFile } from "../../interfaces/MediaFile";
 import { useNavigate } from "react-router-dom";
+import { motion } from 'framer-motion';
 // import { formatFileSize } from "../../utils/formatFileSize";
 import { nonEditableFields, fieldConfigurations, fieldLabels } from "../../config/config";
 import "./mediaDetail.scss";
@@ -158,8 +159,21 @@ const MediaDetail: React.FC = () => {
     return !nonEditableFields.hasOwnProperty(fieldName);
   }
 
+  // Define animation variants
+  const containerVariants = {
+    hidden: { opacity: 0, x: -50 },
+    visible: { opacity: 1, x: 0, transition: { duration: 0.5 } },
+    exit: { opacity: 0, x: -50, transition: { duration: 0.5 } },
+  };
+
   return (
-    <div className="media-detail-wrapper">
+    <motion.div
+      className="media-detail-wrapper"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+    >
       <div className="navbar">
         <Button variant="contained" color="info" onClick={goBack}>
           Back
@@ -240,7 +254,7 @@ const MediaDetail: React.FC = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

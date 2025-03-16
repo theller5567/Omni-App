@@ -57,12 +57,19 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     navigate(`/media/slug/${file.slug}`);
   };
 
+  const handleMediaTypeChange = (type: string) => {
+    setSelectedMediaType(type);
+  };
+
   const columns: GridColDef[] = [
     { field: 'image', headerName: 'Image', flex: 0.5, renderCell: (params) => (
       <img src={params.row.location} alt={params.row.title} style={{ width: '40px', height: '40px', padding: '0.3rem', alignSelf: 'center' }} />
     )},
     { field: 'fileName', headerName: 'Title', flex: 0.5, renderCell: (params) => (
       <Link to={`/media/slug/${params.row.slug}`} >{params.row.metadata.fileName}</Link>
+    )},
+    { field: '__t', headerName: 'Media Type', flex: 0.5, renderCell: (params) => (
+      <span>{params.row.__t}</span>
     )},
     { 
       field: 'fileSize', 
@@ -120,17 +127,20 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     },
   ];
 
-  const rows = mediaFilesData.map((file) => ({
-    ...file,
-    id: file.id,
-    image: file.location,
-    title: file.metadata.fileName,
-    fileSize: file.fileSize,
-    fileExtension: file.fileExtension,
-    modifiedDate: file.modifiedDate,
-    fileName: file.metadata.fileName,
-    tags: file.metadata.tags
-  }));
+  const rows = mediaFilesData
+    .filter(file => selectedMediaType === 'All' || file.__t === selectedMediaType)
+    .map((file) => ({
+      ...file,
+      id: file.id,
+      image: file.location,
+      title: file.metadata.fileName,
+      fileSize: file.fileSize,
+      fileExtension: file.fileExtension,
+      modifiedDate: file.modifiedDate,
+      fileName: file.metadata.fileName,
+      tags: file.metadata.tags,
+      __t: file.__t
+    }));
 
   const containerVariants = {
     hidden: { opacity: 0, x: -350 },
@@ -157,15 +167,6 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     }
   };
 
-  const handleMediaTypeChange = (type: string) => {
-    setSelectedMediaType(type);
-  };
-
-  // Filter media files based on selected media type
-  const filteredMediaFiles = selectedMediaType === 'All'
-    ? mediaFilesData
-    : mediaFilesData.filter(file => file.metadata.mediaType === selectedMediaType);
-
   return (
     <motion.div
       id="media-library"
@@ -177,7 +178,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
       <Box className="media-library">
         <Typography variant="h2" align="left" sx={{paddingBottom: '2rem'}}>OMNI Media Library</Typography>
         <Box display="flex" justifyContent="space-between" gap={12} alignItems="center">
-        <ButtonGroup variant="outlined" aria-label="Basic button group">
+          <ButtonGroup variant="outlined" aria-label="Basic button group">
             {Object.keys(mediaTypes).map((type) => (
               <Button
                 key={type}
@@ -202,9 +203,9 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
           {viewMode === 'grid' ? (
             <div style={{ height: 600, width: '100%' }}>
               <DataGrid
-              slots={{
-                toolbar: GridToolbar,
-              }}
+                slots={{
+                  toolbar: GridToolbar,
+                }}
                 rows={rows}
                 columns={columns}
                 getRowId={(row) => row.id}
@@ -222,7 +223,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
               />
             </div>
           ) : (
-            filteredMediaFiles.map((file) => (
+            rows.map((file) => (
               <MediaCard key={file.id} file={file} onClick={() => handleFileClick(file)} />
             ))
           )}

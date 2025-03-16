@@ -13,6 +13,7 @@ const MediaContainer: React.FC = () => {
   const fetchMediaFiles = async () => {
     try {
       const response = await axios.get<MediaFile[]>('http://localhost:5002/media/all');
+      console.log('response: ', response.data);
       setMediaFiles(response.data);
     } catch (error) {
       console.error('Error fetching media files:', error);
