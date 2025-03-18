@@ -4,6 +4,8 @@ export const mediaTypes = {
       schema: {
         companyBrand: { type: String, required: true },
         productSKU: { type: String, required: true },
+        imageWidth: { type: Number, required: true },
+        imageHeight: { type: Number, required: true },
         sizeRequirements: String,
       },
     },

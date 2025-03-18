@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Box, Typography, Grid, Button, ButtonGroup } from '@mui/material';
+import { Box, Typography, Grid, Button, Toolbar, IconButton, Tooltip } from '@mui/material';
 import { motion } from 'framer-motion';
 import './MediaLibrary.scss';
 import HeaderComponent from './HeaderComponent';
 import MediaCard from './MediaCard';
 import { useNavigate, Link } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
-import { FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
+import { FaTrash, FaEdit } from 'react-icons/fa';
 import { MediaFile } from '../../interfaces/MediaFile';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import { formatFileSize } from '../../utils/formatFileSize';
@@ -14,6 +14,7 @@ import { toast } from 'react-toastify';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ConfirmationModal from './ConfirmationModal';
+import { alpha } from '@mui/material/styles';
 
 const CustomGrid = styled(Grid)({
   '&.grid-view': {
@@ -32,25 +33,24 @@ interface MediaLibraryProps {
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   onAddMedia: () => void;
   onDeleteMedia: (id: string) => Promise<boolean>;
+  selectedMediaType: string;
+  handleMediaTypeChange: (type: string) => void;
 }
 
 // Define media types in the frontend
-const mediaTypes = {
-  All: 'All',
-  ProductImage: 'ProductImage',
-  WebinarVideo: 'WebinarVideo',
-  // Add more media types here
-};
 
-const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQuery, onAddMedia, onDeleteMedia }) => {
-  const [viewMode, setViewMode] = useState<'grid' | 'card'>('grid');
+
+const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQuery, onDeleteMedia, onAddMedia }) => {
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [selectedMediaType, setSelectedMediaType] = useState<string>('All');
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selected, setSelected] = useState<readonly (string | number)[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  const [isToolbarDelete, setIsToolbarDelete] = useState(false);
 
   const toggleView = () => {
-    setViewMode((prevView) => (prevView === 'grid' ? 'card' : 'grid'));
+    setViewMode((prevView) => (prevView === 'list' ? 'card' : 'list'));
   };
 
   const handleFileClick = (file: MediaFile) => {
@@ -159,13 +159,68 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
   };
 
   const handleConfirmDelete = async () => {
-    if (selectedFileId) {
-      const response: boolean = await onDeleteMedia(selectedFileId);
-      if (response) {
+    if (isToolbarDelete) {
+      // Handle multiple deletions
+      const promises = selected.map(id => onDeleteMedia(id as string));
+      const results = await Promise.all(promises);
+
+      if (results.every(result => result)) {
+        toast.success('Selected media deleted successfully');
+        setSelected([]); // Clear selection after deletion
+      } else {
+        toast.error('Failed to delete some media');
+      }
+    } else if (selectedFileId) {
+      // Handle single deletion
+      const success = await onDeleteMedia(selectedFileId);
+      if (success) {
         toast.success('Media deleted successfully');
+        setSelectedFileId(null); // Clear the selected file ID
+      } else {
+        toast.error('Failed to delete media');
       }
     }
+    setIsModalOpen(false);
+    setIsToolbarDelete(false); // Reset the toolbar delete flag
   };
+
+  const handleDeleteSelected = () => {
+    if (selected.length > 0) {
+      setIsToolbarDelete(true);
+      setIsModalOpen(true);
+    }
+  };
+
+  const EnhancedTableToolbar = ({ numSelected }: { numSelected: number }) => (
+    
+    <Toolbar
+      className="toolbar"
+      sx={{
+        ...(numSelected > 0 && {
+          bgcolor: (theme) =>
+            alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
+        }),
+      }}
+    >
+      {numSelected > 0 && (
+        <Typography
+          sx={{ flex: '1 1 100%' }}
+          color="inherit"
+          variant="subtitle1"
+          component="div"
+        >
+          {numSelected} selected
+        </Typography>
+      )}
+      {numSelected > 0 ? (
+        <Tooltip title="Delete">
+          <IconButton onClick={handleDeleteSelected}>
+            <FaTrash />
+          </IconButton>
+        </Tooltip>
+      ) : null}
+    </Toolbar>
+  );
 
   return (
     <motion.div
@@ -175,59 +230,61 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
       animate="visible"
       exit="exit"
     >
-      <Box className="media-library">
-        <Typography variant="h2" align="left" sx={{paddingBottom: '2rem'}}>OMNI Media Library</Typography>
-        <Box display="flex" justifyContent="space-between" gap={12} alignItems="center">
-          <ButtonGroup variant="outlined" aria-label="Basic button group">
-            {Object.keys(mediaTypes).map((type) => (
-              <Button
-                key={type}
-                variant={selectedMediaType === type ? 'contained' : 'outlined'}
-                color="primary"
-                onClick={() => handleMediaTypeChange(type)}
-              >
-                {type}
-              </Button>
-            ))}
-            <Button variant="contained" color="secondary" onClick={onAddMedia} startIcon={<FaPlus />}>Add Media</Button>
-          </ButtonGroup>
-        </Box>
+      <Box className="media-library" sx={{ width: '100%', overflow: 'hidden' }}>
+        <Typography variant="h2" align="left" sx={{ paddingBottom: '2rem' }}>OMNI Media Library</Typography>
         <HeaderComponent
           view={viewMode}
           toggleView={toggleView}
           mediaFilesData={mediaFilesData}
           setSearchQuery={setSearchQuery}
+          selectedMediaType={selectedMediaType}
+          handleMediaTypeChange={handleMediaTypeChange}
+          onAddMedia={onAddMedia}
         />
-        
-        <CustomGrid id="media-library-container" container spacing={2} justifyContent="start" className={viewMode === 'grid' ? 'grid-view '  : 'card-view'}>
-          {viewMode === 'grid' ? (
-            <div style={{ height: 600, width: '100%' }}>
-              <DataGrid
-                slots={{
-                  toolbar: GridToolbar,
-                }}
-                rows={rows}
-                columns={columns}
-                getRowId={(row) => row.id}
-                pageSizeOptions={[5, 10, 20]}
-                initialState={{
-                  pagination: {
-                    paginationModel: { pageSize: 10 },
-                  },
-                  sorting: {
-                    sortModel: [{ field: 'modifiedDate', sort: 'desc' }],
-                  },
-                }}
-                checkboxSelection
-                disableRowSelectionOnClick
-              />
-            </div>
-          ) : (
-            rows.map((file) => (
-              <MediaCard key={file.id} file={file} onClick={() => handleFileClick(file)} />
-            ))
+        <Box sx={{ width: '100%', height: 'calc(100% - 4rem)', overflow: 'hidden' }}>
+          {selected.length > 0 && (
+            <EnhancedTableToolbar numSelected={selected.length} />
           )}
-        </CustomGrid>
+          <CustomGrid
+            id="media-library-container"
+            container
+            spacing={2}
+            justifyContent="start"
+            className={viewMode === 'list' ? 'list-view' : 'grid-view'}
+            sx={{ height: '100%', overflow: 'hidden' }}
+          >
+            {viewMode === 'list' ? (
+              <div style={{ height: '100%', width: '100%', overflow: 'auto' }}>
+                <DataGrid
+                  slots={{
+                    toolbar: GridToolbar,
+                  }}
+                  rows={rows}
+                  columns={columns}
+                  getRowId={(row) => row.id}
+                  pageSizeOptions={[5, 10, 20]}
+                  initialState={{
+                    pagination: {
+                      paginationModel: { pageSize: 10 },
+                    },
+                    sorting: {
+                      sortModel: [{ field: 'modifiedDate', sort: 'desc' }],
+                    },
+                  }}
+                  checkboxSelection
+                  disableRowSelectionOnClick
+                  onRowSelectionModelChange={(newSelection) => {
+                    setSelected(newSelection);
+                  }}
+                />
+              </div>
+            ) : (
+              rows.map((file) => (
+                <MediaCard key={file.id} file={file} onClick={() => handleFileClick(file)} />
+              ))
+            )}
+          </CustomGrid>
+        </Box>
       </Box>
       <ToastContainer />
       <ConfirmationModal

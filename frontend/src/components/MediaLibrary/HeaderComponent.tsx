@@ -1,8 +1,9 @@
 import React from 'react';
-import { Box, Switch, FormGroup, FormControlLabel, styled } from '@mui/material';
+import { Box, Switch, FormGroup, FormControlLabel, styled, Button, ButtonGroup } from '@mui/material';
 import './HeaderComponent.scss';
 import SearchInput from '../SearchInput/SearchInput';
 import { MediaFile } from '../../interfaces/MediaFile';
+import { FaPlus } from 'react-icons/fa';
 const gridIcon = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>'
 );
@@ -11,11 +12,21 @@ const listIcon = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M3 4h18v2H3V9zm0 6h18v2H3v-2zm0 6h18v2H3v-2z"/></svg>'
 );
 
+const mediaTypes = {
+  All: 'All',
+  ProductImage: 'ProductImage',
+  WebinarVideo: 'WebinarVideo',
+  // Add more media types here
+};
+
 interface HeaderComponentProps {
-  view: 'card' | 'grid';
+  view: 'card' | 'list';
   toggleView: () => void;
   mediaFilesData: MediaFile[];
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+  selectedMediaType: string;
+  handleMediaTypeChange: (type: string) => void;
+  onAddMedia: () => void;
 }
 const Android12Switch = styled(Switch)({
   padding: 8,
@@ -29,7 +40,7 @@ const Android12Switch = styled(Switch)({
       transform: 'translateY(-50%)',
       width: 14,
       height: 14,
-      backgroundImage: `url('data:image/svg+xml;utf8,${gridIcon}')`,
+      backgroundImage: `url('data:image/svg+xml;utf8,${listIcon}')`,
     },
     '&::after': {
       content: '""',
@@ -39,7 +50,7 @@ const Android12Switch = styled(Switch)({
       transform: 'translateY(-50%)',
       width: 14,
       height: 14,
-      backgroundImage: `url('data:image/svg+xml;utf8,${listIcon}')`,
+      backgroundImage: `url('data:image/svg+xml;utf8,${gridIcon}')`,
     },
   },
   '& .MuiSwitch-thumb': {
@@ -51,22 +62,45 @@ const Android12Switch = styled(Switch)({
   },
 });
 
-const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, mediaFilesData, setSearchQuery }) => {
+const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, mediaFilesData, setSearchQuery, selectedMediaType, handleMediaTypeChange, onAddMedia }) => {
   return (
-    <Box className="header-component" display="flex" alignItems="center" justifyContent="space-between" padding="1rem" bgcolor="var(--secondary-color)">
-       <Box display="flex" alignItems="center" gap={2}>
-            <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
-          </Box>
+    <Box
+      className="header-component"
+      display="flex"
+      alignItems="center"
+      justifyContent="space-between"
+      padding="1rem"
+      bgcolor="var(--secondary-color)"
+    >
+      <Box display="flex" alignItems="center" gap={2}>
+        <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
+        <ButtonGroup variant="outlined" aria-label="Basic button group">
+          {Object.keys(mediaTypes).map((type) => (
+            <Button
+              key={type}
+              variant={selectedMediaType === type ? 'contained' : 'outlined'}
+              color="primary"
+              onClick={() => handleMediaTypeChange(type)}
+            >
+              {type}
+            </Button>
+          ))}
+          <Button variant="contained" color="secondary" onClick={onAddMedia} startIcon={<FaPlus />}>
+            Add Media
+          </Button>
+        </ButtonGroup>
+      </Box>
       <Box display="flex" alignItems="center">
         <FormGroup>
           <FormControlLabel
             control={
               <Android12Switch
-                checked={view === 'grid'}
+                checked={view === 'list'}
                 onChange={toggleView}
+                className="toggle-switch"
               />
             }
-            label={view === 'grid' ? 'Grid' : 'card'}
+            label={view === 'list' ? 'List' : 'Card'}
           />
         </FormGroup>
       </Box>

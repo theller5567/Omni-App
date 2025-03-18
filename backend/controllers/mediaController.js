@@ -10,10 +10,9 @@ const generateSlug = (title) => {
 export const uploadMedia = async (req, res) => {
   console.log('Uploading media', req.body);
   try {
-    const { title, metadata, mediaType, uploadedBy, modifiedBy } = req.body;
+    const { title, metadata, mediaType, uploadedBy, modifiedBy} = req.body;
     const file = req.file;
-    console.log('uploadedBy:::: ',uploadedBy);
-    console.log('file: ', file, 'title: ', title, 'uploadedBy: ', uploadedBy, 'modifiedBy: ', modifiedBy);
+    console.log('file: ', req);
     console.log('Uploading media with metadata:', metadata);
     if (!file || !title || !uploadedBy || !modifiedBy) {
       console.error('File, title, uploadedBy, and modifiedBy are required');
@@ -23,7 +22,6 @@ export const uploadMedia = async (req, res) => {
     console.log('Received file for upload:', file.originalname);
 
     const id = uuidv4();
-    const key = `${uploadedBy}/${Date.now()}_${file.originalname}`;
     let location;
 
     try {
@@ -62,6 +60,7 @@ export const uploadMedia = async (req, res) => {
     }
 
     const newMedia = new MediaTypeModel(mediaData);
+    console.log('newMedia: ', newMedia);
     await newMedia.save();
 
     console.log('Media file saved to database:', newMedia);
@@ -90,13 +89,3 @@ export const deleteMedia = async (req, res) => {
   }
 };
 
-async function saveMediaFile(fileId, s3Key, userId, originalFileName) {
-  const mediaFile = new MediaFile({
-    fileId,
-    s3Key,
-    userId,
-    originalFileName,
-    uploadDate: new Date(),
-  });
-  await mediaFile.save();
-}

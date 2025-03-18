@@ -4,6 +4,22 @@
     input {
         min-width: 350px;
     }
+    .MuiFormLabel-root {
+        padding:0;
+    }
+    .MuiFormControl-root {
+        padding:0;
+        .MuiInputLabel-root {
+            padding:0;
+        }
+        .MuiOutlinedInput-root {
+            padding:0;
+        }
+        .MuiInputLabel-root {
+            top: -0.5rem;
+        }
+    }
+   
 }
 
 .css-1pzfmz2-MuiInputBase-input-MuiOutlinedInput-input {

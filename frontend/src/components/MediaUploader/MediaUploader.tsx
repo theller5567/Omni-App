@@ -98,11 +98,27 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
       setError(null);
       setFile(file);
       setFileSelected(true);
-
+      console.log('file: ', file);
       // Generate a local preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFilePreview(reader.result as string);
+        const imageUrl = reader.result as string;
+        setFilePreview(imageUrl);
+
+        // Create an Image object to get dimensions
+        const img = new Image();
+        img.onload = () => {
+          console.log('Image Width:', img.width);
+          console.log('Image Height:', img.height);
+
+          // You can store these dimensions in the metadata or state if needed
+          setMetadata((prevMetadata: any) => ({
+            ...prevMetadata,
+            imageWidth: img.width,
+            imageHeight: img.height,
+          }));
+        };
+        img.src = imageUrl;
       };
       reader.readAsDataURL(file);
     }
@@ -129,7 +145,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     formData.append('uploadedBy', user._id);
     formData.append('modifiedBy', user._id);
     formData.append('mediaType', selectedMediaType);
-
+    console.log('file: ', file);
     // Append each metadata field individually
     Object.entries(metadata).forEach(([key, value]) => {
       formData.append(`metadata[${key}]`, value as string);
@@ -147,7 +163,6 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     };
 
     try {
-      console.log('formData: ', formData);
       const response = await axios.post<UploadResponse>('http://localhost:5002/media/upload', formData, config);
 
       if (response.status === 200) {
@@ -264,7 +279,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     const fields = mediaTypes[selectedMediaType]?.schema || {};
     return Object.keys(fields).map((field) => {
       // Exclude 'uploadedBy' and 'modifiedBy' from rendering
-      if (field === 'uploadedBy' || field === 'modifiedBy') {
+      if (field === 'uploadedBy' || field === 'modifiedBy' || field === 'imageWidth' || field === 'imageHeight') {
         return null;
       }
       return (

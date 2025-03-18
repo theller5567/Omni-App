@@ -41,7 +41,7 @@ const SearchInput: React.FC<SearchInputProps> = ({ mediaFiles, setSearchQuery })
       }}
       filterOptions={filter}
       renderInput={(params) => (
-        <TextField {...params} label="Search media..." variant="outlined" />
+        <TextField className="search-input" {...params} label="Search media..." variant="outlined" />
       )}
     />
   );

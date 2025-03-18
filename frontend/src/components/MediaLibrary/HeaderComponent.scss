@@ -1,5 +1,8 @@
 .header-component {
-  margin: 1rem 0;
+  margin: 0;
+  background-image: linear-gradient(to bottom right, var(--secondary-color), var(--background-color));
+  max-width: calc(100% - 16px);
+  margin-bottom: 1rem;
 }
 
 .toggle-switch {
@@ -7,6 +10,15 @@
   display: inline-block;
   width: 50px;
   height: 24px;
+  background-color: transparent;
+}
+
+.MuiSwitch-thumb {
+  border: none;
+}
+.MuiSwitch-track {
+  opacity: 1;
+  border: none;
 }
 
 .toggle-switch input {
