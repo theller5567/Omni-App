@@ -4,7 +4,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { Box, Button, CircularProgress, Chip, Dialog, DialogContent, DialogTitle, FormControl, FormLabel, FormControlLabel, FormGroup, FormHelperText } from "@mui/material";
 import axios from "axios";
-import { MediaFile } from "../../interfaces/MediaFile";
+import {  BaseMediaFile } from "../../interfaces/MediaFile";
 import { useNavigate } from "react-router-dom";
 import { motion } from 'framer-motion';
 // import { formatFileSize } from "../../utils/formatFileSize";
@@ -13,7 +13,7 @@ import "./mediaDetail.scss";
 
 const MediaDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [mediaFile, setMediaFile] = useState<MediaFile | null>(null);
+  const [mediaFile, setMediaFile] = useState<BaseMediaFile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [mediaTypes, setMediaTypes] = useState<any>(null);
@@ -22,10 +22,14 @@ const MediaDetail: React.FC = () => {
   useEffect(() => {
     const fetchMediaFile = async () => {
       try {
-        const response = await axios.get<MediaFile>(
+        const response = await axios.get<BaseMediaFile>(
           `http://localhost:5002/media/slug/${slug}`
         );
-        setMediaFile(response.data);
+        const data = response.data;
+        console.log('Fetched media file:', data);
+        // Ensure tags are an array
+
+        setMediaFile(data);
       } catch (error) {
         console.error("Error fetching media file:", error);
       } finally {
@@ -65,10 +69,9 @@ const MediaDetail: React.FC = () => {
       const updatedValues = {
         metadata: {
           ...values,
-          tags: typeof values.tags === 'string' ? values.tags.split(',').map((tag: string) => tag.trim()) : values.tags,
         }
       };
-      const response = await axios.put<MediaFile>(`http://localhost:5002/media/update/${mediaFile.slug}`, updatedValues);
+      const response = await axios.put<BaseMediaFile>(`http://localhost:5002/media/update/${mediaFile.slug}`, updatedValues);
       setMediaFile(response.data);
       setIsEditing(false);
     } catch (error) {
@@ -142,18 +145,6 @@ const MediaDetail: React.FC = () => {
     );
   };
 
-  // const renderMetadataFields = () => {
-  //   if (!mediaTypes || !mediaFile) return null;
-
-  //   const mediaTypeSchema = mediaTypes[mediaFile.__t]?.schema;
-  //   if (!mediaTypeSchema) return null;
-
-  //   return Object.keys(mediaTypeSchema).map((field) => (
-  //     <p key={field}>
-  //       {field}: <span className="metadata-value">{mediaFile.metadata[field]}</span>
-  //     </p>
-  //   ));
-  // };
 
   function isFieldEditable(fieldName: string): boolean {
     return !nonEditableFields.hasOwnProperty(fieldName);
@@ -195,8 +186,8 @@ const MediaDetail: React.FC = () => {
                       {Object.entries(value).map(([subKey, subValue]) =>
                         subKey === 'tags' ? (
                           <div className="tags" key={subKey}>
-                            {(subValue as string[]).map((tag: string) => (
-                              <Chip key={tag} label={tag} className="tag" />
+                            {mediaFile.metadata.tags.map((tag: string, index: number) => (
+                              <Chip key={index} label={tag} className="tag" />
                             ))}
                           </div>
                         ) : subKey === 'fileName' ? (

@@ -1,6 +1,6 @@
-import { BaseMediaMetadata } from './MediaFile';
+import { BaseMediaFile } from './MediaFile';
 
-export interface ProductImageMetadata extends BaseMediaMetadata {
+export interface ProductImageMetadata extends BaseMediaFile {
   companyBrand: string;
   productSKU: string;
   uploadedBy: string;

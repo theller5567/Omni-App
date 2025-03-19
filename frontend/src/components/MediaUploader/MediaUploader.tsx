@@ -7,14 +7,14 @@ import './MediaUploader.scss';
 import useFileUpload from '../../hooks/useFileUpload';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { MediaFile } from '../../interfaces/MediaFile';
+import { BaseMediaFile } from '../../interfaces/MediaFile';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store/store'; // Adjust the import path as necessary
 
 interface MediaUploaderProps {
   open: boolean;
   onClose: () => void;
-  onUploadComplete: (newFile: MediaFile) => void;
+  onUploadComplete: (newFile: BaseMediaFile) => void;
 }
 
 // Define the expected response type
@@ -60,6 +60,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     const fetchMediaTypes = async () => {
       try {
         const response = await axios.get('http://localhost:5002/media/media-types');
+        console.log(response.data, 'response555');
         setMediaTypes(response.data);
       } catch (error) {
         console.error('Error fetching media types:', error);
@@ -145,10 +146,15 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     formData.append('uploadedBy', user._id);
     formData.append('modifiedBy', user._id);
     formData.append('mediaType', selectedMediaType);
-    console.log('file: ', file);
+
     // Append each metadata field individually
     Object.entries(metadata).forEach(([key, value]) => {
-      formData.append(`metadata[${key}]`, value as string);
+      if (key === 'tags') {
+        // Append each tag separately
+        (value as string[]).forEach(tag => formData.append(`metadata[${key}][]`, tag));
+      } else {
+        formData.append(`metadata[${key}]`, value as string);
+      }
     });
 
     const config = {
@@ -171,7 +177,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
         setSlug(response.data.slug);
         const modifiedDate = new Date(file.lastModified);
 
-        const newFile: MediaFile = {
+        const newFile: BaseMediaFile = {
           _id: response.data._id,
           id: response.data.id,
           __t: selectedMediaType,
@@ -457,3 +463,5 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
 };
 
 export default MediaUploader;
+
+

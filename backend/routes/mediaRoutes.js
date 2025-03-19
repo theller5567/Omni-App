@@ -28,6 +28,7 @@ router.get('/slug/:slug', async (req, res) => {
     if (!mediaFile) {
       return res.status(404).json({ error: 'Media not found' });
     }
+    console.log('mediaFile', mediaFile);
     res.status(200).json(mediaFile);
   } catch (error) {
     console.error('Error fetching media by slug:', error);

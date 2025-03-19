@@ -2,19 +2,25 @@ import React, { useEffect, useState } from 'react';
 import MediaUploader from '../components/MediaUploader/MediaUploader';
 import MediaLibrary from '../components/MediaLibrary/MediaLibrary';
 import axios from 'axios';
-import { MediaFile } from '../interfaces/MediaFile';
+import { BaseMediaFile } from '../interfaces/MediaFile';
 import '../components/MediaLibrary/MediaContainer.scss';
 
 const MediaContainer: React.FC = () => {
-  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<BaseMediaFile[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMediaType, setSelectedMediaType] = useState<string>('All');
 
   const fetchMediaFiles = async () => {
     try {
-      const response = await axios.get<MediaFile[]>('http://localhost:5002/media/all');
-      console.log('response: ', response.data);
-      setMediaFiles(response.data);
+      const response = await axios.get<BaseMediaFile[]>('http://localhost:5002/media/all');
+      const mediaFilesWithSplitTags = response.data.map(file => {
+        if (Array.isArray(file.metadata.tags) && typeof file.metadata.tags[0] === 'string') {
+          file.metadata.tags = file.metadata.tags[0].split(',').map(tag => tag.trim());
+        }
+        return file;
+      });
+      setMediaFiles(mediaFilesWithSplitTags);
     } catch (error) {
       console.error('Error fetching media files:', error);
     }
@@ -32,7 +38,7 @@ const MediaContainer: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  const handleUploadComplete = (newFile: MediaFile | null) => {
+  const handleUploadComplete = (newFile: BaseMediaFile | null) => {
     if (newFile) {
       setMediaFiles((prevFiles) => [...prevFiles, newFile]);
     }
@@ -50,6 +56,10 @@ const MediaContainer: React.FC = () => {
     }
   };
 
+  const handleMediaTypeChange = (type: string) => {
+    setSelectedMediaType(type);
+  };
+
   // Filter media files based on search query
   const filteredMediaFiles = mediaFiles.filter(file =>
     file.metadata.fileName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -62,6 +72,8 @@ const MediaContainer: React.FC = () => {
         setSearchQuery={setSearchQuery}
         onAddMedia={handleOpen}
         onDeleteMedia={handleDeleteMedia}
+        selectedMediaType={selectedMediaType}
+        handleMediaTypeChange={handleMediaTypeChange}
       />
       <MediaUploader
         open={isModalOpen}

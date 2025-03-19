@@ -7,7 +7,7 @@ import MediaCard from './MediaCard';
 import { useNavigate, Link } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import { FaTrash, FaEdit } from 'react-icons/fa';
-import { MediaFile } from '../../interfaces/MediaFile';
+import { BaseMediaFile } from '../../interfaces/MediaFile';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import { formatFileSize } from '../../utils/formatFileSize';
 import { toast } from 'react-toastify';
@@ -29,7 +29,7 @@ const CustomGrid = styled(Grid)({
 });
 
 interface MediaLibraryProps {
-  mediaFilesData: MediaFile[];
+  mediaFilesData: BaseMediaFile[];
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   onAddMedia: () => void;
   onDeleteMedia: (id: string) => Promise<boolean>;
@@ -53,13 +53,14 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     setViewMode((prevView) => (prevView === 'list' ? 'card' : 'list'));
   };
 
-  const handleFileClick = (file: MediaFile) => {
+  const handleFileClick = (file: BaseMediaFile) => {
     navigate(`/media/slug/${file.slug}`);
   };
 
   const handleMediaTypeChange = (type: string) => {
     setSelectedMediaType(type);
   };
+
 
   const columns: GridColDef[] = [
     { field: 'image', headerName: 'Image', flex: 0.5, renderCell: (params) => (
@@ -91,10 +92,10 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
       }
     },
     { field: 'tags', headerName: 'Tags', flex: 0.5, renderCell: (params) => (
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+      <div className="tags">
         {params.row.metadata.tags.map((tag: string, index: number) => (
           <span key={index} className="tag">
-            {tag}{index === params.row.metadata.tags.length - 1 ? '' : ', '}
+            {tag}{index < params.row.metadata.tags.length - 1 ? ', ' : ''}
           </span>
         ))}
       </div>
@@ -297,3 +298,4 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
 };
 
 export default MediaLibrary;
+

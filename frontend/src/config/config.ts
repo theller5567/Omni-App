@@ -18,6 +18,8 @@ export const fieldLabels = {
   altText: 'Alt Text',
   productSKU: 'Product SKU',
   visibility: 'Visibility',
+  imageWidth: 'Image Width',
+  imageHeight: 'Image Height',
   // Add more field label mappings as needed
 };
 
@@ -34,6 +36,8 @@ export const nonEditableFields = {
   fileSize: true,
   uploadedBy: true,
   modifiedBy: true,
+  imageWidth: true,
+  imageHeight: true,
 };
 
 export const fieldConfigurations = {

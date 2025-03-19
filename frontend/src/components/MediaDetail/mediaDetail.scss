@@ -112,11 +112,11 @@
       display: flex;
       flex-direction: row;
       gap: 1rem;
+      flex-wrap: wrap;
       .tag {
         background-color: var(--secondary-color);
         padding: 0.5rem 1rem;
         border-radius: 0.5rem;
-        min-width: 2rem;
         color: var(--accent-color2);
       }
     }

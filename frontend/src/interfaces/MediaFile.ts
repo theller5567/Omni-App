@@ -1,4 +1,4 @@
-export interface MediaFile {
+export interface BaseMediaFile {
   _id: string; // MongoDB's ObjectId
   id: string; // Custom UUID
   title: string;

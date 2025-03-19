@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Switch, FormGroup, FormControlLabel, styled, Button, ButtonGroup } from '@mui/material';
 import './HeaderComponent.scss';
 import SearchInput from '../SearchInput/SearchInput';
-import { MediaFile } from '../../interfaces/MediaFile';
+import { BaseMediaFile } from '../../interfaces/MediaFile';
 import { FaPlus } from 'react-icons/fa';
 const gridIcon = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>'
@@ -22,7 +22,7 @@ const mediaTypes = {
 interface HeaderComponentProps {
   view: 'card' | 'list';
   toggleView: () => void;
-  mediaFilesData: MediaFile[];
+  mediaFilesData: BaseMediaFile[];
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   selectedMediaType: string;
   handleMediaTypeChange: (type: string) => void;
