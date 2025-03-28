@@ -2,11 +2,27 @@
 export const mediaTypes = {
     ProductImage: {
       schema: {
-        companyBrand: { type: String, required: true },
+        companyBrand: { 
+          type: String, 
+          required: true, 
+          options: [
+            "Omni",
+            "Revvity",
+            "BioLegend",
+            "ThermoFisher",
+            "PerkinElmer",
+            "Merck",
+            "Sigma-Aldrich",
+            "Invitrogen",
+            "Roche",
+            "Novartis",
+            "Pfizer",
+          ] 
+        },
         productSKU: { type: String, required: true },
         imageWidth: { type: Number, required: true },
         imageHeight: { type: Number, required: true },
-        sizeRequirements: String,
+        sizeRequirements: { type: String },
       },
     },
     WebinarVideo: {
@@ -18,4 +34,3 @@ export const mediaTypes = {
     },
     // Add more media types here
   };
-  

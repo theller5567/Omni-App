@@ -15,26 +15,34 @@ import { Provider, useDispatch, useSelector } from 'react-redux';
 import store from './store/store';
 import ProtectedRoute from './components/ProtectedRoute';
 import PasswordSetupPage from './pages/PasswordSetup';
-import { setUser } from './store/slices/userSlice';
+import { setUser, CurrentUserState } from './store/slices/userSlice';
 import axios from 'axios';
 import { RootState } from './store/store';
 import MediaLibraryPage from './pages/MediaLibraryPage';
-
+import AccountUsers from './pages/AccountUsers';
+import AccountTags from './pages/AccountTags';
+import AccountMediaTypes from './pages/AccountMediaTypes';
+import AccountAdminDashboard from './pages/AccountAdminDashboard';
 
 interface UserState {
+  _id: string;
   id: string;
   email: string;
   firstName: string;
   lastName: string;
+  role: string;
+  username: string;
   avatar: string;
   isLoading: boolean;
+  token: string;
+  error: string | null;
 }
 
 const App: React.FC = () => {
   //const [isSidebarVisible, setSidebarVisible] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const dispatch = useDispatch();
-  const isLoading = useSelector((state: RootState) => state.user.isLoading);
+  const isLoading = useSelector((state: RootState) => state.user.currentUser.isLoading);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
@@ -47,20 +55,20 @@ const App: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then(response => {
-        dispatch(setUser(response.data));
+        dispatch(setUser(response.data as CurrentUserState));
       })
       .catch(error => {
         console.error('Error fetching user data:', error);
         localStorage.removeItem('authToken');
-        dispatch(setUser({ id: '', email: '', firstName: '', lastName: '', avatar: '', isLoading: false }));
+        dispatch(setUser({ id: '', email: '', firstName: '', lastName: '', avatar: '', isLoading: false, _id: '', username: '', role: '', error: null, token: '' }));
       });
     } else {
-      dispatch(setUser({ id: '', email: '', firstName: '', lastName: '', avatar: '', isLoading: false }));
+      dispatch(setUser({ id: '', email: '', firstName: '', lastName: '', avatar: '', isLoading: false, _id: '', username: '', role: '', error: null, token: '' }));
     }
   }, [dispatch]);
 
   // Debugging: Check user state
-  const userState = useSelector((state: RootState) => state.user);
+  const userState = useSelector((state: RootState) => state.user.currentUser);
 
   // const toggleSidebar = () => {
   //   setSidebarVisible(!isSidebarVisible);
@@ -96,6 +104,10 @@ const App: React.FC = () => {
                 <Route path="/media/slug/:slug" element={<ProtectedRoute element={<MediaDetail />} />} />
                 <Route path="/media-library" element={<ProtectedRoute element={<MediaLibraryPage />} />} />
                 <Route path="/account" element={<ProtectedRoute element={<Account />} />} />
+                <Route path="/admin-users" element={<ProtectedRoute element={<AccountUsers />} />} />
+                <Route path="/admin-tags" element={<ProtectedRoute element={<AccountTags />} />} />
+                <Route path="/admin-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} />} />
+                <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} />} />
                 <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
                 <Route path="/password-setup" element={<PasswordSetupPage />} />
                 <Route path="/" element={<AuthPage />} />

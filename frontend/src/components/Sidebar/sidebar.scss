@@ -11,6 +11,9 @@
     flex-direction: column;
     background-image: linear-gradient(to bottom, var(--secondary-color), var(--background-color));
   }
+  .ps-menu-icon {
+    margin-right: 1rem;
+  }
   .ps-menu-button {
     background-color: var(--secondary-color);
     border-bottom: 1px solid var(--background-color);
@@ -19,7 +22,37 @@
       justify-content: left;
       align-items: center;
       svg {
+        display: inline;
         font-size: 1.5rem;
+        margin-right: 1rem;
+      }
+    }
+  }
+  .ps-submenu-content {
+    background-color: rgba(0, 0, 0, 0.3) !important; // Change this to your desired active color
+    .ps-menuitem-root:not(.active) .ps-menu-button:hover {
+      background-color: rgba(0, 0, 0, 0.1) !important; // Change this to your desired active color
+    }
+  }
+  .ps-menuitem-root.active .ps-menu-button  {
+    background-color: rgba(0, 0, 0, 0.3) !important; // Change this to your desired active color
+    color: #333; // Change this to your desired text color
+    width: 100%; // Ensure the NavLink takes up the full space
+  }
+  .ps-menuitem-root:not(.active) .ps-menu-button:hover {
+    background-color: rgba(0, 0, 0, 0.2) !important; // Change this to your desired active color
+  }
+  
+  .ps-menuitem-root .ps-menuitem-root .ps-menu-button {
+    border-bottom: 1px solid var(--background-color);
+    span {
+      display: flex;
+      justify-content: left;
+      align-items: center;
+      font-size: 0.8rem;
+      svg {
+        font-size: 1.5rem;
+        display: span;
         margin-right: 1rem;
       }
     }
@@ -42,9 +75,9 @@
     }
   }
 }
-
-
-
+#sidebar .ps-menuitem-root .ps-menuitem-root .ps-menu-button {
+  background-color: #2f2f2f;
+}
 
 
   
@@ -154,3 +187,4 @@
 .toggle-icon {
   color: #fff;
 }
+

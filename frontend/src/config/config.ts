@@ -36,13 +36,36 @@ export const nonEditableFields = {
   fileSize: true,
   uploadedBy: true,
   modifiedBy: true,
+  mediaType: true,
   imageWidth: true,
   imageHeight: true,
 };
 
 export const fieldConfigurations = {
-  description: { type: 'textarea', class: 'text-area-field' },
-  category: { type: 'select', options: ['Option 1', 'Option 2', 'Option 3'] },
-  isActive: { type: 'checkbox' },
+  description: { type: 'textarea', class: 'text-area-field', fullWidth: true },
+  companyBrand: { type: 'select', class: 'select-field', options: [
+        "Omni",
+        "Revvity",
+        "BioLegend",
+        "ThermoFisher",
+        "PerkinElmer",
+        "Merck",
+        "Sigma-Aldrich",
+        "Invitrogen",
+        "Roche",
+        "Novartis",
+        "Pfizer"], fullWidth: false 
+  },
+  isActive: { type: 'checkbox', class: 'checkbox-field', fullWidth: false },
+  title: { type: 'text', class: 'text-field', fullWidth: false },
+  mediaType: { type: 'text', class: 'text-field', fullWidth: false },
+  fileName: { type: 'text', class: 'text-field', fullWidth: false },
+  tags: { type: 'tag', class: 'text-field', fullWidth: false },
+  visibility: { type: 'select', options: ['public', 'private'], class: 'select-field', fullWidth: false },
+  altText: { type: 'text', class: 'text-field', fullWidth: false },
+  productSKU: { type: 'text', class: 'text-field', fullWidth: false },
+  imageWidth: { type: 'number', class: 'number-field', fullWidth: false },
+  imageHeight: { type: 'number', class: 'number-field', fullWidth: false },
+  sizeRequirements: { type: 'text', class: 'text-field', fullWidth: false },
   // Add more field configurations as needed
 };

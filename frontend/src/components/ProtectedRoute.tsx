@@ -8,10 +8,10 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ element }) => {
-  const isAuthenticated = useSelector((state: RootState) => !!state.user.email);
+  const isAuthenticated = useSelector((state: RootState) => !!state.user.currentUser.email);  
 
   // Debugging: Check user state and authentication status
-  console.log('User state:', useSelector((state: RootState) => state.user));
+  console.log('User state:', useSelector((state: RootState) => state.user.currentUser));
   console.log('Is authenticated:', isAuthenticated);
   
   return isAuthenticated ? element : <Navigate to="/" />;

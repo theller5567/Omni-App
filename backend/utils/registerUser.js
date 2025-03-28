@@ -12,13 +12,14 @@ export const registerUser = async (req, res) => {
     if (user) {
       return res.status(400).json({ message: "User already exists" });
     }
-
+    const username = `${firstName.toLowerCase()}${lastName.toUpperCase()}`;
     const verificationToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: "2d" });
     const verificationLink = `http://localhost:5002/api/auth/verify-email/${verificationToken}`;
 
     user = new User({
       firstName,
       lastName,
+      username,
       email,
       isVerified: false,
       role: 'user',

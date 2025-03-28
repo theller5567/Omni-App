@@ -61,6 +61,21 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     setSelectedMediaType(type);
   };
 
+  const renderCell = (params: any) => {
+    const tags = params.row.metadata.tags;
+    // Ensure tags is an array before using map
+    if (Array.isArray(tags)) {
+      return tags.map((tag, index) => (
+         <span key={index} className="tag">
+            {tag}{index < params.row.metadata.tags.length - 1 ? ', ' : ''}
+          </span>
+      ));
+    } else {
+      console.warn('Expected tags to be an array, but got:', typeof tags);
+      return <span>No tags available</span>;
+    }
+  };
+
 
   const columns: GridColDef[] = [
     { field: 'image', headerName: 'Image', flex: 0.5, renderCell: (params) => (
@@ -69,8 +84,8 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     { field: 'fileName', headerName: 'Title', flex: 0.5, renderCell: (params) => (
       <Link to={`/media/slug/${params.row.slug}`} >{params.row.metadata.fileName}</Link>
     )},
-    { field: '__t', headerName: 'Media Type', flex: 0.5, renderCell: (params) => (
-      <span>{params.row.__t}</span>
+    { field: 'mediaType', headerName: 'Media Type', flex: 0.5, renderCell: (params) => (
+      <span>{params.row.mediaType}</span>
     )},
     { 
       field: 'fileSize', 
@@ -91,15 +106,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
         return new Date(value).toLocaleDateString();
       }
     },
-    { field: 'tags', headerName: 'Tags', flex: 0.5, renderCell: (params) => (
-      <div className="tags">
-        {params.row.metadata.tags.map((tag: string, index: number) => (
-          <span key={index} className="tag">
-            {tag}{index < params.row.metadata.tags.length - 1 ? ', ' : ''}
-          </span>
-        ))}
-      </div>
-    ), },
+    { field: 'tags', headerName: 'Tags', flex: 0.5, renderCell: renderCell },
     {
       field: 'actions',
       headerName: 'Actions',
@@ -129,7 +136,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
   ];
 
   const rows = mediaFilesData
-    .filter(file => selectedMediaType === 'All' || file.__t === selectedMediaType)
+    .filter(file => selectedMediaType === 'All' || file.mediaType === selectedMediaType)
     .map((file) => ({
       ...file,
       id: file.id,
@@ -140,7 +147,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
       modifiedDate: file.modifiedDate,
       fileName: file.metadata.fileName,
       tags: file.metadata.tags,
-      __t: file.__t
+      mediaType: file.mediaType
     }));
 
   const containerVariants = {

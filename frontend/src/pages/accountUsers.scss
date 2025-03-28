@@ -1,0 +1,55 @@
+#account-users {
+    width: calc(100% - 250px);
+    height: 100%;
+    overflow: hidden;
+    margin-left: 250px;
+    padding: 1rem;
+}
+
+.account-users {
+    width: 100%;
+    flex-grow: 1;
+    padding: 1rem;
+    margin: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    .toolbar {
+      padding: 0.5rem 1rem;
+      margin:0;
+      max-width: calc(100% - 16px);
+    }
+      h6 {
+          margin-bottom: 2rem;
+      }
+      .MuiDataGrid-cell[data-field="image"] {
+          padding: 0.3rem;
+          align-self: center;
+          img {
+            padding: 0;
+            border: 1px solid black;
+            object-fit: cover;
+            margin: 0;
+          }
+      }
+      .MuiDataGrid-cell[data-field="actions"] {
+          display: flex;
+          align-items: center;
+      }
+      .MuiDataGrid-cell[data-field="fileName"] a {
+          color: var(--accent-color);
+          text-decoration: none;
+      }
+    .folder, .folder-content {
+      transition: opacity 0.3s ease;
+      cursor: pointer;
+      &:hover {
+        opacity: 0.8;
+      }
+    }
+    .subfolder {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+  }

@@ -12,6 +12,7 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
+  username: string;
   password?: string;
   avatar?: string | null;
 }
@@ -24,6 +25,7 @@ const Account: React.FC = () => {
     email: '',
     firstName: '',
     lastName: '',
+    username: '',
     password: '',
   });
 
@@ -43,8 +45,8 @@ const Account: React.FC = () => {
           },
         });
 
-        const { email, firstName, lastName, avatar } = response.data;
-        setInitialValues({ email, firstName, lastName, password: '' });
+        const { email, firstName, lastName, avatar, username } = response.data;
+        setInitialValues({ email, firstName, lastName, username, password: '' });
         setAvatar(avatar || null);
         console.log('Token:', token);
         console.log('Response:', response.data);
@@ -64,6 +66,7 @@ const Account: React.FC = () => {
       email: Yup.string().email('Invalid email address').required('Email is required'),
       firstName: Yup.string().required('First Name is required'),
       lastName: Yup.string().required('Last Name is required'),
+      username: Yup.string().required('Username is required'),
       password: Yup.string().min(6, 'Password must be at least 6 characters'),
     }),
     onSubmit: async (values) => {
@@ -113,75 +116,94 @@ const Account: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Typography variant="h4" align="center" gutterBottom>
-          Account Settings
-        </Typography>
-        <form onSubmit={formik.handleSubmit}>
-          <Box display="flex" justifyContent="center" marginBottom={2}>
-            <Avatar src={avatar || '/default-avatar.png'} sx={{ width: 100, height: 100 }} />
-          </Box>
-         
-          <TextField
-            fullWidth
-            label="First Name"
-            name="firstName"
-            value={formik.values.firstName}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            margin="normal"
-            required
-            error={formik.touched.firstName && Boolean(formik.errors.firstName)}
-            helperText={formik.touched.firstName && formik.errors.firstName}
-          />
-           <TextField
-            fullWidth
-            label="Last Name"
-            name="lastName"
-            value={formik.values.lastName}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            margin="normal"
-            required
-            error={formik.touched.lastName && Boolean(formik.errors.lastName)}
-            helperText={formik.touched.lastName && formik.errors.lastName}
-          />
+        <div className="account-wrapper">
           
-          <TextField
-            fullWidth
-            label="Email"
-            name="email"
-            type="email"
-            value={formik.values.email}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            margin="normal"
-            required
-            error={formik.touched.email && Boolean(formik.errors.email)}
-            helperText={formik.touched.email && formik.errors.email}
-          />
-          <TextField
-            fullWidth
-            label="Password"
-            name="password"
-            type="password"
-            value={formik.values.password}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            margin="normal"
-            error={formik.touched.password && Boolean(formik.errors.password)}
-            helperText={formik.touched.password && formik.errors.password}
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            fullWidth
-            type="submit"
-            sx={{ marginTop: 2 }}
-            disabled={loading}
-          >
-            {loading ? <CircularProgress size={24} color="inherit" /> : 'Update Profile'}
-          </Button>
-        </form>
+          <div className="account-settings">
+            
+          </div>
+          <div className="account-user-info">
+            <Typography variant="h4" align="center" gutterBottom>Account Settings</Typography>
+            <form onSubmit={formik.handleSubmit}>
+              <Box display="flex" justifyContent="center" marginBottom={2}>
+                <Avatar src={avatar || '/default-avatar.png'} sx={{ width: 100, height: 100 }} />
+              </Box>
+            
+              <TextField
+                fullWidth
+                label="First Name"
+                name="firstName"
+                value={formik.values.firstName}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                margin="normal"
+                required
+                error={formik.touched.firstName && Boolean(formik.errors.firstName)}
+                helperText={formik.touched.firstName && formik.errors.firstName}
+              />
+              <TextField
+                fullWidth
+                label="Last Name"
+                name="lastName"
+                value={formik.values.lastName}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                margin="normal"
+                required
+                error={formik.touched.lastName && Boolean(formik.errors.lastName)}
+                helperText={formik.touched.lastName && formik.errors.lastName}
+              />
+              <TextField
+                fullWidth
+                label="Username"
+                name="username"
+                value={formik.values.username}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                margin="normal"
+                required
+                error={formik.touched.username && Boolean(formik.errors.username)}
+                helperText={formik.touched.username && formik.errors.username}
+              />
+              <TextField
+                fullWidth
+                label="Email"
+                name="email"
+                type="email"
+                value={formik.values.email}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                margin="normal"
+                required
+                error={formik.touched.email && Boolean(formik.errors.email)}
+                helperText={formik.touched.email && formik.errors.email}
+              />
+              <TextField
+                fullWidth
+                label="Password"
+                name="password"
+                type="password"
+                value={formik.values.password}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                margin="normal"
+                error={formik.touched.password && Boolean(formik.errors.password)}
+                helperText={formik.touched.password && formik.errors.password}
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                type="submit"
+                sx={{ marginTop: 2 }}
+                disabled={loading}
+              >
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'Update Profile'}
+              </Button>
+            </form>
+          </div>
+
+        </div>
+        
       </motion.div>
       <ToastContainer />
     </Box>

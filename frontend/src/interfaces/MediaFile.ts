@@ -9,6 +9,7 @@ export interface BaseMediaFile {
   modifiedDate: Date;
   uploadedBy: string;
   modifiedBy: string;
+  mediaType: string;
   __t: string;
   metadata: {
     fileName: string;

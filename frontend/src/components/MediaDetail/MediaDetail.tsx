@@ -7,7 +7,7 @@ import axios from "axios";
 import {  BaseMediaFile } from "../../interfaces/MediaFile";
 import { useNavigate } from "react-router-dom";
 import { motion } from 'framer-motion';
-// import { formatFileSize } from "../../utils/formatFileSize";
+import { formatFileSize } from "../../utils/formatFileSize";
 import { nonEditableFields, fieldConfigurations, fieldLabels } from "../../config/config";
 import "./mediaDetail.scss";
 
@@ -17,6 +17,9 @@ const MediaDetail: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [mediaTypes, setMediaTypes] = useState<any>(null);
+  const [companyBrandOptions, setCompanyBrandOptions] = useState<string[]>([]);
+  const [visibilityOptions, setVisibilityOptions] = useState<string[]>([]);
+  const [username, setUsername] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,9 +29,6 @@ const MediaDetail: React.FC = () => {
           `http://localhost:5002/media/slug/${slug}`
         );
         const data = response.data;
-        console.log('Fetched media file:', data);
-        // Ensure tags are an array
-
         setMediaFile(data);
       } catch (error) {
         console.error("Error fetching media file:", error);
@@ -40,9 +40,23 @@ const MediaDetail: React.FC = () => {
     const fetchMediaTypes = async () => {
       try {
         const response = await axios.get('http://localhost:5002/media/media-types');
+        const companyBrandOptions = fieldConfigurations.companyBrand.options;
+        const visibilityOptions = fieldConfigurations.visibility.options;
+        setCompanyBrandOptions(companyBrandOptions || []);
+        setVisibilityOptions(visibilityOptions || []);
         setMediaTypes(response.data);
       } catch (error) {
         console.error("Error fetching media types:", error);
+      }
+    };
+
+    const fetchUsername = async () => {
+      try {
+        const response = await axios.get<{ username: string }>(`http://localhost:5002/api/user/username/${mediaFile?.uploadedBy}`);
+        setUsername(response.data?.username || '');
+        console.log('username: ', username);
+      } catch (error) {
+        console.error('Error fetching username:', error);
       }
     };
 
@@ -50,7 +64,11 @@ const MediaDetail: React.FC = () => {
       fetchMediaFile();
       fetchMediaTypes();
     }
-  }, [slug]);
+
+    if (mediaFile?.uploadedBy) {
+      fetchUsername();
+    }
+  }, [slug, mediaFile?.uploadedBy]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -66,12 +84,27 @@ const MediaDetail: React.FC = () => {
         console.error("Media slug is undefined");
         return;
       }
+
+      // Merge existing data with updated values
       const updatedValues = {
+        ...mediaFile, // Start with the existing media file data
+        title: values.title, // Update the title if changed
         metadata: {
-          ...values,
+          ...mediaFile.metadata, // Start with the existing metadata
+          ...values, // Merge updated values
+          tags: values.tags.split(',').map((tag: string) => tag.trim()), // Ensure tags are an array
         }
       };
-      const response = await axios.put<BaseMediaFile>(`http://localhost:5002/media/update/${mediaFile.slug}`, updatedValues);
+
+      console.log('updatedValues: ', updatedValues);
+
+      // Make the PUT request
+      const response = await axios.put<BaseMediaFile & { mediaType: string }>(
+        `http://localhost:5002/media/update/${mediaFile.slug}`,
+        updatedValues
+      );
+
+      console.log('response: ', response.data);
       setMediaFile(response.data);
       setIsEditing(false);
     } catch (error) {
@@ -93,8 +126,7 @@ const MediaDetail: React.FC = () => {
 
   const renderFields = () => {
     if (!mediaTypes || !mediaFile) return null;
-
-    const mediaTypeSchema = mediaTypes[mediaFile.__t]?.schema;
+    const mediaTypeSchema = mediaTypes[mediaFile.mediaType]?.schema;
     if (!mediaTypeSchema) return null;
 
     const mergedObject = {
@@ -108,38 +140,53 @@ const MediaDetail: React.FC = () => {
     return (
       <FormGroup sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 2 }}>
         {Object.keys(mergedObject).map((field) => {
-          if (field !== 'metadata' && isFieldEditable(field) && !renderedFields.has(field)) {
-            renderedFields.add(field);
-
-            const fieldConfig = fieldConfigurations[field as keyof typeof fieldConfigurations] || { type: 'text' };
-            const label = fieldLabels[field as keyof typeof fieldLabels] || field;
-
-            return (
-              <FormControl className="media-detail-field" key={field} sx={{ mb: 2, gridColumn: fieldConfig.type === 'textarea' ? '1 / -1' : undefined, width: fieldConfig.type === 'textarea' ? '100%' : undefined }}>
-                <FormLabel htmlFor={field}>{label}</FormLabel>
-                {fieldConfig.type === 'textarea' && 'class' in fieldConfig && (
-                  <Field name={field} as="textarea" className={fieldConfig.class || ''} />
-                )}
-                {fieldConfig.type === 'select' && 'options' in fieldConfig && (
-                  <Field name={field} as="select">
-                    {(fieldConfig.options || []).map((option: string) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </Field>
-                )}
-                {fieldConfig.type === 'checkbox' && (
-                  <Field name={field} type="checkbox" as={FormControlLabel} control={<input />} />
-                )}
-                {fieldConfig.type === 'text' && (
-                  <Field name={field} type="text" as={FormControlLabel} control={<input />} />
-                )}
-                <ErrorMessage name={field} component={FormHelperText} />
-              </FormControl>
-            );
+          // Skip fields that are part of the metadata object
+          if (field.startsWith('metadata.') || !isFieldEditable(field) || renderedFields.has(field) || field === 'metadata') {
+            return null;
           }
-          return null;
+
+          renderedFields.add(field);
+
+          const fieldConfig = fieldConfigurations[field as keyof typeof fieldConfigurations] || { type: 'text' };
+          const label = fieldLabels[field as keyof typeof fieldLabels] || field;
+
+          return (
+            <FormControl className="media-detail-field" key={field} sx={{ mb: 2, gridColumn: fieldConfig.type === 'textarea' ? '1 / -1' : undefined, width: fieldConfig.type === 'textarea' ? '100%' : undefined }}>
+              <FormLabel htmlFor={field}>{label}</FormLabel>
+              {fieldConfig.type === 'textarea' && 'class' in fieldConfig && (
+                <Field name={field} as="textarea" className={fieldConfig.class || ''} />
+              )}
+              {fieldConfig.type === 'select' && (
+                <Field
+                  name={field}
+                  as="select"
+                  variant="outlined"
+                  fullWidth
+                >
+                  {field === 'companyBrand' && companyBrandOptions.map((option: string) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                  {field === 'visibility' && visibilityOptions.map((option: string) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </Field>
+              )}
+              {fieldConfig.type === 'checkbox' && (
+                <Field name={field} type="checkbox" as={FormControlLabel} control={<input />} />
+              )}
+              {fieldConfig.type === 'text' && (
+                <Field name={field} type="text" as={FormControlLabel} control={<input />} />
+              )}
+              {fieldConfig.type === 'tag' && (
+                <Field name={field} type="text" as={FormControlLabel} control={<input />} />
+              )}
+              <ErrorMessage name={field} component={FormHelperText} />
+            </FormControl>
+          );
         })}
       </FormGroup>
     );
@@ -172,6 +219,13 @@ const MediaDetail: React.FC = () => {
       </div>
       <div className="media-detail">
         <div className="img-container">
+          <div className="img-container-info">
+          <p>Updated By: <span>{username}</span></p>
+            <p>Width: <span>{mediaFile.metadata.imageWidth}px</span></p>
+            <p>Height: <span>{mediaFile.metadata.imageHeight}px</span></p>
+            <p>Size: <span>{formatFileSize(mediaFile.fileSize)}</span></p>
+            <p>Visibility: <span>{mediaFile.metadata.visibility}</span></p>
+          </div>
           <img src={mediaFile.location} alt={mediaFile.metadata.altText} />
         </div>
         <div className="media-information">
@@ -181,7 +235,6 @@ const MediaDetail: React.FC = () => {
               if (typeof value === 'object' && value !== null) {
                 return (
                   <div key={key}>
-                    {/* <strong>{fieldLabels[key as keyof typeof fieldLabels]}:</strong> */}
                     <ul>
                       {Object.entries(value).map(([subKey, subValue]) =>
                         subKey === 'tags' ? (
@@ -193,7 +246,7 @@ const MediaDetail: React.FC = () => {
                         ) : subKey === 'fileName' ? (
                           <h1 key={subKey}>{subValue as string}</h1>
                         ) : (
-                          <li key={subKey} data-name={subKey}>
+                          !subKey.includes('imageWidth') && !subKey.includes('imageHeight') && !subKey.includes('fileSize') && !subKey.includes('sizeRequirements') && !subKey.includes('visibility') && <li key={subKey} data-name={subKey}>
                             {fieldLabels[subKey as keyof typeof fieldLabels] || subKey}: <span className="metadata-value">{subValue as string}</span>
                           </li>
                         )
@@ -216,6 +269,7 @@ const MediaDetail: React.FC = () => {
             <Formik
               initialValues={{
                 ...mediaFile.metadata,
+                tags: Array.isArray(mediaFile.metadata.tags) ? mediaFile.metadata.tags.join(', ') : '',
                 title: mediaFile.title,
               }}
               validationSchema={Yup.object({
@@ -225,7 +279,9 @@ const MediaDetail: React.FC = () => {
                 title: Yup.string().required('Title is required'),
               })}
               onSubmit={(values) => {
-                handleSubmit(values);
+                handleSubmit({
+                  ...values,
+                });
               }}
             >
               {({ isSubmitting }) => (

@@ -7,18 +7,11 @@ import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
 import hubspotRoutes from './routes/hubspotRoutes.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
-import axios from 'axios';
-
+import accountRoutes from './routes/accountRoutes.js';
 // Load environment variables from .env file
 dotenv.config();
 
 const app = express();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 
 // Enable CORS
 app.use(cors({
@@ -27,36 +20,25 @@ app.use(cors({
   credentials: true,
 }));
 
-// Read mock data from JSON file
-const mockData = JSON.parse(fs.readFileSync(path.join(__dirname, 'mockData.json'), 'utf-8'));
-
-
 // Middleware
 app.use(bodyParser.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/users', userRoutes);
 app.use('/media', mediaRoutes);
+app.use('/media/upload', mediaRoutes);
+app.use('/media-types', mediaRoutes);
 app.use('/api/hubspot', hubspotRoutes);
-
+app.use('/api/account', accountRoutes);
 // Root route
 app.get('/', (req, res) => {
   res.send('Welcome to the Omni App API');
 });
 
-// app.get('/api/quotes', async (req, res) => {
-//   try {
-//     const response = await axios.get('https://api.hubapi.com/crm/v3/objects/quotes', {
-//       headers: {
-//         Authorization: `Bearer YOUR_ACCESS_TOKEN`,
-//       },
-//     });
-//     res.json(response.data);
-//   } catch (error) {
-//     res.status(500).json({ error: 'Error fetching data from HubSpot' });
-//   }
-// });
+// Enable Mongoose debug mode
+mongoose.set('debug', true);
 
 // Connect to MongoDB
 const mongoUri = process.env.MONGO_URI;

@@ -1,17 +1,28 @@
 import express from 'express';
 import User from '../models/User.js';
 import { authenticate } from '../middleware/authMiddleware.js';
+import { getUsernameById } from '../controllers/userController.js';
 
 const router = express.Router();
 
 // Middleware to parse JSON bodies
 router.use(express.json());
 
+
+router.get('/', async (req, res) => {
+  console.log('// Fetching all users');
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Route to get user profile
 router.get('/profile', authenticate, async (req, res) => {
   try {
     // Assuming req.user contains the authenticated user's info
-    console.log(req.user, 'req.user');
     const user = await User.findOne({ email: req.user.email });
     if (!user) {
       console.log('User not found');
@@ -35,6 +46,17 @@ router.put('/profile', async (req, res) => {
     res.status(200).json(user);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/username/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const username = await getUsernameById(userId);
+    res.status(200).json({ username });
+  } catch (error) {
+    console.error('Error fetching username:', error);
+    res.status(404).json({ error: 'User not found' });
   }
 });
 

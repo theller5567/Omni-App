@@ -2,33 +2,27 @@ import React, { useEffect, useState } from 'react';
 import MediaUploader from '../components/MediaUploader/MediaUploader';
 import MediaLibrary from '../components/MediaLibrary/MediaLibrary';
 import axios from 'axios';
-import { BaseMediaFile } from '../interfaces/MediaFile';
 import '../components/MediaLibrary/MediaContainer.scss';
 
 const MediaContainer: React.FC = () => {
-  const [mediaFiles, setMediaFiles] = useState<BaseMediaFile[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMediaType, setSelectedMediaType] = useState<string>('All');
 
   const fetchMediaFiles = async () => {
     try {
-      const response = await axios.get<BaseMediaFile[]>('http://localhost:5002/media/all');
-      const mediaFilesWithSplitTags = response.data.map(file => {
-        if (Array.isArray(file.metadata.tags) && typeof file.metadata.tags[0] === 'string') {
-          file.metadata.tags = file.metadata.tags[0].split(',').map(tag => tag.trim());
-        }
-        return file;
-      });
-      setMediaFiles(mediaFilesWithSplitTags);
+      const response = await axios.get<any[]>('http://localhost:5002/media/all');
+      setMediaFiles(response.data);
     } catch (error) {
       console.error('Error fetching media files:', error);
     }
   };
 
   useEffect(() => {
+    console.log('Fetching media files...');
     fetchMediaFiles(); // Call the function when the component mounts
-  }, []);
+  }, []); // Empty dependency array ensures this runs only once
 
   const handleOpen = () => {
     setIsModalOpen(true);
@@ -38,7 +32,7 @@ const MediaContainer: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  const handleUploadComplete = (newFile: BaseMediaFile | null) => {
+  const handleUploadComplete = (newFile: any | null) => {
     if (newFile) {
       setMediaFiles((prevFiles) => [...prevFiles, newFile]);
     }
@@ -61,9 +55,10 @@ const MediaContainer: React.FC = () => {
   };
 
   // Filter media files based on search query
-  const filteredMediaFiles = mediaFiles.filter(file =>
-    file.metadata.fileName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMediaFiles = mediaFiles.filter(file => {
+    // Check if metadata is defined before accessing it
+    return file.metadata && file.metadata.fileName && file.metadata.fileName.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   return (
     <div id="media-container">
