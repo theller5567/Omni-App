@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { fetchAllUsers } from '../store/slices/userSlice';
 import { DataGrid, GridColDef, GridRowId, GridToolbar } from '@mui/x-data-grid';
-import { alpha, Box, Button, Grid, IconButton, styled, Toolbar, Tooltip, Typography } from '@mui/material';
+import { alpha, Avatar, Box, Button, Grid, IconButton, styled, Toolbar, Tooltip, Typography } from '@mui/material';
 import { FaTrash } from 'react-icons/fa';
 import { FaEdit } from 'react-icons/fa';
 import { motion } from 'framer-motion';
@@ -43,7 +43,10 @@ const AccountUsers: React.FC = () => {
 
   const columns: GridColDef[] = [
     { field: 'username', headerName: 'User Name', flex: 0.5, renderCell: (params) => (
-      <span>{params.row.username}</span>
+      <div className="user-name" style={{ display: 'flex', justifyContent: 'left', gap: '1rem', alignItems: 'center' }}>
+        <span><Avatar sx={{ width: 32, height: 32 }} src={params.row.avatar} /></span>
+        <span>{params.row.username}</span>
+      </div>
     )},
     { field: 'email', headerName: 'Email', flex: 0.5, renderCell: (params) => (
       <span>{params.row.email}</span>

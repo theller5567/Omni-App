@@ -102,11 +102,7 @@ const CustomSidebar: React.FC = () => {
                 </MenuItem>
               </SubMenu>
             ) : (
-              <SubMenu
-                title="Admin Options"
-                label={userData.currentUser.firstName + " " + userData.currentUser.lastName}
-                icon={<Avatar src={userData.currentUser.avatar} />}
-              >
+             
                 <MenuItem component="div" id="sidebar-account">
                   <NavLink to="/account" className={({ isActive }) => (isActive ? "active-menu-item" : "")}>
                     <Avatar src={userData.currentUser.avatar} />
@@ -115,7 +111,7 @@ const CustomSidebar: React.FC = () => {
                     </span>
                   </NavLink>
                 </MenuItem>
-              </SubMenu>
+
             )}
             <MenuItem component="div">
               <NavLink to="/home" className={({ isActive }) => (isActive ? "active-menu-item" : "")}>

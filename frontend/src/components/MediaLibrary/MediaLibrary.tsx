@@ -15,6 +15,8 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ConfirmationModal from './ConfirmationModal';
 import { alpha } from '@mui/material/styles';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store/store';
 
 const CustomGrid = styled(Grid)({
   '&.grid-view': {
@@ -76,6 +78,8 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     }
   };
 
+  // Access the current user's role
+  const userRole = useSelector((state: RootState) => state.user.currentUser.role);
 
   const columns: GridColDef[] = [
     { field: 'image', headerName: 'Image', flex: 0.5, renderCell: (params) => (
@@ -107,12 +111,12 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
       }
     },
     { field: 'tags', headerName: 'Tags', flex: 0.5, renderCell: renderCell },
-    {
+    ...(userRole === 'super-admin' ? [{
       field: 'actions',
       headerName: 'Actions',
       flex: 0.5,
       sortable: false,
-      renderCell: (params) => (
+      renderCell: (params: any) => (
         <div style={{ display: 'flex', gap: '8px' }}>
           <Button
             variant="contained"
@@ -132,7 +136,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
           </Button>
         </div>
       ),
-    },
+    }] : []),
   ];
 
   const rows = mediaFilesData
