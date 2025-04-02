@@ -53,7 +53,16 @@ const AccountMediaTypes: React.FC = () => {
             <ListItem key={index}>
               <ListItemText
                 primary={mediaType.name}
-                secondary={`Fields: ${mediaType.fields.map((field: Field) => `${field.name}: (${field.type})`).join(', ')}`}
+                secondary={mediaType.fields.map((field: Field) => (
+                  `${field.name}: (${field.type})${field.options?.length ? 
+                    `\nOptions: ${field.options.join(', ')}` : 
+                    ''}`
+                )).join('\n')}
+                sx={{
+                  '& .MuiListItemText-secondary': {
+                    whiteSpace: 'pre-line'
+                  }
+                }}
               />
             </ListItem>
           ))}
