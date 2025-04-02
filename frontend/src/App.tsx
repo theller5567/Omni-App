@@ -43,7 +43,7 @@ const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const dispatch = useDispatch();
   const isLoading = useSelector((state: RootState) => state.user.currentUser.isLoading);
-
+  const userRole = useSelector((state: RootState) => state.user.currentUser.role);
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
@@ -107,6 +107,9 @@ const App: React.FC = () => {
                 <Route path="/admin-users" element={<ProtectedRoute element={<AccountUsers />} />} />
                 <Route path="/admin-tags" element={<ProtectedRoute element={<AccountTags />} />} />
                 <Route path="/admin-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} />} />
+                {userRole === 'super-admin' && (
+                  <Route path="/manage-media-types" element={<AccountMediaTypes />} />
+                 )}
                 <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} />} />
                 <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
                 <Route path="/password-setup" element={<PasswordSetupPage />} />
