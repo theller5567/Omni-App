@@ -1,28 +1,52 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MediaUploader from '../components/MediaUploader/MediaUploader';
 import MediaLibrary from '../components/MediaLibrary/MediaLibrary';
 import axios from 'axios';
 import '../components/MediaLibrary/MediaContainer.scss';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../store/store';
+import { deleteMedia, initializeMedia } from '../store/slices/mediaSlice';
+import { CircularProgress, Box, Typography } from '@mui/material';
 
 const MediaContainer: React.FC = () => {
-  const [mediaFiles, setMediaFiles] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMediaType, setSelectedMediaType] = useState<string>('All');
+  const mediaState = useSelector((state: RootState) => state.media);
+  const dispatch = useDispatch<AppDispatch>();
 
-  const fetchMediaFiles = async () => {
-    try {
-      const response = await axios.get<any[]>('http://localhost:5002/media/all');
-      setMediaFiles(response.data);
-    } catch (error) {
-      console.error('Error fetching media files:', error);
+  // Single initialization effect
+  useEffect(() => {
+    if (mediaState.status === 'idle' && mediaState.allMedia.length === 0) {
+      dispatch(initializeMedia());
     }
-  };
+  }, [dispatch, mediaState.status, mediaState.allMedia.length]);
+
+  // Track meaningful state changes
+  const prevStateRef = React.useRef({
+    status: mediaState.status,
+    count: mediaState.allMedia.length
+  });
 
   useEffect(() => {
-    console.log('Fetching media files...');
-    fetchMediaFiles(); // Call the function when the component mounts
-  }, []); // Empty dependency array ensures this runs only once
+    const prevState = prevStateRef.current;
+    const currentState = {
+      status: mediaState.status,
+      count: mediaState.allMedia.length
+    };
+
+    // Only log meaningful transitions
+    if (prevState.status !== currentState.status || prevState.count !== currentState.count) {
+      if (currentState.status === 'succeeded' && currentState.count > 0) {
+        console.log('MediaLibraryPage - Ready:', {
+          status: currentState.status,
+          items: currentState.count
+        });
+      }
+    }
+
+    prevStateRef.current = currentState;
+  }, [mediaState.status, mediaState.allMedia.length]);
 
   const handleOpen = () => {
     setIsModalOpen(true);
@@ -34,19 +58,22 @@ const MediaContainer: React.FC = () => {
 
   const handleUploadComplete = (newFile: any | null) => {
     if (newFile) {
-      setMediaFiles((prevFiles) => [...prevFiles, newFile]);
+      console.log('Upload complete, new file:', newFile);
+      // The new file will be added to the Redux store through the addMedia action
+      // which will be dispatched in the MediaUploader component
     }
     handleClose();
   };
 
   const handleDeleteMedia = async (id: string): Promise<boolean> => {
     try {
+      console.log('Deleting media with ID:', id);
       await axios.delete(`http://localhost:5002/media/delete/${id}`);
-      setMediaFiles((prevFiles) => prevFiles.filter(file => file.id !== id));
-      return true; // Return true on success
+      dispatch(deleteMedia(id));
+      return true;
     } catch (error) {
       console.error('Error deleting media file:', error);
-      return false; // Return false on failure
+      return false;
     }
   };
 
@@ -55,10 +82,25 @@ const MediaContainer: React.FC = () => {
   };
 
   // Filter media files based on search query
-  const filteredMediaFiles = mediaFiles.filter(file => {
-    // Check if metadata is defined before accessing it
+  const filteredMediaFiles = mediaState.allMedia.filter(file => {
     return file.metadata && file.metadata.fileName && file.metadata.fileName.toLowerCase().includes(searchQuery.toLowerCase());
   });
+
+  if (mediaState.status === 'loading') {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (mediaState.status === 'failed') {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+        <Typography color="error">Error loading media: {mediaState.error}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <div id="media-container">

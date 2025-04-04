@@ -2,7 +2,6 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles/index.scss'
 import App from './App'
-import { UserProvider } from './contexts/UserContext'
 import { Provider } from 'react-redux'
 import store from './store/store'
 
@@ -12,9 +11,7 @@ if (rootElement) {
   root.render(
     <React.StrictMode>
       <Provider store={store}>
-        <UserProvider>
-          <App />
-        </UserProvider>
+        <App />
       </Provider>
     </React.StrictMode>
   )

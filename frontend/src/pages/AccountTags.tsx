@@ -11,11 +11,13 @@ const AccountTags: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const [searchTerm, setSearchTerm] = useState("");
   const [newTag, setNewTag] = useState("");
-  const { tags } = useSelector((state: RootState) => state.tags);
+  const { tags, status } = useSelector((state: RootState) => state.tags);
 
   useEffect(() => {
-    dispatch(fetchTags() as any);
-  }, [dispatch]);
+    if (status === 'idle' && tags.length === 0) {
+      dispatch(fetchTags());
+    }
+  }, [dispatch, status, tags.length]);
 
   const handleAddTag = () => {
     if (newTag.trim()) {

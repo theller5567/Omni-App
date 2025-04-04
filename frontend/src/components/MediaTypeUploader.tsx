@@ -5,17 +5,13 @@ import { addMediaType } from '../store/slices/mediaTypeSlice';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { FaPlus, FaMinus } from 'react-icons/fa';
+import type { MediaType } from '../store/slices/mediaTypeSlice';
 
 interface Field {
   name: string;
   type: string;
   options?: string[];
   required: boolean;
-}
-
-interface MediaType {
-  name: string;
-  fields: Field[];
 }
 
 interface MediaTypeUploaderProps {
@@ -67,28 +63,59 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
     }
   };
 
-  const saveMediaTypeToBackend = async (mediaType: MediaType) => {
+  const saveMediaTypeToBackend = async (mediaType: Omit<MediaType, '_id'>) => {
     try {
-      const response = await axios.post('/media-types', mediaType);
+      console.log('Sending media type to backend:', JSON.stringify(mediaType, null, 2));
+      const response = await axios.post<MediaType>('http://localhost:5002/api/media-types', {
+        name: mediaType.name,
+        fields: mediaType.fields.map((field: Field) => ({
+          name: field.name,
+          type: field.type,
+          options: field.options || [],
+          required: field.required
+        }))
+      });
       console.log('Media Type saved:', response.data);
-    } catch (error) {
+      return response.data;
+    } catch (error: any) {
       console.error('Error saving media type:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        toast.error(error.response.data.message || 'Failed to save media type');
+      } else {
+        toast.error('Failed to save media type');
+      }
+      throw error;
     }
   };
 
-  const handleSaveMediaType = () => {
-    if (fieldName.trim() && inputType) {
-      handleAddField();
-    }
+  const handleSaveMediaType = async () => {
+    try {
+      if (fieldName.trim() && inputType) {
+        handleAddField();
+      }
 
-    if (mediaTypeName.trim()) {
-      const mediaType = { name: mediaTypeName, fields };
-      dispatch(addMediaType(mediaType));
-      saveMediaTypeToBackend(mediaType);
-      toast.success('Media Type added successfully!');
-      handleClose();
-    } else {
-      toast.error('Media Type Name cannot be empty');
+      if (mediaTypeName.trim()) {
+        const mediaType = { 
+          name: mediaTypeName, 
+          fields: fields.map(field => ({
+            name: field.name,
+            type: field.type,
+            options: field.options || [],
+            required: field.required
+          }))
+        };
+        console.log('Saving media type:', mediaType);
+        const savedMediaType = await saveMediaTypeToBackend(mediaType);
+        dispatch(addMediaType(savedMediaType));
+        toast.success('Media Type added successfully!');
+        handleClose();
+      } else {
+        toast.error('Media Type Name cannot be empty');
+      }
+    } catch (error) {
+      // Error is already handled in saveMediaTypeToBackend
+      console.error('Failed to save media type:', error);
     }
   };
 

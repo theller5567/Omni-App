@@ -14,16 +14,20 @@ interface MediaCardProps {
   onClick: () => void;
 } 
 
-const MediaCard: React.FC<MediaCardProps> = ({ file, onClick }) => (
-  <div className="media-card" onClick={onClick}>
-    <div className="content">
-      <div className="img-wrapper">
-        <img src={file.location} alt={file.metadata.altText} />
+const MediaCard: React.FC<MediaCardProps> = ({ file, onClick }) => {
+  
+
+  return (
+    <div className="media-card" onClick={onClick}>
+      <div className="content">
+        <div className="img-wrapper">
+          <img src={file.location} alt={file.metadata.altText} />
+        </div>
+        <h3>{file.metadata.fileName}</h3>
       </div>
-      <h3>{file.metadata.fileName}</h3>
+      {/* Add more UI elements as needed */}
     </div>
-    {/* Add more UI elements as needed */}
-  </div>
-);
+  );
+};
 
 export default MediaCard;

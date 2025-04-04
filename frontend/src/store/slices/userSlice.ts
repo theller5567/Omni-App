@@ -2,27 +2,9 @@ import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
 import axios from 'axios';
+import type { User } from '../../types/userTypes';
 
-export interface User {
-  _id: string;
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  avatar: string;
-  username: string;
-  role: string;
-}
-
-export interface CurrentUserState {
-  _id: string;
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  avatar: string;
-  username: string;
-  role: string;
+export interface CurrentUserState extends User {
   isLoading: boolean;
   error: string | null;
   token: string;
@@ -48,7 +30,7 @@ const initialState: UserState = {
     lastName: '',
     avatar: '',
     username: '',
-    role: '',
+    role: 'user',
     isLoading: true,
     error: null,
     token: '',
@@ -65,11 +47,49 @@ export const useAuth = () => {
     return { user, isAuthenticated: !!user };
   };
 
-export const fetchAllUsers = createAsyncThunk<User[], void>('http://localhost:5002/api/users/fetchAll', async () => {
-  const response = await axios.get('http://localhost:5002/api/users');
-  console.log('response.data', response.data);
-  return response.data as User[];
-});
+export const fetchAllUsers = createAsyncThunk(
+  'user/fetchAllUsers',
+  async () => {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.get<User[]>('http://localhost:5002/api/users', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    console.log('Fetched users:', response.data);
+    return response.data;
+  }
+);
+
+export const initializeUser = createAsyncThunk(
+  'user/initialize',
+  async (_, { dispatch, rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No token found');
+      }
+
+      // Fetch user profile
+      const profileResponse = await axios.get<UserState>('http://localhost:5002/api/user/profile', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      console.log('Profile response:', profileResponse.data);
+
+      // If user is admin or super-admin, also fetch all users
+      if (profileResponse.data.currentUser.role === 'admin' || 
+          profileResponse.data.currentUser.role === 'superAdmin') {
+        console.log('User is admin/super-admin, fetching all users');
+        dispatch(fetchAllUsers());
+      }
+
+      return profileResponse.data;
+    } catch (error: any) {
+      console.error('Failed to initialize user:', error.response?.data || error.message);
+      localStorage.removeItem('authToken');
+      return rejectWithValue('Failed to initialize user');
+    }
+  }
+);
 
 const userSlice = createSlice({
   name: 'user',
@@ -80,10 +100,30 @@ const userSlice = createSlice({
     },
     clearUser(state) {
       state.currentUser = initialState.currentUser;
+      state.users = initialState.users;
     },
   },
   extraReducers: (builder) => {
     builder
+      .addCase(initializeUser.pending, (state) => {
+        state.currentUser.isLoading = true;
+        state.users.status = 'loading';
+      })
+      .addCase(initializeUser.fulfilled, (state, action) => {
+        state.currentUser = {
+          ...state.currentUser,
+          ...action.payload.currentUser,
+          isLoading: false
+        };
+        if (action.payload.users) {
+          state.users = action.payload.users;
+        }
+      })
+      .addCase(initializeUser.rejected, (state) => {
+        state.currentUser = { ...initialState.currentUser, isLoading: false };
+        state.users = initialState.users;
+      })
+      // Keep these cases for manual fetching if needed
       .addCase(fetchAllUsers.pending, (state) => {
         state.users.status = 'loading';
       })

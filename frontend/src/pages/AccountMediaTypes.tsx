@@ -4,10 +4,9 @@ import './accountMediaTypes.scss';
 import { motion } from 'framer-motion';
 import { ToastContainer } from 'react-toastify';
 import MediaTypeUploader from '../components/MediaTypeUploader';
-import axios from 'axios';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '../store/store';
-import { setMediaTypes } from '../store/slices/mediaTypeSlice';
+import { RootState, AppDispatch } from '../store/store';
+import { initializeMediaTypes } from '../store/slices/mediaTypeSlice';
 
 interface Field {
   name: string;
@@ -18,14 +17,13 @@ interface Field {
 
 const AccountMediaTypes: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
 
   useEffect(() => {
     const fetchMediaTypes = async () => {
       if (mediaTypes.length === 0) {
-        const response = await axios.get<any[]>('/media-types');
-        dispatch(setMediaTypes(response.data));
+        dispatch(initializeMediaTypes());
       }
     };
     fetchMediaTypes();
@@ -54,7 +52,7 @@ const AccountMediaTypes: React.FC = () => {
               <ListItemText
                 primary={mediaType.name}
                 secondary={mediaType.fields.map((field: Field) => (
-                  `${field.name}: (${field.type})${field.options?.length ? 
+                  `${field.name}: (${field.type})${field.options ? 
                     `\nOptions: ${field.options.join(', ')}` : 
                     ''}`
                 )).join('\n')}

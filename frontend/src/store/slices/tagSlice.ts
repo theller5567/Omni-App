@@ -53,21 +53,30 @@ const tagSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
+      .addCase(fetchTags.pending, (state) => {
+        state.status = 'loading';
+        state.error = null;
+      })
       .addCase(fetchTags.fulfilled, (state, action: PayloadAction<Tags[]>) => {
         state.tags = action.payload;
         state.status = 'succeeded';
+        state.error = null;
+      })
+      .addCase(fetchTags.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.error.message ?? 'Failed to fetch tags';
       })
       .addCase(addTag.fulfilled, (state, action: PayloadAction<Tags>) => {
         state.tags.push(action.payload);
       })
       .addCase(updateTag.fulfilled, (state, action: PayloadAction<Tags>) => {
-        const index = state.tags.findIndex((tag: Tags) => tag.name === action.payload.name);
+        const index = state.tags.findIndex((tag: Tags) => tag._id === action.payload._id);
         if (index !== -1) {
           state.tags[index] = action.payload;
         }
       })
       .addCase(deleteTag.fulfilled, (state, action: PayloadAction<string>) => {
-        state.tags = state.tags.filter((tag: Tags) => tag.name !== action.payload);
+        state.tags = state.tags.filter((tag: Tags) => tag._id !== action.payload);
       });
   },
 });

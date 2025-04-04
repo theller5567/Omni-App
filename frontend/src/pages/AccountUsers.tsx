@@ -1,21 +1,53 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { fetchAllUsers } from '../store/slices/userSlice';
-import { DataGrid, GridColDef, GridRowId, GridToolbar } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import { alpha, Avatar, Box, Button, Grid, IconButton, styled, Toolbar, Tooltip, Typography } from '@mui/material';
 import { FaTrash } from 'react-icons/fa';
 import { FaEdit } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import './accountUsers.scss';
+import { AppDispatch } from '../store/store';
+import type { User } from '../types/userTypes';
 
-const AccountUsers: React.FC = () => {
-  const dispatch = useDispatch();
-  const [selected, setSelected] = useState<GridRowId[]>([]);
+const AccountUsers = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { currentUser, users } = useSelector((state: RootState) => state.user);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   useEffect(() => {
-    dispatch(fetchAllUsers() as any);
-  }, [dispatch]);
+    // Fetch users if we're admin/super-admin and users haven't been loaded yet
+    console.log('AccountUsers - Current state:', {
+      role: currentUser?.role,
+      usersCount: users.allUsers?.length,
+      usersStatus: users.status
+    });
+    
+    if ((currentUser?.role === 'admin' || currentUser?.role === 'superAdmin') && 
+        (users.status === 'idle' || (!users.allUsers || users.allUsers.length === 0))) {
+      console.log('AccountUsers - Fetching users');
+      dispatch(fetchAllUsers());
+    }
+  }, [dispatch, currentUser?.role, users.status, users.allUsers]);
+
+  // Show loading state
+  if (users.status === 'loading') {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography>Loading users...</Typography>
+      </Box>
+    );
+  }
+
+  // Show error state
+  if (users.status === 'failed') {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography color="error">Error: {users.error || 'Failed to load users'}</Typography>
+      </Box>
+    );
+  }
 
   const CustomGrid = styled(Grid)({
     '&.grid-view': {
@@ -125,9 +157,6 @@ const AccountUsers: React.FC = () => {
     exit: { opacity: 0, x: -350, transition: { duration: 0.5 } },
   };
 
-
-  // Select users and status from the Redux store
-  const { allUsers } = useSelector((state: RootState) => state.user.users);
   return (
     <motion.div
       id="account-users"
@@ -139,8 +168,8 @@ const AccountUsers: React.FC = () => {
       <Box className="account-users" sx={{ width: '100%', overflow: 'hidden' }}>
         <Typography variant="h2" align="left" sx={{ paddingBottom: '2rem' }}>Account Users</Typography>
         <Box sx={{ width: '100%', height: 'calc(100% - 4rem)', overflow: 'hidden' }}>
-          {selected.length > 0 && (
-            <EnhancedTableToolbar numSelected={selected.length} />
+          {selectedUser && (
+            <EnhancedTableToolbar numSelected={1} />
           )}
       <CustomGrid container spacing={2}>
         <Grid item xs={12}>
@@ -148,7 +177,7 @@ const AccountUsers: React.FC = () => {
             slots={{
                 toolbar: GridToolbar,
               }}
-              rows={allUsers}
+              rows={users.allUsers}
               columns={columns}
               getRowId={(row) => row._id}
               pageSizeOptions={[5, 10, 20]}
@@ -163,7 +192,9 @@ const AccountUsers: React.FC = () => {
               checkboxSelection
               disableRowSelectionOnClick
               onRowSelectionModelChange={(newSelection) => {
-                setSelected([...newSelection]);
+                const selectedId = newSelection[0];
+                const foundUser = users.allUsers.find(u => u._id === selectedId);
+                setSelectedUser(foundUser || null);
               }}
           />
         </Grid>

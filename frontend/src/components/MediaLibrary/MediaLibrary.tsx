@@ -42,7 +42,7 @@ interface MediaLibraryProps {
 // Define media types in the frontend
 
 
-const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQuery, onDeleteMedia, onAddMedia }) => {
+const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQuery, onAddMedia, onDeleteMedia }) => {
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [selectedMediaType, setSelectedMediaType] = useState<string>('All');
   const navigate = useNavigate();
@@ -50,6 +50,40 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
   const [selected, setSelected] = useState<readonly (string | number)[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [isToolbarDelete, setIsToolbarDelete] = useState(false);
+  const prevDataRef = React.useRef<string>('');
+
+  // Process rows only when mediaFilesData or filter changes
+  const rows = React.useMemo(() => {
+    const newRows = mediaFilesData
+      .filter(file => selectedMediaType === 'All' || file.mediaType === selectedMediaType)
+      .map((file) => ({
+        id: file._id || file.id || crypto.randomUUID(),
+        location: file.location || '',
+        title: file.title || '',
+        fileSize: file.fileSize || 0,
+        fileExtension: file.fileExtension || '',
+        modifiedDate: file.modifiedDate,
+        metadata: {
+          fileName: file.metadata?.fileName || 'Untitled',
+          altText: file.metadata?.altText || '',
+          description: file.metadata?.description || '',
+          tags: file.metadata?.tags || [],
+          visibility: file.metadata?.visibility || 'public'
+        },
+        slug: file.slug || '',
+        mediaType: file.mediaType || 'Unknown'
+      }));
+
+    const dataString = JSON.stringify({ count: newRows.length, types: [...new Set(newRows.map(row => row.mediaType))] });
+    if (newRows.length > 0 && dataString !== prevDataRef.current) {
+      console.log('MediaLibrary - Data ready:', {
+        count: newRows.length,
+        types: [...new Set(newRows.map(row => row.mediaType))]
+      });
+      prevDataRef.current = dataString;
+    }
+    return newRows;
+  }, [mediaFilesData, selectedMediaType]);
 
   const toggleView = () => {
     setViewMode((prevView) => (prevView === 'list' ? 'card' : 'list'));
@@ -111,7 +145,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
       }
     },
     { field: 'tags', headerName: 'Tags', flex: 0.5, renderCell: renderCell },
-    ...(userRole === 'super-admin' ? [{
+    ...(userRole === 'superAdmin' ? [{
       field: 'actions',
       headerName: 'Actions',
       flex: 0.5,
@@ -138,21 +172,6 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
       ),
     }] : []),
   ];
-
-  const rows = mediaFilesData
-    .filter(file => selectedMediaType === 'All' || file.mediaType === selectedMediaType)
-    .map((file) => ({
-      ...file,
-      id: file.id,
-      image: file.location,
-      title: file.metadata.fileName,
-      fileSize: file.fileSize,
-      fileExtension: file.fileExtension,
-      modifiedDate: file.modifiedDate,
-      fileName: file.metadata.fileName,
-      tags: file.metadata.tags,
-      mediaType: file.mediaType
-    }));
 
   const containerVariants = {
     hidden: { opacity: 0, x: -350 },

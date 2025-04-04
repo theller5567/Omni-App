@@ -8,11 +8,28 @@ import useFileUpload from '../../hooks/useFileUpload';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { BaseMediaFile } from '../../interfaces/MediaFile';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store/store'; // Adjust the import path as necessary
-import { fieldLabels, nonEditableFields, fieldConfigurations } from '../../config/config'; // Adjust the import path as necessary
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../../store/store'; // Adjust the import path as necessary
+import { addMedia } from '../../store/slices/mediaSlice';
+import { toast } from 'react-toastify';
+import { initializeMediaTypes } from '../../store/slices/mediaTypeSlice';
+//import { fieldLabels, nonEditableFields, fieldConfigurations } from '../../config/config'; // Adjust the import path as necessary
 
-interface MediaUploaderProps {
+interface SelectFieldConfig {
+  type: 'select';
+  class: string;
+  options: string[];
+  fullWidth: boolean;
+}
+
+interface Field {
+  name: string;
+  type: string;
+  options?: string[];
+  required: boolean;
+}
+
+interface MediaTypeUploaderProps {
   open: boolean;
   onClose: () => void;
   onUploadComplete: (newFile: BaseMediaFile) => void;
@@ -27,81 +44,82 @@ interface UploadResponse {
   title: string;
 }
 
-// Define a type for field configurations with options
-interface SelectFieldConfig {
-  type: 'select';
-  class: string;
-  options: string[];
-  fullWidth: boolean;
-}
-
 // Type guard to check if a field configuration is a SelectFieldConfig
 function isSelectFieldConfig(config: any): config is SelectFieldConfig {
   return config.type === 'select' && Array.isArray(config.options);
 }
 
-const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadComplete }) => {
-  if (!open) return null; // Render nothing if not open
+// interface UploadProgressEvent extends ProgressEvent {
+//   loaded: number;
+//   total: number;
+// }
 
+interface MetadataState {
+  fileName: string;
+  tags: string[];
+  tagsInput?: string;
+  visibility: string;
+  altText: string;
+  description: string;
+  recordedDate: string;
+  uploadedBy: string;
+  modifiedBy: string;
+  imageWidth?: number;
+  imageHeight?: number;
+  [key: string]: any; // Allow dynamic fields for media type specific fields
+}
+
+const MediaUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, onUploadComplete }) => {
   // Access user data from Redux store
   const user = useSelector((state: RootState) => state.user);
+  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  const mediaTypesStatus = useSelector((state: RootState) => state.mediaTypes.status);
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
 
+  useEffect(() => {
+    // Skip if we're already loading or have data
+    if (mediaTypesStatus === 'loading' || mediaTypes.length > 0) {
+      console.log('MediaUploader - Media types:', 
+        mediaTypesStatus === 'loading' ? 'loading in progress' : `${mediaTypes.length} types loaded`);
+      return;
+    }
+
+    // Only load if we're idle and have no data
+    if (mediaTypesStatus === 'idle') {
+      console.log('MediaUploader - Loading media types');
+      dispatch(initializeMediaTypes());
+    }
+  }, [dispatch, mediaTypesStatus, mediaTypes.length]);
+
+  // All state hooks
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [selectedMediaType, setSelectedMediaType] = useState('');
-  const [metadata, setMetadata] = useState<any>({
+  const [metadata, setMetadata] = useState<MetadataState>({
     fileName: '',
     tags: [],
     visibility: 'public',
     altText: '',
     description: '',
-    recordedDate: new Date().toISOString().split('T')[0],
-    uploadedBy: user._id,
-    modifiedBy: user._id,
+    recordedDate: new Date().toISOString(),
+    uploadedBy: user.currentUser._id,
+    modifiedBy: user.currentUser._id,
   });
-  const { uploadProgress, setUploadProgress, uploadComplete, resetUploadComplete } = useFileUpload();
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [fileSelected, setFileSelected] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
-  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
-  const [mediaTypes, setMediaTypes] = useState<any>({});
 
-  useEffect(() => {
-    const fetchMediaTypes = async () => {
-      try {
-        const response = await axios.get('http://localhost:5002/media/media-types');
-        console.log('Fetched media types:', response.data);
-        setMediaTypes(response.data);
-      } catch (error) {
-        console.error('Error fetching media types:', error);
-      }
-    };
-
-    fetchMediaTypes();
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      setMetadata((prevMetadata: any) => {
-        const updatedMetadata = {
-          ...prevMetadata,
-          uploadedBy: user._id,
-          modifiedBy: user._id,
-        };
-        console.log('Updated Metadata:', updatedMetadata);
-        return updatedMetadata;
-      });
-    }
-  }, [user]);
+  const { uploadProgress, setUploadProgress, uploadComplete, resetUploadComplete } = useFileUpload();
 
   const onDrop = useCallback((acceptedFiles: File[], fileRejections: any[]) => {
     if (fileRejections.length > 0) {
       const rejection = fileRejections[0];
-      const fileSizeInMB = (rejection.file.size / (1024 * 1024)).toFixed(2); // Convert bytes to MB
-      const maxFileSizeMB = 200; // Maximum file size in MB
+      const fileSizeInMB = (rejection.file.size / (1024 * 1024)).toFixed(2);
+      const maxFileSizeMB = 200;
       const errorMessage = `Error: File is larger than ${maxFileSizeMB} MB. Your file was ${fileSizeInMB} MB. Please use a smaller file.`;
       setError(errorMessage);
       return;
@@ -112,22 +130,16 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
       setError(null);
       setFile(file);
       setFileSelected(true);
-      console.log('file: ', file);
-      // Generate a local preview URL
+
       const reader = new FileReader();
       reader.onloadend = () => {
         const imageUrl = reader.result as string;
         setFilePreview(imageUrl);
 
-        // Create an Image object to get dimensions
         const img = new Image();
         img.onload = () => {
-          console.log('Image Width:', img.width);
-          console.log('Image Height:', img.height);
-
-          // You can store these dimensions in the metadata or state if needed
-          setMetadata((prevMetadata: any) => ({
-            ...prevMetadata,
+          setMetadata(prev => ({
+            ...prev,
             imageWidth: img.width,
             imageHeight: img.height,
           }));
@@ -138,6 +150,54 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     }
   }, []);
 
+  // Dropzone setup
+  const {
+    getRootProps,
+    getInputProps,
+    isDragActive,
+    isDragReject,
+  } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': [],
+      'video/*': []
+    },
+    maxSize: 200 * 1024 * 1024,
+  });
+
+  useEffect(() => {
+    if (user) {
+      setMetadata(prevMetadata => ({
+        ...prevMetadata,
+        uploadedBy: user.currentUser._id,
+        modifiedBy: user.currentUser._id,
+      }));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (uploadProgress === 100) {
+      setShowSuccessMessage(true);
+      setTimeout(() => setUploadProgress(0), 1000);
+    }
+  }, [uploadProgress, setUploadProgress]);
+
+  useEffect(() => {
+    if (step === 2) {
+      setShowSuccessMessage(false);
+      setUploadProgress(0);
+    }
+  }, [step, setUploadProgress]);
+
+  useEffect(() => {
+    if (step === 4 && file) {
+      handleUpload(file);
+    }
+  }, [step, file]);
+
+  // Early return after all hooks
+  if (!open) return null;
+
   const handleMetadataChange = (field: string, value: any) => {
     setMetadata((prevMetadata: any) => ({
       ...prevMetadata,
@@ -147,20 +207,23 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
 
   const handleTagsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
-    console.log('Raw Tags Input:', value);
     handleMetadataChange('tagsInput', value); // Store the raw input temporarily
   };
 
   const handleTagsBlur = () => {
-    const tags = metadata.tagsInput.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag !== '');
-    console.log('Processed Tags Array:', tags);
-    handleMetadataChange('tags', tags);
+    if (metadata.tagsInput) {
+      const tags = metadata.tagsInput
+        .split(',')
+        .map((tag: string) => tag.trim())
+        .filter((tag: string) => tag !== '');
+      handleMetadataChange('tags', tags);
+    }
   };
 
   const handleTagsKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
+      event.preventDefault(); // Prevent form submission
       handleTagsBlur();
-      event.preventDefault(); // Prevent form submission if inside a form
     }
   };
 
@@ -169,50 +232,46 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
     formData.append('file', file);
     formData.append('title', file.name);
     formData.append('fileExtension', file.name.split('.').pop()?.toUpperCase() || 'UNKNOWN');
-    formData.append('uploadedBy', user._id);
-    formData.append('modifiedBy', user._id);
+    formData.append('uploadedBy', user.currentUser._id);
+    formData.append('modifiedBy', user.currentUser._id);
     formData.append('mediaType', selectedMediaType);
-    console.log('Metadata before appending to FormData:', metadata);
 
-    // Create a new metadata object excluding tagsInput
     const { tagsInput, ...metadataWithoutTagsInput } = metadata;
 
-    console.log('Metadata before appending to FormData:', metadataWithoutTagsInput);
-
     Object.entries(metadataWithoutTagsInput).forEach(([key, value]) => {
-      if (key === 'tags') {
-        console.log('Tags before appending:', value);
-        if (Array.isArray(value)) {
-          value.forEach(tag => formData.append(`metadata[${key}][]`, tag));
-        } else {
-          console.log('Tags are not an array:', value);
-        }
+      if (key === 'tags' && Array.isArray(value)) {
+        value.forEach(tag => formData.append(`metadata[${key}][]`, tag));
       } else {
         formData.append(`metadata[${key}]`, value as string);
       }
     });
 
-    const config = {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (progressEvent: ProgressEvent) => {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        console.log(`Upload Progress: ${percentCompleted}%`);
-        setUploadProgress(percentCompleted);
-      },
-    };
+    interface ProgressEvent {
+      loaded: number;
+      total?: number;
+    }
 
     try {
-      console.log('formDataXX:', formData);
-      const response = await axios.post<UploadResponse>('http://localhost:5002/media/upload', formData, config);
+      const response = await axios.post<UploadResponse>(
+        'http://localhost:5002/media/upload',
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        }
+      );
+
+      // Update progress separately using XMLHttpRequest
+      const xhr = new XMLHttpRequest();
+      xhr.upload.onprogress = (event: ProgressEvent) => {
+        const total = event.total || 0;
+        const percentCompleted = Math.round((event.loaded * 100) / total);
+        setUploadProgress(percentCompleted);
+      };
 
       if (response.status === 201) {
-        console.log('Upload successful:', response.data);
         resetUploadComplete();
         setFileUrl(response.data.location);
         setSlug(response.data.slug);
-        const modifiedDate = new Date(file.lastModified);
 
         const newFile: BaseMediaFile = {
           _id: response.data._id,
@@ -220,24 +279,23 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
           location: response.data.location,
           slug: response.data.slug,
           title: response.data.title,
-          uploadedBy: user._id,
-          modifiedBy: user._id,
+          uploadedBy: user.currentUser._id,
+          modifiedBy: user.currentUser._id,
           mediaType: selectedMediaType,
           __t: selectedMediaType,
           metadata: {
             ...metadataWithoutTagsInput,
           },
           fileSize: file.size,
-          modifiedDate,
+          modifiedDate: new Date(file.lastModified).toISOString(),
           fileExtension: file.name.split('.').pop() || '',
         };
-        console.log('newFile: ', newFile);
+        dispatch(addMedia(newFile));
         onUploadComplete(newFile);
-      } else {
-        console.error('Upload failed with status:', response.status);
       }
     } catch (error) {
       console.error('Error uploading file:', error);
+      toast.error('Failed to upload file');
     }
   };
 
@@ -246,20 +304,6 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
   };
 
   const handleBack = () => setStep((prev) => (prev === 1 ? 1 : prev - 1));
-
-  useEffect(() => {
-    if (uploadProgress === 100) {
-      setShowSuccessMessage(true);
-      setTimeout(() => setUploadProgress(0), 1000);
-    }
-  }, [uploadProgress]);
-
-  useEffect(() => {
-    if (step === 2) {
-      setShowSuccessMessage(false);
-      setUploadProgress(0);
-    }
-  }, [step]);
 
   const handleAddMore = () => {
     setUploadProgress(0);
@@ -272,9 +316,9 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
       visibility: 'public',
       altText: '',
       description: '',
-      recordedDate: new Date().toISOString().split('T')[0], // Reset to the current date
-      uploadedBy: user._id,
-      modifiedBy: user._id,
+      recordedDate: new Date().toISOString(),
+      uploadedBy: user.currentUser._id,
+      modifiedBy: user.currentUser._id,
     });
     resetUploadComplete();
   };
@@ -287,26 +331,6 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
 
   const steps = ['Select Media Type', 'Upload File', 'Add Metadata', 'Completion'];
 
-  const {
-    getRootProps,
-    getInputProps,
-    isDragActive,
-    isDragReject,
-  } = useDropzone({
-    onDrop,
-    accept: {
-      'image/*': [],
-      'video/*': []
-    },
-    maxSize: 200 * 1024 * 1024, // Ensure this is 200MB in bytes
-  });
-
-  useEffect(() => {
-    if (step === 4) {
-      handleUpload(file as File); // Start upload when reaching step 4
-    }
-  }, [step, file]);
-
   const handleViewMedia = () => {
     if (slug) {
       navigate(`/media-library/media/${slug}`);
@@ -316,102 +340,125 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
   const renderFields = () => {
     if (!selectedMediaType) return null;
 
-    const fields = mediaTypes[selectedMediaType]?.schema || {};
+    const selectedType = mediaTypes.find(type => type.name === selectedMediaType);
+    if (!selectedType) return null;
+
+    // Base schema fields that are common to all media types
+    const baseFields = (
+      <>
+        <TextField
+          label="File Name"
+          value={metadata.fileName || ''}
+          onChange={(e) => handleMetadataChange('fileName', e.target.value)}
+          required
+          fullWidth
+          margin="normal"
+        />
+        <TextField
+          label="Tags"
+          value={metadata.tagsInput || ''}
+          onChange={handleTagsChange}
+          onBlur={handleTagsBlur}
+          onKeyDown={handleTagsKeyDown}
+          fullWidth
+          margin="normal"
+          helperText="Enter tags separated by commas"
+        />
+        <TextField
+          label="Alt Text"
+          value={metadata.altText || ''}
+          onChange={(e) => handleMetadataChange('altText', e.target.value)}
+          required
+          fullWidth
+          margin="normal"
+        />
+        <TextField
+          label="Description"
+          value={metadata.description || ''}
+          onChange={(e) => handleMetadataChange('description', e.target.value)}
+          required
+          fullWidth
+          margin="normal"
+          multiline
+          rows={4}
+        />
+        <FormControl fullWidth margin="normal">
+          <InputLabel>Visibility</InputLabel>
+          <Select
+            value={metadata.visibility || 'public'}
+            onChange={(e) => handleMetadataChange('visibility', e.target.value)}
+            label="Visibility"
+          >
+            <MenuItem value="public">Public</MenuItem>
+            <MenuItem value="private">Private</MenuItem>
+          </Select>
+        </FormControl>
+      </>
+    );
+
+    // Media type specific fields (will be stored under metadata)
+    const mediaTypeFields = selectedType.fields.map((field: Field) => {
+      const fieldPath = field.name; // Remove metadata. prefix
+      switch (field.type) {
+        case 'Select':
+        case 'MultiSelect':
+          return (
+            <FormControl fullWidth margin="normal" key={field.name}>
+              <InputLabel id={`${field.name}-label`}>{field.name}</InputLabel>
+              <Select
+                labelId={`${field.name}-label`}
+                id={field.name}
+                value={metadata[fieldPath] || ''}
+                onChange={(e) => handleMetadataChange(fieldPath, e.target.value)}
+                label={field.name}
+                required={field.required}
+              >
+                {field.options?.map((option: string) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          );
+        case 'Boolean':
+          return (
+            <FormControlLabel
+              key={field.name}
+              control={
+                <Checkbox
+                  checked={metadata[fieldPath] || false}
+                  onChange={(e) => handleMetadataChange(fieldPath, e.target.checked)}
+                  name={field.name}
+                  required={field.required}
+                />
+              }
+              label={field.name}
+            />
+          );
+        default:
+          const fieldConfig = isSelectFieldConfig(field) ? field : { type: 'text' };
+          return (
+            <TextField
+              key={field.name}
+              label={field.name}
+              required={field.required}
+              value={metadata[fieldPath] || ''}
+              onChange={(e) => handleMetadataChange(fieldPath, e.target.value)}
+              fullWidth
+              margin="normal"
+              multiline={fieldConfig.type === 'text'}
+              rows={fieldConfig.type === 'text' ? 4 : 1}
+            />
+          );
+      }
+    });
 
     return (
       <div className="form-grid">
-        {Object.keys(fields).map((field) => {
-          const strippedField = field.startsWith('metadata.') ? field.replace('metadata.', '') : field;
-
-          if (nonEditableFields[strippedField as keyof typeof nonEditableFields]) {
-            return null;
-          }
-          const fieldConfig = fieldConfigurations[strippedField as keyof typeof fieldConfigurations] || { type: 'text' };
-          const label = fieldLabels[strippedField as keyof typeof fieldLabels] || strippedField;
-
-          // Determine if the field should be full-width
-          const isFullWidth = fieldConfig.fullWidth || false;
-          const fieldClassName = isFullWidth ? 'full-width' : '';
-
-          switch (fieldConfig.type) {
-            case 'textarea':
-              return (
-                <TextField
-                  key={strippedField}
-                  label={label}
-                  required={fields[field].required}
-                  value={metadata[strippedField] || ''}
-                  onChange={(e) => handleMetadataChange(strippedField, e.target.value)}
-                  fullWidth
-                  margin="normal"
-                  multiline
-                  rows={4}
-                  className={`${fieldConfig.class || ''} ${fieldClassName}`}
-                />
-              );
-            case 'select':
-              return (
-                <FormControl fullWidth margin="normal" key={strippedField} className={fieldClassName}>
-                  <InputLabel id={`${strippedField}-label`}>{label}</InputLabel>
-                  <Select
-                    labelId={`${strippedField}-label`}
-                    id={strippedField}
-                    value={metadata[strippedField] || ''}
-                    onChange={(e) => handleMetadataChange(strippedField, e.target.value)}
-                    label={label}
-                    className={fieldConfig.class || ''}
-                  >
-                    {isSelectFieldConfig(fieldConfig) && fieldConfig.options.map((option: string) => (
-                      <MenuItem className='option-item' key={option} value={option}>
-                        {option}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              );
-            case 'checkbox':
-              return (
-                <FormControlLabel
-                  key={strippedField}
-                  control={
-                    <Checkbox
-                      checked={metadata[strippedField] || false}
-                      onChange={(e) => handleMetadataChange(strippedField, e.target.checked)}
-                      name={strippedField}
-                    />
-                  }
-                  label={label}
-                  className={fieldClassName}
-                />
-              );
-            case 'tag':
-              return (
-                <TextField
-                  key={strippedField}
-                  label={label}
-                  value={metadata.tagsInput || ''}
-                  onChange={handleTagsChange}
-                  onBlur={handleTagsBlur}
-                  onKeyDown={handleTagsKeyDown}
-                  fullWidth
-                  margin="normal"
-                />
-              );
-            default:
-              return (
-                <TextField
-                  key={strippedField}
-                  label={label}
-                  required={fields[field].required}
-                  value={metadata[strippedField] || ''}
-                  onChange={(e) => handleMetadataChange(strippedField, e.target.value)}
-                  fullWidth
-                  margin="normal"
-                  className={fieldClassName}
-                />
-              );
-          }
-        })}
+        {baseFields}
+        <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>Media Type Specific Fields</Typography>
+        {mediaTypeFields}
       </div>
     );
   };
@@ -439,8 +486,8 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ open, onClose, onUploadCo
                 label="Media Type"
                 onChange={handleChange}
               >
-                {Object.keys(mediaTypes).map((type) => (
-                  <MenuItem key={type} value={type}>{type}</MenuItem>
+                {mediaTypes.map((type) => (
+                  <MenuItem key={type._id} value={type.name}>{type.name}</MenuItem>
                 ))}
               </Select>
             </FormControl>

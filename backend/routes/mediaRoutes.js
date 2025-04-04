@@ -2,13 +2,12 @@ import express from 'express';
 import multer from 'multer';
 import mongoose from 'mongoose';
 import models from '../models/Index.js'; // Import the centralized model storage
+import MediaType from '../models/MediaType.js';
+import Media from '../models/Media.js';
 import { uploadMedia, getAllMedia, deleteMedia } from '../controllers/mediaController.js';
 
 const router = express.Router();
 const upload = multer();
-
-const mediaSchema = new mongoose.Schema({}, { strict: false }); // Use a flexible schema
-const Media = mongoose.model('Media', mediaSchema, 'media'); // Specify the collection name
 
 router.put('/update/:slug', async (req, res) => {
   const { slug } = req.params;
@@ -16,23 +15,14 @@ router.put('/update/:slug', async (req, res) => {
   console.log('Request body:', JSON.stringify(req.body, null, 2));
 
   try {
-    // Fetch the document to determine the media type
-    const documentBeforeUpdate = await models.ProductImage.findOne({ slug }) || await models.WebinarVideo.findOne({ slug });
+    // Fetch the document using the Media model
+    const documentBeforeUpdate = await Media.findOne({ slug });
     if (!documentBeforeUpdate) {
       console.log('Media not found for slug:', slug);
       return res.status(404).json({ error: 'Media not found' });
     }
 
     console.log('Document before update:', JSON.stringify(documentBeforeUpdate, null, 2));
-
-    // Determine the model based on the mediaType property
-    const mediaType = documentBeforeUpdate.mediaType;
-    const Model = models[mediaType];
-
-    if (!Model) {
-      console.error('No model found for media type:', mediaType);
-      return res.status(400).json({ error: 'Invalid media type' });
-    }
 
     // Build update fields
     const updateFields = {
@@ -45,8 +35,8 @@ router.put('/update/:slug', async (req, res) => {
 
     console.log('Constructed updateFields:', JSON.stringify(updateFields, null, 2));
 
-    // Perform the update
-    const updatedMediaFile = await Model.findOneAndUpdate(
+    // Perform the update using the Media model
+    const updatedMediaFile = await Media.findOneAndUpdate(
       { slug },
       { $set: updateFields },
       { new: true, runValidators: true }
@@ -79,39 +69,38 @@ router.get('/all', getAllMedia);
 
 router.get('/media-types', async (req, res) => {
   try {
-    const mediaTypes = {};
-
-    // Iterate over each model in the models object
-    for (const modelName in models) {
-      if (models.hasOwnProperty(modelName) && modelName !== 'User' && modelName !== 'File') {
-        const Model = models[modelName];
-        // Assume each model has a schema property with paths
-        const schemaPaths = Model.schema.paths;
-        const schema = {};
-
-        // Construct the schema object for each model
-        for (const path in schemaPaths) {
-          console.log('Path:', path);
-          if (schemaPaths.hasOwnProperty(path)) {
-            schema[path] = { type: schemaPaths[path].instance };
-          }
-        }
-
-        mediaTypes[modelName] = { schema };
-      }
-    }
-
+    const mediaTypes = await MediaType.find().lean();
+    console.log('Found media types:', mediaTypes);
     res.status(200).json(mediaTypes);
   } catch (error) {
-    console.error('Error generating media types:', error);
+    console.error('Error fetching media types:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
-router.post('/upload', upload.single('file'), (req, res, next) => {
+router.post('/upload', upload.single('file'), async (req, res, next) => {
   console.log('Received upload request', req.body);
-  console.log('Tags in request:', req.body.metadata.tags);
-  next();
+  console.log('Tags in request:', req.body.metadata?.tags);
+  
+  try {
+    const mediaType = req.body.mediaType;
+    console.log('Received media type:', mediaType);
+    
+    // Fetch media types using the MediaType model
+    const mediaTypes = await MediaType.find();
+    console.log('test:', mediaTypes);
+    console.log('Available media types:', mediaTypes.map(t => t.name));
+    
+    if (!mediaType || !mediaTypes.some(type => type.name === mediaType)) {
+      console.error(`Invalid media type: ${mediaType}`);
+      return res.status(400).json({ error: `Invalid media type: ${mediaType}` });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error in media type validation:', error);
+    res.status(500).json({ error: 'Internal server error during media type validation' });
+  }
 }, uploadMedia);
 
 router.delete('/delete/:id', deleteMedia);
@@ -121,24 +110,7 @@ router.get('/slug/:slug', async (req, res) => {
     const { slug } = req.params;
     console.log('Fetching media with slug:', slug);
 
-    // Fetch the document to determine the media type
-    const documentBeforeFetch = await models.ProductImage.findOne({ slug }) || await models.WebinarVideo.findOne({ slug });
-    if (!documentBeforeFetch) {
-      console.log('Media not found for slug:', slug);
-      return res.status(404).json({ error: 'Media not found' });
-    }
-
-    // Determine the model based on the mediaType property
-    const mediaType = documentBeforeFetch.mediaType;
-    const Model = models[mediaType];
-
-    if (!Model) {
-      console.error('No model found for media type:', mediaType);
-      return res.status(400).json({ error: 'Invalid media type' });
-    }
-
-    // Fetch the media file using the correct model
-    const mediaFile = await Model.findOne({ slug });
+    const mediaFile = await Media.findOne({ slug });
 
     if (!mediaFile) {
       console.log('Media not found for slug:', slug);

@@ -1,10 +1,8 @@
 import { uploadFileToS3, deleteFileFromS3 } from '../services/awsService.js';
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabaseConnection } from '../config/db.js';
-import models from '../models/Index.js';
-import ProductImage from '../models/mediaTypes/ProductImage.js';
-import WebinarVideo from '../models/mediaTypes/WebinarVideo.js';
-import { ObjectLockRetentionMode } from '@aws-sdk/client-s3';
+import mongoose from 'mongoose';
+import Media from '../models/Media.js';
 
 const generateSlug = (title) => {
   return `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${uuidv4()}`;
@@ -60,14 +58,8 @@ export const uploadMedia = async (req, res) => {
 
     await getDatabaseConnection(); // Ensure the database connection is established
 
-    // Use the __t field to determine the model
-    const MediaTypeModel = models[mediaType];
-    if (!MediaTypeModel) {
-      console.error('Invalid media type:', mediaType);
-      return res.status(400).json({ error: 'Invalid media type' });
-    }
-
-    const newMedia = new MediaTypeModel(mediaData);
+    // Create a new Media document using the imported Media model
+    const newMedia = new Media(mediaData);
     console.log('Attempting to save new media:', newMedia);
     const savedMedia = await newMedia.save();
     console.log('Media saved successfully:', savedMedia);
@@ -93,15 +85,7 @@ export const deleteMedia = async (req, res) => {
     const { id } = req.params;
     console.log('Deleting media with id:', id);
 
-    // Determine the model based on the mediaType or other criteria
-    const Model = models.ProductImage || models.WebinarVideo; // Example, adjust as needed
-
-    if (!Model) {
-      console.error('No model found for deletion');
-      return res.status(400).json({ error: 'Invalid media type' });
-    }
-
-    const result = await Model.findOneAndDelete({ id: id });
+    const result = await Media.findOneAndDelete({ _id: id });
 
     if (!result) {
       console.log('Media not found for id:', id);
@@ -118,13 +102,8 @@ export const deleteMedia = async (req, res) => {
 
 export const getAllMedia = async (req, res) => {
   try {
-    // Query both collections
-    const productImages = await ProductImage.find();
-    const webinarVideos = await WebinarVideo.find();
-
-    // Combine results from both collections
-    const allMedia = [...productImages, ...webinarVideos];
-
+    // Query only the Media collection
+    const allMedia = await Media.find();
     res.status(200).json(allMedia);
   } catch (error) {
     console.error('Error fetching media:', error);
