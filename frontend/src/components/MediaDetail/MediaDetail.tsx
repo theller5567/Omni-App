@@ -28,15 +28,18 @@ import "./mediaDetail.scss";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/store";
 import { toast } from 'react-toastify';
+import { useUsername } from '../../hooks/useUsername';
 
 const MediaDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [mediaFile, setMediaFile] = useState<BaseMediaFile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [username, setUsername] = useState('');
   const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
   const navigate = useNavigate();
+  const { username: uploaderUsername, loading: uploaderLoading } = useUsername(mediaFile?.uploadedBy);
+  const { username: modifierUsername, loading: modifierLoading } = useUsername(mediaFile?.modifiedBy);
+  const userRole = useSelector((state: RootState) => state.user.currentUser.role);
 
   useEffect(() => {
     const fetchMediaFile = async () => {
@@ -45,18 +48,6 @@ const MediaDetail: React.FC = () => {
           `http://localhost:5002/media/slug/${slug}`
         );
         setMediaFile(response.data);
-        
-        // Fetch username after getting media file
-        if (response.data.uploadedBy) {
-          try {
-            const userResponse = await axios.get<{ username: string }>(
-              `http://localhost:5002/api/user/username/${response.data.uploadedBy}`
-            );
-            setUsername(userResponse.data?.username || '');
-          } catch (error) {
-            console.error('Error fetching username:', error);
-          }
-        }
       } catch (error) {
         console.error("Error fetching media file:", error);
         toast.error("Failed to load media file");
@@ -185,44 +176,73 @@ const MediaDetail: React.FC = () => {
       exit={{ opacity: 0 }}
       className="media-detail-container"
     >
-      <Box className="media-detail">
-        <Button onClick={() => navigate(-1)} variant="outlined" sx={{ mb: 2 }}>
+      <Button onClick={() => navigate(-1)} variant="outlined" sx={{ mb: 2 }}>
           Back to Media Library
         </Button>
+      <Box className="media-detail">
+        
 
         <Box className="media-preview">
-          <img src={mediaFile.location} alt={mediaFile.metadata?.altText || ''} />
+          <Box className="media-preview-header">
+            <Typography variant="h6">Media Type:<span> {mediaFile.mediaType}</span></Typography>
+            <Box className="tags-container">
+              Tags: {mediaFile.metadata?.tags?.map((tag, index) => (
+                <Chip key={index} label={tag} sx={{ backgroundColor: 'var(--accent-color2)', color: 'var(--background-color)', marginRight: '0.5rem' }}/>
+              ))}
+            </Box>
+            <Box className="size-container">
+              <Typography variant="h6">Size:<span> {formatFileSize(mediaFile.fileSize || 0)}</span></Typography>
+            </Box>
+            <Box className="updated-date">
+              <Typography variant="h6">Uploaded on:<span> {new Date(mediaFile.modifiedDate).toLocaleDateString()}</span></Typography>
+            </Box>
+            <Box className="uploaded-by">
+              <Typography variant="h6">Uploaded by:<span> {uploaderLoading ? 'Loading...' : uploaderUsername}</span></Typography>
+            </Box>
+          </Box>
+          <Box className="media-preview-media">
+            <img src={mediaFile.location} alt={mediaFile.metadata?.altText || ''} />
+          </Box>
+          <Box className="media-preview-footer">
+            <Typography variant="h6">{mediaFile.metadata?.description || ''}</Typography>
+          </Box>
         </Box>
 
-        <Box className="media-info">
+        <Box className="media-information">
           <Typography variant="h4">{mediaFile.metadata?.fileName || 'Untitled'}</Typography>
           
           <Box className="media-metadata">
             <Typography><strong>Type:</strong> {mediaFile.mediaType}</Typography>
             <Typography><strong>Size:</strong> {formatFileSize(mediaFile.fileSize || 0)}</Typography>
-            <Typography><strong>Uploaded by:</strong> {username}</Typography>
+            <Typography>
+              <strong>Uploaded by:</strong> {uploaderLoading ? 'Loading...' : uploaderUsername}
+            </Typography>
+            <Typography>
+              <strong>Modified by:</strong> {modifierLoading ? 'Loading...' : modifierUsername}
+            </Typography>
             <Typography><strong>Modified:</strong> {new Date(mediaFile.modifiedDate).toLocaleDateString()}</Typography>
             
-            {!isEditing && mediaFile.metadata?.tags && (
-              <Box className="tags-container">
-                <Typography><strong>Tags:</strong></Typography>
-                <Box display="flex" gap={1} flexWrap="wrap">
-                  {mediaFile.metadata.tags.map((tag, index) => (
-                    <Chip key={index} label={tag} />
-                  ))}
-                </Box>
-              </Box>
-            )}
+            {mediaFile.metadata && Object.entries(mediaFile.metadata).map(([key, value]) => {
+              if (['fileName', 'altText', 'description', 'visibility', 'tags', 'uploadedBy', 'modifiedBy', 'modifiedDate', 'fileSize', 'recordedDate', 'mediaType'].includes(key)) return null;
+              
+              return (
+                <Typography key={key}>
+                  <strong>{key}:</strong> {Array.isArray(value) ? value.join(', ') : value}
+                </Typography>
+              );
+            })}
           </Box>
 
-          <Button 
-            variant="contained" 
-            color={isEditing ? "error" : "primary"}
-            onClick={() => setIsEditing(!isEditing)}
-            sx={{ mt: 2 }}
-          >
-            {isEditing ? "Cancel Editing" : "Edit"}
-          </Button>
+          {(userRole === 'admin' || userRole === 'superAdmin') && (
+            <Button 
+              variant="contained" 
+              color={isEditing ? "error" : "primary"}
+              onClick={() => setIsEditing(!isEditing)}
+              sx={{ mt: 2 }}
+            >
+              {isEditing ? "Cancel Editing" : "Edit"}
+            </Button>
+          )}
         </Box>
 
         <Dialog open={isEditing} onClose={() => setIsEditing(false)} maxWidth="md" fullWidth>
@@ -327,41 +347,27 @@ const MediaDetail: React.FC = () => {
                                   name={`metadata.${field.name}`}
                                   value={values.metadata[field.name] || ''}
                                   onChange={handleChange}
-                                  label={field.name}
                                 >
-                                  {field.options?.map(option => (
-                                    <MenuItem key={option} value={option}>{option}</MenuItem>
+                                  {field.options?.map((option, index) => (
+                                    <MenuItem key={index} value={option}>{option}</MenuItem>
                                   ))}
                                 </Select>
                               </FormControl>
                             );
                           default:
-                            return (
-                              <TextField
-                                key={field.name}
-                                fullWidth
-                                name={`metadata.${field.name}`}
-                                label={field.name}
-                                value={values.metadata[field.name] || ''}
-                                onChange={handleChange}
-                                required={field.required}
-                              />
-                            );
+                            return null;
                         }
                       })}
                     </Box>
-
-                    <DialogActions>
-                      <Button onClick={() => setIsEditing(false)}>Cancel</Button>
-                      <Button type="submit" variant="contained" color="primary">
-                        Save Changes
-                      </Button>
-                    </DialogActions>
                   </Form>
                 );
               }}
             </Formik>
           </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setIsEditing(false)}>Cancel</Button>
+            <Button onClick={() => handleSubmit(initialValues)}>Save</Button>
+          </DialogActions>
         </Dialog>
       </Box>
     </motion.div>

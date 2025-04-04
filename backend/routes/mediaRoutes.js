@@ -1,7 +1,5 @@
 import express from 'express';
 import multer from 'multer';
-import mongoose from 'mongoose';
-import models from '../models/Index.js'; // Import the centralized model storage
 import MediaType from '../models/MediaType.js';
 import Media from '../models/Media.js';
 import { uploadMedia, getAllMedia, deleteMedia } from '../controllers/mediaController.js';
