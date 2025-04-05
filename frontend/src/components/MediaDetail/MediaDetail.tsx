@@ -141,9 +141,16 @@ const MediaDetail: React.FC = () => {
       );
       console.log('Received response:', response.data);
 
+      // Update the local state with the new data
       setMediaFile(response.data);
       setIsEditing(false);
       toast.success('Media file updated successfully');
+
+      // Refresh the data from the server to ensure we have the latest version
+      const refreshResponse = await axios.get<BaseMediaFile>(
+        `http://localhost:5002/media/slug/${mediaFile.slug}`
+      );
+      setMediaFile(refreshResponse.data);
     } catch (error) {
       console.error("Error updating media file:", error);
       toast.error('Failed to update media file');
@@ -259,7 +266,7 @@ const MediaDetail: React.FC = () => {
               onSubmit={handleSubmit}
               enableReinitialize
             >
-              {({ errors, touched, handleChange, handleSubmit, values }: FormikProps<FormValues>) => {
+              {({ errors, touched, handleChange, handleSubmit, values, submitForm }: FormikProps<FormValues>) => {
                 console.log('Formik render - current values:', values);
                 console.log('Formik render - current errors:', errors);
                 return (
@@ -364,15 +371,23 @@ const MediaDetail: React.FC = () => {
                         }
                       })}
                     </Box>
+                    <DialogActions>
+                      <Button onClick={() => setIsEditing(false)}>Cancel</Button>
+                      <Button 
+                        onClick={() => {
+                          console.log('Save button clicked, submitting form with values:', values);
+                          submitForm();
+                        }}
+                        color="primary"
+                      >
+                        Save
+                      </Button>
+                    </DialogActions>
                   </Form>
                 );
               }}
             </Formik>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setIsEditing(false)}>Cancel</Button>
-            <Button onClick={() => handleSubmit(initialValues)}>Save</Button>
-          </DialogActions>
         </Dialog>
       </Box>
     </motion.div>

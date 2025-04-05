@@ -62,7 +62,7 @@ const MediaContainer: React.FC = () => {
       // The new file will be added to the Redux store through the addMedia action
       // which will be dispatched in the MediaUploader component
     }
-    handleClose();
+    // Do not automatically close the modal - let the user choose when to close it
   };
 
   const handleDeleteMedia = async (id: string): Promise<boolean> => {

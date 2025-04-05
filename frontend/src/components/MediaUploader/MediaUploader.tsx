@@ -26,7 +26,6 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { useDropzone } from "react-dropzone";
 import { FaFileImage, FaFileVideo, FaUpload } from "react-icons/fa";
 import "./MediaUploader.scss";
-import useFileUpload from "../../hooks/useFileUpload";
 import { useNavigate } from "react-router-dom";
 import { BaseMediaFile } from "../../interfaces/MediaFile";
 import { useSelector, useDispatch } from "react-redux";
@@ -103,11 +102,10 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   const [slug, setSlug] = useState<string | null>(null);
   const [uploadComplete, setUploadComplete] = useState(false);
 
-  const { uploadProgress, setUploadProgress } = useFileUpload();
-
-  // Add new state for file loading progress
   const [fileLoadingProgress, setFileLoadingProgress] = useState(0);
   const [isPreviewReady, setIsPreviewReady] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const maxFileSizeMB = 200;
 
@@ -260,9 +258,43 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     }
   };
 
+  const renderUploadStatus = () => {
+    return (
+      <Box sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "400px",
+        padding: "2rem",
+      }}>
+        <Typography variant="h6" sx={{ mb: 3 }}>
+          {isProcessing ? "Processing Upload" : "Upload Progress"}
+        </Typography>
+        <Box sx={{ width: "100%", maxWidth: "400px", mb: 3 }}>
+          <LinearProgress
+            variant={isProcessing ? "indeterminate" : "determinate"}
+            value={uploadProgress}
+            sx={{ height: 10, borderRadius: 5 }}
+          />
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            align="center"
+            sx={{ mt: 2 }}
+          >
+            {isProcessing ? "Processing your upload..." : `${uploadProgress}% Uploaded`}
+          </Typography>
+        </Box>
+      </Box>
+    );
+  };
+
   const handleUpload = async (file: File) => {
+    console.log('Starting upload process...');
     setUploadComplete(false);
     setUploadProgress(0);
+    setIsProcessing(false);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -286,30 +318,39 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     });
 
     try {
+      console.log('Creating XMLHttpRequest...');
       const xhr = new XMLHttpRequest();
       const response = await new Promise<UploadResponse>((resolve, reject) => {
         xhr.upload.onprogress = (event: ProgressEvent) => {
           const percentCompleted = Math.round(
             (event.loaded * 100) / event.total
           );
+          console.log(`Upload progress: ${percentCompleted}%`);
           setUploadProgress(percentCompleted);
         };
 
         xhr.onload = () => {
           if (xhr.status === 201) {
-            setUploadProgress(100);
+            console.log('Upload successful, processing response...');
+            // Don't set upload progress to 100 yet
+            setIsProcessing(true);
             resolve(JSON.parse(xhr.response));
           } else {
+            console.error('Upload failed with status:', xhr.status);
             reject(new Error("Upload failed"));
           }
         };
 
-        xhr.onerror = () => reject(new Error("Upload failed"));
+        xhr.onerror = () => {
+          console.error('Upload failed with network error');
+          reject(new Error("Upload failed"));
+        };
 
         xhr.open("POST", "http://localhost:5002/media/upload");
         xhr.send(formData);
       });
 
+      console.log('Creating new file object...');
       const newFile: BaseMediaFile = {
         _id: response._id,
         id: response.id,
@@ -328,20 +369,32 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
         fileExtension: file.name.split(".").pop() || "",
       };
 
+      console.log('Dispatching addMedia action...');
       dispatch(addMedia(newFile));
+      
+      console.log('Setting final states...');
       setSlug(response.slug);
+      // Set processing to false before showing completion
+      setIsProcessing(false);
       setUploadComplete(true);
-      onUploadComplete(newFile);
-      // Do not close the modal or reset any states here
+      console.log('Upload complete state set to true');
+      
+      if (typeof onUploadComplete === 'function') {
+        console.log('Calling onUploadComplete callback...');
+        onUploadComplete(newFile);
+      }
+      console.log('Upload process completed successfully');
     } catch (error) {
       console.error("Error uploading file:", error);
       toast.error("Failed to upload file");
       setUploadProgress(0);
+      setIsProcessing(false);
       setUploadComplete(false);
     }
   };
 
   const handleClose = () => {
+    console.log('handleClose called - explicit close requested');
     // Only reset states if explicitly closed by user
     setStep(1);
     setFile(null);
@@ -349,6 +402,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     setFileSelected(false);
     setSlug(null);
     setUploadProgress(0);
+    setIsProcessing(false);
     setUploadComplete(false);
     setSelectedMediaType("");
     setMetadata({
@@ -656,21 +710,26 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     <Dialog
       open={open}
       onClose={(_, reason) => {
-        // Prevent modal from closing on backdrop click or escape key
-        if (reason === "backdropClick" || reason === "escapeKeyDown") {
+        console.log('Dialog onClose triggered with reason:', reason);
+        // Only allow closing through explicit button clicks
+        if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+          console.log('Preventing automatic close from:', reason);
           return;
         }
-        handleClose();
-      }}
-      maxWidth={false}
-      className="media-uploader-dialog"
-      PaperProps={{
-        style: {
-          maxWidth: "1000px",
-          width: "100%",
-        },
+        console.log('Allowing close from explicit action');
+        onClose();
       }}
       disableEscapeKeyDown
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          minHeight: "600px",
+          maxHeight: "90vh",
+          width: "100%",
+          margin: 2,
+        },
+      }}
     >
       <DialogTitle>
         Upload Media
@@ -815,123 +874,102 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
                 transition={{ duration: 0.3 }}
                 style={{ width: "100%" }}
               >
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minHeight: "400px",
-                    padding: "2rem",
-                  }}
-                >
-                  {!uploadComplete ? (
-                    <>
-                      <Typography variant="h6" sx={{ mb: 3 }}>
-                        Upload Progress
-                      </Typography>
-                      <Box sx={{ width: "100%", maxWidth: "400px", mb: 3 }}>
-                        <LinearProgress
-                          variant="determinate"
-                          value={uploadProgress}
-                          sx={{ height: 10, borderRadius: 5 }}
-                        />
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                          align="center"
-                          sx={{ mt: 2 }}
-                        >
-                          {uploadProgress}% Uploaded
-                        </Typography>
-                      </Box>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircleIcon
-                        sx={{
-                          fontSize: "80px",
-                          color: "success.main",
-                          mb: 3,
-                        }}
-                      />
-                      <Typography
-                        variant="h4"
-                        gutterBottom
-                        sx={{
-                          fontWeight: "bold",
-                          mb: 2,
-                        }}
-                      >
-                        Upload Complete!
-                      </Typography>
-                      <Typography
-                        color="textSecondary"
-                        sx={{
-                          mb: 4,
-                          textAlign: "center",
-                        }}
-                      >
-                        Your file has been successfully uploaded.
-                      </Typography>
-                      {filePreview && (
-                        <Box
-                          sx={{
-                            mb: 4,
-                            width: "100%",
-                            maxWidth: "400px",
-                            display: "flex",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <img
-                            src={filePreview}
-                            alt="Upload preview"
-                            style={{
-                              width: "100%",
-                              maxHeight: "250px",
-                              objectFit: "contain",
-                              borderRadius: "8px",
-                              boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-                            }}
-                          />
-                        </Box>
-                      )}
+                {!uploadComplete ? (
+                  renderUploadStatus()
+                ) : (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      minHeight: "400px",
+                      padding: "2rem",
+                    }}
+                  >
+                    <CheckCircleIcon
+                      sx={{
+                        fontSize: "80px",
+                        color: "success.main",
+                        mb: 3,
+                      }}
+                    />
+                    <Typography
+                      variant="h4"
+                      gutterBottom
+                      sx={{
+                        fontWeight: "bold",
+                        mb: 2,
+                      }}
+                    >
+                      Upload Complete!
+                    </Typography>
+                    <Typography
+                      color="textSecondary"
+                      sx={{
+                        mb: 4,
+                        textAlign: "center",
+                      }}
+                    >
+                      Your file has been successfully uploaded.
+                    </Typography>
+                    {filePreview && (
                       <Box
                         sx={{
+                          mb: 4,
+                          width: "100%",
+                          maxWidth: "400px",
                           display: "flex",
-                          gap: 2,
                           justifyContent: "center",
                         }}
                       >
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          onClick={handleViewMedia}
-                          size="large"
-                        >
-                          View Media
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          color="primary"
-                          onClick={handleAddMore}
-                          size="large"
-                        >
-                          Upload More
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          color="secondary"
-                          onClick={handleClose}
-                          size="large"
-                        >
-                          Close
-                        </Button>
+                        <img
+                          src={filePreview}
+                          alt="Upload preview"
+                          style={{
+                            width: "100%",
+                            maxHeight: "250px",
+                            objectFit: "contain",
+                            borderRadius: "8px",
+                            boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                          }}
+                        />
                       </Box>
-                    </>
-                  )}
-                </Box>
+                    )}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 2,
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleViewMedia}
+                        size="large"
+                      >
+                        View Media
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={handleAddMore}
+                        size="large"
+                      >
+                        Upload More
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={handleClose}
+                        size="large"
+                      >
+                        Close
+                      </Button>
+                    </Box>
+                  </Box>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
