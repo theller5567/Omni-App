@@ -7,7 +7,7 @@
   .navbar {
     justify-self: flex-start; 
     align-self: flex-start;
-    padding-left: calc(250px + 2rem);
+    padding-left: 250px;
   }
 }
 .edit-media-dialog {
@@ -38,22 +38,92 @@
     }
   }
 }
+.media-detail-container {
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 2rem;
+  padding-left: calc(2rem + 250px);
+  display: flex;
+  flex-direction: column;
+
+  .back-button {
+    margin-bottom: 1rem;
+    align-self: flex-start;
+  }
+
+  .media-detail {
+    display: flex;
+    gap: 2rem;
+    height: calc(100% - 3rem); // Account for back button height
+    width: 100%;
+    overflow: hidden;
+
+    .media-preview {
+      flex: 2;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--background-color);
+      border-radius: 0.5rem;
+      overflow: hidden;
+
+      .media-preview-header, .media-preview-footer {
+        display: flex;
+        flex-direction: row;
+        gap: 0.5rem;
+        border-radius: 0.5rem 0.5rem 0 0;
+        padding: 1rem;
+      }
+
+      .media-preview-media {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+
+        img {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          width: auto;
+          height: auto;
+        }
+      }
+
+    }
+
+    .media-information {
+      flex: 1;
+      height: 100%;
+      padding: 1rem;
+      background-color: var(--background-color);
+      border-radius: 0.5rem;
+      overflow-y: auto;
+
+      .media-metadata {
+        margin-top: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+    }
+  }
+}
 .media-detail {
   display: flex;
   flex-direction: row;
   height: 100%;
   width: 100%;
-  padding: 4rem 2rem;
-  gap: 2rem;
+  padding: 0;
   align-items: start;
   box-sizing: border-box;
-  margin: auto;
-  padding-left: calc(250px + 2rem);
 
   .media-preview {
     flex: 1;
     height: 100%;
-    min-height: calc(100vh - 8rem);
     background-color: var(--background-color);
     border: 1px solid var(--border-color);
     border-radius: 0.5rem;

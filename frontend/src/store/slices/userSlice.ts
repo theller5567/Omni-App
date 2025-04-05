@@ -69,20 +69,30 @@ export const initializeUser = createAsyncThunk(
       }
 
       // Fetch user profile
-      const profileResponse = await axios.get<UserState>('http://localhost:5002/api/user/profile', {
+      const profileResponse = await axios.get<User>('http://localhost:5002/api/user/profile', {
         headers: { Authorization: `Bearer ${token}` },
       });
       
       console.log('Profile response:', profileResponse.data);
 
+      // Transform the flat user object into the expected structure
+      const userData = {
+        currentUser: {
+          ...profileResponse.data,
+          isLoading: false,
+          error: null,
+          token
+        }
+      };
+
       // If user is admin or super-admin, also fetch all users
-      if (profileResponse.data.currentUser.role === 'admin' || 
-          profileResponse.data.currentUser.role === 'superAdmin') {
+      if (profileResponse.data.role === 'admin' || 
+          profileResponse.data.role === 'superAdmin') {
         console.log('User is admin/super-admin, fetching all users');
         dispatch(fetchAllUsers());
       }
 
-      return profileResponse.data;
+      return userData;
     } catch (error: any) {
       console.error('Failed to initialize user:', error.response?.data || error.message);
       localStorage.removeItem('authToken');
@@ -115,9 +125,6 @@ const userSlice = createSlice({
           ...action.payload.currentUser,
           isLoading: false
         };
-        if (action.payload.users) {
-          state.users = action.payload.users;
-        }
       })
       .addCase(initializeUser.rejected, (state) => {
         state.currentUser = { ...initialState.currentUser, isLoading: false };

@@ -8,7 +8,8 @@
     position: absolute;
     display: flex;
     flex-direction: column;
-    width: 800px;
+    width: 100%;
+    max-width: 1000px;
     padding: 2rem;
     background-color: var(--background-color);
     border-radius: 0.5rem;
@@ -16,44 +17,48 @@
     min-height: 400px;
     justify-content: stretch;
     box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5);
+    margin: 0 auto;
+
     .step {
         display: flex;
         width: 100%;
+        max-width: 1000px;
         flex-direction: column;
         align-items: center;
         justify-content: stretch;
         height: 100%;
         gap: 1rem;
         flex-grow: 1;
-        }
-        .progress-bar {
-            width: 100%;
-        }
-        .MuiLinearProgress-root {
-            background-color: var(--neutral-color);
-            opacity: 0.5;
-        }
-        .MuiStepper-root {
-            margin-bottom: 2rem;
-            span.MuiStepLabel-labelContainer span {
-                font-size: 0.7rem;
-            }
-        }
-    
+        margin: 0 auto;
     }
-    button.close-modal {
-        position: absolute;
-        width: 1.2rem;
-        height: 1.2rem;
-        top: 1rem;
-        right: 1rem;
-        min-width: auto;
-        padding: 0;
-        margin: 0;
-        background-color: transparent;
-    }
-    
 
+    .progress-bar {
+        width: 100%;
+    }
+    .MuiLinearProgress-root {
+        background-color: var(--neutral-color);
+        opacity: 0.5;
+    }
+    .MuiStepper-root {
+        width: 100%;
+        max-width: 1000px;
+        margin: 0 auto 2rem auto;
+        span.MuiStepLabel-labelContainer span {
+            font-size: 0.7rem;
+        }
+    }
+}
+button.close-modal {
+    position: absolute;
+    width: 1.2rem;
+    height: 1.2rem;
+    top: 1rem;
+    right: 1rem;
+    min-width: auto;
+    padding: 0;
+    margin: 0;
+    background-color: transparent;
+}
 
 .cta-group {
   display: flex;
@@ -65,34 +70,194 @@
 }
 
 .dropzone {
-  transition: border-color 0.3s, background-color 0.3s;
   border: 2px dashed #ccc;
-  width: 80%;
-  padding: 1rem;
+  border-radius: 8px;
+  padding: 2rem;
   text-align: center;
-  margin: 0 auto;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(0, 0, 0, 0.02);
+  
+  &:hover {
+    border-color: #2196f3;
+    background: rgba(33, 150, 243, 0.05);
+    transform: translateY(-2px);
+  }
+  
+  &.active {
+    border-color: #4caf50;
+    background: rgba(76, 175, 80, 0.05);
+    transform: scale(1.02);
+  }
+  
+  &.reject {
+    border-color: #f44336;
+    background: rgba(244, 67, 54, 0.05);
+    animation: shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+  
+  &.accept {
+    border-color: #4caf50;
+    background: rgba(76, 175, 80, 0.05);
+  }
+  
+  .dropzone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    
+    svg {
+      font-size: 3rem;
+      color: #757575;
+      transition: all 0.3s ease;
+    }
+    
+    .browse-text {
+      color: #2196f3;
+      text-decoration: underline;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        color: darken(#2196f3, 10%);
+      }
+    }
+    
+    .error-text {
+      color: #f44336;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      
+      svg {
+        font-size: 1.2rem;
+        color: #f44336;
+      }
+    }
+  }
 }
 
-.dropzone.active {
-  border-color: #3f51b5; /* Change to your active color */
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  
+  .MuiFormControl-root {
+    transition: all 0.3s ease;
+    
+    &:focus-within {
+      transform: translateY(-2px);
+    }
+  }
 }
 
-.dropzone.reject, .dropzone.file-selected.reject {
-  border-color: #f44336; /* Red color for rejected files */
+.cta-group {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+  
+  button {
+    min-width: 120px;
+    transition: all 0.3s ease;
+    
+    &:not(:disabled):hover {
+      transform: translateY(-2px);
+    }
+    
+    &:disabled {
+      opacity: 0.7;
+    }
+  }
 }
 
-.dropzone.file-selected {
-  border-color: #4caf50; /* Green color for selected files */
+// Progress bar animations
+.MuiLinearProgress-root {
+  overflow: hidden;
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+// Keyframe animations
+@keyframes shake {
+  10%, 90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+  20%, 80% {
+    transform: translate3d(2px, 0, 0);
+  }
+  30%, 50%, 70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+  40%, 60% {
+    transform: translate3d(4px, 0, 0);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
 }
 
 .file-preview {
-  opacity: 0;
-  animation: fadeIn 0.5s forwards;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: var(--background-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  img {
+    border-radius: 4px;
+    transition: transform 0.3s ease;
+
+    &:hover {
+      transform: scale(1.05);
+    }
+  }
 }
 
-@keyframes fadeIn {
-  to {
-    opacity: 1;
+.progress-container {
+  margin: 1rem 0;
+  
+  .MuiLinearProgress-root {
+    background-color: var(--progress-bg);
+  }
+
+  .MuiLinearProgress-bar {
+    background-color: var(--accent-color);
+  }
+}
+
+.status-text {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  
+  &.processing {
+    color: var(--accent-color);
+  }
+  
+  &.ready {
+    color: var(--success-color);
   }
 }
 
@@ -115,5 +280,152 @@
 @media (max-width: 480px) {
   .form-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+#dialog-container {
+  .MuiDialog-paper {
+    .MuiDialogContent-root {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      .MuiStepper-root {
+        width: 100%;
+        max-width: 1000px;
+        margin: 0 auto 2rem auto;
+      }
+    }
+  }
+}
+
+.dialog-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1rem;
+
+  & > * {
+    width: 100%;
+    max-width: 1000px;
+  }
+
+  .MuiStepper-root {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto 2rem auto;
+  }
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+
+    &.step-1,
+    &.step-2,
+    &.step-3,
+    &.step-4 {
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+  }
+
+  .dropzone {
+    border: 2px dashed var(--accent-color);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: var(--background-color);
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+
+    &:hover {
+      border-color: var(--accent-color2);
+      background-color: var(--hover-color);
+    }
+
+    &.active {
+      border-color: var(--accent-color2);
+      background-color: var(--hover-color);
+    }
+
+    &.reject {
+      border-color: var(--error-color);
+      background-color: var(--error-bg-color);
+    }
+
+    &.accept {
+      border-color: var(--success-color);
+      background-color: var(--success-bg-color);
+    }
+  }
+
+  .dropzone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    max-width: 100%;
+
+    svg {
+      color: var(--accent-color);
+      transition: all 0.3s ease;
+    }
+
+    .browse-text {
+      color: var(--accent-color);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  }
+
+  .fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .cta-group {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 2rem;
+    width: 100%;
+  }
+}
+
+// Add responsive styles
+@media (max-width: 600px) {
+  .dialog-inner {
+    padding: 1rem;
+    gap: 1rem;
+
+    .dropzone {
+      padding: 1rem;
+      min-height: 150px;
+    }
+
+    .cta-group {
+      flex-direction: column;
+      
+      button {
+        width: 100%;
+      }
+    }
   }
 }

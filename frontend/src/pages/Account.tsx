@@ -91,6 +91,13 @@ const Account: React.FC = () => {
         backgroundColor: 'background.paper',
         borderRadius: '8px',
         boxShadow: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        width: '100%',
+        
       }}
     >
       <Typography variant="h4" gutterBottom>

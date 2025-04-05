@@ -1,33 +1,39 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Button, TextField, LinearProgress, Typography, FormControl, Select, MenuItem, InputLabel, SelectChangeEvent, Stepper, Step, StepLabel, FormControlLabel, Checkbox } from '@mui/material';
-import { useDropzone } from 'react-dropzone';
-//import { useUser } from '../../contexts/UserContext';
-import { FaTimes } from 'react-icons/fa';
-import './MediaUploader.scss';
-import useFileUpload from '../../hooks/useFileUpload';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import { BaseMediaFile } from '../../interfaces/MediaFile';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../../store/store'; // Adjust the import path as necessary
-import { addMedia } from '../../store/slices/mediaSlice';
-import { toast } from 'react-toastify';
-import { initializeMediaTypes } from '../../store/slices/mediaTypeSlice';
-//import { fieldLabels, nonEditableFields, fieldConfigurations } from '../../config/config'; // Adjust the import path as necessary
-
-interface SelectFieldConfig {
-  type: 'select';
-  class: string;
-  options: string[];
-  fullWidth: boolean;
-}
-
-interface Field {
-  name: string;
-  type: string;
-  options?: string[];
-  required: boolean;
-}
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  Box,
+  Button,
+  TextField,
+  LinearProgress,
+  Typography,
+  FormControl,
+  Select,
+  MenuItem,
+  InputLabel,
+  SelectChangeEvent,
+  Stepper,
+  Step,
+  StepLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  CircularProgress,
+} from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import { useDropzone } from "react-dropzone";
+import { FaFileImage, FaFileVideo, FaUpload } from "react-icons/fa";
+import "./MediaUploader.scss";
+import useFileUpload from "../../hooks/useFileUpload";
+import { useNavigate } from "react-router-dom";
+import { BaseMediaFile } from "../../interfaces/MediaFile";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../store/store";
+import { addMedia } from "../../store/slices/mediaSlice";
+import { toast } from "react-toastify";
+import { initializeMediaTypes } from "../../store/slices/mediaTypeSlice";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface MediaTypeUploaderProps {
   open: boolean;
@@ -44,16 +50,6 @@ interface UploadResponse {
   title: string;
 }
 
-// Type guard to check if a field configuration is a SelectFieldConfig
-function isSelectFieldConfig(config: any): config is SelectFieldConfig {
-  return config.type === 'select' && Array.isArray(config.options);
-}
-
-// interface UploadProgressEvent extends ProgressEvent {
-//   loaded: number;
-//   total: number;
-// }
-
 interface MetadataState {
   fileName: string;
   tags: string[];
@@ -69,105 +65,155 @@ interface MetadataState {
   [key: string]: any; // Allow dynamic fields for media type specific fields
 }
 
-const MediaUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, onUploadComplete }) => {
-  // Access user data from Redux store
-  const user = useSelector((state: RootState) => state.user);
-  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
-  const mediaTypesStatus = useSelector((state: RootState) => state.mediaTypes.status);
+const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
+  open,
+  onClose,
+  onUploadComplete,
+}) => {
   const dispatch = useDispatch<AppDispatch>();
+  const mediaTypes = useSelector(
+    (state: RootState) => state.mediaTypes.mediaTypes
+  );
+  const user = useSelector((state: RootState) => state.user);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Skip if we're already loading or have data
-    if (mediaTypesStatus === 'loading' || mediaTypes.length > 0) {
-      console.log('MediaUploader - Media types:', 
-        mediaTypesStatus === 'loading' ? 'loading in progress' : `${mediaTypes.length} types loaded`);
-      return;
-    }
-
-    // Only load if we're idle and have no data
-    if (mediaTypesStatus === 'idle') {
-      console.log('MediaUploader - Loading media types');
+    if (mediaTypes.length === 0) {
       dispatch(initializeMediaTypes());
     }
-  }, [dispatch, mediaTypesStatus, mediaTypes.length]);
+  }, [dispatch, mediaTypes.length]);
 
   // All state hooks
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [selectedMediaType, setSelectedMediaType] = useState('');
+  const [selectedMediaType, setSelectedMediaType] = useState("");
   const [metadata, setMetadata] = useState<MetadataState>({
-    fileName: '',
+    fileName: "",
     tags: [],
-    visibility: 'public',
-    altText: '',
-    description: '',
+    visibility: "public",
+    altText: "",
+    description: "",
     recordedDate: new Date().toISOString(),
     uploadedBy: user.currentUser._id,
     modifiedBy: user.currentUser._id,
   });
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [fileSelected, setFileSelected] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [uploadComplete, setUploadComplete] = useState(false);
 
-  const { uploadProgress, setUploadProgress, uploadComplete, resetUploadComplete } = useFileUpload();
+  const { uploadProgress, setUploadProgress } = useFileUpload();
 
-  const onDrop = useCallback((acceptedFiles: File[], fileRejections: any[]) => {
-    if (fileRejections.length > 0) {
-      const rejection = fileRejections[0];
-      const fileSizeInMB = (rejection.file.size / (1024 * 1024)).toFixed(2);
-      const maxFileSizeMB = 200;
-      const errorMessage = `Error: File is larger than ${maxFileSizeMB} MB. Your file was ${fileSizeInMB} MB. Please use a smaller file.`;
-      setError(errorMessage);
-      return;
-    }
+  // Add new state for file loading progress
+  const [fileLoadingProgress, setFileLoadingProgress] = useState(0);
+  const [isPreviewReady, setIsPreviewReady] = useState(false);
 
-    const file = acceptedFiles[0];
-    if (file) {
-      setError(null);
-      setFile(file);
-      setFileSelected(true);
+  const maxFileSizeMB = 200;
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const imageUrl = reader.result as string;
-        setFilePreview(imageUrl);
+  const acceptedFileTypes = {
+    "image/*": [],
+    "video/*": [],
+  };
 
-        const img = new Image();
-        img.onload = () => {
-          setMetadata(prev => ({
-            ...prev,
-            imageWidth: img.width,
-            imageHeight: img.height,
-          }));
+  const getFileTypeIcon = (fileType: string) => {
+    if (fileType.startsWith("image")) return <FaFileImage size={24} />;
+    if (fileType.startsWith("video")) return <FaFileVideo size={24} />;
+    return <FaUpload size={24} />;
+  };
+
+  const formatFileSize = (size: number) => {
+    if (size < 1024) return size + " B";
+    if (size < 1024 * 1024) return (size / 1024).toFixed(1) + " KB";
+    return (size / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
+  const onDrop = useCallback(
+    (acceptedFiles: File[], fileRejections: any[]) => {
+      if (fileRejections.length > 0) {
+        const { file, errors } = fileRejections[0];
+        const fileSizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+        let errorMessage = "";
+
+        if (errors[0].code === "file-too-large") {
+          errorMessage = `File is too large. Maximum size is ${maxFileSizeMB} MB. Your file was ${fileSizeInMB} MB.`;
+        } else if (errors[0].code === "file-invalid-type") {
+          errorMessage = `Invalid file type. Please upload an image or video file.`;
+        } else {
+          errorMessage = errors[0].message;
+        }
+
+        toast.error(errorMessage);
+        return;
+      }
+
+      const file = acceptedFiles[0];
+      if (file) {
+        setFile(file);
+        setFileSelected(true);
+        setIsPreviewReady(false);
+        setFileLoadingProgress(0);
+
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += 5;
+          setFileLoadingProgress(Math.min(progress, 90));
+          if (progress >= 90) clearInterval(interval);
+        }, 50);
+
+        const reader = new FileReader();
+
+        reader.onloadstart = () => {
+          setFileLoadingProgress(0);
         };
-        img.src = imageUrl;
-      };
-      reader.readAsDataURL(file);
-    }
-  }, []);
 
-  // Dropzone setup
+        reader.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const progress = Math.round((event.loaded / event.total) * 100);
+            setFileLoadingProgress(progress);
+          }
+        };
+
+        reader.onloadend = () => {
+          const imageUrl = reader.result as string;
+          setFilePreview(imageUrl);
+
+          const img = new Image();
+          img.onload = () => {
+            setMetadata((prev) => ({
+              ...prev,
+              imageWidth: img.width,
+              imageHeight: img.height,
+            }));
+            setFileLoadingProgress(100);
+            setIsPreviewReady(true);
+            clearInterval(interval);
+          };
+          img.src = imageUrl;
+        };
+
+        reader.readAsDataURL(file);
+      }
+    },
+    [maxFileSizeMB]
+  );
+
+  // Dropzone setup with enhanced options
   const {
     getRootProps,
     getInputProps,
     isDragActive,
     isDragReject,
+    isDragAccept,
   } = useDropzone({
     onDrop,
-    accept: {
-      'image/*': [],
-      'video/*': []
-    },
-    maxSize: 200 * 1024 * 1024,
+    accept: acceptedFileTypes,
+    maxSize: maxFileSizeMB * 1024 * 1024,
+    multiple: false,
   });
 
   useEffect(() => {
     if (user) {
-      setMetadata(prevMetadata => ({
+      setMetadata((prevMetadata) => ({
         ...prevMetadata,
         uploadedBy: user.currentUser._id,
         modifiedBy: user.currentUser._id,
@@ -176,24 +222,11 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, onUplo
   }, [user]);
 
   useEffect(() => {
-    if (uploadProgress === 100) {
-      setShowSuccessMessage(true);
-      setTimeout(() => setUploadProgress(0), 1000);
-    }
-  }, [uploadProgress, setUploadProgress]);
-
-  useEffect(() => {
     if (step === 2) {
-      setShowSuccessMessage(false);
       setUploadProgress(0);
+      setUploadComplete(false);
     }
-  }, [step, setUploadProgress]);
-
-  useEffect(() => {
-    if (step === 4 && file) {
-      handleUpload(file);
-    }
-  }, [step, file]);
+  }, [step]);
 
   // Early return after all hooks
   if (!open) return null;
@@ -206,157 +239,206 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, onUplo
   };
 
   const handleTagsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    handleMetadataChange('tagsInput', value); // Store the raw input temporarily
+    handleMetadataChange("tagsInput", event.target.value);
   };
 
   const handleTagsBlur = () => {
     if (metadata.tagsInput) {
-      const tags = metadata.tagsInput
-        .split(',')
-        .map((tag: string) => tag.trim())
-        .filter((tag: string) => tag !== '');
-      handleMetadataChange('tags', tags);
+      const newTags = metadata.tagsInput
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag !== "");
+      handleMetadataChange("tags", newTags);
     }
   };
 
   const handleTagsKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
+    if (event.key === "Enter") {
       event.preventDefault(); // Prevent form submission
       handleTagsBlur();
     }
   };
 
   const handleUpload = async (file: File) => {
+    setUploadComplete(false);
+    setUploadProgress(0);
+
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('title', file.name);
-    formData.append('fileExtension', file.name.split('.').pop()?.toUpperCase() || 'UNKNOWN');
-    formData.append('uploadedBy', user.currentUser._id);
-    formData.append('modifiedBy', user.currentUser._id);
-    formData.append('mediaType', selectedMediaType);
+    formData.append("file", file);
+    formData.append("title", file.name);
+    formData.append(
+      "fileExtension",
+      file.name.split(".").pop()?.toUpperCase() || "UNKNOWN"
+    );
+    formData.append("uploadedBy", user.currentUser._id);
+    formData.append("modifiedBy", user.currentUser._id);
+    formData.append("mediaType", selectedMediaType);
 
     const { tagsInput, ...metadataWithoutTagsInput } = metadata;
 
     Object.entries(metadataWithoutTagsInput).forEach(([key, value]) => {
-      if (key === 'tags' && Array.isArray(value)) {
-        value.forEach(tag => formData.append(`metadata[${key}][]`, tag));
+      if (key === "tags" && Array.isArray(value)) {
+        value.forEach((tag) => formData.append(`metadata[${key}][]`, tag));
       } else {
         formData.append(`metadata[${key}]`, value as string);
       }
     });
 
-    interface ProgressEvent {
-      loaded: number;
-      total?: number;
-    }
-
     try {
-      const response = await axios.post<UploadResponse>(
-        'http://localhost:5002/media/upload',
-        formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        }
-      );
-
-      // Update progress separately using XMLHttpRequest
       const xhr = new XMLHttpRequest();
-      xhr.upload.onprogress = (event: ProgressEvent) => {
-        const total = event.total || 0;
-        const percentCompleted = Math.round((event.loaded * 100) / total);
-        setUploadProgress(percentCompleted);
+      const response = await new Promise<UploadResponse>((resolve, reject) => {
+        xhr.upload.onprogress = (event: ProgressEvent) => {
+          const percentCompleted = Math.round(
+            (event.loaded * 100) / event.total
+          );
+          setUploadProgress(percentCompleted);
+        };
+
+        xhr.onload = () => {
+          if (xhr.status === 201) {
+            setUploadProgress(100);
+            resolve(JSON.parse(xhr.response));
+          } else {
+            reject(new Error("Upload failed"));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Upload failed"));
+
+        xhr.open("POST", "http://localhost:5002/media/upload");
+        xhr.send(formData);
+      });
+
+      const newFile: BaseMediaFile = {
+        _id: response._id,
+        id: response.id,
+        location: response.location,
+        slug: response.slug,
+        title: response.title,
+        uploadedBy: user.currentUser._id,
+        modifiedBy: user.currentUser._id,
+        mediaType: selectedMediaType,
+        __t: selectedMediaType,
+        metadata: {
+          ...metadataWithoutTagsInput,
+        },
+        fileSize: file.size,
+        modifiedDate: new Date(file.lastModified).toISOString(),
+        fileExtension: file.name.split(".").pop() || "",
       };
 
-      if (response.status === 201) {
-        resetUploadComplete();
-        setFileUrl(response.data.location);
-        setSlug(response.data.slug);
-
-        const newFile: BaseMediaFile = {
-          _id: response.data._id,
-          id: response.data.id,
-          location: response.data.location,
-          slug: response.data.slug,
-          title: response.data.title,
-          uploadedBy: user.currentUser._id,
-          modifiedBy: user.currentUser._id,
-          mediaType: selectedMediaType,
-          __t: selectedMediaType,
-          metadata: {
-            ...metadataWithoutTagsInput,
-          },
-          fileSize: file.size,
-          modifiedDate: new Date(file.lastModified).toISOString(),
-          fileExtension: file.name.split('.').pop() || '',
-        };
-        dispatch(addMedia(newFile));
-        onUploadComplete(newFile);
-      }
+      dispatch(addMedia(newFile));
+      setSlug(response.slug);
+      setUploadComplete(true);
+      onUploadComplete(newFile);
+      // Do not close the modal or reset any states here
     } catch (error) {
-      console.error('Error uploading file:', error);
-      toast.error('Failed to upload file');
+      console.error("Error uploading file:", error);
+      toast.error("Failed to upload file");
+      setUploadProgress(0);
+      setUploadComplete(false);
     }
   };
 
-  const handleNext = () => {
-    setStep((prev) => prev + 1);
+  const handleClose = () => {
+    // Only reset states if explicitly closed by user
+    setStep(1);
+    setFile(null);
+    setFilePreview(null);
+    setFileSelected(false);
+    setSlug(null);
+    setUploadProgress(0);
+    setUploadComplete(false);
+    setSelectedMediaType("");
+    setMetadata({
+      fileName: "",
+      tags: [],
+      visibility: "public",
+      altText: "",
+      description: "",
+      recordedDate: new Date().toISOString(),
+      uploadedBy: user.currentUser._id,
+      modifiedBy: user.currentUser._id,
+    });
+    onClose();
   };
-
-  const handleBack = () => setStep((prev) => (prev === 1 ? 1 : prev - 1));
 
   const handleAddMore = () => {
     setUploadProgress(0);
     setFilePreview(null);
     setStep(1);
     setFile(null);
+    setSelectedMediaType("");
     setMetadata({
-      fileName: '',
+      fileName: "",
       tags: [],
-      visibility: 'public',
-      altText: '',
-      description: '',
+      visibility: "public",
+      altText: "",
+      description: "",
       recordedDate: new Date().toISOString(),
       uploadedBy: user.currentUser._id,
       modifiedBy: user.currentUser._id,
     });
-    resetUploadComplete();
+    setFileSelected(false);
+    setUploadComplete(false);
   };
+
+  const handleNext = () => {
+    const nextStep = step + 1;
+    if (nextStep === 4) {
+      // Only trigger upload when moving to step 4
+      handleUpload(file!);
+    }
+    setStep(nextStep);
+  };
+
+  const handleBack = () => setStep((prev) => (prev === 1 ? 1 : prev - 1));
 
   const handleChange = (event: SelectChangeEvent) => {
-    const mediaType = event.target.value;
-    setSelectedMediaType(mediaType);
-    handleMetadataChange('mediaType', mediaType);
+    setSelectedMediaType(event.target.value);
+    handleMetadataChange("mediaType", event.target.value);
   };
 
-  const steps = ['Select Media Type', 'Upload File', 'Add Metadata', 'Completion'];
+  const steps = [
+    "Select Media Type",
+    "Upload File",
+    "Add Metadata",
+    "Completion",
+  ];
 
   const handleViewMedia = () => {
     if (slug) {
-      navigate(`/media-library/media/${slug}`);
+      setStep(1);
+      setFile(null);
+      setFilePreview(null);
+      setFileSelected(false);
+      setUploadProgress(0);
+      setUploadComplete(false);
+      navigate(`/media/slug/${slug}`);
     }
   };
 
   const renderFields = () => {
     if (!selectedMediaType) return null;
 
-    const selectedType = mediaTypes.find(type => type.name === selectedMediaType);
+    const selectedType = mediaTypes.find(
+      (type) => type.name === selectedMediaType
+    );
     if (!selectedType) return null;
 
-    // Base schema fields that are common to all media types
-    const baseFields = (
+    return (
       <>
         <TextField
           label="File Name"
-          value={metadata.fileName || ''}
-          onChange={(e) => handleMetadataChange('fileName', e.target.value)}
+          value={metadata.fileName || ""}
+          onChange={(e) => handleMetadataChange("fileName", e.target.value)}
           required
           fullWidth
           margin="normal"
         />
         <TextField
           label="Tags"
-          value={metadata.tagsInput || ''}
+          value={metadata.tagsInput || ""}
           onChange={handleTagsChange}
           onBlur={handleTagsBlur}
           onKeyDown={handleTagsKeyDown}
@@ -366,16 +448,16 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, onUplo
         />
         <TextField
           label="Alt Text"
-          value={metadata.altText || ''}
-          onChange={(e) => handleMetadataChange('altText', e.target.value)}
+          value={metadata.altText || ""}
+          onChange={(e) => handleMetadataChange("altText", e.target.value)}
           required
           fullWidth
           margin="normal"
         />
         <TextField
           label="Description"
-          value={metadata.description || ''}
-          onChange={(e) => handleMetadataChange('description', e.target.value)}
+          value={metadata.description || ""}
+          onChange={(e) => handleMetadataChange("description", e.target.value)}
           required
           fullWidth
           margin="normal"
@@ -385,8 +467,8 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, onUplo
         <FormControl fullWidth margin="normal">
           <InputLabel>Visibility</InputLabel>
           <Select
-            value={metadata.visibility || 'public'}
-            onChange={(e) => handleMetadataChange('visibility', e.target.value)}
+            value={metadata.visibility || "public"}
+            onChange={(e) => handleMetadataChange("visibility", e.target.value)}
             label="Visibility"
           >
             <MenuItem value="public">Public</MenuItem>
@@ -395,178 +477,314 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, onUplo
         </FormControl>
       </>
     );
-
-    // Media type specific fields (will be stored under metadata)
-    const mediaTypeFields = selectedType.fields.map((field: Field) => {
-      const fieldPath = field.name; // Remove metadata. prefix
-      switch (field.type) {
-        case 'Select':
-        case 'MultiSelect':
-          return (
-            <FormControl fullWidth margin="normal" key={field.name}>
-              <InputLabel id={`${field.name}-label`}>{field.name}</InputLabel>
-              <Select
-                labelId={`${field.name}-label`}
-                id={field.name}
-                value={metadata[fieldPath] || ''}
-                onChange={(e) => handleMetadataChange(fieldPath, e.target.value)}
-                label={field.name}
-                required={field.required}
-              >
-                {field.options?.map((option: string) => (
-                  <MenuItem key={option} value={option}>
-                    {option}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          );
-        case 'Boolean':
-          return (
-            <FormControlLabel
-              key={field.name}
-              control={
-                <Checkbox
-                  checked={metadata[fieldPath] || false}
-                  onChange={(e) => handleMetadataChange(fieldPath, e.target.checked)}
-                  name={field.name}
-                  required={field.required}
-                />
-              }
-              label={field.name}
-            />
-          );
-        default:
-          const fieldConfig = isSelectFieldConfig(field) ? field : { type: 'text' };
-          return (
-            <TextField
-              key={field.name}
-              label={field.name}
-              required={field.required}
-              value={metadata[fieldPath] || ''}
-              onChange={(e) => handleMetadataChange(fieldPath, e.target.value)}
-              fullWidth
-              margin="normal"
-              multiline={fieldConfig.type === 'text'}
-              rows={fieldConfig.type === 'text' ? 4 : 1}
-            />
-          );
-      }
-    });
-
-    return (
-      <div className="form-grid">
-        {baseFields}
-        <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>Media Type Specific Fields</Typography>
-        {mediaTypeFields}
-      </div>
-    );
   };
 
   return (
-    <Box id="media-uploader">
-      <Button className="close-modal" onClick={onClose} color="primary"><FaTimes /></Button>
-      <Stepper alternativeLabel activeStep={step - 1}>
-        {steps.map((label) => (
-          <Step key={label}>
-            <StepLabel>{label}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
-      <>
-        {step === 1 && (
-          <Box className="step step-1">
-            <Typography variant="h6">Select the type of media you want to upload</Typography>
-            <FormControl fullWidth>
-              <InputLabel id="demo-simple-select-label">Media Type</InputLabel>
-              <Select
-                labelId="demo-simple-select-label"
-                id="demo-simple-select"
-                value={selectedMediaType}
-                label="Media Type"
-                onChange={handleChange}
+    <Dialog
+      open={open}
+      onClose={(_, reason) => {
+        // Prevent modal from closing on backdrop click or escape key
+        if (reason === "backdropClick" || reason === "escapeKeyDown") {
+          return;
+        }
+        handleClose();
+      }}
+      maxWidth={false}
+      className="media-uploader-dialog"
+      PaperProps={{
+        style: {
+          maxWidth: "1000px",
+          width: "100%",
+        },
+      }}
+      disableEscapeKeyDown
+    >
+      <DialogTitle>
+        Upload Media
+        <IconButton
+          aria-label="close"
+          onClick={handleClose}
+          sx={{
+            position: "absolute",
+            right: 8,
+            top: 8,
+            color: (theme) => theme.palette.grey[500],
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent>
+        <Box className="dialog-inner">
+          <Stepper activeStep={step - 1} alternativeLabel className="stepper">
+            {steps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+          <AnimatePresence mode="wait">
+            {step === 1 && (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3 }}
+                style={{ width: "100%" }}
               >
-                {mediaTypes.map((type) => (
-                  <MenuItem key={type._id} value={type.name}>{type.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <div className="cta-group">
-              <Button variant="outlined" onClick={handleBack} style={{ opacity: '0', pointerEvents: 'none' }} disabled={true}>Back</Button>
-              <Button variant="contained" onClick={handleNext} disabled={!selectedMediaType}>Next</Button>
-            </div>
-          </Box>
-        )}
-        {step === 2 && (
-          <Box className="step step-2">
-            <div
-              {...getRootProps()}
-              className={`dropzone ${fileSelected ? 'file-selected' : ''} ${isDragActive ? 'active' : ''} ${isDragReject ? 'reject' : ''}`}
-            >
-              <input {...getInputProps()} />
-              <p>
-                {isDragReject
-                  ? 'File type not supported'
-                  : isDragActive
-                    ? 'Drop files here'
-                    : 'Drag & drop files here, or click to select files'}
-              </p>
-              {error && <div style={{ color: 'red' }}>{error}</div>}
-            </div>
+                <Typography variant="h6" sx={{ mb: 3 }}>
+                  Select Media Type
+                </Typography>
+                <FormControl fullWidth>
+                  <InputLabel>Media Type</InputLabel>
+                  <Select
+                    value={selectedMediaType}
+                    onChange={handleChange}
+                    label="Media Type"
+                  >
+                    {mediaTypes.map((type) => (
+                      <MenuItem key={type.name} value={type.name}>
+                        {type.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </motion.div>
+            )}
 
-            {filePreview && (
-              <Box mt={2}>
-                <img src={filePreview} alt="File preview" style={{ maxWidth: '150px', height: 'auto' }} />
-              </Box>
+            {step === 2 && (
+              <motion.div
+                key="step2"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3 }}
+                style={{ width: "100%" }}
+              >
+                <Typography variant="h6" sx={{ mb: 3 }}>
+                  Upload File
+                </Typography>
+                <div
+                  {...getRootProps()}
+                  className={`dropzone ${isDragActive ? "active" : ""} ${
+                    isDragReject ? "reject" : ""
+                  } ${isDragAccept ? "accept" : ""}`}
+                  style={{ width: "100%", minHeight: "200px" }}
+                >
+                  <input {...getInputProps()} />
+                  <div className="dropzone-content">
+                    {!fileSelected ? (
+                      <>
+                        {getFileTypeIcon(file?.type || "upload")}
+                        <Typography>
+                          Drag & drop your file here, or click to select
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          Maximum file size: {maxFileSizeMB}MB
+                        </Typography>
+                      </>
+                    ) : (
+                      <>
+                        {!isPreviewReady ? (
+                          <div className="loading-preview">
+                            <CircularProgress />
+                            <Typography>
+                              Loading preview... {fileLoadingProgress}%
+                            </Typography>
+                          </div>
+                        ) : (
+                          <div className="file-preview">
+                            {filePreview && file?.type.startsWith("image") ? (
+                              <img
+                                src={filePreview}
+                                alt="Preview"
+                                style={{ maxWidth: "100%", maxHeight: "200px" }}
+                              />
+                            ) : (
+                              getFileTypeIcon(file?.type || "")
+                            )}
+                            <Typography>{file?.name}</Typography>
+                            <Typography variant="caption">
+                              {formatFileSize(file?.size || 0)}
+                            </Typography>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
             )}
-            <div className="cta-group">
-              <Button variant="outlined" onClick={handleBack}>Back</Button>
-              <Button variant="contained" onClick={handleNext} disabled={!filePreview}>Next</Button>
-            </div>
-          </Box>
-        )}
-        {step === 3 && (
-          <Box className="step step-3">
-            <Typography variant="h6">Add Metadata</Typography>
-            <div className="fields">
-              {renderFields()}
-            </div>
-            <div className="cta-group">
-              <Button variant="outlined" onClick={handleBack}>Back</Button>
-              <Button variant="contained" onClick={handleNext} disabled={!metadata.fileName || !metadata.tags || !metadata.visibility || !metadata.altText || !metadata.description}>Next</Button>
-            </div>
-          </Box>
-        )}
-        {step === 4 && (
-          <Box className="step step-4">
-            {showSuccessMessage ? (
-              <Typography variant="h6" color="primary">Media uploaded successfully!</Typography>
-            ) : (
-              <LinearProgress color="secondary" style={{ margin: '1rem', padding: '0.2rem', borderRadius: '10px' }} className="progress-bar" variant="determinate" value={uploadProgress} />
+
+            {step === 3 && (
+              <motion.div
+                key="step3"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3 }}
+                style={{ width: "100%" }}
+              >
+                <Typography variant="h6" sx={{ mb: 3 }}>
+                  Add Metadata
+                </Typography>
+                {renderFields()}
+              </motion.div>
             )}
-            {uploadComplete && (
-              <>
-                {fileUrl && (
-                  <Box mt={2}>
-                    <img src={fileUrl} alt="Uploaded file" style={{ maxWidth: '100%', height: 'auto' }} />
-                  </Box>
-                )}
-                {slug && (
-                  <Button variant="contained" onClick={handleViewMedia}>View Media</Button>
-                )}
-              </>
+
+            {step === 4 && (
+              <motion.div
+                key="step4"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3 }}
+                style={{ width: "100%" }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: "400px",
+                    padding: "2rem",
+                  }}
+                >
+                  {!uploadComplete ? (
+                    <>
+                      <Typography variant="h6" sx={{ mb: 3 }}>
+                        Upload Progress
+                      </Typography>
+                      <Box sx={{ width: "100%", maxWidth: "400px", mb: 3 }}>
+                        <LinearProgress
+                          variant="determinate"
+                          value={uploadProgress}
+                          sx={{ height: 10, borderRadius: 5 }}
+                        />
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          align="center"
+                          sx={{ mt: 2 }}
+                        >
+                          {uploadProgress}% Uploaded
+                        </Typography>
+                      </Box>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircleIcon
+                        sx={{
+                          fontSize: "80px",
+                          color: "success.main",
+                          mb: 3,
+                        }}
+                      />
+                      <Typography
+                        variant="h4"
+                        gutterBottom
+                        sx={{
+                          fontWeight: "bold",
+                          mb: 2,
+                        }}
+                      >
+                        Upload Complete!
+                      </Typography>
+                      <Typography
+                        color="textSecondary"
+                        sx={{
+                          mb: 4,
+                          textAlign: "center",
+                        }}
+                      >
+                        Your file has been successfully uploaded.
+                      </Typography>
+                      {filePreview && (
+                        <Box
+                          sx={{
+                            mb: 4,
+                            width: "100%",
+                            maxWidth: "400px",
+                            display: "flex",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <img
+                            src={filePreview}
+                            alt="Upload preview"
+                            style={{
+                              width: "100%",
+                              maxHeight: "250px",
+                              objectFit: "contain",
+                              borderRadius: "8px",
+                              boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                            }}
+                          />
+                        </Box>
+                      )}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 2,
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={handleViewMedia}
+                          size="large"
+                        >
+                          View Media
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          onClick={handleAddMore}
+                          size="large"
+                        >
+                          Upload More
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="secondary"
+                          onClick={handleClose}
+                          size="large"
+                        >
+                          Close
+                        </Button>
+                      </Box>
+                    </>
+                  )}
+                </Box>
+              </motion.div>
             )}
-            <div className="cta-group">
-              <Button variant="outlined" onClick={handleAddMore}>Add More</Button>
-              <Button variant="contained" onClick={onClose}>Done</Button>
-            </div>
-          </Box>
+          </AnimatePresence>
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ padding: 2 }}>
+        {step > 1 && (
+          <Button onClick={handleBack} sx={{ mr: 1 }}>
+            Back
+          </Button>
         )}
-      </>
-    </Box>
+        {step < 4 && (
+          <Button
+            variant="contained"
+            onClick={handleNext}
+            disabled={
+              (step === 1 && !selectedMediaType) ||
+              (step === 2 && !fileSelected)
+            }
+          >
+            Next
+          </Button>
+        )}
+      </DialogActions>
+    </Dialog>
   );
 };
 
 export default MediaUploader;
-
-

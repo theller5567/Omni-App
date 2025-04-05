@@ -176,9 +176,13 @@ const MediaDetail: React.FC = () => {
       exit={{ opacity: 0 }}
       className="media-detail-container"
     >
-      <Button onClick={() => navigate(-1)} variant="outlined" sx={{ mb: 2 }}>
-          Back to Media Library
-        </Button>
+      <Button 
+        className="back-button" 
+        onClick={() => navigate(-1)} 
+        variant="outlined"
+      >
+        Back to Media Library
+      </Button>
       <Box className="media-detail">
         
 
@@ -223,6 +227,7 @@ const MediaDetail: React.FC = () => {
             <Typography><strong>Modified:</strong> {new Date(mediaFile.modifiedDate).toLocaleDateString()}</Typography>
             
             {mediaFile.metadata && Object.entries(mediaFile.metadata).map(([key, value]) => {
+              // Skip base schema fields we've already shown
               if (['fileName', 'altText', 'description', 'visibility', 'tags', 'uploadedBy', 'modifiedBy', 'modifiedDate', 'fileSize', 'recordedDate', 'mediaType'].includes(key)) return null;
               
               return (
