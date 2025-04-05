@@ -19,6 +19,7 @@ import {
   DialogActions,
   IconButton,
   CircularProgress,
+  Grid,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -427,55 +428,227 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     if (!selectedType) return null;
 
     return (
-      <>
-        <TextField
-          label="File Name"
-          value={metadata.fileName || ""}
-          onChange={(e) => handleMetadataChange("fileName", e.target.value)}
-          required
-          fullWidth
-          margin="normal"
-        />
-        <TextField
-          label="Tags"
-          value={metadata.tagsInput || ""}
-          onChange={handleTagsChange}
-          onBlur={handleTagsBlur}
-          onKeyDown={handleTagsKeyDown}
-          fullWidth
-          margin="normal"
-          helperText="Enter tags separated by commas"
-        />
-        <TextField
-          label="Alt Text"
-          value={metadata.altText || ""}
-          onChange={(e) => handleMetadataChange("altText", e.target.value)}
-          required
-          fullWidth
-          margin="normal"
-        />
-        <TextField
-          label="Description"
-          value={metadata.description || ""}
-          onChange={(e) => handleMetadataChange("description", e.target.value)}
-          required
-          fullWidth
-          margin="normal"
-          multiline
-          rows={4}
-        />
-        <FormControl fullWidth margin="normal">
-          <InputLabel>Visibility</InputLabel>
-          <Select
-            value={metadata.visibility || "public"}
-            onChange={(e) => handleMetadataChange("visibility", e.target.value)}
-            label="Visibility"
-          >
-            <MenuItem value="public">Public</MenuItem>
-            <MenuItem value="private">Private</MenuItem>
-          </Select>
-        </FormControl>
-      </>
+      <Grid container spacing={2}>
+        {/* Left Column */}
+        <Grid item xs={6}>
+          <TextField
+            label="File Name"
+            value={metadata.fileName || ""}
+            onChange={(e) => handleMetadataChange("fileName", e.target.value)}
+            required
+            fullWidth
+            margin="normal"
+          />
+          <TextField
+            label="Alt Text"
+            value={metadata.altText || ""}
+            onChange={(e) => handleMetadataChange("altText", e.target.value)}
+            required
+            fullWidth
+            margin="normal"
+          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Visibility</InputLabel>
+            <Select
+              value={metadata.visibility || "public"}
+              onChange={(e) => handleMetadataChange("visibility", e.target.value)}
+              label="Visibility"
+            >
+              <MenuItem value="public">Public</MenuItem>
+              <MenuItem value="private">Private</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+
+        {/* Right Column */}
+        <Grid item xs={6}>
+          <TextField
+            label="Tags"
+            value={metadata.tagsInput || ""}
+            onChange={handleTagsChange}
+            onBlur={handleTagsBlur}
+            onKeyDown={handleTagsKeyDown}
+            fullWidth
+            margin="normal"
+            helperText="Enter tags separated by commas"
+          />
+          
+          {/* First half of media type specific fields */}
+          {selectedType.fields.slice(0, Math.ceil(selectedType.fields.length / 2)).map((field) => {
+            switch (field.type) {
+              case 'Text':
+                return (
+                  <TextField
+                    key={field.name}
+                    label={field.name}
+                    value={metadata[field.name] || ""}
+                    onChange={(e) => handleMetadataChange(field.name, e.target.value)}
+                    required={field.required}
+                    fullWidth
+                    margin="normal"
+                  />
+                );
+              case 'Number':
+                return (
+                  <TextField
+                    key={field.name}
+                    label={field.name}
+                    type="number"
+                    value={metadata[field.name] || ""}
+                    onChange={(e) => handleMetadataChange(field.name, e.target.value)}
+                    required={field.required}
+                    fullWidth
+                    margin="normal"
+                  />
+                );
+              case 'Select':
+                return (
+                  <FormControl key={field.name} fullWidth margin="normal">
+                    <InputLabel>{field.name}</InputLabel>
+                    <Select
+                      value={metadata[field.name] || ""}
+                      onChange={(e) => handleMetadataChange(field.name, e.target.value)}
+                      label={field.name}
+                      required={field.required}
+                    >
+                      {field.options?.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                );
+              case 'Date':
+                return (
+                  <TextField
+                    key={field.name}
+                    label={field.name}
+                    type="date"
+                    value={metadata[field.name] || ""}
+                    onChange={(e) => handleMetadataChange(field.name, e.target.value)}
+                    required={field.required}
+                    fullWidth
+                    margin="normal"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                );
+              case 'Boolean':
+                return (
+                  <FormControl key={field.name} fullWidth margin="normal">
+                    <InputLabel>{field.name}</InputLabel>
+                    <Select
+                      value={metadata[field.name] || ""}
+                      onChange={(e) => handleMetadataChange(field.name, e.target.value)}
+                      label={field.name}
+                      required={field.required}
+                    >
+                      <MenuItem value="true">Yes</MenuItem>
+                      <MenuItem value="false">No</MenuItem>
+                    </Select>
+                  </FormControl>
+                );
+              default:
+                return null;
+            }
+          })}
+        </Grid>
+
+        {/* Description field - full width */}
+        <Grid item xs={12}>
+          <TextField
+            label="Description"
+            value={metadata.description || ""}
+            onChange={(e) => handleMetadataChange("description", e.target.value)}
+            required
+            fullWidth
+            margin="normal"
+            multiline
+            rows={4}
+          />
+        </Grid>
+
+        {/* Second half of media type specific fields */}
+        {selectedType.fields.slice(Math.ceil(selectedType.fields.length / 2)).map((field) => (
+          <Grid item xs={6} key={field.name}>
+            {(() => {
+              switch (field.type) {
+                case 'Text':
+                  return (
+                    <TextField
+                      label={field.name}
+                      value={metadata[field.name] || ""}
+                      onChange={(e) => handleMetadataChange(field.name, e.target.value)}
+                      required={field.required}
+                      fullWidth
+                      margin="normal"
+                    />
+                  );
+                case 'Number':
+                  return (
+                    <TextField
+                      label={field.name}
+                      type="number"
+                      value={metadata[field.name] || ""}
+                      onChange={(e) => handleMetadataChange(field.name, e.target.value)}
+                      required={field.required}
+                      fullWidth
+                      margin="normal"
+                    />
+                  );
+                case 'Select':
+                  return (
+                    <FormControl fullWidth margin="normal">
+                      <InputLabel>{field.name}</InputLabel>
+                      <Select
+                        value={metadata[field.name] || ""}
+                        onChange={(e) => handleMetadataChange(field.name, e.target.value)}
+                        label={field.name}
+                        required={field.required}
+                      >
+                        {field.options?.map((option) => (
+                          <MenuItem key={option} value={option}>
+                            {option}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  );
+                case 'Date':
+                  return (
+                    <TextField
+                      label={field.name}
+                      type="date"
+                      value={metadata[field.name] || ""}
+                      onChange={(e) => handleMetadataChange(field.name, e.target.value)}
+                      required={field.required}
+                      fullWidth
+                      margin="normal"
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  );
+                case 'Boolean':
+                  return (
+                    <FormControl fullWidth margin="normal">
+                      <InputLabel>{field.name}</InputLabel>
+                      <Select
+                        value={metadata[field.name] || ""}
+                        onChange={(e) => handleMetadataChange(field.name, e.target.value)}
+                        label={field.name}
+                        required={field.required}
+                      >
+                        <MenuItem value="true">Yes</MenuItem>
+                        <MenuItem value="false">No</MenuItem>
+                      </Select>
+                    </FormControl>
+                  );
+                default:
+                  return null;
+              }
+            })()}
+          </Grid>
+        ))}
+      </Grid>
     );
   };
 
