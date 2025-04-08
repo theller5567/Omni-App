@@ -214,85 +214,89 @@
       height: 100%;
       display: flex;
       flex-direction: column;
-      border-radius: 8px;
-      transition: all 0.2s ease;
-      text-align: left;
+      position: relative;
       
-      &:hover {
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        transform: translateY(-3px);
+      // Status indicator for deprecated/archived media types
+      .media-type-status {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 5px;
+        z-index: 1;
       }
       
-      .MuiCardContent-root {
-        flex-grow: 1;
-        padding-bottom: 8px;
+      // Styling for deprecated media types
+      &.media-type-card--deprecated {
+        opacity: 0.7;
+        border: 1px solid orange;
+        
+        .media-type-title {
+          position: relative;
+          
+          &::after {
+            content: "(Deprecated)";
+            font-size: 0.7rem;
+            opacity: 0.8;
+            margin-left: 6px;
+            font-weight: normal;
+          }
+        }
+      }
+      
+      // Styling for archived media types
+      &.media-type-card--archived {
+        opacity: 0.5;
+        border: 1px solid #f44336;
+        background-color: rgba(244, 67, 54, 0.08);
+        
+        .media-type-title {
+          position: relative;
+          
+          &::after {
+            content: "(Archived)";
+            font-size: 0.7rem;
+            opacity: 0.8;
+            margin-left: 6px;
+            font-weight: normal;
+          }
+        }
       }
       
       .media-type-title {
-        font-weight: 600;
-        margin-bottom: 12px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      
-      .field-count-chip {
-        margin-bottom: 8px;
-      }
-      
-      .field-type-chips {
-        display: flex;
-        flex-wrap: wrap;
-      }
-      
-      .fields-preview {
-        border-top: 1px solid rgba(0, 0, 0, 0.1);
-        padding-top: 12px;
-        
-        .field-name {
-          display: flex;
-          align-items: center;
-          font-weight: 500;
-          
-          .field-type {
-            margin-left: 4px;
-            font-weight: normal;
-            opacity: 0.7;
-            font-size: 0.75rem;
-          }
-          
-          .required-badge {
-            color: #f44336;
-            margin-left: 2px;
-          }
-        }
-        
-        .field-options {
-          display: block;
-          color: rgba(0, 0, 0, 0.6);
-          margin-top: 2px;
-          margin-left: 8px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
+        margin-bottom: 1rem;
       }
       
       .card-actions {
-        border-top: 1px solid rgba(0, 0, 0, 0.1);
-        padding: 8px;
+        margin-top: auto;
         display: flex;
         justify-content: space-between;
+      }
+      
+      .field-name {
+        font-weight: bold;
         
-        button {
-          min-width: auto;
-          padding: 4px 8px;
-          font-size: 0.75rem;
-          
-          svg {
-            font-size: 0.875rem;
-          }
+        .field-type {
+          font-size: 0.8rem;
+          opacity: 0.7;
+          font-weight: normal;
         }
+        
+        .required-badge {
+          color: red;
+          margin-left: 2px;
+        }
+      }
+      
+      .field-options {
+        font-style: italic;
+        color: rgba(255, 255, 255, 0.7);
+      }
+    }
+    
+    .media-type-comparison {
+      .required-badge {
+        color: red;
+        margin-left: 2px;
       }
     }
 }
@@ -319,5 +323,12 @@
         border-top-color: rgba(255, 255, 255, 0.1);
       }
     }
+  }
+}
+
+// Migration dialog
+.media-type-comparison {
+  small {
+    opacity: 0.7;
   }
 }

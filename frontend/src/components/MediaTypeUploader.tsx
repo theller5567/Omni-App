@@ -135,7 +135,11 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
             type: field.type,
             options: field.options || [],
             required: field.required
-          }))
+          })),
+          status: 'active' as 'active',
+          usageCount: 0,
+          replacedBy: null,
+          isDeleting: false
         };
         console.log('Saving media type:', mediaType);
         const savedMediaType = await saveMediaTypeToBackend(mediaType);

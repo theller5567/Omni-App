@@ -776,11 +776,13 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
                     onChange={handleChange}
                     label="Media Type"
                   >
-                    {mediaTypes.map((type) => (
-                      <MenuItem key={type.name} value={type.name}>
-                        {type.name}
-                      </MenuItem>
-                    ))}
+                    {mediaTypes
+                      .filter(type => !type.status || type.status === 'active')
+                      .map((type) => (
+                        <MenuItem key={type.name} value={type.name}>
+                          {type.name}
+                        </MenuItem>
+                      ))}
                   </Select>
                 </FormControl>
               </motion.div>

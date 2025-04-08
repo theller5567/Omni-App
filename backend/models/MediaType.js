@@ -9,8 +9,16 @@ const fieldSchema = new mongoose.Schema({
 
 const mediaTypeSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  fields: [fieldSchema]
-});
+  fields: [fieldSchema],
+  status: { 
+    type: String, 
+    enum: ['active', 'deprecated', 'archived'], 
+    default: 'active' 
+  },
+  usageCount: { type: Number, default: 0 },
+  replacedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'mediaTypes', default: null },
+  isDeleting: { type: Boolean, default: false }
+}, { timestamps: true });
 
 const MediaType = mongoose.models.mediaTypes || mongoose.model('mediaTypes', mediaTypeSchema);
 
