@@ -34,6 +34,7 @@ import { addMedia } from "../../store/slices/mediaSlice";
 import { toast } from "react-toastify";
 import { initializeMediaTypes } from "../../store/slices/mediaTypeSlice";
 import { motion, AnimatePresence } from "framer-motion";
+import env from '../../config/env';
 
 interface MediaTypeUploaderProps {
   open: boolean;
@@ -346,7 +347,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
           reject(new Error("Upload failed"));
         };
 
-        xhr.open("POST", "http://localhost:5002/media/upload");
+        xhr.open("POST", `${env.BASE_URL}/media/upload`);
         xhr.send(formData);
       });
 

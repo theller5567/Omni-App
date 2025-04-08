@@ -1,0 +1,14 @@
+# netlify.toml
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Handle routing for SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Environment variable settings
+[context.production.environment]
+  VITE_NODE_ENV = "production" 

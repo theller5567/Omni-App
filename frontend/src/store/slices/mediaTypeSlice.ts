@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import env from '../../config/env';
 
 interface Field {
   name: string;
@@ -28,12 +29,15 @@ const initialState: MediaTypeState = {
 
 export const initializeMediaTypes = createAsyncThunk(
   'mediaTypes/initialize',
-  async (_, { rejectWithValue }) => {
+  async () => {
     try {
-      const response = await axios.get<MediaType[]>('http://localhost:5002/api/media-types');
+      console.log('Fetching media types from backend');
+      const response = await axios.get<MediaType[]>(`${env.BASE_URL}/api/media-types`);
+      console.log('Media types received:', response.data);
       return response.data;
-    } catch (error) {
-      return rejectWithValue('Failed to fetch media types');
+    } catch (error: any) {
+      console.error('Error fetching media types:', error);
+      throw error;
     }
   }
 );

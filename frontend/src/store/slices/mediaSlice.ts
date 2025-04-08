@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import { BaseMediaFile } from '../../interfaces/MediaFile';
+import env from '../../config/env';
 
 interface MediaState {
   allMedia: BaseMediaFile[];
@@ -16,19 +17,15 @@ const initialState: MediaState = {
 
 export const initializeMedia = createAsyncThunk(
   'media/initialize',
-  async (_, { rejectWithValue }) => {
+  async () => {
     try {
-      console.log('Fetching media from backend...');
-      const response = await axios.get<BaseMediaFile[]>('http://localhost:5002/media/all');
-      console.log('Media fetch response:', response.data);
-      if (!response.data || !Array.isArray(response.data)) {
-        console.error('Invalid media data format:', response.data);
-        return rejectWithValue('Invalid media data format');
-      }
+      console.log('Fetching media from backend');
+      const response = await axios.get<BaseMediaFile[]>(`${env.BASE_URL}/media/all`);
+      console.log('Media received:', response.data);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching media:', error);
-      return rejectWithValue('Failed to fetch media');
+      throw error;
     }
   }
 );

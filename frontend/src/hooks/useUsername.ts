@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import env from '../config/env';
 
 // Cache object to store usernames
 const usernameCache: { [key: string]: string } = {};
@@ -29,7 +30,7 @@ export const useUsername = (userId: string | undefined) => {
       }
 
       try {
-        const response = await axios.get<UsernameResponse>(`http://localhost:5002/api/user/username/${userId}`);
+        const response = await axios.get<UsernameResponse>(`${env.BASE_URL}/api/user/username/${userId}`);
         const fetchedUsername = response.data.username;
         // Store in cache
         usernameCache[userId] = fetchedUsername;

@@ -2,38 +2,28 @@ import React from 'react';
 import TextField from '@mui/material/TextField';
 import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete';
 import './searchInput.scss';
-
-interface MediaFile {
-  id: string;
-  location: string;
-  metadata: {
-    fileName: string;
-    altText: string;
-    description: string;
-  };
-  title: string;
-}
+import { BaseMediaFile } from '../../interfaces/MediaFile';
 
 interface SearchInputProps {
-  mediaFiles: MediaFile[];
+  mediaFiles: BaseMediaFile[];
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
 }
 
-const filter = createFilterOptions<MediaFile>();
+const filter = createFilterOptions<BaseMediaFile>();
 
 const SearchInput: React.FC<SearchInputProps> = ({ mediaFiles, setSearchQuery }) => {
-  const [value, setValue] = React.useState<MediaFile | null>(null);
+  const [value, setValue] = React.useState<BaseMediaFile | null>(null);
 
   return (
     <Autocomplete
       className="ml-search-input"
       options={mediaFiles}
-      getOptionLabel={(option) => option.metadata.fileName}
+      getOptionLabel={(option) => option.metadata?.fileName || option.title || ''}
       value={value}
       onChange={(_, newValue) => {
         if (newValue) {
           setValue(newValue);
-          setSearchQuery(newValue.metadata.fileName);
+          setSearchQuery(newValue.metadata?.fileName || newValue.title || '');
         } else {
           setValue(null);
           setSearchQuery('');

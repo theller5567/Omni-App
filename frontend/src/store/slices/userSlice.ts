@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
 import axios from 'axios';
 import type { User } from '../../types/userTypes';
+import env from '../../config/env';
 
 export interface CurrentUserState extends User {
   isLoading: boolean;
@@ -51,7 +52,7 @@ export const fetchAllUsers = createAsyncThunk(
   'user/fetchAllUsers',
   async () => {
     const token = localStorage.getItem('authToken');
-    const response = await axios.get<User[]>('http://localhost:5002/api/users', {
+    const response = await axios.get<User[]>(`${env.BASE_URL}/api/users`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     console.log('Fetched users:', response.data);
@@ -69,7 +70,7 @@ export const initializeUser = createAsyncThunk(
       }
 
       // Fetch user profile
-      const profileResponse = await axios.get<User>('http://localhost:5002/api/user/profile', {
+      const profileResponse = await axios.get<User>(`${env.BASE_URL}/api/user/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       

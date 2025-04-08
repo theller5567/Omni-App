@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";  // Use useNavigate from v6
 import { Box, Typography, CircularProgress, Button } from "@mui/material";
+import env from '../config/env';
 
 const VerifyEmailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -13,7 +14,7 @@ const VerifyEmailPage: React.FC = () => {
   useEffect(() => {
     // Send GET request to backend for email verification with response type `VerifyEmailResponse`
     axios
-      .get(`http://localhost:5002/api/auth/verify-email/${token}`)
+      .get(`${env.BASE_URL}/api/auth/verify-email/${token}`)
       .then((response) => {
         setLoading(false);
         setMessage((response.data as { message: string }).message); // Set success message

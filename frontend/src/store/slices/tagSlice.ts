@@ -1,7 +1,8 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import env from '../../config/env';
 
-axios.defaults.baseURL = 'http://localhost:5002/api';
+axios.defaults.baseURL = `${env.BASE_URL}/api`;
 
 interface Tags {
   _id: string;
@@ -22,26 +23,26 @@ const initialState: TagsState = {
   error: null,
 };
 
-export const fetchTags = createAsyncThunk<Tags[], void>('http://localhost:5002/api/tags/fetchTags', async () => {
+export const fetchTags = createAsyncThunk<Tags[], void>('tags/fetchTags', async () => {
   console.log('Fetching tags');
-  const response = await axios.get<Tags[]>(`http://localhost:5002/api/tags`);
+  const response = await axios.get<Tags[]>(`${env.BASE_URL}/api/tags`);
   console.log('Tags fetched:', response.data);
   return response.data;
 });
 
-export const addTag = createAsyncThunk<Tags, string>('http://localhost:5002/api/tags/addTag', async (name) => {
+export const addTag = createAsyncThunk<Tags, string>('tags/addTag', async (name) => {
   console.log('Adding tag');
   const response = await axios.post<Tags>(`${axios.defaults.baseURL}/tags`, { name });
   return response.data;
 });
 
-export const updateTag = createAsyncThunk<Tags, { id: string; name: string }>('http://localhost:5002/api/tags/updateTag', async ({ id, name }) => {
+export const updateTag = createAsyncThunk<Tags, { id: string; name: string }>('tags/updateTag', async ({ id, name }) => {
   console.log('Updating tag');
   const response = await axios.put<Tags>(`${axios.defaults.baseURL}/tags/${id}`, { name });
   return response.data;
 });
 
-export const deleteTag = createAsyncThunk<string, string>('http://localhost:5002/api/tags/deleteTag', async (id) => {
+export const deleteTag = createAsyncThunk<string, string>('tags/deleteTag', async (id) => {
   console.log('Deleting tag');
   await axios.delete(`${axios.defaults.baseURL}/tags/${id}`);
   return id;

@@ -1,38 +1,59 @@
 // cSpell:ignore Toastify
 
-import React, { useState } from 'react';
-import { TextField, Button, Typography, Box, Paper, CircularProgress } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { TextField, Button, Typography, Box, CircularProgress, Container, Alert, Grid, Link } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
-import { registerUser, loginUser } from '../store/slices/authSlice';
+import { register, login } from '../store/slices/authSlice';
 import { RootState } from '../store/store';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AppDispatch } from '../store/store';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { setUser } from '../store/slices/userSlice';
 
 const AuthPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [formData, setFormData] = useState({ id: '', firstName: '', lastName: '', email: '', password: '' });
-  const [showForm] = useState(true);
+  const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '' });
+  const [showForm, setShowForm] = useState(true);
+  const [emailVerified, setEmailVerified] = useState(false);
 
-  const { loading, error, message } = useSelector((state: RootState) => state.auth);
+  const { error, message } = useSelector((state: RootState) => state.auth);
+  const loading = useSelector((state: RootState) => state.auth.isLoading);
+
+  useEffect(() => {
+    // Check for verification parameters in URL
+    const params = new URLSearchParams(location.search);
+    const verified = params.get('emailVerified');
+    
+    if (verified === 'true') {
+      setEmailVerified(true);
+      setIsSignUp(false); // Switch to sign in form
+      toast.success('Your email has been successfully verified!');
+    }
+  }, [location]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       if (isSignUp) {
-        await dispatch(registerUser({ id: '', firstName: formData.firstName, lastName: formData.lastName, email: formData.email, avatar: '' }));
-        // Handle registration response if needed
+        await dispatch(register({ 
+          firstName: formData.firstName, 
+          lastName: formData.lastName, 
+          email: formData.email,
+          username: formData.email,
+          password: "temporary123" // Temporary password for email registration flow
+        }));
+        // After successful registration, hide the form and show the email verification message
+        setShowForm(false);
       } else {
-        const response = await dispatch(loginUser({ email: formData.email, password: formData.password }));
+        const response = await dispatch(login({ email: formData.email, password: formData.password }));
         if (response.payload && typeof response.payload === 'object' && 'token' in response.payload && 'user' in response.payload) {
           const { token, user } = response.payload as { token: string, user: any }; // Type assertion to specify the structure of response.payload
           localStorage.setItem('authToken', token); // Store token in localStorage
@@ -46,113 +67,160 @@ const AuthPage: React.FC = () => {
       console.error('Error during authentication:', error);
     }
   };
-
   
-  const params = new URLSearchParams(window.location.search);
-  const emailVerified = params.get('emailVerified');
-
-  if (emailVerified) {
-    toast.success('Your email has been successfully verified!');
-    navigate('/home');
-  }
-
   return (
-    <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-      <Paper elevation={3} sx={{ padding: 4, width: '400px' }}>
-        {showForm ? (
+    <Container 
+      component="main" 
+      maxWidth="xs" 
+      sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        minHeight: '100vh',
+        padding: 3
+      }}
+    >
+      <Box
+        sx={{
+          padding: 3,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          backgroundColor: 'var(--primary-color)',
+          borderRadius: 2,
+          boxShadow: 3,
+          width: '100%',
+        }}
+      >
+        <Typography component="h1" variant="h5" sx={{ mb: 3 }}>
+          {isSignUp ? 'Create Account' : 'Sign In'}
+        </Typography>
+
+        {emailVerified && (
+          <Alert severity="success" sx={{ mb: 2, width: '100%' }}>
+            Email verified successfully! You can now sign in.
+          </Alert>
+        )}
+
+        {!showForm && isSignUp && (
+          <Box sx={{ mt: 2, width: '100%', textAlign: 'center' }}>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Verification email sent! Please check your inbox to complete registration.
+            </Alert>
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => setShowForm(true)}
+              sx={{ mt: 2 }}
+            >
+              Back to Sign In
+            </Button>
+          </Box>
+        )}
+
+        {showForm && (
           <>
-            <Typography variant="h5" align="center" gutterBottom>
-              {isSignUp ? 'Create an Account' : 'Sign In'}
-            </Typography>
-            <form onSubmit={handleSubmit}>
+            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
               {isSignUp && (
                 <>
                   <TextField
+                    margin="normal"
+                    required
                     fullWidth
+                    id="firstName"
                     label="First Name"
                     name="firstName"
+                    autoComplete="given-name"
                     value={formData.firstName}
                     onChange={handleChange}
-                    margin="normal"
-                    required
                   />
                   <TextField
-                    fullWidth
-                    label="Last Name"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
                     margin="normal"
                     required
+                    fullWidth
+                    id="lastName"
+                    label="Last Name"
+                    name="lastName"
+                    autoComplete="family-name"
+                    value={formData.lastName}
+                    onChange={handleChange}
                   />
                 </>
               )}
               <TextField
-                fullWidth
-                label="Email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
                 margin="normal"
                 required
+                fullWidth
+                id="email"
+                label="Email Address"
+                name="email"
+                autoComplete="email"
+                value={formData.email}
+                onChange={handleChange}
               />
               {!isSignUp && (
                 <TextField
-                  fullWidth
-                  label="Password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
                   margin="normal"
                   required
+                  fullWidth
+                  name="password"
+                  label="Password"
+                  type="password"
+                  id="password"
+                  autoComplete="current-password"
+                  value={formData.password}
+                  onChange={handleChange}
                 />
               )}
               <Button
-                variant="contained"
-                color="primary"
-                fullWidth
                 type="submit"
-                sx={{ marginTop: 2 }}
+                fullWidth
+                variant="contained"
+                sx={{ mt: 3, mb: 2 }}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : isSignUp ? 'Sign Up' : 'Sign In'}
+                {loading ? (
+                  <CircularProgress size={24} />
+                ) : isSignUp ? (
+                  'Sign Up'
+                ) : (
+                  'Sign In'
+                )}
               </Button>
-            </form>
+              <Grid container justifyContent="center">
+                <Grid item>
+                  <Link 
+                    component="button" 
+                    variant="body2" 
+                    onClick={() => {
+                      setIsSignUp(!isSignUp);
+                      setFormData({ firstName: '', lastName: '', email: '', password: '' });
+                    }}
+                  >
+                    {isSignUp
+                      ? 'Already have an account? Sign In'
+                      : "Don't have an account? Sign Up"}
+                  </Link>
+                </Grid>
+              </Grid>
+            </Box>
           </>
-        ) : (
-          <Box>
-            <Typography variant="h6" align="center" gutterBottom>
-              Check your email for the verification link!
-            </Typography>
-          </Box>
         )}
 
         {error && (
-          <Typography variant="body2" color="error" align="center" sx={{ marginTop: 2 }}>
-            {typeof error === 'string' ? error : (error as { message?: string }).message || 'An unexpected error occurred'}
-          </Typography>
+          <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
+            {error}
+          </Alert>
         )}
-
+        
         {message && (
-          <Typography variant="body2" color="success" align="center" sx={{ marginTop: 2 }}>
+          <Alert severity="success" sx={{ mt: 2, width: '100%' }}>
             {message}
-          </Typography>
+          </Alert>
         )}
-
-        <Box textAlign="center" marginTop={2}>
-          <Typography
-            component="button"
-            onClick={() => setIsSignUp(!isSignUp)}
-            sx={{ textDecoration: 'underline', cursor: 'pointer' }}
-          >
-            {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-          </Typography>
-        </Box>
-      </Paper>
-
-      <ToastContainer />
-    </Box>
+      </Box>
+    </Container>
   );
 };
 

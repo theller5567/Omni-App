@@ -25,3 +25,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Add .env.local to gitignore to allow developers to have their own environment settings
+.env.local

@@ -1,20 +1,12 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
-
-// Define the type for user data
-interface UserData {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  avatar: string;
-}
+import env from '../../config/env';
 
 // Define the type for the authentication state
 interface AuthState {
-  user: UserData | null;
+  user: any;
   isAuthenticated: boolean;
-  loading: boolean;
+  isLoading: boolean;
   error: string | null;
   message: string | null;
 }
@@ -22,34 +14,71 @@ interface AuthState {
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
-  loading: false, 
+  isLoading: false,
   error: null,
   message: null,
 };
 
-// Async thunk for registering a user
-export const registerUser = createAsyncThunk(
-  'auth/registerUser',
-  async (userData: UserData, thunkAPI) => {
+// Types
+interface UserRegistrationData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  username: string;
+  password: string;
+}
+
+interface UserLoginCredentials {
+  email: string;
+  password: string;
+}
+
+interface AuthResponse {
+  token: string;
+  refreshToken: string;
+  user: any;
+  message?: string;
+}
+
+// Async actions
+export const register = createAsyncThunk(
+  "auth/register",
+  async (userData: UserRegistrationData, { rejectWithValue }) => {
     try {
-      const response = await axios.post("http://localhost:5002/api/auth/register", userData);
-      return response.data;  // Return the successful response (message and user data)
+      console.log("Sending registration data:", userData);
+      const response = await axios.post(`${env.BASE_URL}/api/auth/register`, userData);
+      console.log("Registration response:", response.data);
+      return response.data as AuthResponse;
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(error.response.data);
+      if (error.response && error.response.data && error.response.data.message) {
+        return rejectWithValue(error.response.data.message);
+      }
+      return rejectWithValue("Registration failed");
     }
   }
-  
 );
 
-// Async thunk for logging in a user
-export const loginUser = createAsyncThunk(
-  'auth/loginUser',
-  async (credentials: { email: string; password: string }, thunkAPI) => {
+export const login = createAsyncThunk(
+  "auth/login",
+  async (credentials: UserLoginCredentials, { rejectWithValue }) => {
     try {
-      const response = await axios.post('http://localhost:5002/api/auth/login', credentials);
-      return response.data;
+      console.log("Logging in with:", credentials.email);
+      const response = await axios.post(`${env.BASE_URL}/api/auth/login`, credentials);
+      
+      // Type assertion for response data
+      const authData = response.data as AuthResponse;
+      
+      // Store tokens in localStorage
+      localStorage.setItem("authToken", authData.token);
+      localStorage.setItem("refreshToken", authData.refreshToken);
+      
+      return authData;
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(error.response.data);
+      console.error("Login error:", error.response?.data || error.message);
+      if (error.response && error.response.data && error.response.data.message) {
+        return rejectWithValue(error.response.data.message);
+      }
+      return rejectWithValue("Invalid credentials");
     }
   }
 );
@@ -58,41 +87,50 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    logout: (state) => {
+    setUser: (state, action) => {
+      state.user = action.payload;
+      state.isAuthenticated = !!action.payload;
+    },
+    clearUser: (state) => {
       state.user = null;
       state.isAuthenticated = false;
-      state.message = null;
+    },
+    setLoading: (state, action) => {
+      state.isLoading = action.payload;
+    },
+    setError: (state, action) => {
+      state.error = action.payload;
     },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(registerUser.pending, (state) => {
-        state.loading = true;
+      .addCase(register.pending, (state) => {
+        state.isLoading = true;
         state.error = null;
       })
-      .addCase(registerUser.fulfilled, (state, action: PayloadAction<any>) => {
-        state.loading = false;
+      .addCase(register.fulfilled, (state, action: PayloadAction<any>) => {
+        state.isLoading = false;
         state.message = action.payload.message;
       })
-      .addCase(registerUser.rejected, (state, action: PayloadAction<any>) => {
-        state.loading = false;
-        state.error = action.payload.message;
+      .addCase(register.rejected, (state, action: PayloadAction<any>) => {
+        state.isLoading = false;
+        state.error = action.payload;
       })
-      .addCase(loginUser.pending, (state) => {
-        state.loading = true;
+      .addCase(login.pending, (state) => {
+        state.isLoading = true;
         state.error = null;
       })
-      .addCase(loginUser.fulfilled, (state, action: PayloadAction<any>) => {
-        state.loading = false;
+      .addCase(login.fulfilled, (state, action: PayloadAction<any>) => {
+        state.isLoading = false;
         state.user = action.payload.user;
         state.isAuthenticated = true;
       })
-      .addCase(loginUser.rejected, (state, action: PayloadAction<any>) => {
-        state.loading = false;
-        state.error = action.payload.message;
+      .addCase(login.rejected, (state, action: PayloadAction<any>) => {
+        state.isLoading = false;
+        state.error = action.payload;
       });
   },
 });
 
-export const { logout } = authSlice.actions;
+export const { setUser, clearUser, setLoading, setError } = authSlice.actions;
 export default authSlice.reducer;

@@ -29,6 +29,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../store/store";
 import { toast } from 'react-toastify';
 import { useUsername } from '../../hooks/useUsername';
+import env from '../../config/env';
 
 const MediaDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -38,14 +39,14 @@ const MediaDetail: React.FC = () => {
   const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
   const navigate = useNavigate();
   const { username: uploaderUsername, loading: uploaderLoading } = useUsername(mediaFile?.uploadedBy);
-  const { username: modifierUsername, loading: modifierLoading } = useUsername(mediaFile?.modifiedBy);
+  //const { username: modifierUsername, loading: modifierLoading } = useUsername(mediaFile?.modifiedBy);
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
 
   useEffect(() => {
     const fetchMediaFile = async () => {
       try {
         const response = await axios.get<BaseMediaFile>(
-          `http://localhost:5002/media/slug/${slug}`
+          `${env.BASE_URL}/media/slug/${slug}`
         );
         setMediaFile(response.data);
       } catch (error) {
@@ -60,6 +61,26 @@ const MediaDetail: React.FC = () => {
       fetchMediaFile();
     }
   }, [slug]);
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!mediaFile) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <Typography color="error">Error loading media file.</Typography>
+      </Box>
+    );
+  }
+
+  // Find the media type configuration
+  const mediaTypeConfig = mediaTypes.find(type => type.name === mediaFile.mediaType);
+
 
   const validationSchema = Yup.object().shape({
     title: Yup.string().required('Title is required'),
@@ -100,6 +121,7 @@ const MediaDetail: React.FC = () => {
     return tags.map(tag => tag.replace(/"/g, '')).join(', ');
   };
 
+  // Create initial values including all metadata from the mediaFile
   const initialValues: FormValues = {
     title: mediaFile?.title || '',
     metadata: {
@@ -108,6 +130,30 @@ const MediaDetail: React.FC = () => {
       description: mediaFile?.metadata?.description || '',
       visibility: mediaFile?.metadata?.visibility || 'public',
       tags: formatTagsForDisplay(mediaFile?.metadata?.tags),
+      // Add default values for all fields defined in the mediaType config
+      ...(mediaTypeConfig?.fields?.reduce((acc, field) => {
+        // Only set a default if the field isn't already in the mediaFile metadata
+        if (!(field.name in (mediaFile?.metadata || {}))) {
+          switch (field.type) {
+            case 'Number':
+              acc[field.name] = 0;
+              break;
+            case 'Boolean':
+              acc[field.name] = false;
+              break;
+            case 'Date':
+              acc[field.name] = '';
+              break;
+            case 'Select':
+              acc[field.name] = field.options?.[0] || '';
+              break;
+            default:
+              acc[field.name] = '';
+          }
+        }
+        return acc;
+      }, {} as Record<string, any>) || {}),
+      // Include all existing metadata from the media file
       ...mediaFile?.metadata
     }
   };
@@ -124,7 +170,6 @@ const MediaDetail: React.FC = () => {
       const tags = typeof values.metadata.tags === 'string' 
         ? values.metadata.tags.split(',').map(tag => tag.trim())
         : values.metadata.tags;
-      console.log('Processed tags:', tags);
 
       const updatedValues = {
         title: values.title,
@@ -136,7 +181,7 @@ const MediaDetail: React.FC = () => {
       console.log('Sending update request with data:', updatedValues);
 
       const response = await axios.put<BaseMediaFile>(
-        `http://localhost:5002/media/update/${mediaFile.slug}`,
+        `${env.BASE_URL}/media/update/${mediaFile.slug}`,
         updatedValues
       );
       console.log('Received response:', response.data);
@@ -148,7 +193,7 @@ const MediaDetail: React.FC = () => {
 
       // Refresh the data from the server to ensure we have the latest version
       const refreshResponse = await axios.get<BaseMediaFile>(
-        `http://localhost:5002/media/slug/${mediaFile.slug}`
+        `${env.BASE_URL}/media/slug/${mediaFile.slug}`
       );
       setMediaFile(refreshResponse.data);
     } catch (error) {
@@ -156,25 +201,6 @@ const MediaDetail: React.FC = () => {
       toast.error('Failed to update media file');
     }
   };
-
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (!mediaFile) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <Typography color="error">Error loading media file.</Typography>
-      </Box>
-    );
-  }
-
-  // Find the media type configuration
-  const mediaTypeConfig = mediaTypes.find(type => type.name === mediaFile.mediaType);
 
   return (
     <motion.div
@@ -195,29 +221,29 @@ const MediaDetail: React.FC = () => {
 
         <Box className="media-preview">
           <Box className="media-preview-header">
-            <Typography variant="h6">Media Type:<span> {mediaFile.mediaType}</span></Typography>
-            <Box className="tags-container">
-              Tags: {mediaFile.metadata?.tags?.map((tag, index) => (
-                <Chip key={index} label={tag} sx={{ backgroundColor: 'var(--accent-color2)', color: 'var(--background-color)', marginRight: '0.5rem' }}/>
-              ))}
-            </Box>
+            <Typography variant="body2">Media Type:<span> {mediaFile.mediaType}</span></Typography>
+            
             <Box className="size-container">
-              <Typography variant="h6">Size:<span> {formatFileSize(mediaFile.fileSize || 0)}</span></Typography>
+              <Typography variant="body2">Size:<span> {formatFileSize(mediaFile.fileSize || 0)}</span></Typography>
             </Box>
             <Box className="updated-date">
-              <Typography variant="h6">Uploaded on:<span> {new Date(mediaFile.modifiedDate).toLocaleDateString()}</span></Typography>
+              <Typography variant="body2">Uploaded on:<span> {new Date(mediaFile.modifiedDate).toLocaleDateString()}</span></Typography>
             </Box>
             <Box className="uploaded-by">
-              <Typography variant="h6">Uploaded by:<span> {uploaderLoading ? 'Loading...' : uploaderUsername}</span></Typography>
+              <Typography variant="body2">Uploaded by:<span> {uploaderLoading ? 'Loading...' : uploaderUsername}</span></Typography>
             </Box>
           </Box>
           <Box className="media-preview-media">
             <img src={mediaFile.location} alt={mediaFile.metadata?.altText || ''} />
           </Box>
           <Box className="media-preview-footer">
-            <Typography variant="h6">{mediaFile.metadata?.description || ''}</Typography>
+            <Box className="tags-container">
+              Tags: {mediaFile.metadata?.tags?.map((tag, index) => (
+                <Chip key={index} label={tag} sx={{ backgroundColor: 'var(--accent-color2)', color: 'var(--background-color)', marginRight: '0.5rem' }}/>
+              ))}
+            </Box>
           </Box>
-        </Box>
+      </Box>
 
         <Box className="media-information">
           <Typography variant="h4">{mediaFile.metadata?.fileName || 'Untitled'}</Typography>
@@ -225,21 +251,34 @@ const MediaDetail: React.FC = () => {
           <Box className="media-metadata">
             <Typography><strong>Type:</strong> {mediaFile.mediaType}</Typography>
             <Typography><strong>Size:</strong> {formatFileSize(mediaFile.fileSize || 0)}</Typography>
-            <Typography>
-              <strong>Uploaded by:</strong> {uploaderLoading ? 'Loading...' : uploaderUsername}
-            </Typography>
-            <Typography>
-              <strong>Modified by:</strong> {modifierLoading ? 'Loading...' : modifierUsername}
-            </Typography>
-            <Typography><strong>Modified:</strong> {new Date(mediaFile.modifiedDate).toLocaleDateString()}</Typography>
-            
+            {/* <Typography><strong>Modified:</strong> {new Date(mediaFile.modifiedDate).toLocaleDateString()}</Typography> */}
+            {mediaTypeConfig?.fields?.map(field => {
+              return (
+                <Typography key={field.name}>
+                  <strong>{field.name}:</strong> {mediaFile.metadata?.[field.name]}
+                </Typography>
+              );
+            })}
             {mediaFile.metadata && Object.entries(mediaFile.metadata).map(([key, value]) => {
               // Skip base schema fields we've already shown
-              if (['fileName', 'altText', 'description', 'visibility', 'tags', 'uploadedBy', 'modifiedBy', 'modifiedDate', 'fileSize', 'recordedDate', 'mediaType'].includes(key)) return null;
+              if (['fileName', 'tags', 'altText', 'description', 'visibility'].includes(key)) return null;
               
-              return (
+              // Skip special fields we handle elsewhere
+              if (['uploadedBy', 'modifiedBy', 'modifiedDate', 'fileSize', 'recordedDate', 'mediaType'].includes(key)) return null;
+              
+              // Skip fields that are already shown from mediaTypeConfig
+              if (mediaTypeConfig?.fields?.some(field => field.name === key)) return null;
+              
+              // Format arrays and objects for display
+              const displayValue = Array.isArray(value) 
+                ? value.join(', ') 
+                : (typeof value === 'object' && value !== null) 
+                  ? JSON.stringify(value)
+                  : value;
+
+  return (
                 <Typography key={key}>
-                  <strong>{key}:</strong> {Array.isArray(value) ? value.join(', ') : value}
+                  <strong>{key}:</strong> {displayValue}
                 </Typography>
               );
             })}
@@ -267,110 +306,184 @@ const MediaDetail: React.FC = () => {
               enableReinitialize
             >
               {({ errors, touched, handleChange, handleSubmit, values, submitForm }: FormikProps<FormValues>) => {
-                console.log('Formik render - current values:', values);
-                console.log('Formik render - current errors:', errors);
                 return (
-                  <Form onSubmit={(e) => {
-                    e.preventDefault();
-                    console.log('Form onSubmit triggered');
-                    handleSubmit(e);
-                  }}>
-                    <Box display="grid" gap={2} my={2}>
-                      <TextField
-                        fullWidth
-                        name="title"
-                        label="Title"
-                        value={values.title}
+                  <Form 
+                    id="edit-media-form" 
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      console.log('Form onSubmit triggered');
+                      handleSubmit(e);
+                    }}
+                  >
+                    <TextField
+                      fullWidth
+                      name="title"
+                      label="Title"
+                      value={values.title}
+                      onChange={handleChange}
+                      error={touched.title && Boolean(errors.title)}
+                      helperText={touched.title && errors.title}
+                      margin="normal"
+                    />
+
+                    <TextField
+                      fullWidth
+                      name="metadata.fileName"
+                      label="File Name"
+                      value={values.metadata.fileName || ''}
+                      onChange={handleChange}
+                      error={touched.metadata?.fileName && Boolean(errors.metadata?.fileName)}
+                      helperText={touched.metadata?.fileName && errors.metadata?.fileName}
+                      margin="normal"
+                    />
+
+                    <TextField
+                      fullWidth
+                      name="metadata.altText"
+                      label="Alt Text"
+                      value={values.metadata.altText || ''}
+                      onChange={handleChange}
+                      error={touched.metadata?.altText && Boolean(errors.metadata?.altText)}
+                      helperText={touched.metadata?.altText && errors.metadata?.altText}
+                      margin="normal"
+                    />
+
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={1}
+                      name="metadata.description"
+                      label="Description"
+                      value={values.metadata.description || ''}
+                      onChange={handleChange}
+                      error={touched.metadata?.description && Boolean(errors.metadata?.description)}
+                      helperText={touched.metadata?.description && errors.metadata?.description}
+                      margin="normal"
+                      className="full-width-field"
+                    />
+
+                    <FormControl fullWidth margin="normal">
+                      <InputLabel>Visibility</InputLabel>
+                      <Select
+                        name="metadata.visibility"
+                        value={values.metadata.visibility || ''}
                         onChange={handleChange}
-                        error={touched.title && Boolean(errors.title)}
-                        helperText={touched.title && errors.title}
-                      />
+                        label="Visibility"
+                      >
+                        <MenuItem value="public">Public</MenuItem>
+                        <MenuItem value="private">Private</MenuItem>
+                      </Select>
+                    </FormControl>
 
-                      <TextField
-                        fullWidth
-                        name="metadata.fileName"
-                        label="File Name"
-                        value={values.metadata.fileName || ''}
-                        onChange={handleChange}
-                        error={touched.metadata?.fileName && Boolean(errors.metadata?.fileName)}
-                        helperText={touched.metadata?.fileName && errors.metadata?.fileName}
-                      />
+                    <TextField
+                      fullWidth
+                      name="metadata.tags"
+                      label="Tags (comma-separated)"
+                      value={formatTagsForDisplay(values.metadata.tags)}
+                      onChange={handleChange}
+                      error={touched.metadata?.tags && Boolean(errors.metadata?.tags)}
+                      helperText={touched.metadata?.tags && errors.metadata?.tags}
+                      margin="normal"
+                    />
 
-                      <TextField
-                        fullWidth
-                        name="metadata.altText"
-                        label="Alt Text"
-                        value={values.metadata.altText || ''}
-                        onChange={handleChange}
-                        error={touched.metadata?.altText && Boolean(errors.metadata?.altText)}
-                        helperText={touched.metadata?.altText && errors.metadata?.altText}
-                      />
+                    {/* Render all other media type specific fields */}
+                    {mediaTypeConfig?.fields?.map(field => {
+                      // Type guard for nonEditableFields
+                      const isFieldEditable = (fieldName: string): boolean => {
+                        return !(fieldName in nonEditableFields);
+                      };
 
-                      <TextField
-                        fullWidth
-                        multiline
-                        rows={4}
-                        name="metadata.description"
-                        label="Description"
-                        value={values.metadata.description || ''}
-                        onChange={handleChange}
-                        error={touched.metadata?.description && Boolean(errors.metadata?.description)}
-                        helperText={touched.metadata?.description && errors.metadata?.description}
-                      />
+                      // Skip standard fields (already rendered above)
+                      if (['fileName', 'tags', 'altText', 'description', 'visibility'].includes(field.name)) {
+                        return null;
+                      }
 
-                      <FormControl fullWidth>
-                        <InputLabel>Visibility</InputLabel>
-                        <Select
-                          name="metadata.visibility"
-                          value={values.metadata.visibility || ''}
-                          onChange={handleChange}
-                          label="Visibility"
-                        >
-                          <MenuItem value="public">Public</MenuItem>
-                          <MenuItem value="private">Private</MenuItem>
-                        </Select>
-                      </FormControl>
+                      if (!isFieldEditable(field.name)) return null;
 
-                      <TextField
-                        fullWidth
-                        name="metadata.tags"
-                        label="Tags (comma-separated)"
-                        value={formatTagsForDisplay(values.metadata.tags)}
-                        onChange={handleChange}
-                        error={touched.metadata?.tags && Boolean(errors.metadata?.tags)}
-                        helperText={touched.metadata?.tags && errors.metadata?.tags}
-                      />
-
-                      {/* Render media type specific fields */}
-                      {mediaTypeConfig?.fields.map(field => {
-                        // Type guard for nonEditableFields
-                        const isFieldEditable = (fieldName: string): boolean => {
-                          return !(fieldName in nonEditableFields);
-                        };
-
-                        if (!isFieldEditable(field.name)) return null;
-
-                        switch (field.type) {
-                          case 'Select':
-                            return (
-                              <FormControl key={field.name} fullWidth>
-                                <InputLabel>{field.name}</InputLabel>
-                                <Select
-                                  name={`metadata.${field.name}`}
-                                  value={values.metadata[field.name] || ''}
-                                  onChange={handleChange}
-                                >
-                                  {field.options?.map((option, index) => (
-                                    <MenuItem key={index} value={option}>{option}</MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            );
-                          default:
-                            return null;
-                        }
-                      })}
-                    </Box>
+                      // Get the current value from the form state
+                      const fieldValue = values.metadata[field.name];
+                      
+                      switch (field.type) {
+                        case 'Text':
+                          return (
+                            <TextField
+                              key={field.name}
+                              fullWidth
+                              name={`metadata.${field.name}`}
+                              label={field.name}
+                              value={fieldValue || ''}
+                              onChange={handleChange}
+                              required={field.required}
+                              margin="normal"
+                            />
+                          );
+                        case 'Number':
+                          return (
+                            <TextField
+                              key={field.name}
+                              fullWidth
+                              type="number"
+                              name={`metadata.${field.name}`}
+                              label={field.name}
+                              value={fieldValue || ''}
+                              onChange={handleChange}
+                              required={field.required}
+                              margin="normal"
+                            />
+                          );
+                        case 'Select':
+                          return (
+                            <FormControl key={field.name} fullWidth margin="normal">
+                              <InputLabel>{field.name}</InputLabel>
+                              <Select
+                                name={`metadata.${field.name}`}
+                                value={fieldValue || ''}
+                                onChange={handleChange}
+                                label={field.name}
+                                required={field.required}
+                              >
+                                {field.options?.map((option, index) => (
+                                  <MenuItem key={index} value={option}>{option}</MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          );
+                        case 'Date':
+                          return (
+                            <TextField
+                              key={field.name}
+                              fullWidth
+                              type="date"
+                              name={`metadata.${field.name}`}
+                              label={field.name}
+                              value={fieldValue || ''}
+                              onChange={handleChange}
+                              InputLabelProps={{ shrink: true }}
+                              required={field.required}
+                              margin="normal"
+                            />
+                          );
+                        case 'Boolean':
+                          return (
+                            <FormControl key={field.name} fullWidth margin="normal">
+                              <InputLabel>{field.name}</InputLabel>
+                              <Select
+                                name={`metadata.${field.name}`}
+                                value={fieldValue ? 'true' : 'false'}
+                                onChange={handleChange}
+                                label={field.name}
+                                required={field.required}
+                              >
+                                <MenuItem value="true">Yes</MenuItem>
+                                <MenuItem value="false">No</MenuItem>
+                              </Select>
+                            </FormControl>
+                          );
+                        default:
+                          console.log(`Unhandled field type: ${field.type} for field ${field.name}`);
+                          return null;
+                      }
+                    })}
                     <DialogActions>
                       <Button onClick={() => setIsEditing(false)}>Cancel</Button>
                       <Button 
@@ -380,13 +493,13 @@ const MediaDetail: React.FC = () => {
                         }}
                         color="primary"
                       >
-                        Save
-                      </Button>
+                    Save
+                  </Button>
                     </DialogActions>
-                  </Form>
+              </Form>
                 );
               }}
-            </Formik>
+          </Formik>
           </DialogContent>
         </Dialog>
       </Box>

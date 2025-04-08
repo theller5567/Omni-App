@@ -7,6 +7,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../store/store';
 import { deleteMedia, initializeMedia } from '../store/slices/mediaSlice';
 import { CircularProgress, Box, Typography } from '@mui/material';
+import env from '../config/env';
 
 const MediaContainer: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -68,7 +69,7 @@ const MediaContainer: React.FC = () => {
   const handleDeleteMedia = async (id: string): Promise<boolean> => {
     try {
       console.log('Deleting media with ID:', id);
-      await axios.delete(`http://localhost:5002/media/delete/${id}`);
+      await axios.delete(`${env.BASE_URL}/media/delete/${id}`);
       dispatch(deleteMedia(id));
       return true;
     } catch (error) {

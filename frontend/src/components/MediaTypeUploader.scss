@@ -1,0 +1,677 @@
+// Variables
+$dark-bg: rgba(33, 33, 33, 0.9);
+$input-bg: rgba(45, 45, 45, 0.8);
+$border-color: rgba(255, 255, 255, 0.1);
+$focus-color: #1976d2;
+$success-color: rgba(14, 234, 33, 0.5);
+$accent-color: rgba(255, 170, 0, 0.7);
+$danger-color: rgba(234, 14, 14, 0.7);
+$small-font: 0.8rem;
+$input-height: 50px;
+$spacing-sm: 5px;
+$spacing-md: 10px;
+$spacing-lg: 15px;
+
+// Dialog Container Styles
+#dialog-container {
+  width: 100%;
+  max-width: calc(100% - 250px);
+  margin-left: auto;
+  
+  .MuiDialog-paper {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+  }
+  
+  .dialog-inner {
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: auto;
+    height: 100%;
+    max-width: 100%;
+    
+    .new-media-type-form-container {
+      width: 100%;
+      height: 100%;
+    }
+
+    // Layout for Steps
+    .step-container {
+      display: grid;
+      width: 100%;
+      height: 100%;
+      gap: 1rem;
+      
+      // Step 1 - Add Fields
+      &.step1 {
+        grid-template-columns: 2fr 1fr;
+        
+        // Left Side - Field Creation
+        .field-creation-container {
+          width: 100%;
+          padding: 2rem;
+          border-radius: 0.5rem;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+          overflow-y: auto;
+          max-height: 500px;
+          
+          // Section header
+          .section-title {
+            font-size: 1.1rem;
+            margin: 0 0 $spacing-md 0;
+            padding-bottom: $spacing-sm;
+            border-bottom: 1px solid $border-color;
+            color: $focus-color;
+          }
+          
+          // Existing fields
+          .field-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: $spacing-md;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            border-left: 3px solid $focus-color;
+            margin-bottom: $spacing-md;
+            
+            .field-list-title {
+              font-weight: bold;
+              font-size: 0.9rem;
+              margin-bottom: $spacing-md;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              
+              .count-badge {
+                background-color: $focus-color;
+                color: white;
+                padding: 2px 8px;
+                border-radius: 12px;
+                font-size: 0.7rem;
+              }
+            }
+            
+            // Compact field item for existing fields
+            .compact-field-item {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              background-color: rgba(45, 45, 45, 0.4);
+              border-radius: 4px;
+              padding: $spacing-md;
+              font-size: 0.75rem;
+              border: 1px solid $border-color;
+              transition: all 0.2s ease;
+              
+              &:hover {
+                border-color: rgba(255, 255, 255, 0.3);
+                background-color: rgba(45, 45, 45, 0.6);
+              }
+              
+              &.active {
+                border-color: $focus-color;
+                box-shadow: 0 0 0 1px $focus-color;
+              }
+              
+              .field-info {
+                display: flex;
+                align-items: center;
+                gap: $spacing-md;
+                flex: 1;
+                
+                .field-type-badge {
+                  background-color: rgba(25, 118, 210, 0.2);
+                  padding: 2px 6px;
+                  border-radius: 3px;
+                  font-size: 0.7rem;
+                  font-weight: normal;
+                  color: rgba(255, 255, 255, 0.9);
+                }
+                
+                .field-name {
+                  font-weight: bold;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  max-width: 150px;
+                }
+                
+                .field-required {
+                  color: $success-color;
+                  font-size: 0.7rem;
+                  display: flex;
+                  align-items: center;
+                  gap: 2px;
+                }
+              }
+              
+              .field-options {
+                color: rgba(255, 255, 255, 0.5);
+                font-size: 0.7rem;
+                font-style: italic;
+                margin-left: $spacing-md;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 150px;
+              }
+              
+              .field-actions {
+                display: flex;
+                gap: $spacing-sm;
+                
+                .edit-button, 
+                .remove-button {
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  min-width: 28px;
+                  height: 28px;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  transition: background-color 0.2s;
+                  
+                  &:hover {
+                    opacity: 1;
+                  }
+                  
+                  svg {
+                    font-size: 0.8rem;
+                  }
+                }
+                
+                .edit-button {
+                  background-color: rgba(25, 118, 210, 0.2);
+                  color: $focus-color;
+                  
+                  &:hover {
+                    background-color: rgba(25, 118, 210, 0.3);
+                  }
+                }
+                
+                .remove-button {
+                  background-color: rgba(234, 14, 14, 0.2);
+                  color: $danger-color;
+                  
+                  &:hover {
+                    background-color: rgba(234, 14, 14, 0.3);
+                  }
+                }
+              }
+            }
+          }
+          
+          .new-input-field-container {
+            max-width: 100%;
+            display: flex;
+            align-items: center;
+            gap: $spacing-md;
+            margin-bottom: $spacing-lg;
+            position: relative;
+            padding: $spacing-lg;
+            background-color: rgba(45, 45, 45, 0.4);
+            border-radius: 6px;
+            border: 1px solid $border-color;
+            transition: all 0.2s ease;
+            
+            &:hover {
+              border-color: rgba(255, 255, 255, 0.3);
+            }
+            
+            &.active {
+              box-shadow: 0 0 0 1px $focus-color;
+              border-color: $focus-color;
+            }
+            
+            &.select-input {
+              flex-direction: column;
+              
+              .options-container {
+                width: 100%;
+                padding: $spacing-md;
+                margin-top: $spacing-md;
+                background-color: rgba(0, 0, 0, 0.2);
+                border-radius: 4px;
+                
+                .options-header {
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: $spacing-md;
+                  padding-bottom: $spacing-sm;
+                  border-bottom: 1px dashed $border-color;
+                  
+                  .title {
+                    font-size: 0.85rem;
+                    font-weight: bold;
+                    color: $accent-color;
+                  }
+                }
+                
+                .option-chips {
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: $spacing-sm;
+                  margin-top: $spacing-sm;
+                  
+                  .option-chip {
+                    background-color: rgba(25, 118, 210, 0.2);
+                    border-radius: 4px;
+                    padding: 4px 8px;
+                    font-size: $small-font;
+                    display: inline-flex;
+                    align-items: center;
+                    
+                    .remove-icon {
+                      margin-left: 4px;
+                      cursor: pointer;
+                      opacity: 0.7;
+                      
+                      &:hover {
+                        opacity: 1;
+                      }
+                    }
+                  }
+                }
+                
+                .add-option-container {
+                  display: flex;
+                  align-items: center;
+                  gap: $spacing-md;
+                  margin-top: $spacing-md;
+                }
+              }
+            }
+            
+            .input-row {
+              display: flex;
+              flex-direction: row;
+              gap: 1rem;
+              width: 100%;
+              align-items: center;
+              flex-wrap: wrap;
+              
+              .field-group {
+                display: flex;
+                gap: $spacing-md;
+                align-items: center;
+                flex: 1;
+                min-width: 200px;
+                
+                // Adjust the width of select and text inputs inside field-group
+                .input-field.select-input {
+                  width: 35%;
+                  min-width: 120px;
+                  max-width: 160px;
+                  flex-shrink: 0;
+                }
+                
+                .input-field.text-input {
+                  width: 65%;
+                  flex-grow: 1;
+                  min-width: 180px;
+                }
+              }
+              
+              input {
+                width: auto;
+              }
+            }
+            
+            .input-field {
+              min-width: 100px;
+              height: $input-height;
+              display: flex;
+              box-sizing: border-box;
+              
+              &.select-input {
+                min-width: 120px;
+                max-width: 160px;
+              }
+              
+              &.text-input {
+                flex: 1;
+                min-width: 180px;
+              }
+              
+              &.submitted {
+                box-shadow: 0 0 10px $success-color;
+              }
+            }
+            
+            textarea {
+              height: $input-height;
+              box-sizing: border-box;
+              min-width: 200px;
+            }
+            
+            .required-checkbox {
+              margin-left: $spacing-md;
+              display: flex;
+              flex-direction: column;
+              font-size: $small-font;
+              white-space: nowrap;
+              
+              span:first-child {
+                order: 2;
+              }
+              
+              span:last-child {
+                order: 1;
+                font-size: $small-font;
+              }
+            }
+            
+            .button-wrapper {
+              display: flex;
+              gap: $spacing-sm;
+              align-items: center;
+              
+              .add-button {
+                background-color: rgba(14, 234, 33, 0.2);
+                &:hover {
+                  background-color: rgba(14, 234, 33, 0.3);
+                }
+              }
+              
+              .remove-button {
+                background-color: rgba(234, 14, 14, 0.2);
+                &:hover {
+                  background-color: rgba(234, 14, 14, 0.3);
+                }
+              }
+            }
+            
+            .new-input-field-container-inner {
+              display: flex;
+              flex-direction: row;
+              gap: 2rem;
+              width: 100%;
+            }
+            
+            .new-input-options {
+              display: flex;
+              flex-direction: column;
+              gap: 0.5rem;
+              width: auto;
+              
+              .MuiFormControl-root {
+                padding: 0;
+                margin: 0;
+              }
+            }
+          }
+        }
+        
+        // Right Side - Field Preview
+        .field-preview-container {
+          width: 100%;
+          padding: 1.5rem;
+          border-radius: 0.5rem;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          overflow-y: auto;
+          max-height: 500px;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+          
+          .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: $spacing-lg;
+            padding-bottom: $spacing-md;
+            border-bottom: 1px solid $border-color;
+            
+            h6 {
+              margin: 0;
+              font-size: 1.1rem;
+              color: $focus-color;
+            }
+            
+            .field-count {
+              background-color: $dark-bg;
+              padding: 4px 10px;
+              border-radius: 12px;
+              font-size: 0.7rem;
+            }
+          }
+          
+          .empty-message {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-style: italic;
+            font-size: 0.9rem;
+          }
+          
+          .MuiList-root {
+            .MuiListItem-root {
+              padding: $spacing-md;
+              margin-bottom: $spacing-md;
+              border-bottom: 1px solid $border-color;
+              background-color: rgba(0, 0, 0, 0.2);
+              border-radius: 4px;
+              transition: background-color 0.2s ease;
+              cursor: pointer;
+              
+              &:hover {
+                background-color: rgba(0, 0, 0, 0.3);
+              }
+              
+              .MuiListItemText-primary {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                
+                .field-name {
+                  font-weight: bold;
+                }
+                
+                .field-type {
+                  background-color: rgba(25, 118, 210, 0.2);
+                  padding: 2px 8px;
+                  border-radius: 4px;
+                  font-size: 0.7rem;
+                }
+              }
+              
+              .field-required-badge {
+                background-color: $success-color;
+                color: black;
+                padding: 1px 6px;
+                border-radius: 4px;
+                font-size: 0.7rem;
+                margin-left: $spacing-sm;
+              }
+            }
+          }
+        }
+      }
+      
+      // Step 2 - Review & Submit
+      &.step2 {
+        grid-template-columns: 1fr;
+        width: 70%;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        
+        .media-type-summary {
+          background-color: rgba(25, 118, 210, 0.1);
+          border-radius: 8px;
+          padding: $spacing-lg;
+          margin-bottom: $spacing-lg;
+          border: 1px solid rgba(25, 118, 210, 0.3);
+          
+          h4 {
+            margin-top: 0;
+            color: $focus-color;
+            font-size: 1.2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: $spacing-md;
+            margin-bottom: $spacing-md;
+          }
+        }
+        
+        .field-list-container {
+          background-color: $input-bg;
+          border-radius: 8px;
+          padding: $spacing-lg;
+          margin-top: $spacing-lg;
+          max-height: 300px;
+          overflow-y: auto;
+          border: 1px solid $border-color;
+          
+          h6 {
+            margin-top: 0;
+            margin-bottom: $spacing-lg;
+            font-size: 1rem;
+            text-align: left;
+            padding-bottom: $spacing-sm;
+            border-bottom: 1px solid $border-color;
+          }
+          
+          .MuiList-root {
+            .MuiListItem-root {
+              background-color: rgba(0, 0, 0, 0.2);
+              margin-bottom: $spacing-md;
+              border-radius: 4px;
+              padding: $spacing-md;
+              transition: background-color 0.2s ease;
+              border-left: 3px solid $focus-color;
+              
+              &:hover {
+                background-color: rgba(0, 0, 0, 0.3);
+              }
+              
+              .MuiListItemText-primary {
+                font-weight: bold;
+                font-size: 0.9rem;
+              }
+              
+              .MuiListItemText-secondary {
+                font-size: $small-font;
+                margin-top: 4px;
+                color: rgba(255, 255, 255, 0.7);
+              }
+              
+              .required-badge {
+                background-color: $success-color;
+                color: #000;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 0.7rem;
+                margin-left: $spacing-md;
+              }
+            }
+          }
+        }
+        
+        .confirmation-message {
+          margin-top: $spacing-lg;
+          padding: $spacing-md;
+          font-size: $small-font;
+          text-align: center;
+          color: rgba(255, 255, 255, 0.7);
+        }
+      }
+    }
+  }
+}
+
+// Material UI Component Overrides
+.MuiInputBase-root {
+  background-color: $input-bg;
+  border-radius: 4px;
+  font-size: $small-font;
+  min-height: $input-height;
+  
+  .MuiInputBase-input {
+    padding: 8px 12px;
+  }
+  
+  &.Mui-focused {
+    .MuiOutlinedInput-notchedOutline {
+      border-color: $focus-color;
+    }
+  }
+}
+
+// Select Components
+.MuiSelect-select {
+  min-height: 20px !important;
+  font-size: $small-font !important;
+}
+
+.MuiMenuItem-root {
+  font-size: $small-font;
+}
+
+// Input Labels
+.MuiInputLabel-root {
+  font-size: $small-font;
+  color: rgba(255, 255, 255, 0.7);
+  background-color: $input-bg;
+  padding: 0 4px;
+  z-index: 1;
+  
+  &.Mui-focused {
+    color: $focus-color;
+  }
+  
+  &.MuiInputLabel-shrink {
+    transform: translate(14px, -9px) scale(0.75) !important;
+    background-color: $dark-bg;
+    
+    &:not(.MuiInputLabel-outlined) {
+      transform: translate(0, -1.5px) scale(0.75) !important;
+    }
+  }
+  
+  &.MuiInputLabel-outlined {
+    background-color: $input-bg;
+    z-index: 1;
+    
+    &.MuiInputLabel-shrink {
+      background-color: $dark-bg;
+      padding: 0 $spacing-sm;
+      border-radius: 2px;
+    }
+  }
+}
+
+// Fix for fieldset and legend
+.MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.23);
+  
+  legend {
+    max-width: 0;
+    opacity: 0;
+    transition: max-width 100ms cubic-bezier(0.0, 0, 0.2, 1) 50ms;
+  }
+}
+
+// When the label is shrunk, expand the legend
+.MuiInputLabel-shrink + .MuiInputBase-root .MuiOutlinedInput-notchedOutline legend {
+  max-width: 1000px;
+  opacity: 1;
+  transition: max-width 50ms cubic-bezier(0.0, 0, 0.2, 1);
+}
+
+// Form Controls
+.MuiFormControlLabel-root {
+  margin-left: 0;
+  height: auto;
+}
+
+.MuiFormControlLabel-label {
+  font-size: $small-font;
+}
