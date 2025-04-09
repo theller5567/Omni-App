@@ -30,8 +30,10 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import MediaInformation from './MediaInformation';
 import EditMediaDialog from './EditMediaDialog';
+import { MediaFormData, ApiMediaData, transformFormToApiData, createLogger } from '../../types/mediaTypes';
 
-
+// Create a logger instance for this component
+const logger = createLogger('MediaDetail');
 
 // Add a helper function to safely get metadata fields from either root or metadata object
 const getMetadataField = (mediaFile: any, fieldName: string, defaultValue: any = undefined) => {
@@ -162,41 +164,19 @@ const MediaDetail: React.FC = () => {
     }
   }, [mediaFile, mediaTypes]);
 
-  const handleSave = async (data: Partial<MediaFile>) => {
+  const handleSave = async (formData: MediaFormData) => {
     if (!mediaFile) return;
 
     try {
-      console.log('MediaDetail - Save initiated with data:', {
-        receivedData: data,
-        currentMediaFile: mediaFile
-      });
+      logger.formData('Received form data', formData);
 
-      // Format the data to match the backend's expected structure
-      const updateData = {
-        title: data.title || mediaFile.title,
-        metadata: {
-          fileName: data.fileName,
-          altText: data.altText,
-          description: data.description,
-          visibility: data.visibility,
-          tags: data.tags || [],
-          // Include webinar fields
-          'Webinar Title': data.customFields?.['Webinar Title'] || '',
-          'Webinar Summary': data.customFields?.['Webinar Summary'] || '',
-          'Webinar CTA': data.customFields?.['Webinar CTA'] || '',
-          // Include any other custom fields
-          ...data.customFields
-        }
-      };
-
-      console.log('MediaDetail - Formatted update data:', {
-        updateData,
-        originalData: data
-      });
+      // Transform form data to API format
+      const apiData = transformFormToApiData(formData);
+      logger.apiData('Transformed for API', apiData);
 
       const response = await axios.put<BaseMediaFile>(
         `${env.BASE_URL}/media/update/${mediaFile.slug}`,
-        updateData,
+        apiData,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -205,36 +185,35 @@ const MediaDetail: React.FC = () => {
         }
       );
 
-      console.log('MediaDetail - Server response:', {
-        status: response.status,
-        data: response.data
-      });
+      // Transform server response to ApiMediaData format before logging
+      const transformedResponse: ApiMediaData = {
+        title: response.data.title,
+        metadata: {
+          ...response.data.metadata,
+          fileName: response.data.metadata?.fileName || '',
+          tags: response.data.metadata?.tags || [],
+          visibility: (response.data.metadata?.visibility || 'public') as 'public' | 'private'
+        }
+      };
+
+      logger.apiData('Server response', transformedResponse);
 
       if (response.status === 200 && response.data) {
         // Update the local state with the new data
         const updatedMediaFile = {
           ...mediaFile,
-          title: data.title || mediaFile.title,
+          title: formData.title,
           metadata: {
-            fileName: data.fileName,
-            altText: data.altText,
-            description: data.description,
-            visibility: data.visibility,
-            tags: data.tags || [],
-            // Include webinar fields
-            'Webinar Title': data.customFields?.['Webinar Title'] || '',
-            'Webinar Summary': data.customFields?.['Webinar Summary'] || '',
-            'Webinar CTA': data.customFields?.['Webinar CTA'] || '',
-            // Include any other custom fields
-            ...data.customFields
+            fileName: formData.fileName,
+            altText: formData.altText,
+            description: formData.description,
+            visibility: formData.visibility,
+            tags: formData.tags,
+            ...formData.customFields
           }
         };
 
-        console.log('MediaDetail - Updating local state:', {
-          before: mediaFile,
-          after: updatedMediaFile
-        });
-
+        logger.formData('Updating local state', formData);
         setMediaFile(updatedMediaFile);
         setIsEditing(false);
         toast.success('Media file updated successfully');
@@ -242,11 +221,7 @@ const MediaDetail: React.FC = () => {
         throw new Error('Failed to update media file');
       }
     } catch (error: any) {
-      console.error('MediaDetail - Error updating media file:', {
-        error,
-        requestData: data,
-        mediaFile
-      });
+      logger.error('Update failed', error);
       
       if (error.response?.status === 404) {
         toast.error('Media file not found. Please refresh the page.');
