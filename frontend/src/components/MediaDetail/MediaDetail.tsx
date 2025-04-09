@@ -1,46 +1,134 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { Formik, Form, FormikProps } from 'formik';
-import * as Yup from 'yup';
+import { useParams, useNavigate } from "react-router-dom";
 import { 
   Box, 
   Button, 
   CircularProgress, 
   Chip, 
-  Dialog, 
-  DialogContent, 
-  DialogTitle,
-  DialogActions,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Typography
+  Typography,
 } from "@mui/material";
 import axios from "axios";
 import { BaseMediaFile } from "../../interfaces/MediaFile";
-import { useNavigate } from "react-router-dom";
+import { MediaFile, MediaType } from "../../types/media";
 import { motion } from 'framer-motion';
 import { formatFileSize } from "../../utils/formatFileSize";
-import { nonEditableFields } from "../../config/config";
 import "./mediaDetail.scss";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/store";
 import { toast } from 'react-toastify';
 import { useUsername } from '../../hooks/useUsername';
 import env from '../../config/env';
+import { 
+  FaFileAudio, 
+  FaFilePdf, 
+  FaFileWord, 
+  FaFileExcel, 
+  FaFile, 
+  FaDownload,
+} from 'react-icons/fa';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import EditIcon from '@mui/icons-material/Edit';
+import MediaInformation from './MediaInformation';
+import EditMediaDialog from './EditMediaDialog';
+
+
+
+// Add a helper function to safely get metadata fields from either root or metadata object
+const getMetadataField = (mediaFile: any, fieldName: string, defaultValue: any = undefined) => {
+  if (!mediaFile) return defaultValue;
+  
+  // First check in metadata object
+  if (mediaFile.metadata && mediaFile.metadata[fieldName] !== undefined) {
+    return mediaFile.metadata[fieldName];
+  }
+  
+  // Then check in root object
+  if (mediaFile[fieldName] !== undefined) {
+    return mediaFile[fieldName];
+  }
+  
+  // Return default if not found anywhere
+  return defaultValue;
+};
+
+
+// Add this interface near the other interfaces
+interface MediaTypeField {
+  name: string;
+  type: string;
+  required?: boolean;
+  options?: string[];
+  [key: string]: any;
+}
+
+interface MediaTypeConfig {
+  fields: MediaTypeField[];
+  name: string;
+  baseType?: string;
+  [key: string]: any;
+}
 
 const MediaDetail: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>();
+  // All state hooks first
+  const { slug } = useParams();
   const [mediaFile, setMediaFile] = useState<BaseMediaFile | null>(null);
+  const [mediaTypeConfig, setMediaTypeConfig] = useState<MediaTypeConfig | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
   const navigate = useNavigate();
   const { username: uploaderUsername, loading: uploaderLoading } = useUsername(mediaFile?.uploadedBy);
-  //const { username: modifierUsername, loading: modifierLoading } = useUsername(mediaFile?.modifiedBy);
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
+  
+  // Function to get base schema fields
+  const getBaseSchemaFields = (): Record<string, any> => {
+    if (!mediaFile || !mediaFile.__t) return {};
+
+    // Handle different base types with their fields
+    switch (mediaFile.__t) {
+      case 'BaseImage':
+        return {
+          imageWidth: { type: 'Number', required: true },
+          imageHeight: { type: 'Number', required: true },
+          resolution: { type: 'Number' },
+          colorSpace: { type: 'Text' },
+          orientation: { type: 'Text' },
+          hasAlpha: { type: 'Boolean' }
+        };
+      case 'BaseVideo':
+        return {
+          duration: { type: 'Number' },
+          frameRate: { type: 'Number' },
+          width: { type: 'Number' },
+          height: { type: 'Number' },
+          codec: { type: 'Text' },
+          aspectRatio: { type: 'Text' },
+          hasAudio: { type: 'Boolean' },
+          audioCodec: { type: 'Text' }
+        };
+      case 'BaseAudio':
+        return {
+          duration: { type: 'Number' },
+          sampleRate: { type: 'Number' },
+          bitRate: { type: 'Number' },
+          channels: { type: 'Number' },
+          codec: { type: 'Text' }
+        };
+      case 'BaseDocument':
+        return {
+          pageCount: { type: 'Number' },
+          author: { type: 'Text' },
+          creationDate: { type: 'Date' }
+        };
+      default:
+        return {};
+    }
+  };
+
+  // Get base fields based on the file type
+  const baseFields = getBaseSchemaFields();
+
+ 
 
   useEffect(() => {
     const fetchMediaFile = async () => {
@@ -62,6 +150,38 @@ const MediaDetail: React.FC = () => {
     }
   }, [slug]);
 
+  // Update mediaTypeConfig when mediaFile changes
+  useEffect(() => {
+    if (mediaFile && mediaTypes.length > 0) {
+      const config = mediaTypes.find(type => type.name === mediaFile.mediaType);
+      setMediaTypeConfig(config || null);
+    }
+  }, [mediaFile, mediaTypes]);
+
+  const handleSave = async (data: Partial<MediaFile>) => {
+    if (!mediaFile) return;
+
+    try {
+      const response = await axios.put<BaseMediaFile>(
+        `${env.BASE_URL}/api/media/update/${mediaFile.slug}`,
+        data
+      );
+
+      if (response.status === 200) {
+        const updatedMediaFile = {
+          ...mediaFile,
+          ...response.data
+        };
+        setMediaFile(updatedMediaFile);
+        setIsEditing(false);
+        toast.success('Media file updated successfully');
+      }
+    } catch (error) {
+      console.error('Error updating media file:', error);
+      toast.error('Failed to update media file');
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
@@ -78,128 +198,40 @@ const MediaDetail: React.FC = () => {
     );
   }
 
-  // Find the media type configuration
-  const mediaTypeConfig = mediaTypes.find(type => type.name === mediaFile.mediaType);
-
-
-  const validationSchema = Yup.object().shape({
-    title: Yup.string().required('Title is required'),
-    metadata: Yup.object().shape({
-      fileName: Yup.string().required('File name is required'),
-      altText: Yup.string().required('Alt text is required'),
-      description: Yup.string().required('Description is required'),
-      visibility: Yup.string().required('Visibility is required'),
-      tags: Yup.mixed()
-        .required('Tags are required')
-        .transform((value) => {
-          if (typeof value === 'string') {
-            return value.split(',').map(tag => tag.trim());
-          }
-          return value;
-        })
-    })
-  });
-
-  interface MetadataValues {
-    fileName: string;
-    altText: string;
-    description: string;
-    visibility: string;
-    tags: string | string[];
-    [key: string]: any; // Allow dynamic fields from media type config
-  }
-
-  interface FormValues {
-    title: string;
-    metadata: MetadataValues;
-  }
-
-  // Helper function to format tags for display
-  const formatTagsForDisplay = (tags: string | string[] | undefined): string => {
-    if (!tags) return '';
-    if (typeof tags === 'string') return tags;
-    return tags.map(tag => tag.replace(/"/g, '')).join(', ');
+  // Convert BaseMediaFile to MediaFile type for the EditMediaDialog
+  const mediaFileForEdit: MediaFile = {
+    id: mediaFile._id,
+    title: mediaFile.title || '',
+    fileName: mediaFile.metadata?.fileName || '',
+    visibility: mediaFile.metadata?.visibility as 'public' | 'private',
+    altText: mediaFile.metadata?.altText || '',
+    description: mediaFile.metadata?.description || '',
+    tags: mediaFile.metadata?.tags || [],
+    customFields: mediaFile.metadata || {},
+    fileType: mediaFile.fileExtension,
+    fileSize: mediaFile.fileSize,
+    uploadDate: mediaFile.modifiedDate,
+    url: mediaFile.location
   };
 
-  // Create initial values including all metadata from the mediaFile
-  const initialValues: FormValues = {
-    title: mediaFile?.title || '',
-    metadata: {
-      fileName: mediaFile?.metadata?.fileName || '',
-      altText: mediaFile?.metadata?.altText || '',
-      description: mediaFile?.metadata?.description || '',
-      visibility: mediaFile?.metadata?.visibility || 'public',
-      tags: formatTagsForDisplay(mediaFile?.metadata?.tags),
-      // Add default values for all fields defined in the mediaType config
-      ...(mediaTypeConfig?.fields?.reduce((acc, field) => {
-        // Only set a default if the field isn't already in the mediaFile metadata
-        if (!(field.name in (mediaFile?.metadata || {}))) {
-          switch (field.type) {
-            case 'Number':
-              acc[field.name] = 0;
-              break;
-            case 'Boolean':
-              acc[field.name] = false;
-              break;
-            case 'Date':
-              acc[field.name] = '';
-              break;
-            case 'Select':
-              acc[field.name] = field.options?.[0] || '';
-              break;
-            default:
-              acc[field.name] = '';
-          }
-        }
-        return acc;
-      }, {} as Record<string, any>) || {}),
-      // Include all existing metadata from the media file
-      ...mediaFile?.metadata
-    }
-  };
-
-  const handleSubmit = async (values: FormValues) => {
-    console.log('handleSubmit called with values:', values);
-    try {
-      if (!mediaFile?.slug) {
-        console.error("Media slug is undefined");
-        return;
-      }
-
-      // Process tags into an array
-      const tags = typeof values.metadata.tags === 'string' 
-        ? values.metadata.tags.split(',').map(tag => tag.trim())
-        : values.metadata.tags;
-
-      const updatedValues = {
-        title: values.title,
-        metadata: {
-          ...values.metadata,
-          tags
-        }
-      };
-      console.log('Sending update request with data:', updatedValues);
-
-      const response = await axios.put<BaseMediaFile>(
-        `${env.BASE_URL}/media/update/${mediaFile.slug}`,
-        updatedValues
-      );
-      console.log('Received response:', response.data);
-
-      // Update the local state with the new data
-      setMediaFile(response.data);
-      setIsEditing(false);
-      toast.success('Media file updated successfully');
-
-      // Refresh the data from the server to ensure we have the latest version
-      const refreshResponse = await axios.get<BaseMediaFile>(
-        `${env.BASE_URL}/media/slug/${mediaFile.slug}`
-      );
-      setMediaFile(refreshResponse.data);
-    } catch (error) {
-      console.error("Error updating media file:", error);
-      toast.error('Failed to update media file');
-    }
+  // Convert MediaTypeConfig to MediaType for the EditMediaDialog
+  const mediaTypeForEdit: MediaType = mediaTypeConfig ? {
+    id: mediaTypeConfig._id,
+    name: mediaTypeConfig.name,
+    description: mediaTypeConfig.description || '',
+    fields: mediaTypeConfig.fields.map(field => ({
+      name: field.name,
+      label: field.name,
+      type: field.type.toLowerCase(),
+      required: field.required || false,
+      options: field.options || []
+    })),
+    acceptedFileTypes: mediaTypeConfig.acceptedFileTypes || []
+  } : {
+    id: '',
+    name: '',
+    fields: [],
+    acceptedFileTypes: []
   };
 
   return (
@@ -214,11 +246,9 @@ const MediaDetail: React.FC = () => {
         onClick={() => navigate(-1)} 
         variant="outlined"
       >
-        Back to Media Library
+        <ArrowBackIcon />
       </Button>
       <Box className="media-detail">
-        
-
         <Box className="media-preview">
           <Box className="media-preview-header">
             <Typography variant="body2">Media Type:<span> {mediaFile.mediaType}</span></Typography>
@@ -234,274 +264,173 @@ const MediaDetail: React.FC = () => {
             </Box>
           </Box>
           <Box className="media-preview-media">
-            <img src={mediaFile.location} alt={mediaFile.metadata?.altText || ''} />
+            {mediaFile.fileExtension && ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(mediaFile.fileExtension.toLowerCase()) ? (
+              // Image preview
+              <img src={mediaFile.location} alt={mediaFile.metadata?.altText || ''} />
+            ) : mediaFile.fileExtension && ['mp4', 'webm', 'ogg', 'mov'].includes(mediaFile.fileExtension.toLowerCase()) ? (
+              // Video preview
+              <Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#000' }}>
+                <video 
+                  controls 
+                  autoPlay={false}
+                  style={{ width: '100%', maxHeight: '600px' }} 
+                  poster={mediaFile.metadata?.v_thumbnail} 
+                >
+                  <source src={mediaFile.location} type={`video/${mediaFile.fileExtension === 'mov' ? 'quicktime' : mediaFile.fileExtension.toLowerCase()}`} />
+                  Your browser does not support the video tag.
+                </video>
+              </Box>
+            ) : (mediaTypeConfig?.baseType === 'BaseVideo' || mediaFile.__t === 'BaseVideo') ? (
+              // Fallback for videos when file extension is not recognized
+              <Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#000' }}>
+                <video 
+                  controls 
+                  autoPlay={false}
+                  style={{ width: '100%', maxHeight: '600px' }} 
+                  poster={mediaFile.metadata?.v_thumbnail} 
+                >
+                  <source src={mediaFile.location} />
+                  Your browser does not support the video tag.
+                </video>
+              </Box>
+            ) : mediaFile.fileExtension && ['mp3', 'wav', 'ogg', 'aac', 'flac'].includes(mediaFile.fileExtension.toLowerCase()) ? (
+              // Audio preview
+              <Box sx={{ width: '100%', p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+                <Box sx={{ mb: 2, fontSize: '3rem', color: 'primary.main' }}>
+                  <FaFileAudio />
+                </Box>
+                <audio controls style={{ width: '100%' }}>
+                  <source src={mediaFile.location} type={`audio/${mediaFile.fileExtension.toLowerCase()}`} />
+                  Your browser does not support the audio tag.
+                </audio>
+              </Box>
+            ) : mediaFile.fileExtension === 'pdf' ? (
+              // PDF preview
+              <Box sx={{ width: '100%', p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+                <Box sx={{ mb: 2, fontSize: '3rem', color: 'error.main' }}>
+                  <FaFilePdf />
+                </Box>
+                <iframe 
+                  src={`${mediaFile.location}#toolbar=0&navpanes=0`}
+                  title={mediaFile.title || 'PDF Document'}
+                  style={{ width: '100%', height: '600px', border: 'none' }}
+                />
+              </Box>
+            ) : mediaFile.fileExtension && ['doc', 'docx'].includes(mediaFile.fileExtension.toLowerCase()) ? (
+              // Word document (no preview, just icon)
+              <Box sx={{ width: '100%', p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+                <Box sx={{ mb: 2, fontSize: '3rem', color: 'primary.main' }}>
+                  <FaFileWord />
+                </Box>
+                <Typography variant="body1">
+                  This is a Word document. Please download to view.
+                </Typography>
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  startIcon={<FaDownload />}
+                  onClick={() => window.open(mediaFile.location, '_blank')}
+                  sx={{ mt: 2 }}
+                >
+                  Download Document
+                </Button>
+              </Box>
+            ) : mediaFile.fileExtension && ['xls', 'xlsx'].includes(mediaFile.fileExtension.toLowerCase()) ? (
+              // Excel document (no preview, just icon)
+              <Box sx={{ width: '100%', p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+                <Box sx={{ mb: 2, fontSize: '3rem', color: 'success.main' }}>
+                  <FaFileExcel />
+                </Box>
+                <Typography variant="body1">
+                  This is an Excel spreadsheet. Please download to view.
+                </Typography>
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  startIcon={<FaDownload />}
+                  onClick={() => window.open(mediaFile.location, '_blank')}
+                  sx={{ mt: 2 }}
+                >
+                  Download Spreadsheet
+                </Button>
+              </Box>
+            ) : (
+              // Generic file (no preview, just icon)
+              <Box sx={{ width: '100%', p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+                <Box sx={{ mb: 2, fontSize: '3rem', color: 'text.secondary' }}>
+                  <FaFile />
+                </Box>
+                <Typography variant="body1">
+                  {mediaFile.fileExtension 
+                    ? `This is a ${mediaFile.fileExtension.toUpperCase()} file. Please download to view.` 
+                    : 'File preview not available.'}
+                </Typography>
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  startIcon={<FaDownload />}
+                  onClick={() => window.open(mediaFile.location, '_blank')}
+                  sx={{ mt: 2 }}
+                >
+                  Download File
+                </Button>
+              </Box>
+            )}
           </Box>
           <Box className="media-preview-footer">
             <Box className="tags-container">
               Tags: {mediaFile.metadata?.tags?.map((tag, index) => (
-                <Chip key={index} label={tag} sx={{ backgroundColor: 'var(--accent-color2)', color: 'var(--background-color)', marginRight: '0.5rem' }}/>
+                <Chip key={index} size="small" label={tag} sx={{ backgroundColor: 'var(--accent-color)', fontSize: '0.8rem', padding: '0px', color: 'var(--background-color)', marginRight: '0.5rem' }}/>
               ))}
             </Box>
+            <Box className="media-actions">
+            <Box className="action-buttons">
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<FaDownload />}
+                onClick={() => window.open(mediaFile.location, '_blank')}
+              >
+                Download
+              </Button>
+              
+              {(userRole === 'admin' || userRole === 'superAdmin') && (
+                <Button 
+                  variant="outlined" 
+                  color="primary" 
+                  startIcon={<EditIcon />}
+                  onClick={() => setIsEditing(true)}
+                >
+                  Edit
+                </Button>
+              )}
+            </Box>
           </Box>
-      </Box>
-
-        <Box className="media-information">
-          <Typography variant="h4">{mediaFile.metadata?.fileName || 'Untitled'}</Typography>
+          </Box>
           
-          <Box className="media-metadata">
-            <Typography><strong>Type:</strong> {mediaFile.mediaType}</Typography>
-            <Typography><strong>Size:</strong> {formatFileSize(mediaFile.fileSize || 0)}</Typography>
-            {/* <Typography><strong>Modified:</strong> {new Date(mediaFile.modifiedDate).toLocaleDateString()}</Typography> */}
-            {mediaTypeConfig?.fields?.map(field => {
-              return (
-                <Typography key={field.name}>
-                  <strong>{field.name}:</strong> {mediaFile.metadata?.[field.name]}
-                </Typography>
-              );
-            })}
-            {mediaFile.metadata && Object.entries(mediaFile.metadata).map(([key, value]) => {
-              // Skip base schema fields we've already shown
-              if (['fileName', 'tags', 'altText', 'description', 'visibility'].includes(key)) return null;
-              
-              // Skip special fields we handle elsewhere
-              if (['uploadedBy', 'modifiedBy', 'modifiedDate', 'fileSize', 'recordedDate', 'mediaType'].includes(key)) return null;
-              
-              // Skip fields that are already shown from mediaTypeConfig
-              if (mediaTypeConfig?.fields?.some(field => field.name === key)) return null;
-              
-              // Format arrays and objects for display
-              const displayValue = Array.isArray(value) 
-                ? value.join(', ') 
-                : (typeof value === 'object' && value !== null) 
-                  ? JSON.stringify(value)
-                  : value;
-
-  return (
-                <Typography key={key}>
-                  <strong>{key}:</strong> {displayValue}
-                </Typography>
-              );
-            })}
-          </Box>
-
-          {(userRole === 'admin' || userRole === 'superAdmin') && (
-            <Button 
-              variant="contained" 
-              color={isEditing ? "error" : "primary"}
-              onClick={() => setIsEditing(!isEditing)}
-              sx={{ mt: 2 }}
-            >
-              {isEditing ? "Cancel Editing" : "Edit"}
-            </Button>
-          )}
+          
         </Box>
 
-        <Dialog open={isEditing} onClose={() => setIsEditing(false)} maxWidth="md" fullWidth>
-          <DialogTitle>Edit Media Details</DialogTitle>
-          <DialogContent>
-            <Formik
-              initialValues={initialValues}
-              validationSchema={validationSchema}
-              onSubmit={handleSubmit}
-              enableReinitialize
-            >
-              {({ errors, touched, handleChange, handleSubmit, values, submitForm }: FormikProps<FormValues>) => {
-                return (
-                  <Form 
-                    id="edit-media-form" 
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      console.log('Form onSubmit triggered');
-                      handleSubmit(e);
-                    }}
-                  >
-                    <TextField
-                      fullWidth
-                      name="title"
-                      label="Title"
-                      value={values.title}
-                      onChange={handleChange}
-                      error={touched.title && Boolean(errors.title)}
-                      helperText={touched.title && errors.title}
-                      margin="normal"
-                    />
+        {mediaFile && (
+          <div className="media-information-container">
+            <MediaInformation 
+              mediaFile={mediaFile} 
+              mediaTypeConfig={mediaTypeConfig} 
+              baseFields={baseFields} 
+              getMetadataField={getMetadataField} 
+            />
+          </div>
+        )}
 
-                    <TextField
-                      fullWidth
-                      name="metadata.fileName"
-                      label="File Name"
-                      value={values.metadata.fileName || ''}
-                      onChange={handleChange}
-                      error={touched.metadata?.fileName && Boolean(errors.metadata?.fileName)}
-                      helperText={touched.metadata?.fileName && errors.metadata?.fileName}
-                      margin="normal"
-                    />
-
-                    <TextField
-                      fullWidth
-                      name="metadata.altText"
-                      label="Alt Text"
-                      value={values.metadata.altText || ''}
-                      onChange={handleChange}
-                      error={touched.metadata?.altText && Boolean(errors.metadata?.altText)}
-                      helperText={touched.metadata?.altText && errors.metadata?.altText}
-                      margin="normal"
-                    />
-
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={1}
-                      name="metadata.description"
-                      label="Description"
-                      value={values.metadata.description || ''}
-                      onChange={handleChange}
-                      error={touched.metadata?.description && Boolean(errors.metadata?.description)}
-                      helperText={touched.metadata?.description && errors.metadata?.description}
-                      margin="normal"
-                      className="full-width-field"
-                    />
-
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel>Visibility</InputLabel>
-                      <Select
-                        name="metadata.visibility"
-                        value={values.metadata.visibility || ''}
-                        onChange={handleChange}
-                        label="Visibility"
-                      >
-                        <MenuItem value="public">Public</MenuItem>
-                        <MenuItem value="private">Private</MenuItem>
-                      </Select>
-                    </FormControl>
-
-                    <TextField
-                      fullWidth
-                      name="metadata.tags"
-                      label="Tags (comma-separated)"
-                      value={formatTagsForDisplay(values.metadata.tags)}
-                      onChange={handleChange}
-                      error={touched.metadata?.tags && Boolean(errors.metadata?.tags)}
-                      helperText={touched.metadata?.tags && errors.metadata?.tags}
-                      margin="normal"
-                    />
-
-                    {/* Render all other media type specific fields */}
-                    {mediaTypeConfig?.fields?.map(field => {
-                      // Type guard for nonEditableFields
-                      const isFieldEditable = (fieldName: string): boolean => {
-                        return !(fieldName in nonEditableFields);
-                      };
-
-                      // Skip standard fields (already rendered above)
-                      if (['fileName', 'tags', 'altText', 'description', 'visibility'].includes(field.name)) {
-                        return null;
-                      }
-
-                      if (!isFieldEditable(field.name)) return null;
-
-                      // Get the current value from the form state
-                      const fieldValue = values.metadata[field.name];
-                      
-                      switch (field.type) {
-                        case 'Text':
-                          return (
-                            <TextField
-                              key={field.name}
-                              fullWidth
-                              name={`metadata.${field.name}`}
-                              label={field.name}
-                              value={fieldValue || ''}
-                              onChange={handleChange}
-                              required={field.required}
-                              margin="normal"
-                            />
-                          );
-                        case 'Number':
-                          return (
-                            <TextField
-                              key={field.name}
-                              fullWidth
-                              type="number"
-                              name={`metadata.${field.name}`}
-                              label={field.name}
-                              value={fieldValue || ''}
-                              onChange={handleChange}
-                              required={field.required}
-                              margin="normal"
-                            />
-                          );
-                        case 'Select':
-                          return (
-                            <FormControl key={field.name} fullWidth margin="normal">
-                              <InputLabel>{field.name}</InputLabel>
-                              <Select
-                                name={`metadata.${field.name}`}
-                                value={fieldValue || ''}
-                                onChange={handleChange}
-                                label={field.name}
-                                required={field.required}
-                              >
-                                {field.options?.map((option, index) => (
-                                  <MenuItem key={index} value={option}>{option}</MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          );
-                        case 'Date':
-                          return (
-                            <TextField
-                              key={field.name}
-                              fullWidth
-                              type="date"
-                              name={`metadata.${field.name}`}
-                              label={field.name}
-                              value={fieldValue || ''}
-                              onChange={handleChange}
-                              InputLabelProps={{ shrink: true }}
-                              required={field.required}
-                              margin="normal"
-                            />
-                          );
-                        case 'Boolean':
-                          return (
-                            <FormControl key={field.name} fullWidth margin="normal">
-                              <InputLabel>{field.name}</InputLabel>
-                              <Select
-                                name={`metadata.${field.name}`}
-                                value={fieldValue ? 'true' : 'false'}
-                                onChange={handleChange}
-                                label={field.name}
-                                required={field.required}
-                              >
-                                <MenuItem value="true">Yes</MenuItem>
-                                <MenuItem value="false">No</MenuItem>
-                              </Select>
-                            </FormControl>
-                          );
-                        default:
-                          console.log(`Unhandled field type: ${field.type} for field ${field.name}`);
-                          return null;
-                      }
-                    })}
-                    <DialogActions>
-                      <Button onClick={() => setIsEditing(false)}>Cancel</Button>
-                      <Button 
-                        onClick={() => {
-                          console.log('Save button clicked, submitting form with values:', values);
-                          submitForm();
-                        }}
-                        color="primary"
-                      >
-                    Save
-                  </Button>
-                    </DialogActions>
-              </Form>
-                );
-              }}
-          </Formik>
-          </DialogContent>
-        </Dialog>
+        {mediaTypeConfig && (
+          <EditMediaDialog
+            open={isEditing}
+            onClose={() => setIsEditing(false)}
+            mediaFile={mediaFileForEdit}
+            mediaType={mediaTypeForEdit}
+            onSave={handleSave}
+          />
+        )}
       </Box>
     </motion.div>
   );

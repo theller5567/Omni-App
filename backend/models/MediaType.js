@@ -17,7 +17,14 @@ const mediaTypeSchema = new mongoose.Schema({
   },
   usageCount: { type: Number, default: 0 },
   replacedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'mediaTypes', default: null },
-  isDeleting: { type: Boolean, default: false }
+  isDeleting: { type: Boolean, default: false },
+  acceptedFileTypes: { type: [String], default: [] },
+  baseType: { 
+    type: String, 
+    enum: ['BaseImage', 'BaseVideo', 'BaseAudio', 'BaseDocument', 'Media'],
+    default: 'Media'
+  },
+  includeBaseFields: { type: Boolean, default: true }
 }, { timestamps: true });
 
 const MediaType = mongoose.models.mediaTypes || mongoose.model('mediaTypes', mediaTypeSchema);

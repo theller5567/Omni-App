@@ -42,102 +42,166 @@ $border-radius: 0.5rem;
 
 // Media Detail Layout
 .media-detail {
-  @include flex-container(row, $spacing-md);
-  height: calc(100% - 3rem);
+  padding: 20px;
+  max-width: 1600px;
+  margin: 0 auto;
   width: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  height: calc(100vh - 120px);
   overflow: hidden;
-
-  // Left Section - Media Preview
+  
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+  
   .media-preview {
-    flex: 3;
-    height: 100%;
-    @include flex-container(column);
-    background-color: var(--background-color);
-    border: 1px solid var(--border-color);
-    border-radius: $border-radius;
+    border-radius: 8px;
     overflow: hidden;
-
-    // Header Section
+    background-color: var(--bg-secondary);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    flex: 1.5;
+    min-width: 0;
+    height: fit-content;
+    
     .media-preview-header {
-      @include preview-section;
-
-      p {
-        margin: 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background-color: rgba(0, 0, 0, 0.1);
+      
+      @media (max-width: 600px) {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      
+      .MuiTypography-body2 {
         font-size: 0.8rem;
+        color: var(--text-secondary);
         
         span {
-          color: var(--accent-color2);
+          font-weight: 500;
+          color: var(--text-primary);
+          margin-left: 4px;
         }
       }
     }
 
-    // Main Media Display
+    .media-preview-footer {
+      padding: 1rem;
+      display: flex;
+      align-content: center;
+      align-items: center;
+      justify-content: space-between;
+      .tags-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: left;
+      }
+      .media-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        
+        @media (max-width: 600px) {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 16px;
+        }
+        
+        .title-section {
+          h5 {
+            margin: 0;
+            font-weight: 500;
+            color: var(--text-primary);
+          }
+        }
+        
+        .action-buttons {
+          display: flex;
+          gap: 12px;
+        }
+      }
+    }
+    
     .media-preview-media {
-      flex: 1;
-      @include flex-container(row);
+      width: 100%;
+      min-height: 400px;
+      display: flex;
       justify-content: center;
       align-items: center;
+      background-color: #000;
       overflow: hidden;
-
+      
       img {
         max-width: 100%;
-        max-height: 100%;
+        max-height: 70vh;
         object-fit: contain;
-        width: auto;
-        height: auto;
-        padding: $spacing-sm;
+      }
+      
+      video {
+        width: 100%;
+        max-height: 70vh;
+      }
+      
+      audio {
+        width: 100%;
+        padding: 20px;
+      }
+      
+      iframe {
+        width: 100%;
+        height: 70vh;
+        border: none;
       }
     }
-
-    // Footer Section
-    .media-preview-footer {
-      @include preview-section;
-
-      .tags-container {
-        @include flex-container(row, $spacing-xs);
-        flex-wrap: wrap;
-      }
-    }
+    
+    
   }
-
-  // Right Section - Media Information
-  .media-information {
+  
+  .media-information-container {
     flex: 1;
-    height: 100%;
-    padding: $spacing-sm;
-    background-color: var(--background-color);
-    border-radius: $border-radius;
+    min-width: 300px;
+    max-width: 450px;
     overflow-y: auto;
-    text-align: left;
-
-    .media-metadata {
-      margin-top: $spacing-sm;
-      text-align: left;
-      @include flex-container(column, $spacing-xs);
+    
+    @media (max-width: 1024px) {
+      max-width: 100%;
+      overflow-y: visible;
+    }
+  }
+  
+  .media-information {
+    height: auto;
+    overflow-y: visible;
+  }
+  
+  .edit-media-dialog {
+    .MuiDialog-paper {
+      background-color: var(--bg-primary);
     }
   }
 }
 
-// Edit Dialog Styles
-.edit-media-dialog {
-  .MuiDialog-paper {
-    background-color: var(--primary-color);
-  }
-}
-
-// Form Grid Layout
 #edit-media-form {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: $spacing-sm;
   padding: $spacing-sm;
 
-  // Full width items (like description/textarea)
   .full-width-field {
     grid-column: 1 / -1;
   }
 
-  // Make description and textarea fields full width
   .MuiFormControl-root {
     &[name*="description"],
     textarea {
@@ -145,7 +209,6 @@ $border-radius: 0.5rem;
     }
   }
 
-  // Base styles for all form inputs
   input, 
   textarea, 
   select,
@@ -174,10 +237,46 @@ $border-radius: 0.5rem;
     }
   }
 
-  // Dialog actions should be full width
   .MuiDialogActions-root {
     grid-column: 1 / -1;
     justify-content: flex-end;
     padding-top: $spacing-md;
+  }
+}
+
+.MuiChip-root {
+  font-size: 0.7rem;
+  height: 20px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: $spacing-xs $spacing-sm;
+  background-color: var(--accent-color2);
+  color: var(--background-color);
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-right: $spacing-xs;
+  
+  .badge-icon {
+    margin-right: $spacing-xs;
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .media-detail-container {
+    padding: $spacing-sm;
+    padding-left: calc($spacing-sm + $sidebar-width);
+  }
+  
+  .media-detail {
+    padding: 12px;
   }
 }

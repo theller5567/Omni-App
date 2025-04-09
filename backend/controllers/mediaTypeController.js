@@ -5,8 +5,12 @@ import Media from '../models/Media.js';
 export const addMediaType = async (req, res) => {
   try {
     console.log(req.body);
-    const { name, fields } = req.body;
-    const newMediaType = new MediaType({ name, fields });
+    const { name, fields, acceptedFileTypes } = req.body;
+    const newMediaType = new MediaType({ 
+      name, 
+      fields,
+      acceptedFileTypes: acceptedFileTypes || []
+    });
     await newMediaType.save();
     res.status(201).json(newMediaType);
   } catch (error) {
@@ -251,5 +255,63 @@ export const deleteMediaType = async (req, res) => {
   } catch (error) {
     console.error('❌ Error deleting media type:', error);
     res.status(500).json({ message: 'Error deleting media type', error });
+  }
+};
+
+// Update a media type
+export const updateMediaType = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, fields, acceptedFileTypes } = req.body;
+    
+    // Find the media type
+    const mediaType = await MediaType.findById(id);
+    
+    if (!mediaType) {
+      return res.status(404).json({ message: 'Media type not found' });
+    }
+    
+    // Check if this media type is in use
+    const count = await Media.countDocuments({
+      $or: [
+        { mediaType: id },
+        { mediaType: mediaType.name }
+      ]
+    });
+    
+    if (count > 0) {
+      // For media types in use, we can only update acceptedFileTypes
+      // Cannot change fields or name as it could break existing media files
+      if (acceptedFileTypes) {
+        mediaType.acceptedFileTypes = acceptedFileTypes;
+        await mediaType.save();
+        
+        return res.status(200).json({
+          ...mediaType._doc,
+          usageCount: count,
+          warningMessage: "Only acceptedFileTypes were updated as this media type is in use by existing files"
+        });
+      } else {
+        return res.status(400).json({ 
+          message: 'Cannot modify fields or name of a media type that is in use by existing files',
+          count
+        });
+      }
+    }
+    
+    // If not in use, we can update everything
+    if (name) mediaType.name = name;
+    if (fields) mediaType.fields = fields;
+    if (acceptedFileTypes) mediaType.acceptedFileTypes = acceptedFileTypes;
+    
+    await mediaType.save();
+    
+    res.status(200).json({
+      ...mediaType._doc,
+      usageCount: count
+    });
+  } catch (error) {
+    console.error('Error updating media type:', error);
+    res.status(500).json({ message: 'Error updating media type', error });
   }
 };

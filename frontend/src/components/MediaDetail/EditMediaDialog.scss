@@ -1,0 +1,126 @@
+.edit-media-dialog {
+  .MuiDialog-paper {
+    min-width: 600px;
+    max-width: 900px;
+    max-height: 90vh;
+  }
+
+  .MuiDialogTitle-root {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    padding: 16px 24px;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--border-color);
+    
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 500;
+    }
+  }
+
+  .dialog-content {
+    padding: 1rem;
+    overflow-y: auto;
+
+    .edit-form {
+      .form-section {
+        margin-bottom: 1.5rem;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        h6 {
+          font-size: 1rem;
+          font-weight: 500;
+          color: var(--text-color);
+        }
+      }
+
+      .MuiGrid-container {
+        margin-top: -8px;
+        margin-bottom: -8px;
+      }
+
+      .MuiFormControl-root {
+        width: 100%;
+
+        .MuiInputBase-root {
+          background-color: var(--input-background);
+          
+          &:hover {
+            background-color: var(--input-background-hover);
+          }
+          
+          &.Mui-focused {
+            background-color: var(--input-background-focus);
+          }
+        }
+
+        .MuiInputLabel-root {
+          font-size: 0.875rem;
+        }
+
+        .MuiInputBase-input {
+          font-size: 0.875rem;
+        }
+      }
+
+      .MuiChip-root {
+        background-color: var(--chip-background);
+        color: var(--text-color);
+        font-size: 0.75rem;
+        height: 24px;
+
+        .MuiChip-deleteIcon {
+          font-size: 16px;
+          color: var(--text-color);
+          opacity: 0.7;
+
+          &:hover {
+            opacity: 1;
+          }
+        }
+      }
+
+      .MuiDivider-root {
+        background-color: var(--border-color);
+      }
+
+      .MuiFormControlLabel-root {
+        margin-left: -9px;
+        margin-right: 0;
+        
+        .MuiFormControlLabel-label {
+          font-size: 0.875rem;
+        }
+      }
+    }
+  }
+
+  .dialog-title {
+    padding: 16px 24px;
+    background-color: var(--background-color);
+    border-top: 1px solid var(--border-color);
+  }
+
+  .dialog-actions {
+    padding: 16px 24px;
+    background-color: var(--background-color);
+    border-top: 1px solid var(--border-color);
+
+    .MuiButton-root {
+      min-width: 100px;
+      font-size: 0.875rem;
+      
+      &.MuiButton-contained {
+        background-color: var(--accent-color);
+        color: var(--background-color);
+        
+        &:hover {
+          background-color: var(--accent-color-hover);
+        }
+      }
+    }
+  }
+} 

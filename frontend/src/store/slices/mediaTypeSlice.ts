@@ -17,8 +17,11 @@ export interface MediaType {
   usageCount: number;
   replacedBy: string | null;
   isDeleting: boolean;
+  acceptedFileTypes: string[];
   createdAt?: string;
   updatedAt?: string;
+  baseType?: 'BaseImage' | 'BaseVideo' | 'BaseAudio' | 'BaseDocument' | 'Media';
+  includeBaseFields?: boolean;
 }
 
 interface MediaTypeState {
@@ -146,6 +149,21 @@ export const deleteMediaType = createAsyncThunk<string, string>(
   }
 );
 
+export const updateMediaType = createAsyncThunk<MediaType, {id: string, updates: Partial<MediaType>}>(
+  'mediaTypes/update',
+  async ({ id, updates }, { rejectWithValue }) => {
+    try {
+      console.log('Updating media type with ID:', id, 'Updates:', updates);
+      const response = await axios.put<MediaType>(`${env.BASE_URL}/api/media-types/${id}`, updates);
+      console.log('Update response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error in updateMediaType thunk:', error);
+      return rejectWithValue(error.response?.data?.message || 'Failed to update media type');
+    }
+  }
+);
+
 const mediaTypeSlice = createSlice({
   name: 'mediaTypes',
   initialState,
@@ -234,6 +252,12 @@ const mediaTypeSlice = createSlice({
           if (targetIndex !== -1) {
             state.mediaTypes[targetIndex] = action.payload.target;
           }
+        }
+      })
+      .addCase(updateMediaType.fulfilled, (state, action: PayloadAction<MediaType>) => {
+        const index = state.mediaTypes.findIndex(type => type._id === action.payload._id);
+        if (index !== -1) {
+          state.mediaTypes[index] = action.payload;
         }
       });
   },

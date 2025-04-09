@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Box, Switch, FormGroup, FormControlLabel, styled, Button, ButtonGroup } from '@mui/material';
 import './HeaderComponent.scss';
 import SearchInput from '../SearchInput/SearchInput';
@@ -11,13 +11,6 @@ const gridIcon = encodeURIComponent(
 const listIcon = encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M3 4h18v2H3V9zm0 6h18v2H3v-2zm0 6h18v2H3v-2z"/></svg>'
 );
-
-const mediaTypes = {
-  All: 'All',
-  ProductImage: 'ProductImage',
-  WebinarVideo: 'WebinarVideo',
-  // Add more media types here
-};
 
 interface HeaderComponentProps {
   view: 'card' | 'list';
@@ -63,6 +56,21 @@ const Android12Switch = styled(Switch)({
 });
 
 const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, mediaFilesData, setSearchQuery, selectedMediaType, handleMediaTypeChange, onAddMedia }) => {
+  // Generate media type filters dynamically from the available media types
+  const availableMediaTypes = useMemo(() => {
+    // Start with 'All' option
+    const types = ['All'];
+    
+    // Add unique media types from data
+    mediaFilesData.forEach(file => {
+      if (file.mediaType && !types.includes(file.mediaType)) {
+        types.push(file.mediaType);
+      }
+    });
+    
+    return types;
+  }, [mediaFilesData]);
+
   return (
     <Box
       className="header-component"
@@ -74,8 +82,8 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, med
     >
       <Box display="flex" alignItems="center" gap={2}>
         <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
-        <ButtonGroup variant="outlined" aria-label="Basic button group">
-          {Object.keys(mediaTypes).map((type) => (
+        <ButtonGroup variant="outlined" aria-label="Media type filters">
+          {availableMediaTypes.map((type) => (
             <Button
               key={type}
               variant={selectedMediaType === type ? 'contained' : 'outlined'}

@@ -1,0 +1,66 @@
+.video-thumbnail-selector {
+  background-color: var(--background-color);
+  border-radius: 8px;
+  padding: 1rem;
+  
+  .video-container {
+    margin-bottom: 1rem;
+    background-color: #000;
+    border-radius: 4px;
+    overflow: hidden;
+    
+    video {
+      width: 100%;
+      display: block;
+      object-fit: contain;
+    }
+  }
+  
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    
+    .MuiSlider-root {
+      color: var(--accent-color);
+      
+      .MuiSlider-thumb {
+        width: 12px;
+        height: 12px;
+        
+        &:hover, &.Mui-active {
+          box-shadow: 0 0 0 8px rgba(var(--accent-color-rgb), 0.16);
+        }
+      }
+      
+      .MuiSlider-track {
+        height: 4px;
+      }
+      
+      .MuiSlider-rail {
+        height: 4px;
+        opacity: 0.3;
+      }
+    }
+    
+    .MuiButton-root {
+      min-width: 140px;
+      
+      .MuiCircularProgress-root {
+        color: inherit;
+      }
+    }
+  }
+  
+  .current-thumbnail {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    
+    img {
+      display: block;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+  }
+} 

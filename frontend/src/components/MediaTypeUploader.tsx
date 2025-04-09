@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stepper, Step, StepLabel, TextField, Select, MenuItem, IconButton, List, ListItem, ListItemText, Checkbox, FormControlLabel, Typography, Chip, Box } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stepper, Step, StepLabel, TextField, Select, MenuItem, IconButton, List, ListItem, ListItemText, Checkbox, FormControlLabel, Typography, Chip, Box, FormGroup, FormHelperText } from '@mui/material';
 import { useDispatch } from 'react-redux';
 import { addMediaType } from '../store/slices/mediaTypeSlice';
 import { toast } from 'react-toastify';
 import axios from 'axios';
-import { FaPlus, FaCheck, FaExclamationCircle, FaTimes, FaEdit, FaStar } from 'react-icons/fa';
+import { FaPlus, FaCheck, FaExclamationCircle, FaTimes, FaEdit, FaStar, FaImage, FaVideo, FaFileAudio, FaFileWord } from 'react-icons/fa';
 import type { MediaType } from '../store/slices/mediaTypeSlice';
 import './MediaTypeUploader.scss';
 import env from '../config/env';
@@ -21,6 +21,41 @@ interface MediaTypeUploaderProps {
   onClose: () => void;
 }
 
+// Define common file type categories and their MIME types
+interface FileTypeCategory {
+  name: string;
+  label: string;
+  icon: React.ReactNode;
+  mimeTypes: string[];
+}
+
+const fileTypeCategories: FileTypeCategory[] = [
+  { 
+    name: 'images', 
+    label: 'Images', 
+    icon: <FaImage />, 
+    mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp'] 
+  },
+  { 
+    name: 'videos', 
+    label: 'Videos', 
+    icon: <FaVideo />, 
+    mimeTypes: ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'] 
+  },
+  { 
+    name: 'audio', 
+    label: 'Audio', 
+    icon: <FaFileAudio />, 
+    mimeTypes: ['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm'] 
+  },
+  { 
+    name: 'documents', 
+    label: 'Documents', 
+    icon: <FaFileWord />, 
+    mimeTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'] 
+  }
+];
+
 const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) => {
   const dispatch = useDispatch();
   const [mediaTypeName, setMediaTypeName] = useState('');
@@ -34,6 +69,9 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
   const [isEditing, setIsEditing] = useState(false);
   const [activeField, setActiveField] = useState<number | null>(null);
   const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
+  const [selectedFileTypes, setSelectedFileTypes] = useState<string[]>([]);
+  const [customMimeType, setCustomMimeType] = useState('');
+  const [customMimeTypes, setCustomMimeTypes] = useState<string[]>([]);
 
   const steps = ['Name Media Type', 'Add Fields', 'Review & Submit'];
   const inputOptions = ['Text', 'Number', 'Date', 'Boolean', 'Select', 'MultiSelect'];
@@ -95,6 +133,37 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
     setOptions(options.filter((_, i) => i !== index));
   };
 
+  const handleFileTypeCategoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const categoryName = event.target.name;
+    const isChecked = event.target.checked;
+    
+    // Find the category
+    const category = fileTypeCategories.find(cat => cat.name === categoryName);
+    
+    if (category) {
+      if (isChecked) {
+        // Add all MIME types from this category
+        setSelectedFileTypes(prev => [...prev, ...category.mimeTypes]);
+      } else {
+        // Remove all MIME types from this category
+        setSelectedFileTypes(prev => prev.filter(type => !category.mimeTypes.includes(type)));
+      }
+    }
+  };
+
+  const handleAddCustomMimeType = () => {
+    if (customMimeType.trim() && !customMimeTypes.includes(customMimeType)) {
+      setCustomMimeTypes(prev => [...prev, customMimeType]);
+      setSelectedFileTypes(prev => [...prev, customMimeType]);
+      setCustomMimeType('');
+    }
+  };
+
+  const handleRemoveCustomMimeType = (mimeType: string) => {
+    setCustomMimeTypes(prev => prev.filter(type => type !== mimeType));
+    setSelectedFileTypes(prev => prev.filter(type => type !== mimeType));
+  };
+
   const saveMediaTypeToBackend = async (mediaType: Omit<MediaType, '_id'>) => {
     try {
       console.log('Sending media type to backend:', JSON.stringify(mediaType, null, 2));
@@ -105,7 +174,8 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
           type: field.type,
           options: field.options || [],
           required: field.required
-        }))
+        })),
+        acceptedFileTypes: mediaType.acceptedFileTypes
       });
       console.log('Media Type saved:', response.data);
       return response.data;
@@ -128,6 +198,11 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
       }
 
       if (mediaTypeName.trim()) {
+        if (selectedFileTypes.length === 0) {
+          toast.error('Please select at least one file type');
+          return;
+        }
+
         const mediaType = { 
           name: mediaTypeName, 
           fields: fields.map(field => ({
@@ -139,7 +214,8 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
           status: 'active' as 'active',
           usageCount: 0,
           replacedBy: null,
-          isDeleting: false
+          isDeleting: false,
+          acceptedFileTypes: selectedFileTypes
         };
         console.log('Saving media type:', mediaType);
         const savedMediaType = await saveMediaTypeToBackend(mediaType);
@@ -170,6 +246,9 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
     setFields([]);
     setActiveStep(0);
     setActiveField(null);
+    setSelectedFileTypes([]);
+    setCustomMimeTypes([]);
+    setCustomMimeType('');
     onClose();
   };
 
@@ -332,6 +411,23 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
     );
   };
 
+  const isCategorySelected = (categoryName: string) => {
+    const category = fileTypeCategories.find(cat => cat.name === categoryName);
+    if (!category) return false;
+    
+    // Check if all MIME types in this category are selected
+    return category.mimeTypes.every(type => selectedFileTypes.includes(type));
+  };
+
+  const isCategoryPartiallySelected = (categoryName: string) => {
+    const category = fileTypeCategories.find(cat => cat.name === categoryName);
+    if (!category) return false;
+    
+    // Check if some (but not all) MIME types in this category are selected
+    const selectedCount = category.mimeTypes.filter(type => selectedFileTypes.includes(type)).length;
+    return selectedCount > 0 && selectedCount < category.mimeTypes.length;
+  };
+
   return (
     <Dialog id='dialog-container' open={open} onClose={handleClose}>
       <DialogTitle>Create New Media Type</DialogTitle>
@@ -345,14 +441,106 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
         </Stepper>
         <div className='new-media-type-form-container'>
               {activeStep === 0 && (
-                <TextField
-                  label="Media Type Name"
-                  value={mediaTypeName}
-                  onChange={(e) => setMediaTypeName(e.target.value)}
-                  fullWidth
-                  margin="normal"
-                  className="input-field text-input"
-                />
+                <div className="step-container">
+                  <TextField
+                    label="Media Type Name"
+                    value={mediaTypeName}
+                    onChange={(e) => setMediaTypeName(e.target.value)}
+                    fullWidth
+                    margin="normal"
+                    className="input-field text-input"
+                  />
+                  
+                  <Box sx={{ mt: 4 }}>
+                    <Typography variant="h6">Accepted File Types</Typography>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                      Select which file types this media type will accept during uploads
+                    </Typography>
+                    
+                    <FormGroup>
+                      {fileTypeCategories.map((category) => (
+                        <div key={category.name} className="file-type-category">
+                          <FormControlLabel
+                            control={
+                              <Checkbox 
+                                checked={isCategorySelected(category.name)}
+                                indeterminate={isCategoryPartiallySelected(category.name)}
+                                onChange={handleFileTypeCategoryChange}
+                                name={category.name}
+                              />
+                            }
+                            label={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                {category.icon}
+                                <span>{category.label}</span>
+                              </Box>
+                            }
+                          />
+                          
+                          <Box sx={{ pl: 4, pb: 2 }}>
+                            {category.mimeTypes.map((type) => (
+                              <Chip 
+                                key={type}
+                                label={type}
+                                variant={selectedFileTypes.includes(type) ? "filled" : "outlined"}
+                                onClick={() => {
+                                  if (selectedFileTypes.includes(type)) {
+                                    setSelectedFileTypes(prev => prev.filter(t => t !== type));
+                                  } else {
+                                    setSelectedFileTypes(prev => [...prev, type]);
+                                  }
+                                }}
+                                sx={{ m: 0.5 }}
+                              />
+                            ))}
+                          </Box>
+                        </div>
+                      ))}
+                    </FormGroup>
+                    
+                    <Box sx={{ mt: 3 }}>
+                      <Typography variant="subtitle1">Add Custom MIME Type</Typography>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1 }}>
+                        <TextField
+                          placeholder="e.g., application/json"
+                          value={customMimeType}
+                          onChange={(e) => setCustomMimeType(e.target.value)}
+                          size="small"
+                          fullWidth
+                        />
+                        <Button 
+                          variant="contained" 
+                          onClick={handleAddCustomMimeType}
+                          disabled={!customMimeType.trim()}
+                        >
+                          Add
+                        </Button>
+                      </Box>
+                      
+                      {customMimeTypes.length > 0 && (
+                        <Box sx={{ mt: 2 }}>
+                          <Typography variant="subtitle2">Custom MIME Types:</Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                            {customMimeTypes.map((type) => (
+                              <Chip 
+                                key={type}
+                                label={type}
+                                onDelete={() => handleRemoveCustomMimeType(type)}
+                                sx={{ m: 0.5 }}
+                              />
+                            ))}
+                          </Box>
+                        </Box>
+                      )}
+                    </Box>
+                    
+                    {selectedFileTypes.length === 0 && (
+                      <FormHelperText error>
+                        Please select at least one file type that will be accepted
+                      </FormHelperText>
+                    )}
+                  </Box>
+                </div>
               )}
               {activeStep === 1 && (
                 <div className="step-container step1">
@@ -513,6 +701,19 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
                       )}
                     </Typography>
                     
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle1">Accepted File Types:</Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                        {selectedFileTypes.map((type) => (
+                          <Chip 
+                            key={type}
+                            label={type}
+                            sx={{ m: 0.5 }}
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                    
                     <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                       {inputOptions.map(type => {
                         const count = fields.filter(f => f.type === type).length;
@@ -583,7 +784,13 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
             Create Media Type
           </Button>
         ) : (
-          <Button onClick={handleNext} color="primary">Next</Button>
+          <Button 
+            onClick={handleNext} 
+            color="primary"
+            disabled={activeStep === 0 && (mediaTypeName.trim() === '' || selectedFileTypes.length === 0)}
+          >
+            Next
+          </Button>
         )}
       </DialogActions>
     </Dialog>

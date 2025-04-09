@@ -6,7 +6,8 @@ import {
   deprecateMediaType,
   archiveMediaType,
   migrateMediaFiles,
-  deleteMediaType
+  deleteMediaType,
+  updateMediaType
 } from '../controllers/mediaTypeController.js';
 
 const router = express.Router();
@@ -14,6 +15,7 @@ const router = express.Router();
 // Basic CRUD operations
 router.post('/', addMediaType);
 router.get('/', getMediaTypes);
+router.put('/:id', updateMediaType);
 
 // Media type status management
 router.get('/:id/usage', checkMediaTypeUsage);

@@ -11,7 +11,19 @@ const mediaSchema = new mongoose.Schema({
   uploadedBy: String,
   modifiedBy: String,
   mediaType: String,
-  metadata: mongoose.Schema.Types.Mixed, // Use a flexible type for metadata
+  metadata: {
+    // Standardized fields for all media types
+    fileName: { type: String },
+    altText: { type: String },
+    visibility: { type: String, enum: ['public', 'private'], default: 'public' },
+    tags: { type: [String], default: [] },
+    description: { type: String },
+    // Other metadata will be added dynamically
+  },
+}, { 
+  discriminatorKey: '__t', // This is the key that will identify the specific media type
+  timestamps: true,
+  strict: false // Allow additional fields to be added to metadata
 });
 
 // Check if the model already exists before defining it
