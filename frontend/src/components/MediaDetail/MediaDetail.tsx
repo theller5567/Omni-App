@@ -68,6 +68,9 @@ interface MediaTypeConfig {
   [key: string]: any;
 }
 
+// Remove unused interface
+// interface ExtendedMediaFile extends BaseMediaFile { ... }
+
 const MediaDetail: React.FC = () => {
   // All state hooks first
   const { slug } = useParams();
@@ -136,6 +139,7 @@ const MediaDetail: React.FC = () => {
         const response = await axios.get<BaseMediaFile>(
           `${env.BASE_URL}/media/slug/${slug}`
         );
+        console.log('Fetched media file:', response.data);
         setMediaFile(response.data);
       } catch (error) {
         console.error("Error fetching media file:", error);
@@ -162,23 +166,93 @@ const MediaDetail: React.FC = () => {
     if (!mediaFile) return;
 
     try {
+      console.log('MediaDetail - Save initiated with data:', {
+        receivedData: data,
+        currentMediaFile: mediaFile
+      });
+
+      // Format the data to match the backend's expected structure
+      const updateData = {
+        title: data.title || mediaFile.title,
+        metadata: {
+          fileName: data.fileName,
+          altText: data.altText,
+          description: data.description,
+          visibility: data.visibility,
+          tags: data.tags || [],
+          // Include webinar fields
+          'Webinar Title': data.customFields?.['Webinar Title'] || '',
+          'Webinar Summary': data.customFields?.['Webinar Summary'] || '',
+          'Webinar CTA': data.customFields?.['Webinar CTA'] || '',
+          // Include any other custom fields
+          ...data.customFields
+        }
+      };
+
+      console.log('MediaDetail - Formatted update data:', {
+        updateData,
+        originalData: data
+      });
+
       const response = await axios.put<BaseMediaFile>(
-        `${env.BASE_URL}/api/media/update/${mediaFile.slug}`,
-        data
+        `${env.BASE_URL}/media/update/${mediaFile.slug}`,
+        updateData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        }
       );
 
-      if (response.status === 200) {
+      console.log('MediaDetail - Server response:', {
+        status: response.status,
+        data: response.data
+      });
+
+      if (response.status === 200 && response.data) {
+        // Update the local state with the new data
         const updatedMediaFile = {
           ...mediaFile,
-          ...response.data
+          title: data.title || mediaFile.title,
+          metadata: {
+            fileName: data.fileName,
+            altText: data.altText,
+            description: data.description,
+            visibility: data.visibility,
+            tags: data.tags || [],
+            // Include webinar fields
+            'Webinar Title': data.customFields?.['Webinar Title'] || '',
+            'Webinar Summary': data.customFields?.['Webinar Summary'] || '',
+            'Webinar CTA': data.customFields?.['Webinar CTA'] || '',
+            // Include any other custom fields
+            ...data.customFields
+          }
         };
+
+        console.log('MediaDetail - Updating local state:', {
+          before: mediaFile,
+          after: updatedMediaFile
+        });
+
         setMediaFile(updatedMediaFile);
         setIsEditing(false);
         toast.success('Media file updated successfully');
+      } else {
+        throw new Error('Failed to update media file');
       }
-    } catch (error) {
-      console.error('Error updating media file:', error);
-      toast.error('Failed to update media file');
+    } catch (error: any) {
+      console.error('MediaDetail - Error updating media file:', {
+        error,
+        requestData: data,
+        mediaFile
+      });
+      
+      if (error.response?.status === 404) {
+        toast.error('Media file not found. Please refresh the page.');
+      } else {
+        toast.error(`Failed to update media file: ${error.response?.data?.error || error.message}`);
+      }
     }
   };
 
@@ -206,13 +280,35 @@ const MediaDetail: React.FC = () => {
     visibility: mediaFile.metadata?.visibility as 'public' | 'private',
     altText: mediaFile.metadata?.altText || '',
     description: mediaFile.metadata?.description || '',
-    tags: mediaFile.metadata?.tags || [],
-    customFields: mediaFile.metadata || {},
+    tags: Array.isArray(mediaFile.metadata?.tags) ? [...mediaFile.metadata.tags] : [],
+    customFields: {
+      // Map webinar fields first
+      'Webinar Title': mediaFile.metadata?.['Webinar Title'] || '',
+      'Webinar Summary': mediaFile.metadata?.['Webinar Summary'] || '',
+      'Webinar CTA': mediaFile.metadata?.['Webinar CTA'] || '',
+      // Then spread the rest of metadata, excluding standard fields
+      ...Object.entries(mediaFile.metadata || {}).reduce((acc, [key, value]) => {
+        if (!['fileName', 'altText', 'description', 'visibility', 'tags'].includes(key)) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as Record<string, any>)
+    },
     fileType: mediaFile.fileExtension,
     fileSize: mediaFile.fileSize,
     uploadDate: mediaFile.modifiedDate,
     url: mediaFile.location
   };
+
+  console.log('MediaDetail - Preparing edit form with data:', {
+    originalFile: mediaFile,
+    originalMetadata: mediaFile.metadata,
+    mappedData: mediaFileForEdit,
+    originalTags: mediaFile.metadata?.tags,
+    hasMetadata: !!mediaFile.metadata,
+    metadataKeys: mediaFile.metadata ? Object.keys(mediaFile.metadata) : [],
+    customFields: mediaFileForEdit.customFields
+  });
 
   // Convert MediaTypeConfig to MediaType for the EditMediaDialog
   const mediaTypeForEdit: MediaType = mediaTypeConfig ? {

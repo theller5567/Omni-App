@@ -3,6 +3,7 @@
     min-width: 600px;
     max-width: 900px;
     max-height: 90vh;
+    background-color: var(--background-color);
   }
 
   .MuiDialogTitle-root {
@@ -21,6 +22,7 @@
   .dialog-content {
     padding: 1rem;
     overflow-y: auto;
+    background-color: var(--background-color);
 
     .edit-form {
       .form-section {
@@ -112,6 +114,7 @@
     .MuiButton-root {
       min-width: 100px;
       font-size: 0.875rem;
+      transition: all 0.2s ease-in-out;
       
       &.MuiButton-contained {
         background-color: var(--accent-color);
@@ -119,6 +122,25 @@
         
         &:hover {
           background-color: var(--accent-color-hover);
+          color: var(--background-color);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+          transform: translateY(-1px);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+      }
+
+      &.MuiButton-outlined {
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+        background-color: transparent;
+        
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.05);
+          border-color: var(--accent-color);
+          color: var(--accent-color);
         }
       }
     }

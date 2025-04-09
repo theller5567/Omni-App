@@ -14,27 +14,37 @@ const uploadFields = upload.fields([
 ]);
 
 router.put('/update/:slug', async (req, res) => {
+  // Add CORS headers
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+
   const { slug } = req.params;
   console.log('Received update request for slug:', slug);
   console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('Request URL:', req.originalUrl);
+  console.log('Request method:', req.method);
+  console.log('Request headers:', req.headers);
 
   try {
     // Fetch the document using the Media model
+    console.log('Attempting to find media with slug:', slug);
     const documentBeforeUpdate = await Media.findOne({ slug });
+    
     if (!documentBeforeUpdate) {
       console.log('Media not found for slug:', slug);
       return res.status(404).json({ error: 'Media not found' });
     }
 
-    console.log('Document before update:', JSON.stringify(documentBeforeUpdate, null, 2));
+    console.log('Found document before update:', documentBeforeUpdate);
 
     // Build update fields
     const updateFields = {
       title: req.body.title,
-      ...Object.entries(req.body.metadata).reduce((acc, [key, value]) => {
-        acc[`metadata.${key}`] = value;
-        return acc;
-      }, {})
+      metadata: {
+        ...documentBeforeUpdate.metadata, // Keep existing metadata
+        ...req.body.metadata, // Merge with new metadata
+      }
     };
 
     console.log('Constructed updateFields:', JSON.stringify(updateFields, null, 2));
@@ -44,17 +54,19 @@ router.put('/update/:slug', async (req, res) => {
       { slug },
       { $set: updateFields },
       { new: true, runValidators: true }
-    );
+    ).lean(); // Add lean() to convert to plain JavaScript object
 
     if (!updatedMediaFile) {
-      console.log('Media not found for slug:', slug);
+      console.log('Media not found during update for slug:', slug);
       return res.status(404).json({ error: 'Media not found' });
     }
 
     // Log the document after update
     console.log('Updated media file:', JSON.stringify(updatedMediaFile, null, 2));
 
-    res.status(200).json(updatedMediaFile);
+    // Send response with proper content type
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(200).json(updatedMediaFile);
   } catch (error) {
     console.error('Error updating media file:', error);
 
@@ -65,7 +77,7 @@ router.put('/update/:slug', async (req, res) => {
       });
     }
 
-    res.status(500).json({ error: 'Failed to update media file' });
+    return res.status(500).json({ error: 'Failed to update media file', details: error.message });
   }
 });
 

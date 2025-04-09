@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
   Dialog,
@@ -50,6 +50,11 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   mediaType,
   onSave
 }) => {
+  console.log('EditMediaDialog - Initial props:', {
+    mediaFile,
+    mediaType
+  });
+
   const [newTag, setNewTag] = useState('');
   const { control, handleSubmit, watch, setValue } = useForm<FormValues>({
     defaultValues: {
@@ -59,9 +64,20 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
       description: mediaFile.description || '',
       visibility: mediaFile.visibility || 'private',
       tags: mediaFile.tags || [],
-      customFields: mediaFile.customFields || {}
+      customFields: {
+        ...mediaFile.customFields,
+        'Webinar Title': mediaFile.customFields?.['Webinar Title'] || '',
+        'Webinar Summary': mediaFile.customFields?.['Webinar Summary'] || '',
+        'Webinar CTA': mediaFile.customFields?.['Webinar CTA'] || ''
+      }
     }
   });
+
+  // Log the form values whenever they change
+  const formValues = watch();
+  useEffect(() => {
+    console.log('EditMediaDialog - Current form values:', formValues);
+  }, [formValues]);
 
   const handleAddTag = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && newTag.trim()) {
@@ -79,19 +95,25 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   };
 
   const onSubmit = async (data: FormValues) => {
-    try {
-      await onSave({
-        ...mediaFile,
-        ...data,
-        customFields: {
-          ...mediaFile.customFields,
-          ...data.customFields
-        }
-      });
-      onClose();
-    } catch (error) {
-      console.error('Error saving media:', error);
-    }
+    console.log('EditMediaDialog - Form submission data:', {
+      formData: data,
+      originalMediaFile: mediaFile
+    });
+
+    // Format the data before sending
+    const formattedData = {
+      ...data,
+      customFields: {
+        ...data.customFields,
+        'Webinar Title': data.customFields?.['Webinar Title'] || '',
+        'Webinar Summary': data.customFields?.['Webinar Summary'] || '',
+        'Webinar CTA': data.customFields?.['Webinar CTA'] || ''
+      }
+    };
+
+    console.log('EditMediaDialog - Formatted submission data:', formattedData);
+    await onSave(formattedData);
+    onClose();
   };
 
   const renderCustomField = (field: MediaType['fields'][0], value: any, onChange: (value: any) => void) => {
