@@ -24,7 +24,8 @@ const mediaTypeSchema = new mongoose.Schema({
     enum: ['BaseImage', 'BaseVideo', 'BaseAudio', 'BaseDocument', 'Media'],
     default: 'Media'
   },
-  includeBaseFields: { type: Boolean, default: true }
+  includeBaseFields: { type: Boolean, default: true },
+  catColor: { type: String, default: '#2196f3' }
 }, { timestamps: true });
 
 const MediaType = mongoose.models.mediaTypes || mongoose.model('mediaTypes', mediaTypeSchema);

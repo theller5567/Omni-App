@@ -5,11 +5,14 @@ import Media from '../models/Media.js';
 export const addMediaType = async (req, res) => {
   try {
     console.log(req.body);
-    const { name, fields, acceptedFileTypes } = req.body;
+    const { name, fields, acceptedFileTypes, catColor, baseType, includeBaseFields } = req.body;
     const newMediaType = new MediaType({ 
       name, 
       fields,
-      acceptedFileTypes: acceptedFileTypes || []
+      acceptedFileTypes: acceptedFileTypes || [],
+      catColor: catColor || '#2196f3',
+      baseType: baseType || 'Media',
+      includeBaseFields: includeBaseFields !== undefined ? includeBaseFields : true
     });
     await newMediaType.save();
     res.status(201).json(newMediaType);
@@ -262,7 +265,7 @@ export const deleteMediaType = async (req, res) => {
 export const updateMediaType = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, fields, acceptedFileTypes } = req.body;
+    const { name, fields, acceptedFileTypes, catColor } = req.body;
     
     // Find the media type
     const mediaType = await MediaType.findById(id);
@@ -280,16 +283,27 @@ export const updateMediaType = async (req, res) => {
     });
     
     if (count > 0) {
-      // For media types in use, we can only update acceptedFileTypes
+      // For media types in use, we can only update acceptedFileTypes and catColor
       // Cannot change fields or name as it could break existing media files
+      let updated = false;
+      
       if (acceptedFileTypes) {
         mediaType.acceptedFileTypes = acceptedFileTypes;
+        updated = true;
+      }
+      
+      if (catColor) {
+        mediaType.catColor = catColor;
+        updated = true;
+      }
+      
+      if (updated) {
         await mediaType.save();
         
         return res.status(200).json({
           ...mediaType._doc,
           usageCount: count,
-          warningMessage: "Only acceptedFileTypes were updated as this media type is in use by existing files"
+          warningMessage: "Only acceptedFileTypes and catColor were updated as this media type is in use by existing files"
         });
       } else {
         return res.status(400).json({ 
@@ -303,6 +317,7 @@ export const updateMediaType = async (req, res) => {
     if (name) mediaType.name = name;
     if (fields) mediaType.fields = fields;
     if (acceptedFileTypes) mediaType.acceptedFileTypes = acceptedFileTypes;
+    if (catColor) mediaType.catColor = catColor;
     
     await mediaType.save();
     

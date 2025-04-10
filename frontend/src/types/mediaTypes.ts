@@ -1,46 +1,131 @@
 // Base interfaces for media data
 export interface BaseMetadata {
-  fileName?: string;
+  fileName: string;
   altText?: string;
   description?: string;
-  visibility?: 'public' | 'private';
-  tags?: string[];
+  visibility: 'public' | 'private';
+  tags: string[];
 }
 
-export interface WebinarFields {
-  'Webinar Title'?: string;
-  'Webinar Summary'?: string;
-  'Webinar CTA'?: string;
+// Field type definitions
+export type FieldType = 'Text' | 'Number' | 'Date' | 'Boolean' | 'Select' | 'MultiSelect';
+export type NonSelectFieldType = Exclude<FieldType, 'Select' | 'MultiSelect'>;
+export type SelectFieldType = Extract<FieldType, 'Select' | 'MultiSelect'>;
+
+export interface BaseField {
+  name: string;
+  type: NonSelectFieldType;
+  required: boolean;
+  label?: string;
 }
 
+export interface SelectField {
+  name: string;
+  type: SelectFieldType;
+  required: boolean;
+  label?: string;
+  options: string[];
+}
+
+export type MediaTypeField = BaseField | SelectField;
+
+// Media type configuration
+export interface MediaTypeConfig {
+  name: string;
+  fields: MediaTypeField[];
+  baseType?: 'BaseImage' | 'BaseVideo' | 'BaseAudio' | 'BaseDocument' | 'Media';
+  includeBaseFields: boolean;
+  acceptedFileTypes: string[];
+  status: 'active' | 'deprecated' | 'archived';
+}
+
+// Store types
+export interface MediaTypeState extends MediaTypeConfig {
+  _id: string;
+  usageCount: number;
+  replacedBy: string | null;
+  isDeleting: boolean;
+}
+
+// Form data interfaces
 export interface MediaFormData {
-  title?: string;
-  fileName?: string;
+  title: string;
+  fileName: string;
   altText?: string;
   description?: string;
-  visibility?: 'public' | 'private';
-  tags?: string[];
-  customFields?: WebinarFields & Record<string, any>;
+  visibility: 'public' | 'private';
+  tags: string[];
+  customFields: Record<string, any>;
+}
+
+// API data interfaces
+export interface ApiMediaTypeRequest {
+  name: string;
+  fields: MediaTypeField[];
+  baseType?: 'BaseImage' | 'BaseVideo' | 'BaseAudio' | 'BaseDocument' | 'Media';
+  includeBaseFields: boolean;
+  acceptedFileTypes: string[];
+  status: 'active' | 'deprecated' | 'archived';
+}
+
+export interface ApiMediaTypeResponse extends ApiMediaTypeRequest {
+  _id: string;
 }
 
 export interface ApiMediaData {
-  title?: string;
-  metadata: BaseMetadata & WebinarFields & {
+  title: string;
+  metadata: {
+    fileName: string;
+    altText?: string;
+    description?: string;
+    visibility: 'public' | 'private';
+    tags: string[];
     [key: string]: any;
   };
 }
 
-// Type guard functions
-export const isWebinarFields = (fields: any): fields is WebinarFields => {
-  return (
-    typeof fields === 'object' &&
-    ('Webinar Title' in fields ||
-    'Webinar Summary' in fields ||
-    'Webinar CTA' in fields)
-  );
+// Type guards
+export const isSelectField = (field: MediaTypeField): field is SelectField => {
+  return field.type === 'Select' || field.type === 'MultiSelect';
 };
 
-// Data transformers
+export const isSelectFieldType = (type: FieldType): type is SelectFieldType => {
+  return type === 'Select' || type === 'MultiSelect';
+};
+
+// Field update utilities
+export const updateFieldType = (field: MediaTypeField, newType: FieldType): MediaTypeField => {
+  const baseField = {
+    name: field.name,
+    type: newType,
+    required: field.required,
+    label: field.label
+  };
+
+  if (isSelectFieldType(newType)) {
+    return {
+      ...baseField,
+      type: newType,
+      options: isSelectField(field) ? field.options : []
+    } as SelectField;
+  }
+
+  return baseField as BaseField;
+};
+
+export const updateFieldName = (field: MediaTypeField, name: string): MediaTypeField => {
+  return { ...field, name };
+};
+
+export const updateFieldRequired = (field: MediaTypeField, required: boolean): MediaTypeField => {
+  return { ...field, required };
+};
+
+export const updateFieldOptions = (field: SelectField, options: string[]): SelectField => {
+  return { ...field, options };
+};
+
+// Transform functions
 export const transformFormToApiData = (formData: MediaFormData): ApiMediaData => {
   return {
     title: formData.title,
@@ -49,38 +134,45 @@ export const transformFormToApiData = (formData: MediaFormData): ApiMediaData =>
       altText: formData.altText,
       description: formData.description,
       visibility: formData.visibility,
-      tags: formData.tags || [],
-      ...(formData.customFields || {})
+      tags: formData.tags,
+      ...formData.customFields
     }
   };
 };
 
-export const transformApiToFormData = (apiData: ApiMediaData): MediaFormData => {
-  const { title, metadata } = apiData;
-  const {
-    fileName,
-    altText,
-    description,
-    visibility,
-    tags,
-    ...customFields
-  } = metadata;
-
+export const transformConfigToApiData = (config: MediaTypeConfig): ApiMediaTypeRequest => {
+  const { name, fields, baseType, includeBaseFields, acceptedFileTypes, status } = config;
   return {
-    title,
-    fileName,
-    altText,
-    description,
-    visibility,
-    tags: Array.isArray(tags) ? tags : [],
-    customFields
+    name,
+    fields,
+    baseType,
+    includeBaseFields,
+    acceptedFileTypes,
+    status
   };
 };
 
-// Structured logging utility
+// Utility functions
+export const createField = (type: FieldType, name: string = '', required: boolean = false): MediaTypeField => {
+  if (isSelectFieldType(type)) {
+    return {
+      name,
+      type,
+      required,
+      options: []
+    };
+  }
+  return {
+    name,
+    type,
+    required
+  };
+};
+
+// Logging utilities
 export const createLogger = (component: string) => ({
-  formData: (stage: string, data: MediaFormData) => {
-    console.log(`[${component}] ${stage}:`, {
+  formData: (action: string, data: MediaFormData) => {
+    console.log(`[${component}] ${action}:`, {
       standardFields: {
         title: data.title,
         fileName: data.fileName,
@@ -92,28 +184,16 @@ export const createLogger = (component: string) => ({
       customFields: data.customFields
     });
   },
-  apiData: (stage: string, data: ApiMediaData) => {
-    console.log(`[${component}] ${stage}:`, {
-      title: data.title,
-      metadata: {
-        standardFields: {
-          fileName: data.metadata.fileName,
-          altText: data.metadata.altText,
-          description: data.metadata.description,
-          visibility: data.metadata.visibility,
-          tags: data.metadata.tags
-        },
-        customFields: Object.entries(data.metadata)
-          .filter(([key]) => !['fileName', 'altText', 'description', 'visibility', 'tags'].includes(key))
-          .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
-      }
-    });
+  
+  apiData: (action: string, data: ApiMediaTypeRequest | ApiMediaData) => {
+    console.log(`[${component}] ${action}:`, data);
   },
-  error: (stage: string, error: any) => {
-    console.error(`[${component}] Error in ${stage}:`, {
+  
+  error: (action: string, error: any) => {
+    console.error(`[${component}] Error in ${action}:`, {
       message: error.message,
-      stack: error.stack,
-      data: error.response?.data
+      code: error.code,
+      details: error.response?.data
     });
   }
 }); 

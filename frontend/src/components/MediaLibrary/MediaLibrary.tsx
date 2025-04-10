@@ -51,6 +51,9 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [isToolbarDelete, setIsToolbarDelete] = useState(false);
   const prevDataRef = React.useRef<string>('');
+  
+  // Get media types for color mapping
+  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
 
   // Process rows only when mediaFilesData or filter changes
   const rows = React.useMemo(() => {
@@ -69,6 +72,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
           description: file.metadata?.description || '',
           tags: file.metadata?.tags || [],
           visibility: file.metadata?.visibility || 'public',
+          catColor: file.metadata?.catColor || null,
           v_thumbnail: file.metadata?.v_thumbnail || null,
           v_thumbnailTimestamp: file.metadata?.v_thumbnailTimestamp || null
         },
@@ -239,9 +243,25 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     { field: 'fileName', headerName: 'Title', flex: 0.5, renderCell: (params) => (
       <Link to={`/media/slug/${params.row.slug}`} >{params.row.metadata.fileName}</Link>
     )},
-    { field: 'mediaType', headerName: 'Media Type', flex: 0.5, renderCell: (params) => (
-      <span>{params.row.mediaType}</span>
-    )},
+    { field: 'mediaType', headerName: 'Media Type', flex: 0.5, renderCell: (params) => {
+      // Get media type and its color
+      const mediaTypeColor = mediaTypes.find(type => type.name === params.row.mediaType)?.catColor || '#999';
+      
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box 
+            sx={{ 
+              width: 12, 
+              height: 12, 
+              bgcolor: mediaTypeColor, 
+              borderRadius: '50%',
+              border: '1px solid rgba(0,0,0,0.1)'
+            }}
+          />
+          <span>{params.row.mediaType}</span>
+        </Box>
+      );
+    }},
     { 
       field: 'fileSize', 
       headerName: 'Size', 

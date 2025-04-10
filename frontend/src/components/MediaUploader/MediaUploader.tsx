@@ -180,30 +180,63 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
       return {};
     }
     
-    // Group accepted file types by category
-    const acceptedTypes: Record<string, string[]> = {};
+    // Create a map of accepted file types for react-dropzone
+    const acceptedTypesMap: Record<string, string[]> = {};
     
+    // First collect all the non-wildcard types
     mediaType.acceptedFileTypes.forEach(type => {
-      // If it's a MIME type with a slash (e.g., "image/jpeg")
       if (type.includes('/')) {
-        // Extract the category (e.g., "image")
-        const category = type.split('/')[0];
+        const [category, subtype] = type.split('/');
         
-        // For specific MIME type (e.g., "image/jpeg")
-        if (type.split('/')[1] !== '*') {
-          if (!acceptedTypes[`${category}/*`]) {
-            acceptedTypes[`${category}/*`] = [];
+        // Skip wildcards for now
+        if (subtype !== '*') {
+          // Initialize the category array if needed
+          if (!acceptedTypesMap[`${category}/*`]) {
+            acceptedTypesMap[`${category}/*`] = [];
           }
-          acceptedTypes[`${category}/*`].push(`.${type.split('/')[1]}`);
-        } 
-        // For category wildcards (e.g., "image/*")
-        else {
-          acceptedTypes[type] = [];
+          
+          // Add the extension (assuming extension matches subtype)
+          // This avoids the "invalid file extension" warning
+          acceptedTypesMap[`${category}/*`].push(`.${subtype}`);
         }
       }
     });
     
-    return acceptedTypes;
+    // Now handle wildcards - if we have image/* but no specific image types,
+    // we need to include some common extensions
+    mediaType.acceptedFileTypes.forEach(type => {
+      if (type.includes('/')) {
+        const [category, subtype] = type.split('/');
+        
+        if (subtype === '*') {
+          // Initialize category if needed
+          if (!acceptedTypesMap[`${category}/*`]) {
+            acceptedTypesMap[`${category}/*`] = [];
+            
+            // Add common extensions for each category
+            switch (category) {
+              case 'image':
+                acceptedTypesMap[`${category}/*`] = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+                break;
+              case 'video':
+                acceptedTypesMap[`${category}/*`] = ['.mp4', '.webm', '.ogg', '.mov'];
+                break;
+              case 'audio':
+                acceptedTypesMap[`${category}/*`] = ['.mp3', '.wav', '.ogg', '.m4a'];
+                break;
+              case 'application':
+                acceptedTypesMap[`${category}/*`] = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'];
+                break;
+              default:
+                // For unknown categories, leave as empty array
+                break;
+            }
+          }
+        }
+      }
+    });
+    
+    return acceptedTypesMap;
   };
 
   // Add this function to group accepted file types by category for better display
@@ -245,7 +278,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   // Define onDrop function before useDropzone
   const onDrop = useCallback(
     (acceptedFiles: File[], fileRejections: any[]) => {
-      if (fileRejections.length > 0) {
+    if (fileRejections.length > 0) {
         const { file, errors } = fileRejections[0];
         const fileSizeInMB = (file.size / (1024 * 1024)).toFixed(2);
         let errorMessage = "";
@@ -264,11 +297,11 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
         }
 
         toast.error(errorMessage);
-        return;
-      }
+      return;
+    }
 
-      const file = acceptedFiles[0];
-      if (file) {
+    const file = acceptedFiles[0];
+    if (file) {
         // Extra validation to ensure file type is acceptable
         if (!isFileTypeValid(file)) {
           const mediaType = mediaTypes.find(type => type._id === selectedMediaType);
@@ -276,8 +309,8 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
           return;
         }
 
-        setFile(file);
-        setFileSelected(true);
+      setFile(file);
+      setFileSelected(true);
         setIsPreviewReady(false);
         setFileLoadingProgress(0);
 
@@ -288,7 +321,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
           if (progress >= 90) clearInterval(interval);
         }, 50);
 
-        const reader = new FileReader();
+      const reader = new FileReader();
 
         reader.onloadstart = () => {
           setFileLoadingProgress(0);
@@ -301,7 +334,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
           }
         };
 
-        reader.onloadend = () => {
+      reader.onloadend = () => {
           const fileUrl = reader.result as string;
           setFilePreview(fileUrl);
 
@@ -348,8 +381,8 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
           clearInterval(interval);
         };
 
-        reader.readAsDataURL(file);
-      }
+      reader.readAsDataURL(file);
+    }
     },
     [maxFileSizeMB, selectedMediaType, mediaTypes]
   );
@@ -764,16 +797,16 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     switch (field.type) {
       case 'Text':
         return (
-          <TextField
+      <TextField
             value={metadata[field.name] || ""}
             onChange={(e) => handleMetadataChange(field.name, e.target.value)}
             required={field.required}
-            fullWidth
-            margin="normal"
-          />
+        fullWidth
+        margin="normal"
+      />
         );
       case 'Number':
-        return (
+  return (
           <TextField
             type="number"
             value={metadata[field.name] || ""}
@@ -787,7 +820,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
         return (
           <FormControl fullWidth margin="normal">
             <InputLabel>{field.name}</InputLabel>
-            <Select
+              <Select
               value={metadata[field.name] || ""}
               onChange={(e) => handleMetadataChange(field.name, e.target.value)}
               label={field.name}
@@ -797,9 +830,9 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
                 <MenuItem key={option} value={option}>
                   {option}
                 </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+                ))}
+              </Select>
+            </FormControl>
         );
       case 'Date':
         return (
@@ -877,35 +910,35 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6">Standard Information</Typography>
           
-          <TextField
+                <TextField
             fullWidth
             name="metadata.fileName"
-            label="File Name"
+                  label="File Name"
             value={metadata.fileName || file?.name || ""}
             onChange={(e) => handleMetadataChange("fileName", e.target.value)}
-            required
+                  required
             margin="normal"
           />
           
           <TextField
-            fullWidth
+                  fullWidth
             name="metadata.altText"
             label="Alt Text"
             value={metadata.altText || ""}
             onChange={(e) => handleMetadataChange("altText", e.target.value)}
-            margin="normal"
-          />
+                  margin="normal"
+                />
           
-          <TextField
-            fullWidth
+                <TextField
+                  fullWidth
             multiline
             rows={2}
             name="metadata.description"
             label="Description"
             value={metadata.description || ""}
             onChange={(e) => handleMetadataChange("description", e.target.value)}
-            margin="normal"
-          />
+                  margin="normal"
+                />
           
           <FormControl fullWidth margin="normal">
             <InputLabel>Visibility</InputLabel>
@@ -920,17 +953,17 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
             </Select>
           </FormControl>
           
-          <TextField
-            fullWidth
+                <TextField
+                  fullWidth
             name="metadata.tagsInput"
             label="Tags (comma-separated)"
             value={metadata.tagsInput || ""}
             onChange={handleTagsChange}
             onBlur={handleTagsBlur}
             onKeyDown={handleTagsKeyDown}
-            margin="normal"
-          />
-        </Box>
+                  margin="normal"
+                />
+              </Box>
         
         {/* Base schema fields if available */}
         {Object.keys(baseFields).length > 0 && (
@@ -943,16 +976,16 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
               if ((fieldName === 'imageWidth' || fieldName === 'imageHeight') && 
                   metadata[fieldName] !== undefined) {
                 return (
-                  <TextField
+                <TextField
                     key={fieldName}
-                    fullWidth
+                  fullWidth
                     disabled
                     name={`metadata.${fieldName}`}
                     label={fieldName}
                     value={metadata[fieldName] || "Auto-detected"}
                     helperText="This field is automatically populated"
-                    margin="normal"
-                  />
+                  margin="normal"
+                />
                 );
               }
               
@@ -960,17 +993,17 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
               switch (fieldProps.type) {
                 case 'Number':
                   return (
-                    <TextField
+                <TextField
                       key={fieldName}
                       type="number"
-                      fullWidth
+                  fullWidth
                       name={`metadata.${fieldName}`}
                       label={fieldName}
                       value={metadata[fieldName] || ""}
                       onChange={(e) => handleMetadataChange(fieldName, e.target.value)}
                       required={fieldProps.required}
-                      margin="normal"
-                    />
+                  margin="normal"
+                />
                   );
                 case 'Boolean':
                   return (
@@ -989,16 +1022,16 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
                   );
                 case 'Date':
                   return (
-                    <TextField
+                <TextField
                       key={fieldName}
-                      type="date"
-                      fullWidth
+                  type="date"
+                  fullWidth
                       name={`metadata.${fieldName}`}
                       label={fieldName}
                       value={metadata[fieldName] || ""}
                       onChange={(e) => handleMetadataChange(fieldName, e.target.value)}
                       InputLabelProps={{ shrink: true }}
-                      margin="normal"
+                  margin="normal"
                     />
                   );
                 default: // Text fields and others
@@ -1015,7 +1048,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
                   );
               }
             })}
-          </Box>
+              </Box>
         )}
         
         {/* Custom media type fields */}
@@ -1028,7 +1061,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
               <Box key={index} sx={{ mb: 2 }}>
                 <Typography variant="subtitle1">{field.name}</Typography>
                 {renderFieldInput(field)}
-              </Box>
+            </Box>
             ))}
           </Box>
         )}
@@ -1096,9 +1129,9 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
                         {formatFileSize(file?.size || 0)}
                       </Typography>
                     </div>
-                  )}
-                </>
-              )}
+                )}
+              </>
+            )}
             </div>
           )}
         </div>
@@ -1140,7 +1173,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
           {hasVideos && <FaVideo size={12} style={{ color: '#f57c00' }} />}
           {hasAudio && <FaFileAudio size={12} style={{ color: '#7e57c2' }} />}
           {hasDocuments && <FaFileWord size={12} style={{ color: '#2196f3' }} />}
-        </Box>
+    </Box>
       );
     };
 

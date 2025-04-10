@@ -30,10 +30,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import MediaInformation from './MediaInformation';
 import EditMediaDialog from './EditMediaDialog';
-import { MediaFormData, ApiMediaData, transformFormToApiData, createLogger } from '../../types/mediaTypes';
 
-// Create a logger instance for this component
-const logger = createLogger('MediaDetail');
 
 // Add a helper function to safely get metadata fields from either root or metadata object
 const getMetadataField = (mediaFile: any, fieldName: string, defaultValue: any = undefined) => {
@@ -133,7 +130,7 @@ const MediaDetail: React.FC = () => {
   // Get base fields based on the file type
   const baseFields = getBaseSchemaFields();
 
- 
+
 
   useEffect(() => {
     const fetchMediaFile = async () => {
@@ -164,15 +161,25 @@ const MediaDetail: React.FC = () => {
     }
   }, [mediaFile, mediaTypes]);
 
-  const handleSave = async (formData: MediaFormData) => {
+  const handleSave = async (data: Partial<MediaFile>) => {
     if (!mediaFile) return;
 
     try {
-      logger.formData('Received form data', formData);
+      console.log('Received form data:', data);
 
       // Transform form data to API format
-      const apiData = transformFormToApiData(formData);
-      logger.apiData('Transformed for API', apiData);
+      const apiData = {
+        title: data.title || '',
+        metadata: {
+          fileName: data.fileName || '',
+          altText: data.altText || '',
+          description: data.description || '',
+          visibility: data.visibility || 'public',
+          tags: data.tags || [],
+          ...data.customFields
+        }
+      };
+      console.log('Transformed for API:', apiData);
 
       const response = await axios.put<BaseMediaFile>(
         `${env.BASE_URL}/media/update/${mediaFile.slug}`,
@@ -185,35 +192,22 @@ const MediaDetail: React.FC = () => {
         }
       );
 
-      // Transform server response to ApiMediaData format before logging
-      const transformedResponse: ApiMediaData = {
-        title: response.data.title,
-        metadata: {
-          ...response.data.metadata,
-          fileName: response.data.metadata?.fileName || '',
-          tags: response.data.metadata?.tags || [],
-          visibility: (response.data.metadata?.visibility || 'public') as 'public' | 'private'
-        }
-      };
-
-      logger.apiData('Server response', transformedResponse);
-
       if (response.status === 200 && response.data) {
         // Update the local state with the new data
         const updatedMediaFile = {
           ...mediaFile,
-          title: formData.title,
+          title: data.title || '',
           metadata: {
-            fileName: formData.fileName,
-            altText: formData.altText,
-            description: formData.description,
-            visibility: formData.visibility,
-            tags: formData.tags,
-            ...formData.customFields
+            fileName: data.fileName || '',
+            altText: data.altText || '',
+            description: data.description || '',
+            visibility: data.visibility || 'public',
+            tags: data.tags || [],
+            ...data.customFields
           }
         };
 
-        logger.formData('Updating local state', formData);
+        console.log('Updating local state:', data);
         setMediaFile(updatedMediaFile);
         setIsEditing(false);
         toast.success('Media file updated successfully');
@@ -221,13 +215,7 @@ const MediaDetail: React.FC = () => {
         throw new Error('Failed to update media file');
       }
     } catch (error: any) {
-      logger.error('Update failed', error);
-      
-      if (error.response?.status === 404) {
-        toast.error('Media file not found. Please refresh the page.');
-      } else {
-        toast.error(`Failed to update media file: ${error.response?.data?.error || error.message}`);
-      }
+      console.error('Update failed:', error);
     }
   };
 
@@ -322,7 +310,7 @@ const MediaDetail: React.FC = () => {
       <Box className="media-detail">
         <Box className="media-preview">
           <Box className="media-preview-header">
-            <Typography variant="body2">Media Type:<span> {mediaFile.mediaType}</span></Typography>
+            <Typography variant="body2"><span style={{ color: mediaTypes.find(type => type.name === mediaFile.mediaType)?.catColor || '#999' }}>Media Type:</span> <span> {mediaFile.mediaType}</span></Typography>
             
             <Box className="size-container">
               <Typography variant="body2">Size:<span> {formatFileSize(mediaFile.fileSize || 0)}</span></Typography>

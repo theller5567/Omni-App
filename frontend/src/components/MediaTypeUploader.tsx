@@ -1,20 +1,49 @@
 import React, { useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stepper, Step, StepLabel, TextField, Select, MenuItem, IconButton, List, ListItem, ListItemText, Checkbox, FormControlLabel, Typography, Chip, Box, FormGroup, FormHelperText } from '@mui/material';
-import { useDispatch } from 'react-redux';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Stepper,
+  Step,
+  StepLabel,
+  TextField,
+  Select,
+  MenuItem,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
+  Checkbox,
+  FormControlLabel,
+  Typography,
+  Chip,
+  Box,
+  InputLabel,
+  FormControl
+} from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
 import { addMediaType } from '../store/slices/mediaTypeSlice';
 import { toast } from 'react-toastify';
 import axios from 'axios';
-import { FaPlus, FaCheck, FaExclamationCircle, FaTimes, FaEdit, FaStar, FaImage, FaVideo, FaFileAudio, FaFileWord } from 'react-icons/fa';
-import type { MediaType } from '../store/slices/mediaTypeSlice';
+import { FaPlus, FaCheck, FaExclamationCircle, FaTimes, FaEdit, FaStar, FaImage, FaVideo, FaFileAudio, FaFileWord, FaArrowRight, FaArrowLeft, FaSave } from 'react-icons/fa';
+import CloseIcon from '@mui/icons-material/Close';
+import { 
+  MediaTypeConfig, 
+  MediaTypeField, 
+  FieldType, 
+  isSelectField, 
+  transformConfigToApiData, 
+  ApiMediaTypeResponse,
+  createField,
+  MediaTypeState,
+  SelectField,
+  updateFieldOptions
+} from '../types/mediaTypes';
 import './MediaTypeUploader.scss';
 import env from '../config/env';
-
-interface Field {
-  name: string;
-  type: string;
-  options?: string[];
-  required: boolean;
-}
+import { RootState } from '../store/store';
 
 interface MediaTypeUploaderProps {
   open: boolean;
@@ -56,81 +85,240 @@ const fileTypeCategories: FileTypeCategory[] = [
   }
 ];
 
+// Update FieldType to include new types
+type ExtendedFieldType = 'Text' | 'TextArea' | 'Number' | 'Date' | 'Boolean' | 'Select' | 'MultiSelect';
+
+// Available field types
+const inputOptions: ExtendedFieldType[] = ['Text', 'TextArea', 'Number', 'Date', 'Boolean', 'Select', 'MultiSelect'];
+
+// Define predefined colors for the media types
+const predefinedColors = [
+  { name: 'Red', hex: '#f44336' },
+  { name: 'Pink', hex: '#e91e63' },
+  { name: 'Purple', hex: '#9c27b0' },
+  { name: 'Deep Purple', hex: '#673ab7' },
+  { name: 'Indigo', hex: '#3f51b5' },
+  { name: 'Blue', hex: '#2196f3' },
+  { name: 'Light Blue', hex: '#03a9f4' },
+  { name: 'Cyan', hex: '#00bcd4' },
+  { name: 'Teal', hex: '#009688' },
+  { name: 'Green', hex: '#4caf50' },
+  { name: 'Light Green', hex: '#8bc34a' },
+  { name: 'Lime', hex: '#cddc39' },
+  { name: 'Yellow', hex: '#ffeb3b' },
+  { name: 'Amber', hex: '#ffc107' },
+  { name: 'Orange', hex: '#ff9800' },
+  { name: 'Deep Orange', hex: '#ff5722' },
+  { name: 'Brown', hex: '#795548' },
+  { name: 'Grey', hex: '#9e9e9e' },
+  { name: 'Blue Grey', hex: '#607d8b' }
+];
+
+// Extend MediaTypeConfig interface
+interface ExtendedMediaTypeConfig extends MediaTypeConfig {
+  catColor?: string;
+  _id?: string;
+}
+
+const initialMediaTypeConfig: ExtendedMediaTypeConfig = {
+  name: '',
+  fields: [],
+  baseType: 'Media',
+  includeBaseFields: true,
+  acceptedFileTypes: [],
+  status: 'active',
+  catColor: '#2196f3', // Default blue color
+  _id: undefined
+};
+
+// const baseSchemaFields = {
+//   fileName: { type: 'Text', required: true, description: 'Name of the file' },
+//   altText: { type: 'Text', required: false, description: 'Alternative text for accessibility' },
+//   description: { type: 'Text', required: false, description: 'Description of the media' },
+//   visibility: { type: 'Select', required: true, options: ['public', 'private'], description: 'Visibility setting' },
+//   tags: { type: 'Array', required: false, description: 'Tags for categorization' }
+// };
+
+// Define step constants outside component
+const STEP_NAME = 0;
+const STEP_FIELDS = 1;
+const STEP_REVIEW = 2;
+
+// Create a simple color picker component
+const ColorPicker: React.FC<{
+  value: string;
+  onChange: (color: string) => void;
+  usedColors?: string[];
+}> = ({ value, onChange, usedColors = [] }) => {
+  return (
+    <FormControl fullWidth>
+      <InputLabel id="color-select-label">Select Color</InputLabel>
+      <Select
+        labelId="color-select-label"
+        id="color-select"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        label="Select Color"
+        renderValue={(selected) => {
+          const color = predefinedColors.find(c => c.hex === selected);
+          return (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ 
+                width: 20, 
+                height: 20, 
+                bgcolor: selected, 
+                borderRadius: '50%', 
+                border: '1px solid rgba(0, 0, 0, 0.1)'
+              }} />
+              {color?.name || selected}
+            </Box>
+          );
+        }}
+      >
+        {predefinedColors.map((color) => {
+          const isUsed = usedColors.includes(color.hex) && value !== color.hex;
+          return (
+            <MenuItem 
+              key={color.hex} 
+              value={color.hex}
+              disabled={isUsed}
+              sx={{ opacity: isUsed ? 0.5 : 1 }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ 
+                  width: 24, 
+                  height: 24, 
+                  bgcolor: color.hex, 
+                  borderRadius: '50%', 
+                  border: '1px solid rgba(0, 0, 0, 0.1)'
+                }} />
+                <Typography>
+                  {color.name}
+                  {isUsed && <Typography component="span" variant="caption" color="error"> (in use)</Typography>}
+                </Typography>
+              </Box>
+            </MenuItem>
+          );
+        })}
+      </Select>
+    </FormControl>
+  );
+};
+
+// Fix the type issue with mediaTypes by extending MediaTypeState
+interface MediaTypeWithColor extends MediaTypeState {
+  catColor?: string;
+}
+
 const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) => {
   const dispatch = useDispatch();
-  const [mediaTypeName, setMediaTypeName] = useState('');
-  const [fields, setFields] = useState<Field[]>([]);
-  const [inputType, setInputType] = useState('');
-  const [fieldName, setFieldName] = useState('');
+  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes) as MediaTypeWithColor[];
+  
+  // State for media type configuration
+  const [mediaTypeConfig, setMediaTypeConfig] = useState<ExtendedMediaTypeConfig>(initialMediaTypeConfig);
+
+  // State for field editing
+  const [currentField, setCurrentField] = useState<MediaTypeField>(createField('Text'));
   const [options, setOptions] = useState<string[]>([]);
   const [optionInput, setOptionInput] = useState('');
-  const [activeStep, setActiveStep] = useState(0);
-  const [isRequired, setIsRequired] = useState(false);
+  const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
+
+  // UI state
+  const [activeStep, setActiveStep] = useState(STEP_NAME);
   const [isEditing, setIsEditing] = useState(false);
   const [activeField, setActiveField] = useState<number | null>(null);
-  const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
-  const [selectedFileTypes, setSelectedFileTypes] = useState<string[]>([]);
-  const [customMimeType, setCustomMimeType] = useState('');
-  const [customMimeTypes, setCustomMimeTypes] = useState<string[]>([]);
 
   const steps = ['Name Media Type', 'Add Fields', 'Review & Submit'];
-  const inputOptions = ['Text', 'Number', 'Date', 'Boolean', 'Select', 'MultiSelect'];
 
-  const handleNext = () => setActiveStep((prev) => prev + 1);
+  // Get used colors from existing media types - improve the filtering logic
+  const usedColors = React.useMemo(() => {
+    return mediaTypes
+      .filter(type => mediaTypeConfig._id !== type._id)
+      .map(type => type.catColor)
+      .filter(Boolean) as string[];
+  }, [mediaTypes, mediaTypeConfig._id]);
+
+  const handleNext = () => {
+    // Only validate name and file types in step 1
+    if (activeStep === STEP_NAME) {
+      if (mediaTypeConfig.name.trim() === '' || mediaTypeConfig.acceptedFileTypes.length === 0) {
+        toast.error('Please provide a name and select at least one accepted file type');
+        return;
+      }
+    }
+    
+    // No validation for step 2 - fields are optional
+    
+    setActiveStep((prev) => prev + 1);
+  };
+
   const handleBack = () => setActiveStep((prev) => prev - 1);
 
   const handleAddField = () => {
-    if (fieldName.trim() && inputType) {
-      const newField: Field = { name: fieldName, type: inputType, required: isRequired };
-      if (inputType === 'Select' || inputType === 'MultiSelect') {
-        newField.options = options;
+    if (currentField.name.trim()) {
+      let newField: MediaTypeField;
+      
+      if (isSelectField(currentField)) {
+        newField = {
+          ...currentField,
+          options: [...options]
+        };
+      } else {
+        newField = currentField;
       }
       
       if (editingFieldIndex !== null) {
-        // Update existing field
-        const updatedFields = [...fields];
+        const updatedFields = [...mediaTypeConfig.fields];
         updatedFields[editingFieldIndex] = newField;
-        setFields(updatedFields);
+        setMediaTypeConfig(prev => ({ ...prev, fields: updatedFields }));
         setEditingFieldIndex(null);
       } else {
-        // Add new field
-        setFields([...fields, newField]);
+        setMediaTypeConfig(prev => ({ ...prev, fields: [...prev.fields, newField] }));
       }
       
       console.log('submitted', newField);
       resetFieldForm();
     } else {
-      toast.error('Field name and type are required');
+      toast.error('Field name is required');
     }
   };
 
   const handleEditField = (index: number) => {
-    const field = fields[index];
-    setFieldName(field.name);
-    setInputType(field.type);
-    setIsRequired(field.required);
-    setOptions(field.options || []);
+    const field = mediaTypeConfig.fields[index];
+    setCurrentField(field);
+    if (isSelectField(field)) {
+      setOptions(field.options);
+    } else {
+      setOptions([]);
+    }
     setIsEditing(true);
     setEditingFieldIndex(index);
-    setActiveField(index);
   };
 
+
   const handleRemoveField = (index: number) => {
-    setFields(fields.filter((_, i) => i !== index));
+    const updatedFields = mediaTypeConfig.fields.filter((_, i) => i !== index);
+    setMediaTypeConfig(prev => ({ ...prev, fields: updatedFields }));
     if (editingFieldIndex === index) {
       resetFieldForm();
     }
   };
 
   const handleAddOption = () => {
-    if (optionInput.trim()) {
-      setOptions([...options, optionInput]);
+    if (optionInput.trim() && isSelectField(currentField)) {
+      const newOptions = [...currentField.options, optionInput.trim()];
+      setOptions(newOptions);
+      setCurrentField(updateFieldOptions(currentField, newOptions));
       setOptionInput('');
     }
   };
 
   const handleRemoveOption = (index: number) => {
-    setOptions(options.filter((_, i) => i !== index));
+    if (isSelectField(currentField)) {
+      const newOptions = currentField.options.filter((_, i) => i !== index);
+      setOptions(newOptions);
+      setCurrentField(updateFieldOptions(currentField, newOptions));
+    }
   };
 
   const handleFileTypeCategoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,116 +331,80 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
     if (category) {
       if (isChecked) {
         // Add all MIME types from this category
-        setSelectedFileTypes(prev => [...prev, ...category.mimeTypes]);
+        setMediaTypeConfig(prev => ({
+          ...prev,
+          acceptedFileTypes: [...prev.acceptedFileTypes, ...category.mimeTypes]
+        }));
       } else {
         // Remove all MIME types from this category
-        setSelectedFileTypes(prev => prev.filter(type => !category.mimeTypes.includes(type)));
+        setMediaTypeConfig(prev => ({
+          ...prev,
+          acceptedFileTypes: prev.acceptedFileTypes.filter(type => !category.mimeTypes.includes(type))
+        }));
       }
-    }
-  };
-
-  const handleAddCustomMimeType = () => {
-    if (customMimeType.trim() && !customMimeTypes.includes(customMimeType)) {
-      setCustomMimeTypes(prev => [...prev, customMimeType]);
-      setSelectedFileTypes(prev => [...prev, customMimeType]);
-      setCustomMimeType('');
-    }
-  };
-
-  const handleRemoveCustomMimeType = (mimeType: string) => {
-    setCustomMimeTypes(prev => prev.filter(type => type !== mimeType));
-    setSelectedFileTypes(prev => prev.filter(type => type !== mimeType));
-  };
-
-  const saveMediaTypeToBackend = async (mediaType: Omit<MediaType, '_id'>) => {
-    try {
-      console.log('Sending media type to backend:', JSON.stringify(mediaType, null, 2));
-      const response = await axios.post<MediaType>(`${env.BASE_URL}/api/media-types`, {
-        name: mediaType.name,
-        fields: mediaType.fields.map((field: Field) => ({
-          name: field.name,
-          type: field.type,
-          options: field.options || [],
-          required: field.required
-        })),
-        acceptedFileTypes: mediaType.acceptedFileTypes
-      });
-      console.log('Media Type saved:', response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error('Error saving media type:', error);
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        toast.error(error.response.data.message || 'Failed to save media type');
-      } else {
-        toast.error('Failed to save media type');
-      }
-      throw error;
     }
   };
 
   const handleSaveMediaType = async () => {
     try {
-      if (fieldName.trim() && inputType) {
-        handleAddField();
+      if (!mediaTypeConfig.name || !mediaTypeConfig.fields?.length || !mediaTypeConfig.acceptedFileTypes?.length) {
+        toast.error('Please fill in all required fields');
+        return;
       }
 
-      if (mediaTypeName.trim()) {
-        if (selectedFileTypes.length === 0) {
-          toast.error('Please select at least one file type');
-          return;
-        }
+      // Create API data from the media type config
+      const apiData = {
+        ...transformConfigToApiData(mediaTypeConfig),
+        catColor: mediaTypeConfig.catColor || '#2196f3' // Ensure catColor is included
+      };
+      
+      console.log('Saving media type with color:', apiData);
 
-        const mediaType = { 
-          name: mediaTypeName, 
-          fields: fields.map(field => ({
-            name: field.name,
-            type: field.type,
-            options: field.options || [],
-            required: field.required
-          })),
-          status: 'active' as 'active',
-          usageCount: 0,
-          replacedBy: null,
-          isDeleting: false,
-          acceptedFileTypes: selectedFileTypes
-        };
-        console.log('Saving media type:', mediaType);
-        const savedMediaType = await saveMediaTypeToBackend(mediaType);
-        dispatch(addMediaType(savedMediaType));
-        toast.success('Media Type added successfully!');
-        handleClose();
-      } else {
-        toast.error('Media Type Name cannot be empty');
-      }
+      const response = await axios.post<ApiMediaTypeResponse>(
+        `${env.BASE_URL}/api/media-types`,
+        apiData
+      );
+
+      // Add catColor to the store data
+      const storeData: MediaTypeState & { catColor?: string } = {
+        ...response.data,
+        usageCount: 0,
+        replacedBy: null,
+        isDeleting: false,
+        catColor: mediaTypeConfig.catColor || '#2196f3'
+      };
+
+      dispatch(addMediaType(storeData));
+      toast.success('Media Type added successfully!');
+      handleClose();
     } catch (error) {
-      // Error is already handled in saveMediaTypeToBackend
-      console.error('Failed to save media type:', error);
+      console.error('Failed to save media type', error);
+      toast.error('Failed to save media type');
     }
   };
 
   const resetFieldForm = () => {
-    setFieldName('');
-    setInputType('');
+    setCurrentField(createField('Text'));
     setOptions([]);
-    setIsRequired(false);
     setIsEditing(false);
     setEditingFieldIndex(null);
   };
 
   const handleClose = () => {
     resetFieldForm();
-    setMediaTypeName('');
-    setFields([]);
-    setActiveStep(0);
+    setMediaTypeConfig(initialMediaTypeConfig);
+    setActiveStep(STEP_NAME);
     setActiveField(null);
-    setSelectedFileTypes([]);
-    setCustomMimeTypes([]);
-    setCustomMimeType('');
     onClose();
   };
 
-  const renderCompactFieldItem = (field: Field, index: number) => {
+  const renderFieldOptions = (field: SelectField) => (
+    <span className="field-options">
+      Options: {field.options.join(', ')}
+    </span>
+  );
+
+  const renderCompactFieldItem = (field: MediaTypeField, index: number) => {
     if (editingFieldIndex === index) {
       return (
         <div 
@@ -264,10 +416,12 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
               <Select
                 value={field.type}
                 onChange={(e) => {
-                  const newFields = [...fields];
-                  newFields[index].type = e.target.value;
-                  setFields(newFields);
-                  setInputType(e.target.value);
+                  const newType = e.target.value as FieldType;
+                  const newField = createField(newType, currentField.name, currentField.required);
+                  const newFields = [...mediaTypeConfig.fields];
+                  newFields[index] = newField;
+                  setMediaTypeConfig(prev => ({ ...prev, fields: newFields }));
+                  setCurrentField(newField);
                 }}
                 fullWidth
                 displayEmpty
@@ -282,8 +436,11 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
             
               <TextField
                 label="Field Name"
-                value={fieldName}
-                onChange={(e) => setFieldName(e.target.value)}
+                value={currentField.name}
+                onChange={(e) => {
+                  setCurrentField(prev => ({ ...prev, name: e.target.value }));
+                  setIsEditing(true);
+                }}
                 fullWidth
                 className="input-field text-input"
               />
@@ -294,8 +451,12 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
               className='required-checkbox'
               control={
                 <Checkbox 
-                  checked={isRequired}
-                  onChange={(e) => setIsRequired(e.target.checked)}
+                  checked={field.required}
+                  onChange={(e) => {
+                    const newFields = [...mediaTypeConfig.fields];
+                    newFields[index].required = e.target.checked;
+                    setMediaTypeConfig(prev => ({ ...prev, fields: newFields }));
+                  }}
                 />
               }
             />
@@ -323,7 +484,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
             </div>
           </div>
           
-          {(field.type === 'Select' || field.type === 'MultiSelect') && (
+          {isSelectField(field) && (
             <div className="options-container">
               <div className="options-header">
                 <span className="title">Define Options</span>
@@ -345,9 +506,9 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
                 </IconButton>
               </div>
               
-              {options.length > 0 && (
+              {field.options.length > 0 && (
                 <div className="option-chips">
-                  {options.map((option, optIndex) => (
+                  {field.options.map((option, optIndex) => (
                     <div key={optIndex} className="option-chip">
                       {option}
                       <span className="remove-icon" onClick={() => handleRemoveOption(optIndex)}>
@@ -379,11 +540,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
           )}
         </div>
         
-        {field.options && field.options.length > 0 && (
-          <div className="field-options">
-            Options: {field.options.join(', ')}
-          </div>
-        )}
+        {isSelectField(field) && renderFieldOptions(field)}
         
         <div className="field-actions">
           <div 
@@ -416,7 +573,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
     if (!category) return false;
     
     // Check if all MIME types in this category are selected
-    return category.mimeTypes.every(type => selectedFileTypes.includes(type));
+    return category.mimeTypes.every(type => mediaTypeConfig.acceptedFileTypes.includes(type));
   };
 
   const isCategoryPartiallySelected = (categoryName: string) => {
@@ -424,13 +581,106 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
     if (!category) return false;
     
     // Check if some (but not all) MIME types in this category are selected
-    const selectedCount = category.mimeTypes.filter(type => selectedFileTypes.includes(type)).length;
+    const selectedCount = category.mimeTypes.filter(type => mediaTypeConfig.acceptedFileTypes.includes(type)).length;
     return selectedCount > 0 && selectedCount < category.mimeTypes.length;
   };
 
+  const renderFirstStep = () => (
+    <div className="step-container">
+      <Typography variant="h6">Select Media Type Name</Typography>
+      <TextField
+        label="Media Type Name"
+        value={mediaTypeConfig.name}
+        onChange={(e) => setMediaTypeConfig(prev => ({ ...prev, name: e.target.value }))}
+        fullWidth
+        className="input-field text-input"
+      />
+      
+      <Box >
+        <Typography variant="h6">Select Color for Media Type</Typography>
+        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+          This color will help identify this media type throughout the app
+        </Typography>
+        <ColorPicker 
+          value={mediaTypeConfig.catColor || '#2196f3'}
+          onChange={(color) => setMediaTypeConfig(prev => ({ ...prev, catColor: color }))}
+          usedColors={usedColors}
+        />
+      </Box>
+      
+      <Box sx={{ mt: 3 }}>
+        <Typography variant="h6">Accepted File Types</Typography>
+        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+          Select which file types this media type will accept during uploads
+        </Typography>
+      
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+          {fileTypeCategories.map((category) => (
+            <div key={category.name} className="file-type-category">
+              <FormControlLabel
+                control={
+                  <Checkbox 
+                    checked={isCategorySelected(category.name)}
+                    indeterminate={isCategoryPartiallySelected(category.name)}
+                    onChange={handleFileTypeCategoryChange}
+                    name={category.name}
+                  />
+                }
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {category.icon}
+                    <span>{category.label}</span>
+                  </Box>
+                }
+              />
+              
+              <Box sx={{ pl: 4, pb: 2 }}>
+                {category.mimeTypes.map((type) => (
+                  <Chip 
+                    key={type}
+                    size='small'
+                    label={type}
+                    variant={mediaTypeConfig.acceptedFileTypes.includes(type) ? "filled" : "outlined"}
+                    onClick={() => {
+                      if (mediaTypeConfig.acceptedFileTypes.includes(type)) {
+                        setMediaTypeConfig(prev => ({
+                          ...prev,
+                          acceptedFileTypes: prev.acceptedFileTypes.filter(t => t !== type)
+                        }));
+                      } else {
+                        setMediaTypeConfig(prev => ({
+                          ...prev,
+                          acceptedFileTypes: [...prev.acceptedFileTypes, type]
+                        }));
+                      }
+                    }}
+                    sx={{ m: 0.5 }}
+                  />
+                ))}
+              </Box>
+            </div>
+          ))}
+        </Box>
+      </Box>
+    </div>
+  );
+
   return (
     <Dialog id='dialog-container' open={open} onClose={handleClose}>
-      <DialogTitle>Create New Media Type</DialogTitle>
+      <DialogTitle sx={{ m: 0, p: 2 }}>
+        <IconButton
+          aria-label="close"
+          onClick={handleClose}
+          sx={{
+            position: 'absolute',
+            right: 8,
+            top: 8,
+            color: 'grey.500'
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
       <DialogContent className='dialog-inner' style={{width: '100%', height: '600px'}}>
         <Stepper activeStep={activeStep} alternativeLabel sx={{marginBottom: '3rem'}}>
           {steps.map((label) => (
@@ -440,354 +690,292 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
           ))}
         </Stepper>
         <div className='new-media-type-form-container'>
-              {activeStep === 0 && (
-                <div className="step-container">
-                  <TextField
-                    label="Media Type Name"
-                    value={mediaTypeName}
-                    onChange={(e) => setMediaTypeName(e.target.value)}
-                    fullWidth
-                    margin="normal"
-                    className="input-field text-input"
-                  />
-                  
-                  <Box sx={{ mt: 4 }}>
-                    <Typography variant="h6">Accepted File Types</Typography>
-                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                      Select which file types this media type will accept during uploads
-                    </Typography>
+          {activeStep === STEP_NAME && renderFirstStep()}
+          {activeStep === STEP_FIELDS && (
+            <div className="step-container step1">
+              <div className='field-creation-container'>
+                <Typography className="section-title">Create Media Type Fields</Typography>
+                
+                {mediaTypeConfig.fields.length > 0 && (
+                  <div className="field-list">
+                    <div className="field-list-title">
+                      <span>Existing Fields</span>
+                      <span className="count-badge">{mediaTypeConfig.fields.length}</span>
+                    </div>
                     
-                    <FormGroup>
-                      {fileTypeCategories.map((category) => (
-                        <div key={category.name} className="file-type-category">
-                          <FormControlLabel
-                            control={
-                              <Checkbox 
-                                checked={isCategorySelected(category.name)}
-                                indeterminate={isCategoryPartiallySelected(category.name)}
-                                onChange={handleFileTypeCategoryChange}
-                                name={category.name}
-                              />
-                            }
-                            label={
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                {category.icon}
-                                <span>{category.label}</span>
-                              </Box>
-                            }
+                    {mediaTypeConfig.fields.map((field, index) => renderCompactFieldItem(field, index))}
+                  </div>
+                )}
+                
+                {editingFieldIndex === null && (
+                  <div className={`new-input-field-container ${currentField.type === 'Select' || currentField.type === 'MultiSelect' ? 'select-input' : ''} ${isEditing ? 'active' : ''}`}>
+                    <div className='new-input-field-container-inner'>
+                      <div className='input-row'>
+                        <div className="field-group">
+                          <Select
+                            value={currentField.type}
+                            onChange={(e) => {
+                              const newType = e.target.value as FieldType;
+                              setCurrentField(createField(newType, currentField.name, currentField.required));
+                              setIsEditing(true);
+                            }}
+                            onFocus={() => setIsEditing(true)}
+                            fullWidth
+                            displayEmpty
+                            className={`input-field select-input`}
+                          >
+                            <MenuItem value="" disabled>Select Input Type</MenuItem>
+                            {inputOptions.map((option) => (
+                              <MenuItem key={option} value={option}>
+                                {option}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                           
+                          <TextField
+                            label="Field Name"
+                            value={currentField.name}
+                            onChange={(e) => {
+                              setCurrentField(prev => ({ ...prev, name: e.target.value }));
+                              setIsEditing(true);
+                            }}
+                            onFocus={() => setIsEditing(true)}
+                            fullWidth
+                            variant='outlined'
+                            className={`input-field text-input`}
                           />
-                          
-                          <Box sx={{ pl: 4, pb: 2 }}>
-                            {category.mimeTypes.map((type) => (
-                              <Chip 
-                                key={type}
-                                label={type}
-                                variant={selectedFileTypes.includes(type) ? "filled" : "outlined"}
-                                onClick={() => {
-                                  if (selectedFileTypes.includes(type)) {
-                                    setSelectedFileTypes(prev => prev.filter(t => t !== type));
-                                  } else {
-                                    setSelectedFileTypes(prev => [...prev, type]);
-                                  }
-                                }}
-                                sx={{ m: 0.5 }}
-                              />
-                            ))}
-                          </Box>
                         </div>
-                      ))}
-                    </FormGroup>
-                    
-                    <Box sx={{ mt: 3 }}>
-                      <Typography variant="subtitle1">Add Custom MIME Type</Typography>
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1 }}>
-                        <TextField
-                          placeholder="e.g., application/json"
-                          value={customMimeType}
-                          onChange={(e) => setCustomMimeType(e.target.value)}
-                          size="small"
-                          fullWidth
+                        
+                        <FormControlLabel
+                          label='Required'
+                          className='required-checkbox'
+                          control={<Checkbox checked={currentField.required} onChange={(e) => setCurrentField(prev => ({ ...prev, required: e.target.checked }))} />}
                         />
-                        <Button 
-                          variant="contained" 
-                          onClick={handleAddCustomMimeType}
-                          disabled={!customMimeType.trim()}
+                        
+                        <IconButton 
+                          onClick={handleAddField} 
+                          color="primary" 
+                          disabled={!currentField.type || !currentField.name.trim()}
+                          className="add-button"
                         >
-                          Add
-                        </Button>
-                      </Box>
-                      
-                      {customMimeTypes.length > 0 && (
-                        <Box sx={{ mt: 2 }}>
-                          <Typography variant="subtitle2">Custom MIME Types:</Typography>
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                            {customMimeTypes.map((type) => (
-                              <Chip 
-                                key={type}
-                                label={type}
-                                onDelete={() => handleRemoveCustomMimeType(type)}
-                                sx={{ m: 0.5 }}
-                              />
-                            ))}
-                          </Box>
-                        </Box>
-                      )}
-                    </Box>
-                    
-                    {selectedFileTypes.length === 0 && (
-                      <FormHelperText error>
-                        Please select at least one file type that will be accepted
-                      </FormHelperText>
-                    )}
-                  </Box>
-                </div>
-              )}
-              {activeStep === 1 && (
-                <div className="step-container step1">
-                  <div className='field-creation-container'>
-                    <Typography className="section-title">Create Media Type Fields</Typography>
-                    
-                    {fields.length > 0 && (
-                      <div className="field-list">
-                        <div className="field-list-title">
-                          <span>Existing Fields</span>
-                          <span className="count-badge">{fields.length}</span>
-                        </div>
-                        
-                        {fields.map((field, index) => renderCompactFieldItem(field, index))}
+                          <FaPlus />
+                        </IconButton>
                       </div>
-                    )}
+                    </div>
                     
-                    {editingFieldIndex === null && (
-                      <div className={`new-input-field-container ${inputType === 'Select' || inputType === 'MultiSelect' ? 'select-input' : ''} ${isEditing ? 'active' : ''}`}>
-                        <div className='new-input-field-container-inner'>
-                          <div className='input-row'>
-                            <div className="field-group">
-                              <Select
-                                value={inputType}
-                                onChange={(e) => {
-                                  setInputType(e.target.value);
-                                  setIsEditing(true);
-                                }}
-                                onFocus={() => setIsEditing(true)}
-                                fullWidth
-                                displayEmpty
-                                className={`input-field select-input`}
-                              >
-                                <MenuItem value="" disabled>Select Input Type</MenuItem>
-                                {inputOptions.map((option) => (
-                                  <MenuItem key={option} value={option}>
-                                    {option}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                               
-                              <TextField
-                                label="Field Name"
-                                value={fieldName}
-                                onChange={(e) => {
-                                  setFieldName(e.target.value);
-                                  setIsEditing(true);
-                                }}
-                                onFocus={() => setIsEditing(true)}
-                                fullWidth
-                                variant='outlined'
-                                className={`input-field text-input`}
-                              />
-                            </div>
-                            
-                            <FormControlLabel
-                              label='Required'
-                              className='required-checkbox'
-                              control={<Checkbox checked={isRequired} onChange={(e) => setIsRequired(e.target.checked)} />}
-                            />
-                            
-                            <IconButton 
-                              onClick={handleAddField} 
-                              color="primary" 
-                              disabled={!inputType || !fieldName.trim()}
-                              className="add-button"
-                            >
-                              <FaPlus />
-                            </IconButton>
-                          </div>
+                    {(currentField.type === 'Select' || currentField.type === 'MultiSelect') && (
+                      <div className="options-container">
+                        <div className="options-header">
+                          <span className="title">Define Options</span>
                         </div>
                         
-                        {(inputType === 'Select' || inputType === 'MultiSelect') && (
-                          <div className="options-container">
-                            <div className="options-header">
-                              <span className="title">Define Options</span>
-                            </div>
-                            
-                            <div className="add-option-container">
-                              <TextField
-                                label="Option Value"
-                                value={optionInput}
-                                onChange={(e) => {
-                                  setOptionInput(e.target.value);
-                                  setIsEditing(true);
-                                }}
-                                fullWidth
-                                className="input-field text-input"
-                              />
-                              <IconButton onClick={handleAddOption} color="primary" disabled={!optionInput.trim()}>
-                                <FaPlus />
-                              </IconButton>
-                            </div>
-                            
-                            {options.length > 0 && (
-                              <div className="option-chips">
-                                {options.map((option, index) => (
-                                  <div key={index} className="option-chip">
-                                    {option}
-                                    <span className="remove-icon" onClick={() => handleRemoveOption(index)}>
-                                      <FaTimes size={10} />
-                                    </span>
-                                  </div>
-                                ))}
+                        <div className="add-option-container">
+                          <TextField
+                            label="Option Value"
+                            value={optionInput}
+                            onChange={(e) => {
+                              setOptionInput(e.target.value);
+                              setIsEditing(true);
+                            }}
+                            fullWidth
+                            className="input-field text-input"
+                          />
+                          <IconButton onClick={handleAddOption} color="primary" disabled={!optionInput.trim()}>
+                            <FaPlus />
+                          </IconButton>
+                        </div>
+                        
+                        {options.length > 0 && (
+                          <div className="option-chips">
+                            {options.map((option, index) => (
+                              <div key={index} className="option-chip">
+                                {option}
+                                <span className="remove-icon" onClick={() => handleRemoveOption(index)}>
+                                  <FaTimes size={10} />
+                                </span>
                               </div>
-                            )}
+                            ))}
                           </div>
                         )}
                       </div>
                     )}
                   </div>
-                 
-                  <div className='field-preview-container'>
-                    <div className="preview-header">
-                      <h6>Field Preview</h6>
-                      <span className="field-count">{fields.length} fields</span>
-                    </div>
-                    
-                    {fields.length === 0 ? (
-                      <div className="empty-message">
-                        <Typography>No fields added yet. Start by creating a field on the left.</Typography>
-                      </div>
-                    ) : (
-                      <List>
-                        {fields.map((field, index) => (
-                          <ListItem key={index} onClick={() => setActiveField(index)}>
-                            <ListItemText
-                              primary={
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <span className="field-name">
-                                    {field.name}
-                                    {field.required && <span className="field-required-badge">Required</span>}
-                                  </span>
-                                  <span className="field-type">{field.type}</span>
-                                </Box>
-                              }
-                              secondary={
-                                field.options && field.options.length > 0 
-                                  ? `Options: ${field.options.join(', ')}` 
-                                  : null
-                              }
-                            />
-                          </ListItem>
-                        ))}
-                      </List>
-                    )}
-                  </div>
-                </div>
-              )}
-              {activeStep === 2 && (
-                <div className="step-container step2">
-                  <div className="media-type-summary">
-                    <h4>Media Type: {mediaTypeName}</h4>
-                    <Typography variant="body1">
-                      This media type will have {fields.length} field{fields.length !== 1 ? 's' : ''}.
-                      {fields.filter(f => f.required).length > 0 && (
-                        <span> {fields.filter(f => f.required).length} field{fields.filter(f => f.required).length !== 1 ? 's are' : ' is'} required.</span>
-                      )}
-                    </Typography>
-                    
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="subtitle1">Accepted File Types:</Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                        {selectedFileTypes.map((type) => (
-                          <Chip 
-                            key={type}
-                            label={type}
-                            sx={{ m: 0.5 }}
-                          />
-                        ))}
-                      </Box>
-                    </Box>
-                    
-                    <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      {inputOptions.map(type => {
-                        const count = fields.filter(f => f.type === type).length;
-                        if (count === 0) return null;
-                        return (
-                          <Chip 
-                            key={type} 
-                            label={`${type}: ${count}`} 
-                            sx={{ 
-                              backgroundColor: 'rgba(25, 118, 210, 0.2)',
-                              borderRadius: '4px',
-                              fontSize: '0.8rem'
-                            }} 
-                          />
-                        );
-                      })}
-                    </Box>
-                  </div>
-                  
-                  <div className="field-list-container">
-                    <h6>Field Details:</h6>
-                    <List>
-                      {fields.map((field, index) => (
-                        <ListItem key={index}>
-                          <ListItemText
-                            primary={
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                {field.name}
-                                {field.required && 
-                                  <span className="required-badge">Required</span>
-                                }
-                              </Box>
-                            }
-                            secondary={
-                              <>
-                                <Typography component="span" variant="body2">
-                                  Type: {field.type}
-                                </Typography>
-                                {field.options && field.options.length > 0 && (
-                                  <Box mt={1}>
-                                    <Typography component="span" variant="body2">
-                                      Options: {field.options.join(', ')}
-                                    </Typography>
-                                  </Box>
-                                )}
-                              </>
-                            }
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </div>
-                  
-                  <Box className="confirmation-message">
-                    <Typography variant="body2">
-                      <FaExclamationCircle style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-                      Please review the media type details above before proceeding. Once created, only an admin can modify it.
-                    </Typography>
-                  </Box>
-                </div>
-              )}
+                )}
               </div>
+             
+              <div className='field-preview-container'>
+                <div className="preview-header">
+                  <h6>Field Preview</h6>
+                  <span className="field-count">{mediaTypeConfig.fields.length} fields</span>
+                </div>
+                
+                {mediaTypeConfig.fields.length === 0 ? (
+                  <div className="empty-message">
+                    <Typography>No fields added yet. Start by creating a field on the left.</Typography>
+                  </div>
+                ) : (
+                  <List>
+                    {mediaTypeConfig.fields.map((field, index) => (
+                      <ListItem key={index} onClick={() => setActiveField(index)}>
+                        <Box sx={{ width: '100%' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography variant="subtitle2">
+                              {field.name}
+                              {field.required && (
+                                <small className='required-badge' style={{marginLeft: '0.5rem', color: 'green', fontSize: '0.6rem'}}>* Required</small>
+                              )}
+                            </Typography>
+                            <Chip 
+                              size="small" 
+                              label={field.type}
+                              variant="outlined"
+                            />
+                          </Box>
+                          {isSelectField(field) && field.options.length > 0 && (
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="caption" color="textSecondary">
+                                Options: {field.options.join(', ')}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+              </div>
+            </div>
+          )}
+          {activeStep === STEP_REVIEW && (
+            <div className="step-container step2">
+              <div className="media-type-summary">
+                <h4>Media Type: {mediaTypeConfig.name}</h4>
+                <Typography variant="body1">
+                  This media type will have {mediaTypeConfig.fields.length} field{mediaTypeConfig.fields.length !== 1 ? 's' : ''}.
+                  {mediaTypeConfig.fields.filter(f => f.required).length > 0 && (
+                    <span> {mediaTypeConfig.fields.filter(f => f.required).length} field{mediaTypeConfig.fields.filter(f => f.required).length !== 1 ? 's are' : ' is'} required.</span>
+                  )}
+                </Typography>
+                
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle1">Accepted File Types:</Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                    {mediaTypeConfig.acceptedFileTypes.map((type) => (
+                      <Chip 
+                        key={type}
+                        label={type}
+                        sx={{ m: 0.5 }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+                
+                <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {inputOptions.map(type => {
+                    const count = mediaTypeConfig.fields.filter(f => f.type === type).length;
+                    if (count === 0) return null;
+                    return (
+                      <Chip 
+                        key={type} 
+                        label={`${type}: ${count}`} 
+                        sx={{ 
+                          backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                          borderRadius: '4px',
+                          fontSize: '0.8rem'
+                        }} 
+                      />
+                    );
+                  })}
+                </Box>
+              </div>
+              
+              <div className="field-list-container">
+                <h6>Field Details:</h6>
+                <List>
+                  {mediaTypeConfig.fields.map((field, index) => (
+                    <ListItem key={index}>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            {field.name}
+                            {field.required && 
+                              <span className="required-badge">Required</span>
+                            }
+                          </Box>
+                        }
+                        secondary={
+                          <>
+                            <Typography component="span" variant="body2">
+                              Type: {field.type}
+                            </Typography>
+                            {isSelectField(field) && field.options.length > 0 && (
+                              <Box mt={1}>
+                                <Typography component="span" variant="body2">
+                                  Options: {field.options.join(', ')}
+                                </Typography>
+                              </Box>
+                            )}
+                          </>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </div>
+              
+              <Box className="confirmation-message">
+                <Typography variant="body2">
+                  <FaExclamationCircle style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                  Please review the media type details above before proceeding. Once created, only an admin can modify it.
+                </Typography>
+              </Box>
+            </div>
+          )}
+        </div>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={handleBack} disabled={activeStep === 0}>Back</Button>
-        {activeStep === steps.length - 1 ? (
-          <Button onClick={handleSaveMediaType} color="primary" variant="contained" startIcon={<FaCheck />}>
-            Create Media Type
+      <DialogActions sx={{ 
+        justifyContent: 'space-between', 
+        px: 4, 
+        py: 2,
+        position: 'relative',
+        borderTop: '1px solid rgba(0, 0, 0, 0.12)'
+      }}>
+        <Button 
+          onClick={handleBack} 
+          disabled={activeStep === STEP_NAME}
+          startIcon={<FaArrowLeft />}
+          variant="outlined"
+          size="large"
+        >
+          Back
+        </Button>
+        
+        <Button 
+          onClick={handleClose} 
+          variant="text" 
+          sx={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}
+        >
+          Cancel
+        </Button>
+        
+        {activeStep === STEP_REVIEW ? (
+          <Button 
+            onClick={handleSaveMediaType} 
+            color="primary" 
+            variant="contained" 
+            startIcon={<FaSave />}
+            size="large"
+          >
+            Create
           </Button>
         ) : (
           <Button 
             onClick={handleNext} 
             color="primary"
-            disabled={activeStep === 0 && (mediaTypeName.trim() === '' || selectedFileTypes.length === 0)}
+            variant="contained"
+            endIcon={<FaArrowRight />}
+            disabled={activeStep === STEP_NAME && (mediaTypeConfig.name.trim() === '' || mediaTypeConfig.acceptedFileTypes.length === 0)}
+            size="large"
           >
             Next
           </Button>

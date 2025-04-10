@@ -22,6 +22,7 @@ export interface MediaType {
   updatedAt?: string;
   baseType?: 'BaseImage' | 'BaseVideo' | 'BaseAudio' | 'BaseDocument' | 'Media';
   includeBaseFields?: boolean;
+  catColor?: string;
 }
 
 interface MediaTypeState {
