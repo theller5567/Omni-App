@@ -58,7 +58,6 @@ $spacing-lg: 15px;
           flex-direction: column;
           gap: 1.5rem;
           overflow-y: auto;
-          max-height: 500px;
           
           // Section header
           .section-title {
@@ -210,6 +209,7 @@ $spacing-lg: 15px;
           .new-input-field-container {
             max-width: 100%;
             display: flex;
+            flex-direction: column;
             align-items: center;
             gap: $spacing-md;
             margin-bottom: $spacing-lg;

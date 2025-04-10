@@ -8,7 +8,7 @@ export interface BaseMetadata {
 }
 
 // Field type definitions
-export type FieldType = 'Text' | 'Number' | 'Date' | 'Boolean' | 'Select' | 'MultiSelect';
+export type FieldType = 'Text' | 'TextArea' | 'Number' | 'Date' | 'Boolean' | 'Select' | 'MultiSelect';
 export type NonSelectFieldType = Exclude<FieldType, 'Select' | 'MultiSelect'>;
 export type SelectFieldType = Extract<FieldType, 'Select' | 'MultiSelect'>;
 
@@ -33,10 +33,12 @@ export type MediaTypeField = BaseField | SelectField;
 export interface MediaTypeConfig {
   name: string;
   fields: MediaTypeField[];
-  baseType?: 'BaseImage' | 'BaseVideo' | 'BaseAudio' | 'BaseDocument' | 'Media';
-  includeBaseFields: boolean;
+  baseType?: string;
+  includeBaseFields?: boolean;
   acceptedFileTypes: string[];
-  status: 'active' | 'deprecated' | 'archived';
+  status?: 'active' | 'deprecated' | 'archived';
+  catColor?: string;
+  _id?: string;
 }
 
 // Store types
@@ -68,8 +70,15 @@ export interface ApiMediaTypeRequest {
   status: 'active' | 'deprecated' | 'archived';
 }
 
-export interface ApiMediaTypeResponse extends ApiMediaTypeRequest {
+export interface ApiMediaTypeResponse {
   _id: string;
+  name: string;
+  fields: MediaTypeField[];
+  status: 'active' | 'deprecated' | 'archived';
+  acceptedFileTypes: string[];
+  baseType?: 'BaseImage' | 'BaseVideo' | 'BaseAudio' | 'BaseDocument' | 'Media';
+  includeBaseFields?: boolean;
+  catColor?: string;
 }
 
 export interface ApiMediaData {

@@ -1,185 +1,435 @@
-import { getBaseFieldsForMimeType } from '../../utils/mediaTypeUtils';
+import React, { useState } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Stepper,
+  Step,
+  StepLabel,
+  TextField,
+  IconButton,
+  Typography,
+  Box
+} from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { addMediaType } from '../../store/slices/mediaTypeSlice';
+import { toast } from 'react-toastify';
+import axios from 'axios';
+import { FaArrowRight, FaArrowLeft, FaSave } from 'react-icons/fa';
+import CloseIcon from '@mui/icons-material/Close';
+import { 
+  MediaTypeConfig, 
+  MediaTypeField, 
+  FieldType, 
+  ApiMediaTypeResponse,
+  createField,
+} from '../../types/mediaTypes';
+import '../MediaTypeUploader.scss';
+import env from '../../config/env';
+import { RootState } from '../../store/store';
+import { 
+  ColorPicker, 
+  FieldEditor, 
+  FieldPreview, 
+  FileTypeSelector, 
+  ReviewStep 
+} from './components';
+import {
+  transformConfigToApiData,
+  FileTypeCategory,
+  predefinedColors
+} from '../../utils/mediaTypeUploaderUtils';
+import { FaImage, FaVideo, FaFileAudio, FaFileWord } from 'react-icons/fa';
 
-interface BaseType {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-}
+// Define available field types
+const inputOptions: FieldType[] = ['Text', 'TextArea', 'Number', 'Date', 'Boolean', 'Select', 'MultiSelect'];
 
-const [selectedBaseType, setSelectedBaseType] = useState<string>('Media');
-const [includeBaseFields, setIncludeBaseFields] = useState<boolean>(true);
-
-const baseTypes: BaseType[] = [
+// Define common file type categories and their MIME types
+const fileTypeCategories: FileTypeCategory[] = [
   { 
-    id: 'BaseImage', 
-    name: 'Image', 
-    description: 'Base schema for all image files with common image metadata fields',
-    icon: <FaImage /> 
+    name: 'images', 
+    label: 'Images', 
+    icon: <FaImage />, 
+    mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp'] 
   },
   { 
-    id: 'BaseVideo', 
-    name: 'Video', 
-    description: 'Base schema for all video files with common video metadata fields',
-    icon: <FaVideo /> 
+    name: 'videos', 
+    label: 'Videos', 
+    icon: <FaVideo />, 
+    mimeTypes: ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'] 
   },
   { 
-    id: 'BaseAudio', 
-    name: 'Audio', 
-    description: 'Base schema for all audio files with common audio metadata fields',
-    icon: <FaFileAudio /> 
+    name: 'audio', 
+    label: 'Audio', 
+    icon: <FaFileAudio />, 
+    mimeTypes: ['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm'] 
   },
   { 
-    id: 'BaseDocument', 
-    name: 'Document', 
-    description: 'Base schema for all document files with common document metadata fields',
-    icon: <FaFileWord /> 
-  },
-  { 
-    id: 'Media', 
-    name: 'Generic Media', 
-    description: 'Basic schema without specialized fields',
-    icon: <FaUpload /> 
+    name: 'documents', 
+    label: 'Documents', 
+    icon: <FaFileWord />, 
+    mimeTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'] 
   }
 ];
 
-const renderBaseFields = () => {
-  if (selectedBaseType === 'Media' || !includeBaseFields) {
-    return null;
-  }
+// Initial media type configuration
+const initialMediaTypeConfig: MediaTypeConfig = {
+  name: '',
+  fields: [],
+  baseType: 'Media' as 'BaseImage' | 'BaseVideo' | 'BaseAudio' | 'BaseDocument' | 'Media',
+  includeBaseFields: true,
+  acceptedFileTypes: [],
+  status: 'active',
+  catColor: '#2196f3', // Default blue color
+  _id: undefined
+};
 
-  let mimeTypePrefix = '';
-  switch (selectedBaseType) {
-    case 'BaseImage':
-      mimeTypePrefix = 'image/';
-      break;
-    case 'BaseVideo':
-      mimeTypePrefix = 'video/';
-      break;
-    case 'BaseAudio':
-      mimeTypePrefix = 'audio/';
-      break;
-    case 'BaseDocument':
-      mimeTypePrefix = 'application/pdf';
-      break;
-    default:
-      return null;
-  }
+// Define step constants
+const STEP_NAME = 0;
+const STEP_FIELDS = 1;
+const STEP_REVIEW = 2;
 
-  const baseFields = getBaseFieldsForMimeType(mimeTypePrefix);
+interface MediaTypeUploaderProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) => {
+  const dispatch = useDispatch();
+  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
   
-  return (
-    <Box sx={{ mb: 4, mt: 2 }}>
-      <Typography variant="h6">
-        Base Fields (Automatically Included)
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        These fields are included automatically for all {baseTypes.find(t => t.id === selectedBaseType)?.name} files.
-      </Typography>
-      <Box sx={{ 
-        p: 2, 
-        border: '1px dashed', 
-        borderColor: 'divider',
-        borderRadius: 1,
-        bgcolor: 'background.paper',
-        opacity: 0.8
-      }}>
-        {Object.entries(baseFields).map(([fieldName, fieldProps]) => (
-          <Box key={fieldName} sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
-            <Typography variant="body2" fontWeight="bold" sx={{ mr: 1 }}>
-              {fieldName}:
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {fieldProps.type} {fieldProps.required ? '(Required)' : '(Optional)'}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
-    </Box>
-  );
-};
+  // State for media type configuration
+  const [mediaTypeConfig, setMediaTypeConfig] = useState<MediaTypeConfig>(initialMediaTypeConfig);
 
-const renderBaseTypeSelector = () => {
-  return (
-    <Box sx={{ mb: 4 }}>
-      <Typography variant="h6" gutterBottom>
-        Select Base Type
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Choose the base schema that provides standard fields for this media type.
-      </Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-        {baseTypes.map((type) => (
-          <Box
-            key={type.id}
-            onClick={() => setSelectedBaseType(type.id)}
-            sx={{
-              p: 2,
-              border: '1px solid',
-              borderColor: selectedBaseType === type.id ? 'primary.main' : 'divider',
-              borderRadius: 1,
-              cursor: 'pointer',
-              width: '180px',
-              bgcolor: selectedBaseType === type.id ? 'action.selected' : 'background.paper',
-              transition: 'all 0.2s',
-              '&:hover': {
-                bgcolor: 'action.hover',
-                borderColor: 'primary.light',
-              },
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-            }}
-          >
-            <Box sx={{ fontSize: '2rem', mb: 1, color: 'primary.main' }}>
-              {type.icon}
-            </Box>
-            <Typography variant="subtitle1" fontWeight="bold">
-              {type.name}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>
-              {type.description}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
-      <Box sx={{ mt: 2 }}>
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={includeBaseFields}
-              onChange={(e) => setIncludeBaseFields(e.target.checked)}
-            />
-          }
-          label="Include base schema fields automatically"
-        />
-      </Box>
-      {renderBaseFields()}
-    </Box>
-  );
-};
+  // State for field editing
+  const [currentField, setCurrentField] = useState<MediaTypeField>(createField('Text'));
+  const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
 
-const saveMediaTypeToBackend = async (mediaType: Omit<MediaType, '_id'>) => {
-  const mediaTypeData = {
-    ...mediaType,
-    baseType: selectedBaseType,
-    includeBaseFields: includeBaseFields
+  // UI state
+  const [activeStep, setActiveStep] = useState(STEP_NAME);
+  const [isEditing, setIsEditing] = useState(false);
+  const [activeField, setActiveField] = useState<number | null>(null);
+
+  const steps = ['Name Media Type', 'Add Fields', 'Review & Submit'];
+
+  // Get used colors from existing media types
+  const usedColors = React.useMemo(() => {
+    // More explicit mapping to ensure we get the catColor property from each media type
+    const colors = mediaTypes
+      .filter(type => mediaTypeConfig._id !== type._id) // Exclude the current media type
+      .map(type => {
+        console.log('Processing media type:', type.name, 'catColor:', type.catColor);
+        return type.catColor;
+      })
+      .filter(color => color !== undefined && color !== null) as string[];
+    
+    console.log('Used colors:', colors);
+    return colors;
+  }, [mediaTypes, mediaTypeConfig._id]);
+
+  const handleNext = () => {
+    // Only validate name and file types in step 1
+    if (activeStep === STEP_NAME) {
+      if (mediaTypeConfig.name.trim() === '' || mediaTypeConfig.acceptedFileTypes.length === 0) {
+        toast.error('Please provide a name and select at least one accepted file type');
+        return;
+      }
+    }
+    
+    // No validation for step 2 - fields are optional
+    
+    setActiveStep((prev) => prev + 1);
   };
 
-  // ... continue with the existing code ...
+  const handleBack = () => setActiveStep((prev) => prev - 1);
+
+  const handleAddField = (field: MediaTypeField, index: number | null) => {
+    if (field.name.trim()) {
+      if (index !== null) {
+        const updatedFields = [...mediaTypeConfig.fields];
+        updatedFields[index] = field;
+        setMediaTypeConfig(prev => ({ ...prev, fields: updatedFields }));
+        setEditingFieldIndex(null);
+      } else {
+        setMediaTypeConfig(prev => ({ ...prev, fields: [...prev.fields, field] }));
+      }
+      
+      resetFieldForm();
+    } else {
+      toast.error('Field name is required');
+    }
+  };
+
+  const handleEditField = (index: number) => {
+    const field = mediaTypeConfig.fields[index];
+    setCurrentField(field);
+    setIsEditing(true);
+    setEditingFieldIndex(index);
+  };
+
+  const handleRemoveField = (index: number) => {
+    const updatedFields = mediaTypeConfig.fields.filter((_, i) => i !== index);
+    setMediaTypeConfig(prev => ({ ...prev, fields: updatedFields }));
+    if (editingFieldIndex === index) {
+      resetFieldForm();
+    }
+  };
+
+  const handleFieldUpdate = (field: MediaTypeField) => {
+    setCurrentField(field);
+    setIsEditing(true);
+  };
+
+  const handleSaveMediaType = async () => {
+    try {
+      if (!mediaTypeConfig.name || !mediaTypeConfig.acceptedFileTypes?.length) {
+        toast.error('Please fill in all required fields');
+        return;
+      }
+
+      // Make sure we have a color - use default if not specified
+      const catColor = mediaTypeConfig.catColor || '#2196f3';
+      const colorName = predefinedColors.find(c => c.hex === catColor)?.name || 'Default Blue';
+      
+      // Create API data from the media type config
+      const apiData = {
+        ...transformConfigToApiData(mediaTypeConfig),
+        catColor // Make sure catColor is explicitly included
+      };
+
+      console.log('Saving media type with color:', colorName, '(', catColor, ')');
+
+      const response = await axios.post<ApiMediaTypeResponse>(
+        `${env.BASE_URL}/api/media-types`,
+        apiData
+      );
+
+      console.log('Media type created successfully with ID:', response.data._id);
+      console.log('Server response includes catColor:', response.data.catColor || 'Not found');
+
+      // Add the media type to the store with type assertion
+      const storeData = {
+        ...response.data,
+        usageCount: 0,
+        replacedBy: null,
+        isDeleting: false,
+        status: response.data.status || 'active',
+        catColor: catColor // Explicitly include catColor
+      } as any; // Using type assertion to avoid complex typing issues
+
+      dispatch(addMediaType(storeData));
+      toast.success(`Media Type '${mediaTypeConfig.name}' added successfully with color: ${colorName}`);
+      handleClose();
+    } catch (error) {
+      console.error('Failed to save media type', error);
+      toast.error('Failed to save media type');
+    }
+  };
+
+  const resetFieldForm = () => {
+    setCurrentField(createField('Text'));
+    setIsEditing(false);
+    setEditingFieldIndex(null);
+  };
+
+  const handleClose = () => {
+    resetFieldForm();
+    setMediaTypeConfig(initialMediaTypeConfig);
+    setActiveStep(STEP_NAME);
+    setActiveField(null);
+    onClose();
+  };
+
+  const renderFirstStep = () => (
+    <div className="step-container">
+      <Typography variant="h6">Select Media Type Name</Typography>
+      <TextField
+        label="Media Type Name"
+        value={mediaTypeConfig.name}
+        onChange={(e) => setMediaTypeConfig(prev => ({ ...prev, name: e.target.value }))}
+        fullWidth
+        className="input-field text-input"
+      />
+      
+      <Box>
+        <Typography variant="h6">Select Color for Media Type</Typography>
+        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+          This color will help identify this media type throughout the app
+        </Typography>
+        <ColorPicker 
+          value={mediaTypeConfig.catColor || '#2196f3'}
+          onChange={(color) => {
+            console.log('Setting color to:', color);
+            setMediaTypeConfig(prev => ({ ...prev, catColor: color }));
+          }}
+          usedColors={usedColors}
+        />
+      </Box>
+      
+      <FileTypeSelector 
+        fileTypeCategories={fileTypeCategories}
+        acceptedFileTypes={mediaTypeConfig.acceptedFileTypes}
+        onChange={(newTypes) => setMediaTypeConfig(prev => ({ ...prev, acceptedFileTypes: newTypes }))}
+      />
+    </div>
+  );
+
+  // Debug mediaTypeConfig before rendering
+  console.log('MediaTypeUploader - Current mediaTypeConfig:', {
+    ...mediaTypeConfig,
+    catColor: mediaTypeConfig.catColor
+  });
+  console.log('MediaTypeUploader - Current step:', activeStep);
+
+  return (
+    <Dialog id='dialog-container' open={open} onClose={handleClose}>
+      <DialogTitle sx={{ m: 0, p: 2 }}>
+        <IconButton
+          aria-label="close"
+          onClick={handleClose}
+          sx={{
+            position: 'absolute',
+            right: 8,
+            top: 8,
+            color: 'grey.500'
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent className='dialog-inner' style={{width: '100%', height: '600px'}}>
+        <Stepper activeStep={activeStep} alternativeLabel sx={{marginBottom: '3rem'}}>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+        <div className='new-media-type-form-container'>
+          {activeStep === STEP_NAME && renderFirstStep()}
+          {activeStep === STEP_FIELDS && (
+            <div className="step-container step1">
+              <div className='field-creation-container'>
+                <Typography className="section-title">Create Media Type Fields</Typography>
+                
+                {mediaTypeConfig.fields.length > 0 && (
+                  <div className="field-list">
+                    <div className="field-list-title">
+                      <span>Existing Fields</span>
+                      <span className="count-badge">{mediaTypeConfig.fields.length}</span>
+                    </div>
+                    
+                    {mediaTypeConfig.fields.map((field, index) => (
+                      <FieldEditor 
+                        key={index}
+                        field={field}
+                        index={index}
+                        isEditing={editingFieldIndex === index}
+                        activeField={activeField}
+                        inputOptions={inputOptions}
+                        onSave={handleAddField}
+                        onCancel={resetFieldForm}
+                        onFieldUpdate={handleFieldUpdate}
+                        onFieldSelect={(index) => setActiveField(index)}
+                        onEdit={handleEditField}
+                        onRemove={handleRemoveField}
+                      />
+                    ))}
+                  </div>
+                )}
+                
+                {editingFieldIndex === null && (
+                  <div className={`new-input-field-container ${currentField.type === 'Select' || currentField.type === 'MultiSelect' ? 'select-input' : ''} ${isEditing ? 'active' : ''}`}>
+                    <FieldEditor 
+                      field={currentField}
+                      index={null}
+                      isEditing={true}
+                      activeField={null}
+                      inputOptions={inputOptions}
+                      onSave={handleAddField}
+                      onCancel={resetFieldForm}
+                      onFieldUpdate={handleFieldUpdate}
+                      onFieldSelect={() => {}}
+                      onEdit={() => {}}
+                      onRemove={() => {}}
+                    />
+                  </div>
+                )}
+              </div>
+             
+              <div className='field-preview-container'>
+                <div className="preview-header">
+                  <h6>Field Preview</h6>
+                  <span className="field-count">{mediaTypeConfig.fields.length} fields</span>
+                </div>
+                
+                <FieldPreview 
+                  fields={mediaTypeConfig.fields}
+                  onFieldSelect={(index) => setActiveField(index)}
+                />
+              </div>
+            </div>
+          )}
+          {activeStep === STEP_REVIEW && (
+            <ReviewStep 
+              mediaTypeConfig={mediaTypeConfig}
+              inputOptions={inputOptions}
+            />
+          )}
+        </div>
+      </DialogContent>
+      <DialogActions sx={{ 
+        justifyContent: 'space-between', 
+        px: 4, 
+        py: 2,
+        position: 'relative',
+        borderTop: '1px solid rgba(0, 0, 0, 0.12)'
+      }}>
+        <Button 
+          onClick={handleBack} 
+          disabled={activeStep === STEP_NAME}
+          startIcon={<FaArrowLeft />}
+          variant="outlined"
+          size="large"
+        >
+          Back
+        </Button>
+        
+        <Button 
+          onClick={handleClose} 
+          variant="text" 
+          sx={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}
+        >
+          Cancel
+        </Button>
+        
+        {activeStep === STEP_REVIEW ? (
+          <Button 
+            onClick={handleSaveMediaType} 
+            color="primary" 
+            variant="contained" 
+            startIcon={<FaSave />}
+            size="large"
+          >
+            Create
+          </Button>
+        ) : (
+          <Button 
+            onClick={handleNext} 
+            color="primary"
+            variant="contained"
+            endIcon={<FaArrowRight />}
+            disabled={activeStep === STEP_NAME && (mediaTypeConfig.name.trim() === '' || mediaTypeConfig.acceptedFileTypes.length === 0)}
+            size="large"
+          >
+            Next
+          </Button>
+        )}
+      </DialogActions>
+    </Dialog>
+  );
 };
 
-{activeStep === 0 && (
-  <Box>
-    <TextField
-      label="Media Type Name"
-      value={mediaTypeName}
-      onChange={(e) => setMediaTypeName(e.target.value)}
-      variant="outlined"
-      fullWidth
-      required
-      margin="normal"
-    />
-    {renderBaseTypeSelector()}
-  </Box>
-)} 
+export default MediaTypeUploader; 
