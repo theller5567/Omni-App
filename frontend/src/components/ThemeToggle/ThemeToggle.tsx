@@ -1,20 +1,31 @@
 import React from 'react';
+import { ToggleButtonGroup, ToggleButton, Box, Tooltip } from '@mui/material';
 import { FaSun, FaMoon } from 'react-icons/fa';
 import './ThemeToggle.scss';
 
 interface ThemeToggleProps {
   theme: 'light' | 'dark';
-  toggleTheme: () => void;
+  toggleTheme: (event: React.MouseEvent<HTMLElement>, newTheme: 'light' | 'dark' | null) => void;
 }
 
 const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, toggleTheme }) => {
   return (
-    <div className="theme-toggle" onClick={toggleTheme}>
-      <div className={`toggle-switch ${theme}`}>
-        <FaSun className="icon sun" />
-        <FaMoon className="icon moon" />
-      </div>
-    </div>
+    <Box className="theme-toggle">
+      <ToggleButtonGroup
+        value={theme}
+        exclusive
+        onChange={toggleTheme}
+        aria-label="theme mode"
+        size="small"
+      >
+        <ToggleButton value="light" aria-label="light mode" title="Light Mode">
+          <FaSun size={16} />
+        </ToggleButton>
+        <ToggleButton value="dark" aria-label="dark mode" title="Dark Mode">
+          <FaMoon size={16} />
+        </ToggleButton>
+      </ToggleButtonGroup>
+    </Box>
   );
 };
 

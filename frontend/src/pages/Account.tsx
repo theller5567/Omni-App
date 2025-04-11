@@ -86,7 +86,7 @@ const Account: React.FC = () => {
       transition={{ duration: 0.5 }}
       sx={{
         maxWidth: '600px',
-        margin: '0 auto',
+        margin: 'auto',
         padding: '2rem',
         backgroundColor: 'background.paper',
         borderRadius: '8px',
@@ -95,12 +95,12 @@ const Account: React.FC = () => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        height: '100%',
+        height: 'auto',
         width: '100%',
         
       }}
     >
-      <Typography variant="h4" gutterBottom>
+      <Typography variant="h2" gutterBottom>
         Account Settings
       </Typography>
 
@@ -111,7 +111,7 @@ const Account: React.FC = () => {
         />
       </Box>
 
-      <form onSubmit={formik.handleSubmit}>
+      <form onSubmit={formik.handleSubmit} style={{ marginTop: '1rem' }}>
         <TextField
           fullWidth
           id="email"

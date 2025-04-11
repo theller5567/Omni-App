@@ -10,6 +10,7 @@ import hubspotRoutes from './routes/hubspotRoutes.js';
 import accountRoutes from './routes/accountRoutes.js';
 import tagRoutes from './routes/tagRoutes.js';
 import mediaTypeRoutes from './routes/mediaTypeRoutes.js';
+import utilityRoutes from './routes/utilityRoutes.js';
 // Load environment variables from .env file
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.use('/api/hubspot', hubspotRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/media-types', mediaTypeRoutes);
+app.use('/api/utility', utilityRoutes);
 // Root route
 app.get('/', (req, res) => {
   res.send('Welcome to the Omni App API');

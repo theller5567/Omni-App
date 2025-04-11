@@ -402,11 +402,23 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     disabled: !selectedMediaType, // Disable if no media type selected
   });
 
-  // Modify the media type selection to show accepted file types
+  // Modify the media type selection to show accepted file types and apply default tags
   const handleChange = (event: SelectChangeEvent) => {
     const newMediaTypeId = event.target.value;
     setSelectedMediaType(newMediaTypeId);
     handleMetadataChange("mediaType", newMediaTypeId);
+    
+    // Apply default tags from the selected media type
+    const selectedType = mediaTypes.find(type => type._id === newMediaTypeId);
+    if (selectedType && selectedType.defaultTags && selectedType.defaultTags.length > 0) {
+      console.log('Applying default tags:', selectedType.defaultTags);
+      
+      // Merge existing tags with default tags, removing duplicates
+      const existingTags = metadata.tags || [];
+      const newTags = [...new Set([...existingTags, ...selectedType.defaultTags])];
+      
+      handleMetadataChange("tags", newTags);
+    }
     
     // Reset file if media type changes
     if (file) {

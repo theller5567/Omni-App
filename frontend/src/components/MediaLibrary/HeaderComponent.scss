@@ -1,61 +1,50 @@
 .header-component {
-  margin: 0;
-  background-image: linear-gradient(to bottom right, var(--secondary-color), var(--background-color));
-  max-width: calc(100% - 16px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background-color: var(--header-background);
+  background-image: var(--color-surface-gradient);
   margin-bottom: 1rem;
-  border-radius: 3px;  
-}
-
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 24px;
-  background-color: transparent;
-}
-
-.MuiSwitch-thumb {
-  border: none;
-}
-.MuiSwitch-track {
-  opacity: 1;
-  border: none;
-}
-
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  transition: 0.4s;
-  border-radius: 24px;
-}
-
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 20px;
-  width: 20px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  transition: 0.4s;
-  border-radius: 50%;
-}
-
-input:checked + .slider {
-  background-color: #2196F3;
-}
-
-input:checked + .slider:before {
-  transform: translateX(26px);
-}
+  border-radius: 12px;
+  box-shadow: 0 2px 6px var(--search-input-shadow);
+  color: var(--header-text-color);
+  
+  .MuiToggleButtonGroup-root {
+    background-color: rgba(0, 0, 0, 0.03);
+    border-radius: 6px;
+    
+    .MuiToggleButton-root {
+      border: none;
+      color: var(--header-text-color);
+      padding: 0.4rem 0.8rem;
+      
+      &.Mui-selected {
+        background-color: var(--accent-color);
+        color: white;
+        
+        &:hover {
+          background-color: var(--accent-color-hover);
+        }
+      }
+      
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+    }
+  }
+  
+  .MuiButtonGroup-root {
+    margin-left: 1rem;
+    
+    .MuiButton-root {
+      text-transform: none;
+      padding: 6px 12px;
+      
+      &.Mui-selected {
+        background-color: var(--accent-color);
+        color: white;
+      }
+    }
+  }
+} 

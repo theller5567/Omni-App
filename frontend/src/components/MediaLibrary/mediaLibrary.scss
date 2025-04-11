@@ -38,19 +38,6 @@
         color: var(--accent-color);
         text-decoration: none;
     }
-  .folder, .folder-content {
-    transition: opacity 0.3s ease;
-    cursor: pointer;
-    &:hover {
-      opacity: 0.8;
-    }
-  }
-  .subfolder {
-    margin-top: 10px;
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-  }
 }
 
 label {
@@ -77,37 +64,29 @@ label {
 }
 #media-library-container {
   font-size: 1rem;
-  display: flex;
   margin-top: 1rem;
   padding-top: 0;
+  
+  // Grid view - used for card view
   &.grid-view {
-    gap: 2rem;
-  }
-  &.card-view {
-    gap: 2rem;
-  }
-}
-
-.grid-view {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  .MuiGrid-item {
-    margin-top: 1rem;
-  }
-}
-
-.card-view {
-  display: flex;
-  flex-direction: column;
-  .media-card {
-    box-shadow: none; 
-    &:nth-child(even) {
-      background-color: color.adjust(#3a3a3a, $lightness: -5%);
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+    gap: 20px !important;
+    width: 100%;
+    padding: 20px;
+    
+    @media (min-width: 1200px) {
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+    }
+    
+    @media (min-width: 1600px) {
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
     }
   }
-  .MuiGrid-item {
-    &:first-child {
-      margin-top: 1rem;
-    }
+  
+  // List view - used for DataTable view
+  &.list-view {
+    display: block !important;
+    width: 100% !important;
   }
 }

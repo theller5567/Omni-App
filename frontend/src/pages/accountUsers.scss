@@ -39,17 +39,5 @@
           color: var(--accent-color);
           text-decoration: none;
       }
-    .folder, .folder-content {
-      transition: opacity 0.3s ease;
-      cursor: pointer;
-      &:hover {
-        opacity: 0.8;
-      }
-    }
-    .subfolder {
-      margin-top: 10px;
-      display: flex;
-      justify-content: center;
-      gap: 1rem;
-    }
+   
   }

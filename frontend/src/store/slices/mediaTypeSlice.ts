@@ -23,6 +23,7 @@ export interface MediaType {
   baseType?: 'BaseImage' | 'BaseVideo' | 'BaseAudio' | 'BaseDocument' | 'Media';
   includeBaseFields?: boolean;
   catColor?: string;
+  defaultTags?: string[];
 }
 
 interface MediaTypeState {

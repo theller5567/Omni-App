@@ -1,15 +1,16 @@
 import React, { useEffect } from 'react';
 import { Box, Typography, Chip, List, ListItem, ListItemText } from '@mui/material';
-import { FaExclamationCircle } from 'react-icons/fa';
+import { FaExclamationCircle, FaTag } from 'react-icons/fa';
 import { MediaTypeConfig } from '../../../types/mediaTypes';
 import { isSelectField, predefinedColors } from '../../../utils/mediaTypeUploaderUtils';
 
 interface ReviewStepProps {
   mediaTypeConfig: MediaTypeConfig;
   inputOptions: string[];
+  isSuperAdmin?: boolean;
 }
 
-const ReviewStep: React.FC<ReviewStepProps> = ({ mediaTypeConfig, inputOptions }) => {
+const ReviewStep: React.FC<ReviewStepProps> = ({ mediaTypeConfig, inputOptions, isSuperAdmin = false }) => {
   // Add debugging to check the value of catColor
   useEffect(() => {
     console.log('ReviewStep - mediaTypeConfig:', mediaTypeConfig);
@@ -52,6 +53,35 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ mediaTypeConfig, inputOptions }
             <span> {mediaTypeConfig.fields.filter(f => f.required).length} field{mediaTypeConfig.fields.filter(f => f.required).length !== 1 ? 's are' : ' is'} required.</span>
           )}
         </Typography>
+        
+        {/* Default Tags Section */}
+        {mediaTypeConfig.defaultTags && mediaTypeConfig.defaultTags.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FaTag /> Default Tags:
+            </Typography>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+              These tags will be automatically applied to all media files created with this type.
+              {!isSuperAdmin && (
+                <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
+                  * Only Super Admins can modify default tags after creation
+                </Typography>
+              )}
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+              {mediaTypeConfig.defaultTags.map((tag, index) => (
+                <Chip 
+                  key={index}
+                  label={tag}
+                  color="primary"
+                  variant="outlined"
+                  size="small"
+                  sx={{ m: 0.5 }}
+                />
+              ))}
+            </Box>
+          </Box>
+        )}
         
         <Box sx={{ mt: 2 }}>
           <Typography variant="subtitle1">Accepted File Types:</Typography>

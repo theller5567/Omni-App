@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -11,10 +11,11 @@ import {
   TextField,
   IconButton,
   Typography,
-  Box
+  Box,
+  Chip
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
-import { addMediaType } from '../../store/slices/mediaTypeSlice';
+import { addMediaType, initializeMediaTypes } from '../../store/slices/mediaTypeSlice';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { FaArrowRight, FaArrowLeft, FaSave } from 'react-icons/fa';
@@ -28,7 +29,7 @@ import {
 } from '../../types/mediaTypes';
 import '../MediaTypeUploader.scss';
 import env from '../../config/env';
-import { RootState } from '../../store/store';
+import { RootState, AppDispatch } from '../../store/store';
 import { 
   ColorPicker, 
   FieldEditor, 
@@ -83,6 +84,7 @@ const initialMediaTypeConfig: MediaTypeConfig = {
   acceptedFileTypes: [],
   status: 'active',
   catColor: '#2196f3', // Default blue color
+  defaultTags: [], // Initialize with empty array
   _id: undefined
 };
 
@@ -94,14 +96,20 @@ const STEP_REVIEW = 2;
 interface MediaTypeUploaderProps {
   open: boolean;
   onClose: () => void;
+  editMediaTypeId?: string | null; // Add optional prop for editing
 }
 
-const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) => {
-  const dispatch = useDispatch();
+const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, editMediaTypeId }) => {
+  const dispatch = useDispatch<AppDispatch>();
   const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  // Get the current user role
+  const userRole = useSelector((state: RootState) => state.user.currentUser.role);
+  const isSuperAdmin = userRole === 'superAdmin';
   
   // State for media type configuration
   const [mediaTypeConfig, setMediaTypeConfig] = useState<MediaTypeConfig>(initialMediaTypeConfig);
+  const [newTag, setNewTag] = useState(''); // For handling tag input
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // State for field editing
   const [currentField, setCurrentField] = useState<MediaTypeField>(createField('Text'));
@@ -111,6 +119,39 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
   const [activeStep, setActiveStep] = useState(STEP_NAME);
   const [isEditing, setIsEditing] = useState(false);
   const [activeField, setActiveField] = useState<number | null>(null);
+
+  // Effect to initialize media type for editing
+  useEffect(() => {
+    if (open && editMediaTypeId) {
+      const mediaTypeToEdit = mediaTypes.find(type => type._id === editMediaTypeId);
+      if (mediaTypeToEdit) {
+        // Convert field types to ensure compatibility
+        const convertedFields = mediaTypeToEdit.fields?.map(field => ({
+          name: field.name,
+          type: field.type as FieldType,
+          options: field.options || [],
+          required: field.required || false
+        })) || [];
+        
+        setMediaTypeConfig({
+          _id: mediaTypeToEdit._id,
+          name: mediaTypeToEdit.name,
+          fields: convertedFields,
+          baseType: mediaTypeToEdit.baseType || 'Media',
+          includeBaseFields: mediaTypeToEdit.includeBaseFields !== false,
+          acceptedFileTypes: mediaTypeToEdit.acceptedFileTypes || [],
+          status: mediaTypeToEdit.status || 'active',
+          catColor: mediaTypeToEdit.catColor || '#2196f3',
+          defaultTags: mediaTypeToEdit.defaultTags || []
+        });
+        setIsEditMode(true);
+      }
+    } else if (open && !editMediaTypeId) {
+      // Reset for creating a new media type
+      setMediaTypeConfig(initialMediaTypeConfig);
+      setIsEditMode(false);
+    }
+  }, [open, editMediaTypeId, mediaTypes]);
 
   const steps = ['Name Media Type', 'Add Fields', 'Review & Submit'];
 
@@ -199,32 +240,50 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
         catColor // Make sure catColor is explicitly included
       };
 
-      console.log('Saving media type with color:', colorName, '(', catColor, ')');
+      if (isEditMode && mediaTypeConfig._id) {
+        // Update existing media type
+        console.log('Updating media type with ID:', mediaTypeConfig._id);
+        
+        const response = await axios.put<ApiMediaTypeResponse>(
+          `${env.BASE_URL}/api/media-types/${mediaTypeConfig._id}`,
+          apiData
+        );
 
-      const response = await axios.post<ApiMediaTypeResponse>(
-        `${env.BASE_URL}/api/media-types`,
-        apiData
-      );
+        console.log('Media type updated successfully:', response.data);
+        
+        // Refresh all media types to ensure store is updated
+        dispatch(initializeMediaTypes());
+        
+        toast.success(`Media Type '${mediaTypeConfig.name}' updated successfully`);
+      } else {
+        // Create new media type
+        console.log('Creating new media type with color:', colorName, '(', catColor, ')');
 
-      console.log('Media type created successfully with ID:', response.data._id);
-      console.log('Server response includes catColor:', response.data.catColor || 'Not found');
-
-      // Add the media type to the store with type assertion
-      const storeData = {
-        ...response.data,
-        usageCount: 0,
-        replacedBy: null,
-        isDeleting: false,
-        status: response.data.status || 'active',
-        catColor: catColor // Explicitly include catColor
-      } as any; // Using type assertion to avoid complex typing issues
-
-      dispatch(addMediaType(storeData));
-      toast.success(`Media Type '${mediaTypeConfig.name}' added successfully with color: ${colorName}`);
+        const response = await axios.post<ApiMediaTypeResponse>(
+          `${env.BASE_URL}/api/media-types`,
+          apiData
+        );
+  
+        console.log('Media type created successfully with ID:', response.data._id);
+  
+        // Add the media type to the store with type assertion
+        const storeData = {
+          ...response.data,
+          usageCount: 0,
+          replacedBy: null,
+          isDeleting: false,
+          status: response.data.status || 'active',
+          catColor: catColor // Explicitly include catColor
+        } as any; // Using type assertion to avoid complex typing issues
+  
+        dispatch(addMediaType(storeData));
+        toast.success(`Media Type '${mediaTypeConfig.name}' added successfully with color: ${colorName}`);
+      }
+      
       handleClose();
     } catch (error) {
       console.error('Failed to save media type', error);
-      toast.error('Failed to save media type');
+      toast.error(`Failed to ${isEditMode ? 'update' : 'save'} media type`);
     }
   };
 
@@ -239,7 +298,34 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
     setMediaTypeConfig(initialMediaTypeConfig);
     setActiveStep(STEP_NAME);
     setActiveField(null);
+    setIsEditMode(false);
     onClose();
+  };
+
+  const handleAddTag = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    // Only superAdmins can add tags
+    if (!isSuperAdmin) return;
+    
+    if (event.key === 'Enter' && newTag.trim()) {
+      if (!mediaTypeConfig.defaultTags?.includes(newTag.trim())) {
+        setMediaTypeConfig(prev => ({
+          ...prev,
+          defaultTags: [...(prev.defaultTags || []), newTag.trim()]
+        }));
+      }
+      setNewTag('');
+      event.preventDefault(); // Prevent form submission
+    }
+  };
+
+  const handleDeleteTag = (tagToDelete: string) => {
+    // Only superAdmins can delete tags
+    if (!isSuperAdmin) return;
+    
+    setMediaTypeConfig(prev => ({
+      ...prev,
+      defaultTags: prev.defaultTags?.filter(tag => tag !== tagToDelete) || []
+    }));
   };
 
   const renderFirstStep = () => (
@@ -252,6 +338,46 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
         fullWidth
         className="input-field text-input"
       />
+      
+      <Box sx={{ mt: 3, mb: 2 }}>
+        <Typography variant="h6">Default Tags</Typography>
+        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+          These tags will be automatically applied to all media files created with this type
+          {!isSuperAdmin && (
+            <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
+              * Only Super Admins can add or modify default tags
+            </Typography>
+          )}
+        </Typography>
+        
+        {isSuperAdmin && (
+          <TextField
+            label="Add Default Tags"
+            value={newTag}
+            onChange={(e) => setNewTag(e.target.value)}
+            onKeyPress={handleAddTag}
+            fullWidth
+            size="small"
+            helperText="Press Enter to add a tag"
+            className="input-field text-input"
+          />
+        )}
+        
+        {mediaTypeConfig.defaultTags && mediaTypeConfig.defaultTags.length > 0 && (
+          <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            {mediaTypeConfig.defaultTags.map((tag, index) => (
+              <Chip
+                key={index}
+                label={tag}
+                onDelete={isSuperAdmin ? () => handleDeleteTag(tag) : undefined}
+                size="small"
+                color="primary"
+                variant="outlined"
+              />
+            ))}
+          </Box>
+        )}
+      </Box>
       
       <Box>
         <Typography variant="h6">Select Color for Media Type</Typography>
@@ -283,9 +409,13 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
   });
   console.log('MediaTypeUploader - Current step:', activeStep);
 
+  // Update dialog title to reflect create/edit mode
+  const dialogTitle = isEditMode ? 'Edit Media Type' : 'Create New Media Type';
+
   return (
     <Dialog id='dialog-container' open={open} onClose={handleClose}>
       <DialogTitle sx={{ m: 0, p: 2 }}>
+        {dialogTitle}
         <IconButton
           aria-label="close"
           onClick={handleClose}
@@ -376,6 +506,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
             <ReviewStep 
               mediaTypeConfig={mediaTypeConfig}
               inputOptions={inputOptions}
+              isSuperAdmin={isSuperAdmin}
             />
           )}
         </div>
@@ -413,7 +544,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose }) 
             startIcon={<FaSave />}
             size="large"
           >
-            Create
+            {isEditMode ? 'Update' : 'Create'}
           </Button>
         ) : (
           <Button 

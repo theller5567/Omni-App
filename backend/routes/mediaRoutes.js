@@ -2,7 +2,15 @@ import express from 'express';
 import multer from 'multer';
 import MediaType from '../models/MediaType.js';
 import Media from '../models/Media.js';
-import { uploadMedia, getAllMedia, deleteMedia } from '../controllers/mediaController.js';
+import { 
+  getAllMedia, 
+  getMediaById, 
+  updateMedia, 
+  deleteMedia, 
+  uploadMedia,
+  searchMedia,
+  debugMediaFile
+} from '../controllers/mediaController.js';
 
 const router = express.Router();
 
@@ -13,73 +21,7 @@ const uploadFields = upload.fields([
   { name: 'v_thumbnail', maxCount: 1 }
 ]);
 
-router.put('/update/:slug', async (req, res) => {
-  // Add CORS headers
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-
-  const { slug } = req.params;
-  console.log('Received update request for slug:', slug);
-  console.log('Request body:', JSON.stringify(req.body, null, 2));
-  console.log('Request URL:', req.originalUrl);
-  console.log('Request method:', req.method);
-  console.log('Request headers:', req.headers);
-
-  try {
-    // Fetch the document using the Media model
-    console.log('Attempting to find media with slug:', slug);
-    const documentBeforeUpdate = await Media.findOne({ slug });
-    
-    if (!documentBeforeUpdate) {
-      console.log('Media not found for slug:', slug);
-      return res.status(404).json({ error: 'Media not found' });
-    }
-
-    console.log('Found document before update:', documentBeforeUpdate);
-
-    // Build update fields
-    const updateFields = {
-      title: req.body.title,
-      metadata: {
-        ...documentBeforeUpdate.metadata, // Keep existing metadata
-        ...req.body.metadata, // Merge with new metadata
-      }
-    };
-
-    console.log('Constructed updateFields:', JSON.stringify(updateFields, null, 2));
-
-    // Perform the update using the Media model
-    const updatedMediaFile = await Media.findOneAndUpdate(
-      { slug },
-      { $set: updateFields },
-      { new: true, runValidators: true }
-    ).lean(); // Add lean() to convert to plain JavaScript object
-
-    if (!updatedMediaFile) {
-      console.log('Media not found during update for slug:', slug);
-      return res.status(404).json({ error: 'Media not found' });
-    }
-
-    // Log the document after update
-    console.log('Updated media file:', JSON.stringify(updatedMediaFile, null, 2));
-
-    // Send response with proper content type
-    res.setHeader('Content-Type', 'application/json');
-    return res.status(200).json(updatedMediaFile);
-  } catch (error) {
-    console.error('Error updating media file:', error);
-
-    // Log validation errors if present
-    if (error.errors) {
-      Object.values(error.errors).forEach(err => {
-        console.error('Validation error:', err.message);
-      });
-    }
-
-    return res.status(500).json({ error: 'Failed to update media file', details: error.message });
-  }
-});
+router.put('/update/:slug', updateMedia);
 
 router.get('/all', getAllMedia);
 
@@ -193,6 +135,13 @@ router.post('/upload', uploadFields, async (req, res, next) => {
 
 router.delete('/delete/:id', deleteMedia);
 
+// Get all media
+router.get('/', getAllMedia);
+
+// Search media (must come before ID routes)
+router.get('/search/:query', searchMedia);
+
+// Get media by slug (must come before ID routes)
 router.get('/slug/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
@@ -212,6 +161,12 @@ router.get('/slug/:slug', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch media file' });
   }
 });
+
+// Debug media file
+router.get('/:id/debug', debugMediaFile);
+
+// Get specific media by ID
+router.get('/:id', getMediaById);
 
 export default router;
 

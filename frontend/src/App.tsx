@@ -77,8 +77,13 @@ const App: React.FC = () => {
     initializeApp();
   }, [dispatch, isInitialized]);
 
-  const toggleTheme = () => {
-    setIsDarkMode((prevMode) => !prevMode);
+  const toggleTheme = (
+    event: React.MouseEvent<HTMLElement>,
+    newTheme: 'light' | 'dark' | null
+  ) => {
+    if (newTheme !== null) {
+      setIsDarkMode(newTheme === 'dark');
+    }
   };
 
   if (isLoading) {

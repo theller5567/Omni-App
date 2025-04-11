@@ -29,7 +29,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import MediaInformation from './MediaInformation';
-import EditMediaDialog from './EditMediaDialog';
+import { EditMediaDialog } from './EditMediaDialog';
 
 
 // Add a helper function to safely get metadata fields from either root or metadata object
@@ -285,7 +285,8 @@ const MediaDetail: React.FC = () => {
       required: field.required || false,
       options: field.options || []
     })),
-    acceptedFileTypes: mediaTypeConfig.acceptedFileTypes || []
+    acceptedFileTypes: mediaTypeConfig.acceptedFileTypes || [],
+    defaultTags: mediaTypeConfig.defaultTags || []
   } : {
     id: '',
     name: '',

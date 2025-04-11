@@ -270,4 +270,324 @@ export const getAllMedia = async (req, res) => {
   }
 };
 
+// Debug endpoint to examine media file structure
+export const debugMediaFile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log('🔍 Debug request for media file ID:', id);
+    
+    // Find the media file
+    const mediaFile = await Media.findById(id);
+    
+    if (!mediaFile) {
+      console.log('❌ Media file not found');
+      return res.status(404).json({ message: 'Media file not found' });
+    }
+    
+    // Get schema info
+    const schemaKeys = Object.keys(Media.schema.paths);
+    const schemaDetails = {};
+    
+    schemaKeys.forEach(key => {
+      const path = Media.schema.paths[key];
+      schemaDetails[key] = {
+        type: path.instance,
+        required: !!path.isRequired,
+        default: path.defaultValue,
+        options: path.enumValues
+      };
+    });
+    
+    // Get a list of all fields in the document
+    const documentKeys = Object.keys(mediaFile._doc);
+    
+    // Get the associated media type
+    let mediaType = null;
+    if (mediaFile.mediaType) {
+      mediaType = await MediaType.findOne({
+        $or: [
+          { _id: mediaFile.mediaType },
+          { name: mediaFile.mediaType }
+        ]
+      });
+    }
+    
+    const debugInfo = {
+      id: mediaFile._id,
+      title: mediaFile.title,
+      // Full document
+      document: mediaFile._doc,
+      // Schema information
+      schema: {
+        keys: schemaKeys,
+        details: schemaDetails
+      },
+      // Document keys
+      documentKeys,
+      // Metadata specific debugging
+      metadata: {
+        value: mediaFile.metadata,
+        type: typeof mediaFile.metadata,
+        isObject: typeof mediaFile.metadata === 'object' && mediaFile.metadata !== null,
+        keys: mediaFile.metadata ? Object.keys(mediaFile.metadata) : []
+      },
+      // Tags specific debugging
+      tags: {
+        value: mediaFile.metadata?.tags,
+        type: typeof mediaFile.metadata?.tags,
+        isArray: Array.isArray(mediaFile.metadata?.tags),
+        length: mediaFile.metadata?.tags ? mediaFile.metadata.tags.length : null
+      },
+      // Media Type info
+      mediaType: mediaType ? {
+        id: mediaType._id,
+        name: mediaType.name,
+        defaultTags: mediaType.defaultTags
+      } : null
+    };
+    
+    res.status(200).json(debugInfo);
+  } catch (error) {
+    console.error('❌ Error in debug endpoint:', error);
+    res.status(500).json({ message: 'Error debugging media file', error });
+  }
+};
+
+export const getMediaById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('Fetching media with ID:', id);
+
+    const mediaFile = await Media.findById(id);
+
+    if (!mediaFile) {
+      console.log('Media not found for ID:', id);
+      return res.status(404).json({ error: 'Media not found' });
+    }
+
+    console.log('Fetched media file:', mediaFile);
+    res.status(200).json(mediaFile);
+  } catch (error) {
+    console.error('Error fetching media file:', error);
+    res.status(500).json({ error: 'Failed to fetch media file' });
+  }
+};
+
+export const searchMedia = async (req, res) => {
+  try {
+    const { query } = req.params;
+    console.log('Searching media with query:', query);
+
+    if (!query || query.length < 2) {
+      return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+    }
+
+    // Create a case-insensitive regex for the search term
+    const searchRegex = new RegExp(query, 'i');
+
+    // Search in title, filename, and tags
+    const mediaFiles = await Media.find({
+      $or: [
+        { title: searchRegex },
+        { 'metadata.fileName': searchRegex },
+        { 'metadata.tags': { $in: [searchRegex] } }
+      ]
+    });
+
+    console.log(`Found ${mediaFiles.length} results for search query:`, query);
+    res.status(200).json(mediaFiles);
+  } catch (error) {
+    console.error('Error searching media files:', error);
+    res.status(500).json({ error: 'Failed to search media files' });
+  }
+};
+
+// Utility function to fix tags for specific media files
+export const fixTagsForMediaType = async (req, res) => {
+  try {
+    const { mediaTypeName } = req.params;
+    console.log('⭐ Manually fixing tags for media type:', mediaTypeName);
+    
+    // Find the media type 
+    const mediaType = await MediaType.findOne({ 
+      name: { $regex: new RegExp(mediaTypeName, 'i') } // Case-insensitive search
+    });
+    
+    if (!mediaType) {
+      console.log('❌ Media type not found with name:', mediaTypeName);
+      return res.status(404).json({ 
+        message: 'Media type not found',
+        searchedFor: mediaTypeName
+      });
+    }
+    
+    console.log('✅ Found media type:', mediaType.name, 'with ID:', mediaType._id);
+    console.log('Current default tags:', mediaType.defaultTags);
+    
+    // Make sure defaultTags exists and update it 
+    if (!mediaType.defaultTags || !Array.isArray(mediaType.defaultTags)) {
+      mediaType.defaultTags = [];
+    }
+    
+    // Add "Product image" tag if it's the product image type
+    if (mediaType.name.toLowerCase().includes('product') && mediaType.name.toLowerCase().includes('image')) {
+      if (!mediaType.defaultTags.includes('Product image')) {
+        mediaType.defaultTags.push('Product image');
+        await mediaType.save();
+        console.log('✅ Added "Product image" default tag to media type');
+      }
+    }
+    
+    // Find all media files with this media type
+    const mediaFiles = await Media.find({
+      $or: [
+        { mediaType: mediaType._id.toString() },
+        { mediaType: mediaType.name }
+      ]
+    });
+    
+    console.log('🔍 Found', mediaFiles.length, 'media files with media type:', mediaType.name);
+    
+    // Check each file's metadata and tags structure
+    const fileStats = {
+      totalFiles: mediaFiles.length,
+      filesWithNoMetadata: 0,
+      filesWithNoTags: 0,
+      filesAlreadyTagged: 0,
+      filesUpdated: 0,
+      errors: 0
+    };
+    
+    for (const file of mediaFiles) {
+      console.log('📄 Processing file:', file.title || file._id.toString());
+      
+      try {
+        // Check metadata structure
+        if (!file.metadata) {
+          console.log('   ⚠️ File has no metadata, creating metadata object');
+          file.metadata = {};
+          fileStats.filesWithNoMetadata++;
+        }
+        
+        // Check tags structure
+        if (!file.metadata.tags || !Array.isArray(file.metadata.tags)) {
+          console.log('   ⚠️ File has no tags array, creating tags array');
+          file.metadata.tags = [];
+          fileStats.filesWithNoTags++;
+        }
+        
+        // Check if the file already has the default tags
+        let needsUpdate = false;
+        
+        for (const tag of mediaType.defaultTags) {
+          if (!file.metadata.tags.includes(tag)) {
+            console.log(`   ✅ Adding missing tag: "${tag}"`);
+            file.metadata.tags.push(tag);
+            needsUpdate = true;
+          }
+        }
+        
+        if (needsUpdate) {
+          await file.save();
+          console.log('   ✅ Saved file with updated tags:', file.metadata.tags);
+          fileStats.filesUpdated++;
+        } else {
+          console.log('   ⏭️ File already has all default tags:', file.metadata.tags);
+          fileStats.filesAlreadyTagged++;
+        }
+      } catch (fileError) {
+        console.error('   ❌ Error processing file:', fileError);
+        fileStats.errors++;
+      }
+    }
+    
+    console.log('🎉 Fix operation completed with stats:', fileStats);
+    
+    res.status(200).json({
+      message: 'Fix operation completed',
+      mediaType: {
+        id: mediaType._id,
+        name: mediaType.name,
+        defaultTags: mediaType.defaultTags
+      },
+      stats: fileStats
+    });
+  } catch (error) {
+    console.error('❌ Error in fix operation:', error);
+    res.status(500).json({ 
+      message: 'Error fixing tags',
+      error: error.message
+    });
+  }
+};
+
+export const updateMedia = async (req, res) => {
+  // Add CORS headers
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+
+  const { slug } = req.params;
+  console.log('Received update request for slug:', slug);
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('Request URL:', req.originalUrl);
+  console.log('Request method:', req.method);
+  console.log('Request headers:', req.headers);
+
+  try {
+    // Fetch the document using the Media model
+    console.log('Attempting to find media with slug:', slug);
+    const documentBeforeUpdate = await Media.findOne({ slug });
+    
+    if (!documentBeforeUpdate) {
+      console.log('Media not found for slug:', slug);
+      return res.status(404).json({ error: 'Media not found' });
+    }
+
+    console.log('Found document before update:', documentBeforeUpdate);
+
+    // Build update fields
+    const updateFields = {
+      title: req.body.title,
+      metadata: {
+        ...documentBeforeUpdate.metadata, // Keep existing metadata
+        ...req.body.metadata, // Merge with new metadata
+      }
+    };
+
+    console.log('Constructed updateFields:', JSON.stringify(updateFields, null, 2));
+
+    // Perform the update using the Media model
+    const updatedMediaFile = await Media.findOneAndUpdate(
+      { slug },
+      { $set: updateFields },
+      { new: true, runValidators: true }
+    ).lean(); // Add lean() to convert to plain JavaScript object
+
+    if (!updatedMediaFile) {
+      console.log('Media not found during update for slug:', slug);
+      return res.status(404).json({ error: 'Media not found' });
+    }
+
+    // Log the document after update
+    console.log('Updated media file:', JSON.stringify(updatedMediaFile, null, 2));
+
+    // Send response with proper content type
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(200).json(updatedMediaFile);
+  } catch (error) {
+    console.error('Error updating media file:', error);
+
+    // Log validation errors if present
+    if (error.errors) {
+      Object.values(error.errors).forEach(err => {
+        console.error('Validation error:', err.message);
+      });
+    }
+
+    return res.status(500).json({ error: 'Failed to update media file', details: error.message });
+  }
+};
+
 

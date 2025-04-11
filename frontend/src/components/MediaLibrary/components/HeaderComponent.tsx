@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { Box, ToggleButtonGroup, ToggleButton, FormGroup, FormControlLabel, Button, ButtonGroup } from '@mui/material';
-import '../styles/HeaderComponent.scss';
+import { Box, ToggleButtonGroup, ToggleButton, Button, ButtonGroup } from '@mui/material';
+import '../HeaderComponent.scss';
 import SearchInput from '../../SearchInput/SearchInput';
 import { BaseMediaFile } from '../../../interfaces/MediaFile';
 import { FaPlus, FaList, FaThLarge } from 'react-icons/fa';
@@ -31,12 +31,6 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, med
     return types;
   }, [mediaFilesData]);
 
-  const handleViewChange = (event: React.MouseEvent<HTMLElement>, newView: 'card' | 'list' | null) => {
-    if (newView !== null && view !== newView) {
-      toggleView(); // This will switch between list and card
-    }
-  };
-
   return (
     <Box
       className="header-component"
@@ -66,7 +60,7 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, med
         <ToggleButtonGroup
           value={view}
           exclusive
-          onChange={handleViewChange}
+          onChange={() => toggleView()}
           aria-label="view mode"
           size="small"
         >

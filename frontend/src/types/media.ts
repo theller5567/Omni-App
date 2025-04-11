@@ -29,6 +29,7 @@ export interface MediaType {
   description?: string;
   fields: MediaTypeField[];
   acceptedFileTypes: string[];
+  defaultTags?: string[];
   createdAt?: string;
   updatedAt?: string;
 } 

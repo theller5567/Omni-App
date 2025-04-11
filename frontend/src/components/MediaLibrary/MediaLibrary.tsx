@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Typography, Grid, Toolbar, IconButton, Tooltip } from '@mui/material';
 import { motion } from 'framer-motion';
-import './styles/MediaLibrary.scss';
+import './mediaLibrary.scss';
 import { useNavigate } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import { FaTrash } from 'react-icons/fa';
@@ -180,7 +180,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
       transition={{ duration: 0.5 }}
     >
       <Box className="media-library" sx={{ width: '100%', overflow: 'hidden' }}>
-        <Typography variant="h2" align="left" sx={{ paddingBottom: '2rem' }}>OMNI Media Library</Typography>
+        <Typography variant="h1" align="left" sx={{ paddingBottom: '2rem' }}>OMNI Media Library</Typography>
         <HeaderComponent
           view={viewMode}
           toggleView={toggleView}

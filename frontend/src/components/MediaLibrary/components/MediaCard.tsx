@@ -1,7 +1,9 @@
 import React from 'react';
 import { Card, CardContent, Typography, Box } from '@mui/material';
-import '../styles/MediaCard.scss';
+import '../MediaCard.scss';
 import { isImageFile, isVideoFile, getFileIcon } from '../utils';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../../store/store';
 
 interface MediaCardProps {
   file: any;
@@ -9,6 +11,15 @@ interface MediaCardProps {
 }
 
 const MediaCard: React.FC<MediaCardProps> = ({ file, onClick }) => {
+  // Get media types to find the color
+  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  
+  // Find the media type color
+  const mediaTypeColor = React.useMemo(() => {
+    const mediaType = mediaTypes.find(type => type.name === file.mediaType);
+    return mediaType?.catColor || '#4dabf5';
+  }, [file.mediaType, mediaTypes]);
+
   const renderPreview = () => {
     if (isImageFile(file.fileExtension)) {
       return (
@@ -48,6 +59,12 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, onClick }) => {
       onClick={onClick}
       data-extension={fileExtension}
     >
+      {/* Color indicator circle */}
+      <div 
+        className="media-type-indicator" 
+        style={{ backgroundColor: mediaTypeColor }}
+      />
+      
       <div className="media-preview">
         {renderPreview()}
       </div>
@@ -56,12 +73,14 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, onClick }) => {
           {file.metadata?.fileName || file.title}
         </Typography>
         <Box className="media-meta">
-          <Typography variant="caption" className="media-type">
+          <Typography 
+            variant="caption" 
+            className="media-type"
+            style={{ backgroundColor: mediaTypeColor }}
+          >
             {file.mediaType}
           </Typography>
-          <Typography variant="caption" className="media-size">
-            {file.fileExtension ? file.fileExtension.toUpperCase() : ''}
-          </Typography>
+         
         </Box>
       </CardContent>
     </Card>

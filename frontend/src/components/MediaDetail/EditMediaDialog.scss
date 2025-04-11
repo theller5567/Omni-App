@@ -1,13 +1,12 @@
 .edit-media-dialog {
   .MuiDialog-paper {
     min-width: 600px;
-    max-width: 900px;
+    max-width: 1200px;
     max-height: 90vh;
     background-color: var(--background-color);
   }
 
   .MuiDialogTitle-root {
-    background-color: var(--secondary-color);
     color: var(--text-color);
     padding: 16px 24px;
     margin-bottom: 0;
@@ -22,11 +21,10 @@
   .dialog-content {
     padding: 1rem;
     overflow-y: auto;
-    background-color: var(--background-color);
-
     .edit-form {
       .form-section {
-        margin-bottom: 1.5rem;
+        margin-bottom: 0.5rem;
+        margin-top: 0.5rem;
 
         &:last-child {
           margin-bottom: 0;
@@ -35,7 +33,50 @@
         h6 {
           font-size: 1rem;
           font-weight: 500;
-          color: var(--text-color);
+          color: var(--accent-color);
+        }
+        
+        // Video thumbnail accordion styling
+        .MuiAccordion-root {
+          transition: all 0.3s ease;
+          
+          .MuiAccordionSummary-root {
+            transition: all 0.2s ease;
+            min-height: 48px;
+            padding: 0 16px;
+            
+            &:hover {
+              background-color: var(--input-background-hover);
+            }
+            
+            .MuiAccordionSummary-content {
+              margin: 12px 0;
+            }
+            
+            .MuiTypography-subtitle1 {
+              color: var(--color-primary);
+            }
+            
+            .MuiSvgIcon-root {
+              color: var(--color-primary);
+              transition: transform 0.3s ease;
+            }
+          }
+          
+          &.Mui-expanded {
+            .MuiAccordionSummary-root {
+              background-color: var(--input-background-focus);
+              
+              .MuiSvgIcon-root {
+                transform: rotate(180deg);
+              }
+            }
+          }
+          
+          .MuiAccordionDetails-root {
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color-light);
+          }
         }
       }
 
@@ -102,13 +143,14 @@
 
   .dialog-title {
     padding: 16px 24px;
-    background-color: var(--background-color);
     border-top: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-weight: 700;
+    font-size: 1.25rem;
   }
 
   .dialog-actions {
     padding: 16px 24px;
-    background-color: var(--background-color);
     border-top: 1px solid var(--border-color);
 
     .MuiButton-root {

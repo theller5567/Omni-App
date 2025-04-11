@@ -15,26 +15,46 @@
       max-width: 350px;
     }
       
-      .select-input {
-        .MuiSelect-root {
-          padding: 0; // Remove default padding
-          height: 100%; // Ensure it fills the height of the container
-          display: flex;
-          align-items: center; // Center align text vertically
+    .select-input {
+      .MuiSelect-root {
+        padding: 0; // Remove default padding
+        height: 100%; // Ensure it fills the height of the container
+        display: flex;
+        align-items: center; // Center align text vertically
+      }
+    }
+    .MuiFormControl-root {
+      height: 56px; // Set the desired height
+      display: flex;
+      padding: 0;
+      margin: 0;
+      align-items: center; // Center align text vertically
+      box-sizing: border-box; // Ensure padding is included in the height
+    }
+    
+    // Update grid layout for media type cards
+    .MuiGrid-container {
+      .MuiGrid-item {
+        @media (min-width: 1200px) {
+          // 5 cards per row on large screens
+          flex: 0 0 20% !important;
+          max-width: 20% !important;
+        }
+        
+        @media (min-width: 960px) and (max-width: 1199px) {
+          // 4 cards per row on medium-large screens
+          flex: 0 0 25% !important;
+          max-width: 25% !important;
+        }
+        
+        @media (min-width: 600px) and (max-width: 959px) {
+          // 3 cards per row on medium screens
+          flex: 0 0 33.333% !important;
+          max-width: 33.333% !important;
         }
       }
-      .MuiFormControl-root {
-        height: 56px; // Set the desired height
-        display: flex;
-        padding: 0;
-        margin: 0;
-        align-items: center; // Center align text vertically
-        box-sizing: border-box; // Ensure padding is included in the height
-      }
+    }
 }
-
-
-
 
 .account-media-types {
     width: 100%;
@@ -63,13 +83,13 @@
         font-size: 0.8rem;
       }
     }
-      h6 {
-          margin-bottom: 2rem;
-      }
-      .MuiDataGrid-cell[data-field="actions"] {
-          display: flex;
-          align-items: center;
-      }
+    h6 {
+        margin-bottom: 2rem;
+    }
+    .MuiDataGrid-cell[data-field="actions"] {
+        display: flex;
+        align-items: center;
+    }
     
     
     .media-type-card {
@@ -77,6 +97,7 @@
       display: flex;
       flex-direction: column;
       position: relative;
+      // Remove fixed flex-basis to let grid system handle it
       .media-type-color {
         position: absolute;
         top: 0.5rem;
@@ -84,8 +105,7 @@
         width: 10px;
         height: 10px;
         display: block;
-        border-radius:
-        50%;
+        border-radius: 50%;
       }
       
       // Status indicator for deprecated/archived media types

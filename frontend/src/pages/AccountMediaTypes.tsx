@@ -37,14 +37,22 @@ import {
   setMigrationTarget,
   resetOperation
 } from '../store/slices/mediaTypeSlice';
-import { FaEdit, FaTrash, FaPlus,FaArrowRight } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaArrowRight, FaSync } from 'react-icons/fa';
 import MediaTypeCard from '../components/MediaTypeUploader/components/MediaTypeCard';
+import axios from 'axios';
+import env from '../config/env';
 
 const AccountMediaTypes: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [migrationDialogOpen, setMigrationDialogOpen] = useState(false);
   const [migrationStep, setMigrationStep] = useState(0);
+  const [editMediaTypeId, setEditMediaTypeId] = useState<string | null>(null);
+  const [syncTagsDialogOpen, setSyncTagsDialogOpen] = useState(false);
+  const [syncingMediaTypeId, setSyncingMediaTypeId] = useState<string | null>(null);
+  const [syncingStatus, setSyncingStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [affectedFilesCount, setAffectedFilesCount] = useState(0);
+  
   const dispatch = useDispatch<AppDispatch>();
   const { 
     mediaTypes, 
@@ -54,6 +62,7 @@ const AccountMediaTypes: React.FC = () => {
     affectedMediaCount,
     status
   } = useSelector((state: RootState) => state.mediaTypes);
+  const userRole = useSelector((state: RootState) => state.user.currentUser.role);
 
   useEffect(() => {
     const fetchMediaTypes = async () => {
@@ -63,6 +72,16 @@ const AccountMediaTypes: React.FC = () => {
     };
     fetchMediaTypes();
   }, []); // Empty dependency array means this runs once on mount
+
+  const handleEditClick = (mediaTypeId: string) => {
+    setEditMediaTypeId(mediaTypeId);
+    setOpen(true);
+  };
+  
+  const handleClose = () => {
+    setOpen(false);
+    setEditMediaTypeId(null);
+  };
 
   const handleDeleteClick = async (mediaTypeId: string) => {
     // First check how many media files use this type
@@ -199,6 +218,56 @@ const AccountMediaTypes: React.FC = () => {
     dispatch(resetOperation());
   };
 
+  const handleSyncDefaultTagsClick = async (mediaTypeId: string) => {
+    setSyncingMediaTypeId(mediaTypeId);
+    
+    // Find affected media files count
+    try {
+      const response = await axios.get(`${env.BASE_URL}/api/media?mediaType=${mediaTypeId}`);
+      const affectedFiles = Array.isArray(response.data) ? response.data.length : 0;
+      setAffectedFilesCount(affectedFiles);
+      setSyncTagsDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to check affected files:', error);
+      toast.error('Failed to check affected files');
+    }
+  };
+
+  const handleConfirmSyncTags = async () => {
+    if (!syncingMediaTypeId) return;
+    
+    try {
+      setSyncingStatus('loading');
+      
+      const mediaType = mediaTypes.find(type => type._id === syncingMediaTypeId);
+      if (!mediaType || !mediaType.defaultTags || mediaType.defaultTags.length === 0) {
+        throw new Error('No default tags to apply');
+      }
+
+      // Call backend API to update all media files with this media type
+      await axios.post(`${env.BASE_URL}/api/media-types/${syncingMediaTypeId}/apply-default-tags`);
+      
+      setSyncingStatus('success');
+      toast.success(`Default tags applied to all ${affectedFilesCount} media files with type "${mediaType.name}"`);
+      
+      setTimeout(() => {
+        setSyncTagsDialogOpen(false);
+        setSyncingStatus('idle');
+        setSyncingMediaTypeId(null);
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to sync default tags:', error);
+      toast.error('Failed to apply default tags to existing files');
+      setSyncingStatus('error');
+    }
+  };
+
+  const handleCancelSyncTags = () => {
+    setSyncTagsDialogOpen(false);
+    setSyncingMediaTypeId(null);
+    setSyncingStatus('idle');
+  };
+
   return (
     <motion.div
       id="account-media-types"
@@ -215,7 +284,12 @@ const AccountMediaTypes: React.FC = () => {
           Account Media Types
         </Typography>
 
-        <MediaTypeUploader open={open} onClose={() => setOpen(false)} />
+        <MediaTypeUploader 
+          open={open} 
+          onClose={handleClose} 
+          editMediaTypeId={editMediaTypeId} 
+        />
+        
         <Box
           className="header-component"
           display="flex"
@@ -230,6 +304,15 @@ const AccountMediaTypes: React.FC = () => {
               align="left"
             >
               Existing Media Types
+              {userRole === 'superAdmin' ? (
+                <Typography variant="caption" color="primary" sx={{ ml: 1 }}>
+                  (Super Admin: Full control)
+                </Typography>
+              ) : (
+                <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                  (Admin: Limited default tag editing)
+                </Typography>
+              )}
             </Typography>
             <Button
               variant="contained"
@@ -247,9 +330,22 @@ const AccountMediaTypes: React.FC = () => {
               <MediaTypeCard 
                 mediaType={mediaType}
                 onDelete={handleDeleteClick}
-                onEdit={() => console.log('Edit', mediaType._id)}
+                onEdit={handleEditClick}
                 onView={() => console.log('View', mediaType._id)}
               />
+              {/* Add sync tags button if the media type has default tags */}
+              {mediaType.defaultTags && mediaType.defaultTags.length > 0 && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  size="small"
+                  startIcon={<FaSync />}
+                  onClick={() => handleSyncDefaultTagsClick(mediaType._id)}
+                  sx={{ mt: 1, width: '100%' }}
+                >
+                  Apply Default Tags to Existing Files
+                </Button>
+              )}
             </Grid>
           ))}
         </Grid>
@@ -516,6 +612,76 @@ const AccountMediaTypes: React.FC = () => {
             >
               Close
             </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Sync Default Tags Dialog */}
+      <Dialog
+        open={syncTagsDialogOpen}
+        onClose={handleCancelSyncTags}
+        aria-labelledby="sync-tags-dialog-title"
+      >
+        <DialogTitle id="sync-tags-dialog-title">
+          Apply Default Tags to Existing Files
+        </DialogTitle>
+        <DialogContent>
+          {syncingStatus === 'loading' ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 2 }}>
+              <CircularProgress sx={{ mb: 2 }} />
+              <Typography>Applying default tags to existing files...</Typography>
+            </Box>
+          ) : syncingStatus === 'success' ? (
+            <Alert severity="success" sx={{ my: 2 }}>
+              <AlertTitle>Success!</AlertTitle>
+              Default tags have been applied to all existing files.
+            </Alert>
+          ) : syncingStatus === 'error' ? (
+            <Alert severity="error" sx={{ my: 2 }}>
+              <AlertTitle>Error</AlertTitle>
+              Failed to apply default tags. Please try again.
+            </Alert>
+          ) : (
+            <>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <AlertTitle>Confirm Action</AlertTitle>
+                {syncingMediaTypeId && (
+                  <>
+                    <Typography variant="body1" gutterBottom>
+                      You are about to apply the default tags from media type "{mediaTypes.find(type => type._id === syncingMediaTypeId)?.name}" 
+                      to <strong>{affectedFilesCount}</strong> existing files.
+                    </Typography>
+                    <Typography variant="body2">
+                      Default tags: {mediaTypes.find(type => type._id === syncingMediaTypeId)?.defaultTags?.join(', ')}
+                    </Typography>
+                  </>
+                )}
+              </Alert>
+              <Typography variant="body2" color="text.secondary">
+                This will add the default tags to existing files that don't already have them. No existing tags will be removed.
+              </Typography>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          {syncingStatus === 'idle' && (
+            <>
+              <Button onClick={handleCancelSyncTags}>Cancel</Button>
+              <Button 
+                onClick={handleConfirmSyncTags} 
+                color="primary" 
+                variant="contained"
+                disabled={!syncingMediaTypeId || affectedFilesCount === 0}
+              >
+                Apply Default Tags
+              </Button>
+            </>
+          )}
+          {syncingStatus === 'error' && (
+            <Button onClick={handleCancelSyncTags} color="primary">Close</Button>
+          )}
+          {syncingStatus === 'success' && (
+            <Button onClick={handleCancelSyncTags} color="primary">Close</Button>
           )}
         </DialogActions>
       </Dialog>

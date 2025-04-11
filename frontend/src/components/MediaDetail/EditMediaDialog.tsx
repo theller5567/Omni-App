@@ -18,12 +18,17 @@ import {
   Switch,
   Typography,
   Box,
-  Divider
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { MediaFile, MediaType } from '../../types/media';
 import './EditMediaDialog.scss';
 import VideoThumbnailSelector from '../VideoThumbnailSelector/VideoThumbnailSelector';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store/store';
 
 interface EditMediaDialogProps {
   open: boolean;
@@ -55,6 +60,10 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
     mediaType
   });
 
+  // Get user role from Redux
+  const userRole = useSelector((state: RootState) => state.user.currentUser.role);
+  const isSuperAdmin = userRole === 'superAdmin';
+
   const [newTag, setNewTag] = useState('');
   const { control, handleSubmit, watch, setValue } = useForm<FormValues>({
     defaultValues: {
@@ -79,7 +88,41 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
     console.log('EditMediaDialog - Current form values:', formValues);
   }, [formValues]);
 
+  // Initialize form with default values and ensure default tags are included
+  useEffect(() => {
+    // Make sure all default tags from the media type are included in the tags
+    if (mediaType && mediaType.defaultTags && mediaType.defaultTags.length > 0) {
+      const currentTags = watch('tags') || [];
+      const defaultTags = mediaType.defaultTags;
+      
+      // Check if all default tags are included
+      const allDefaultTagsIncluded = defaultTags.every(tag => currentTags.includes(tag));
+      
+      if (!allDefaultTagsIncluded) {
+        // Add any missing default tags
+        const updatedTags = [...currentTags];
+        defaultTags.forEach(tag => {
+          if (!updatedTags.includes(tag)) {
+            updatedTags.push(tag);
+          }
+        });
+        
+        // Update the form
+        setValue('tags', updatedTags);
+        console.log('Added missing default tags:', updatedTags);
+      }
+    }
+  }, [mediaType, setValue, watch]);
+
   const handleAddTag = (event: React.KeyboardEvent) => {
+    // Check if user is a superAdmin for default tags
+    const isDefaultTag = mediaType.defaultTags?.includes(newTag.trim());
+    
+    // Only allow adding tags if not a default tag, or if user is a superAdmin
+    if (isDefaultTag && !isSuperAdmin) {
+      return;
+    }
+    
     if (event.key === 'Enter' && newTag.trim()) {
       const currentTags = watch('tags');
       if (!currentTags.includes(newTag.trim())) {
@@ -90,15 +133,47 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   };
 
   const handleDeleteTag = (tagToDelete: string) => {
+    // Check if the tag is a default tag
+    const isDefaultTag = mediaType.defaultTags?.includes(tagToDelete);
+    
+    // Do not allow removing default tags from this UI
+    if (isDefaultTag) {
+      // For better UX, show a toast notification explaining why
+      // If you have react-toastify or similar
+      console.warn('Cannot remove default tag:', tagToDelete);
+      return;
+    }
+    
     const currentTags = watch('tags');
     setValue('tags', currentTags.filter(tag => tag !== tagToDelete));
   };
 
+  // Before submission, ensure all default tags are included
   const onSubmit = async (data: FormValues) => {
     console.log('EditMediaDialog - Form submission data:', {
       formData: data,
       originalMediaFile: mediaFile
     });
+
+    // Ensure all default tags are included
+    if (mediaType && mediaType.defaultTags) {
+      const finalTags = [...data.tags];
+      let tagsChanged = false;
+      
+      // Add any missing default tags
+      mediaType.defaultTags.forEach(tag => {
+        if (!finalTags.includes(tag)) {
+          finalTags.push(tag);
+          tagsChanged = true;
+        }
+      });
+      
+      // Update the tags if they were changed
+      if (tagsChanged) {
+        data.tags = finalTags;
+        console.log('Ensuring default tags are included in submission:', finalTags);
+      }
+    }
 
     // Format the data before sending
     const formattedData = {
@@ -192,6 +267,82 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
     mediaFile.id
   );
 
+  // After your existing useState hooks, add a new state for tracking accordion expansion
+  const [expandedAccordion, setExpandedAccordion] = useState<string | false>(false);
+
+  const handleAccordionChange = (panel: string) => (_: React.SyntheticEvent, isExpanded: boolean) => {
+    setExpandedAccordion(isExpanded ? panel : false);
+  };
+
+  // Render the tags section
+  const renderTagsSection = () => {
+    // Get all tags and sort them: default tags first, then regular tags
+    const allTags = watch('tags');
+    const defaultTags = mediaType.defaultTags || [];
+    
+    // Sort the tags: default tags first (in their original order), then other tags alphabetically
+    const sortedTags = [...allTags].sort((a, b) => {
+      const aIsDefault = defaultTags.includes(a);
+      const bIsDefault = defaultTags.includes(b);
+      
+      // If both are default or both are not default, sort alphabetically
+      if (aIsDefault === bIsDefault) {
+        // If both are default tags, preserve their original order
+        if (aIsDefault) {
+          return defaultTags.indexOf(a) - defaultTags.indexOf(b);
+        }
+        // If neither are default, sort alphabetically
+        return a.localeCompare(b);
+      }
+      
+      // If only one is a default tag, put it first
+      return aIsDefault ? -1 : 1;
+    });
+    
+    return (
+      <Box className="form-section" sx={{ marginTop: 4, padding: 2 }}>
+        <Typography variant="h6" gutterBottom>Tags</Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+          Default tags from the media type cannot be removed here. They can only be modified by superAdmins in the Media Types settings.
+        </Typography>
+        <Grid container spacing={4}>
+          <Grid item xs={12}>
+            <TextField
+              label="Add Tags"
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+              onKeyPress={handleAddTag}
+              fullWidth
+              size="small"
+              helperText="Press Enter to add a tag"
+            />
+            <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              {sortedTags.map((tag) => {
+                const isDefaultTag = mediaType.defaultTags?.includes(tag);
+                return (
+                  <Chip
+                    key={tag}
+                    label={tag}
+                    onDelete={isDefaultTag ? undefined : () => handleDeleteTag(tag)}
+                    size="small"
+                    color={isDefaultTag ? "primary" : "default"}
+                    sx={isDefaultTag ? {
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      borderColor: 'var(--secondary-color)',
+                      position: 'relative',
+                    } : {}}
+                    title={isDefaultTag ? "This is a default tag from the media type and cannot be removed" : "Click 'x' to remove this tag"}
+                  />
+                );
+              })}
+            </Box>
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
+
   return (
     <Dialog
       open={open}
@@ -213,9 +364,9 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
       <DialogContent className="dialog-content">
         <form onSubmit={handleSubmit(onSubmit)} className="edit-form">
           {/* Basic Information Section */}
-          <Box className="form-section">
+          <Box className="form-section" sx={{ marginTop: 4, padding: 2, marginBottom: 0 }}>
             <Typography variant="h6" gutterBottom>Basic Information</Typography>
-            <Grid container spacing={2}>
+            <Grid container spacing={4}>
               <Grid item xs={12} md={6}>
                 <Controller
                   name="title"
@@ -292,61 +443,11 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
             </Grid>
           </Box>
 
-          <Divider sx={{ my: 2 }} />
-
-          {/* Video Thumbnail Section */}
-          {showVideoThumbnailSelector && mediaFile.url && mediaFile.id && (
-            <>
-              <Box className="form-section">
-                <Typography variant="h6" gutterBottom>Video Thumbnail</Typography>
-                <VideoThumbnailSelector
-                  videoUrl={mediaFile.url}
-                  mediaId={mediaFile.id}
-                  currentThumbnail={mediaFile.customFields?.thumbnailUrl}
-                  onThumbnailUpdate={(thumbnailUrl) => {
-                    setValue('customFields.thumbnailUrl', thumbnailUrl);
-                  }}
-                />
-              </Box>
-              <Divider sx={{ my: 2 }} />
-            </>
-          )}
-
-          {/* Tags Section */}
-          <Box className="form-section">
-            <Typography variant="h6" gutterBottom>Tags</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  label="Add Tags"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={handleAddTag}
-                  fullWidth
-                  size="small"
-                  helperText="Press Enter to add a tag"
-                />
-                <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {watch('tags').map((tag) => (
-                    <Chip
-                      key={tag}
-                      label={tag}
-                      onDelete={() => handleDeleteTag(tag)}
-                      size="small"
-                    />
-                  ))}
-                </Box>
-              </Grid>
-            </Grid>
-          </Box>
-
-          <Divider sx={{ my: 2 }} />
-
           {/* Custom Fields Section */}
           {mediaType.fields.length > 0 && (
-            <Box className="form-section">
+            <Box className="form-section" sx={{ marginTop: 4, padding: 2 }}>
               <Typography variant="h6" gutterBottom>{mediaType.name} Fields</Typography>
-              <Grid container spacing={2}>
+              <Grid container spacing={4}>
                 {mediaType.fields.map((field) => (
                   <Grid item xs={12} md={6} key={field.name}>
                     <Controller
@@ -359,6 +460,80 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                 ))}
               </Grid>
             </Box>
+          )}
+
+          {renderTagsSection()}
+
+          {/* Video Thumbnail Section */}
+          {showVideoThumbnailSelector && mediaFile.url && mediaFile.id && (
+            <>
+              <Box className="form-section" sx={{ marginTop: 2 }}>
+                <Accordion 
+                  expanded={expandedAccordion === 'videoThumbnail'} 
+                  onChange={handleAccordionChange('videoThumbnail')}
+                  sx={{ 
+                    backgroundColor: 'transparent', 
+                    boxShadow: 'none',
+                    '&:before': {
+                      display: 'none', // Hide the default divider
+                    },
+                  }}
+                >
+                  <AccordionSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    aria-controls="video-thumbnail-content"
+                    id="video-thumbnail-header"
+                    sx={{ 
+                      backgroundColor: 'var(--input-background)', 
+                      borderRadius: 'var(--border-radius-md)',
+                      '&:hover': {
+                        backgroundColor: 'var(--input-background-hover)',
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
+                        Edit Video Thumbnail
+                      </Typography>
+                      {mediaFile.customFields?.thumbnailUrl && (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          ml: 'auto', 
+                          gap: 1,
+                          opacity: 0.7,
+                          '& img': { 
+                            width: 36,
+                            height: 20,
+                            objectFit: 'cover',
+                            borderRadius: 0.5,
+                            border: '1px solid var(--border-color)'
+                          }
+                        }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Custom thumbnail set
+                          </Typography>
+                          <img 
+                            src={mediaFile.customFields.thumbnailUrl} 
+                            alt="Current thumbnail" 
+                          />
+                        </Box>
+                      )}
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ padding: 2, paddingLeft: 3, paddingRight: 3, mt: 2 }}>
+                    <VideoThumbnailSelector
+                      videoUrl={mediaFile.url}
+                      mediaId={mediaFile.id}
+                      currentThumbnail={mediaFile.customFields?.thumbnailUrl}
+                      onThumbnailUpdate={(thumbnailUrl) => {
+                        setValue('customFields.thumbnailUrl', thumbnailUrl);
+                      }}
+                    />
+                  </AccordionDetails>
+                </Accordion>
+              </Box>
+            </>
           )}
         </form>
       </DialogContent>
@@ -376,5 +551,3 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
     </Dialog>
   );
 };
-
-export default EditMediaDialog; 
