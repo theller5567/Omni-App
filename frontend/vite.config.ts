@@ -17,6 +17,25 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path
         }
       }
+    },
+    build: {
+      // Generate sourcemaps for better debugging
+      sourcemap: true,
+      // Improve output file structure
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'react-router-dom'],
+            mui: ['@mui/material', '@mui/icons-material'],
+            redux: ['redux', 'react-redux', '@reduxjs/toolkit'],
+          }
+        }
+      }
+    },
+    // Properly handle 404s for SPA
+    preview: {
+      port: 4173,
+      host: true
     }
   }
 })
