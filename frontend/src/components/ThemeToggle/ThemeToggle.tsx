@@ -1,20 +1,32 @@
 import React from 'react';
-import { ToggleButtonGroup, ToggleButton, Box, Tooltip } from '@mui/material';
+import { ToggleButtonGroup, ToggleButton, Box, Tooltip, Typography } from '@mui/material';
 import { FaSun, FaMoon } from 'react-icons/fa';
-import './ThemeToggle.scss';
+import './themeToggle.scss';
 
 interface ThemeToggleProps {
   theme: 'light' | 'dark';
-  toggleTheme: (event: React.MouseEvent<HTMLElement>, newTheme: 'light' | 'dark' | null) => void;
+  toggleTheme: (newTheme: 'light' | 'dark') => void;
+  showLabel?: boolean;
 }
 
-const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, toggleTheme }) => {
+const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, toggleTheme, showLabel = false }) => {
+  const handleChange = (event: React.MouseEvent<HTMLElement>, newTheme: string | null) => {
+    if (newTheme !== null) {
+      toggleTheme(newTheme as 'light' | 'dark');
+    }
+  };
+
   return (
-    <Box className="theme-toggle">
+    <Box className="theme-toggle" sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      {showLabel && (
+        <Typography variant="body2" color="textSecondary">
+          Theme
+        </Typography>
+      )}
       <ToggleButtonGroup
         value={theme}
         exclusive
-        onChange={toggleTheme}
+        onChange={handleChange}
         aria-label="theme mode"
         size="small"
       >

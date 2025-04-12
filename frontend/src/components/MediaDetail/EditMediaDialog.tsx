@@ -23,7 +23,6 @@ import {
   AccordionDetails,
   useMediaQuery,
   Theme,
-  Snackbar,
   Alert
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -373,75 +372,6 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
 
   const handleAccordionChange = (panel: string) => (_: React.SyntheticEvent, isExpanded: boolean) => {
     setExpandedAccordion(isExpanded ? panel : false);
-  };
-
-  // Render the tags section
-  const renderTagsSection = () => {
-    // Get all tags and sort them: default tags first, then regular tags
-    const allTags = watch('tags');
-    const defaultTags = mediaType.defaultTags || [];
-    
-    // Sort the tags: default tags first (in their original order), then other tags alphabetically
-    const sortedTags = [...allTags].sort((a, b) => {
-      const aIsDefault = defaultTags.includes(a);
-      const bIsDefault = defaultTags.includes(b);
-      
-      // If both are default or both are not default, sort alphabetically
-      if (aIsDefault === bIsDefault) {
-        // If both are default tags, preserve their original order
-        if (aIsDefault) {
-          return defaultTags.indexOf(a) - defaultTags.indexOf(b);
-        }
-        // If neither are default, sort alphabetically
-        return a.localeCompare(b);
-      }
-      
-      // If only one is a default tag, put it first
-      return aIsDefault ? -1 : 1;
-    });
-    
-    return (
-      <Box className="form-section" sx={{ marginTop: 4, padding: 2 }}>
-        <Typography variant="h6" gutterBottom>Tags</Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-          Default tags from the media type cannot be removed here. They can only be modified by superAdmins in the Media Types settings.
-        </Typography>
-        <Grid container spacing={4}>
-          <Grid item xs={12}>
-            <TextField
-              label="Add Tags"
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              onKeyDown={handleAddTag}
-              fullWidth
-              size="small"
-              helperText="Press Enter to add a tag"
-            />
-            <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-              {sortedTags.map((tag) => {
-                const isDefaultTag = mediaType.defaultTags?.includes(tag);
-                return (
-                  <Chip
-                    key={tag}
-                    label={tag}
-                    onDelete={isDefaultTag ? undefined : () => handleDeleteTag(tag)}
-                    size="small"
-                    color={isDefaultTag ? "primary" : "default"}
-                    sx={isDefaultTag ? {
-                      borderWidth: '2px',
-                      borderStyle: 'solid',
-                      borderColor: 'var(--secondary-color)',
-                      position: 'relative',
-                    } : {}}
-                    title={isDefaultTag ? "This is a default tag from the media type and cannot be removed" : "Click 'x' to remove this tag"}
-                  />
-                );
-              })}
-            </Box>
-          </Grid>
-        </Grid>
-      </Box>
-    );
   };
 
   return (

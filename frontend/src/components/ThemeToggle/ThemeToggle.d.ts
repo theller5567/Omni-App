@@ -1,5 +1,5 @@
 import React from 'react';
-import './ThemeToggle.scss';
+import './themeToggle.scss';
 interface ThemeToggleProps {
     theme: 'light' | 'dark';
     toggleTheme: () => void;

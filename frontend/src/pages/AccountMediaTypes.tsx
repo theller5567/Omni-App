@@ -52,6 +52,8 @@ const AccountMediaTypes: React.FC = () => {
   const [syncingMediaTypeId, setSyncingMediaTypeId] = useState<string | null>(null);
   const [syncingStatus, setSyncingStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [affectedFilesCount, setAffectedFilesCount] = useState(0);
+  const [mediaTypesWithFilesNeedingTags, setMediaTypesWithFilesNeedingTags] = useState<Record<string, number>>({});
+  const [checkingMediaTypes, setCheckingMediaTypes] = useState(false);
   
   const dispatch = useDispatch<AppDispatch>();
   const { 
@@ -72,6 +74,49 @@ const AccountMediaTypes: React.FC = () => {
     };
     fetchMediaTypes();
   }, []); // Empty dependency array means this runs once on mount
+
+  useEffect(() => {
+    const checkMediaTypesWithDefaultTags = async () => {
+      if (mediaTypes.length === 0 || checkingMediaTypes) return;
+      
+      setCheckingMediaTypes(true);
+      const typesWithDefaultTags = mediaTypes.filter(type => 
+        type.defaultTags && type.defaultTags.length > 0 && type.status === 'active'
+      );
+      
+      if (typesWithDefaultTags.length === 0) {
+        setCheckingMediaTypes(false);
+        return;
+      }
+      
+      try {
+        const results: Record<string, number> = {};
+        
+        // Check each media type with default tags to see if it has files that need tags
+        await Promise.all(typesWithDefaultTags.map(async (mediaType) => {
+          try {
+            const response = await axios.get<{count: number}>(
+              `${env.BASE_URL}/api/media-types/${mediaType._id}/files-needing-tags`
+            );
+            const count = response.data.count || 0;
+            if (count > 0) {
+              results[mediaType._id] = count;
+            }
+          } catch (error) {
+            console.error(`Failed to check files needing tags for ${mediaType.name}:`, error);
+          }
+        }));
+        
+        setMediaTypesWithFilesNeedingTags(results);
+      } catch (error) {
+        console.error('Error checking media types with files needing tags:', error);
+      }
+      
+      setCheckingMediaTypes(false);
+    };
+    
+    checkMediaTypesWithDefaultTags();
+  }, [mediaTypes]);
 
   const handleEditClick = (mediaTypeId: string) => {
     setEditMediaTypeId(mediaTypeId);
@@ -223,8 +268,8 @@ const AccountMediaTypes: React.FC = () => {
     
     // Find affected media files count
     try {
-      const response = await axios.get(`${env.BASE_URL}/api/media?mediaType=${mediaTypeId}`);
-      const affectedFiles = Array.isArray(response.data) ? response.data.length : 0;
+      const response = await axios.get<{count: number}>(`${env.BASE_URL}/api/media-types/${mediaTypeId}/files-needing-tags`);
+      const affectedFiles = response.data.count || 0;
       setAffectedFilesCount(affectedFiles);
       setSyncTagsDialogOpen(true);
     } catch (error) {
@@ -244,11 +289,31 @@ const AccountMediaTypes: React.FC = () => {
         throw new Error('No default tags to apply');
       }
 
+      // If there are no affected files, show success without API call
+      if (affectedFilesCount === 0) {
+        setSyncingStatus('success');
+        toast.info(`No media files found with type "${mediaType.name}" to update`);
+        
+        setTimeout(() => {
+          setSyncTagsDialogOpen(false);
+          setSyncingStatus('idle');
+          setSyncingMediaTypeId(null);
+        }, 2000);
+        return;
+      }
+
       // Call backend API to update all media files with this media type
       await axios.post(`${env.BASE_URL}/api/media-types/${syncingMediaTypeId}/apply-default-tags`);
       
       setSyncingStatus('success');
       toast.success(`Default tags applied to all ${affectedFilesCount} media files with type "${mediaType.name}"`);
+      
+      // Update the count for this media type
+      setMediaTypesWithFilesNeedingTags(prev => {
+        const updated = {...prev};
+        delete updated[syncingMediaTypeId];
+        return updated;
+      });
       
       setTimeout(() => {
         setSyncTagsDialogOpen(false);
@@ -333,8 +398,10 @@ const AccountMediaTypes: React.FC = () => {
                 onEdit={handleEditClick}
                 onView={() => console.log('View', mediaType._id)}
               />
-              {/* Add sync tags button if the media type has default tags */}
-              {mediaType.defaultTags && mediaType.defaultTags.length > 0 && (
+              {/* Only show sync tags button if there are files that need updating */}
+              {mediaType.defaultTags && 
+               mediaType.defaultTags.length > 0 && 
+               mediaTypesWithFilesNeedingTags[mediaType._id] > 0 && (
                 <Button
                   variant="outlined"
                   color="primary"
@@ -343,7 +410,7 @@ const AccountMediaTypes: React.FC = () => {
                   onClick={() => handleSyncDefaultTagsClick(mediaType._id)}
                   sx={{ mt: 1, width: '100%' }}
                 >
-                  Apply Default Tags to Existing Files
+                  Apply Default Tags ({mediaTypesWithFilesNeedingTags[mediaType._id]} files)
                 </Button>
               )}
             </Grid>
@@ -634,7 +701,9 @@ const AccountMediaTypes: React.FC = () => {
           ) : syncingStatus === 'success' ? (
             <Alert severity="success" sx={{ my: 2 }}>
               <AlertTitle>Success!</AlertTitle>
-              Default tags have been applied to all existing files.
+              {affectedFilesCount > 0 
+                ? 'Default tags have been applied to all existing files.'
+                : 'No files needed to be updated.'}
             </Alert>
           ) : syncingStatus === 'error' ? (
             <Alert severity="error" sx={{ my: 2 }}>
@@ -647,10 +716,17 @@ const AccountMediaTypes: React.FC = () => {
                 <AlertTitle>Confirm Action</AlertTitle>
                 {syncingMediaTypeId && (
                   <>
-                    <Typography variant="body1" gutterBottom>
-                      You are about to apply the default tags from media type "{mediaTypes.find(type => type._id === syncingMediaTypeId)?.name}" 
-                      to <strong>{affectedFilesCount}</strong> existing files.
-                    </Typography>
+                    {affectedFilesCount > 0 ? (
+                      <Typography variant="body1" gutterBottom>
+                        You are about to apply the default tags from media type "{mediaTypes.find(type => type._id === syncingMediaTypeId)?.name}" 
+                        to <strong>{affectedFilesCount}</strong> existing files.
+                      </Typography>
+                    ) : (
+                      <Typography variant="body1" gutterBottom>
+                        There are <strong>no files</strong> with media type "{mediaTypes.find(type => type._id === syncingMediaTypeId)?.name}" 
+                        that need default tags applied.
+                      </Typography>
+                    )}
                     <Typography variant="body2">
                       Default tags: {mediaTypes.find(type => type._id === syncingMediaTypeId)?.defaultTags?.join(', ')}
                     </Typography>
@@ -671,9 +747,9 @@ const AccountMediaTypes: React.FC = () => {
                 onClick={handleConfirmSyncTags} 
                 color="primary" 
                 variant="contained"
-                disabled={!syncingMediaTypeId || affectedFilesCount === 0}
+                disabled={!syncingMediaTypeId}
               >
-                Apply Default Tags
+                {affectedFilesCount > 0 ? 'Apply Default Tags' : 'Continue'}
               </Button>
             </>
           )}

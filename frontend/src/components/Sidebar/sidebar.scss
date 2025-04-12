@@ -1,198 +1,249 @@
-/* Sidebar styling */
+/* Modern Sidebar Styling */
+.sidebar-container {
+  display: flex;
+  height: 100vh;
+  max-width: 250px;
+  overflow: hidden;
+}
+
+.sidebar-wrapper {
+  height: 100vh;
+  width: 250px;
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+}
+
 #sidebar {
   height: 100vh;
   width: 250px;
   color: white;
   z-index: 1000;
-  padding: 0; /* Add padding to ensure content is not cut off */
+  padding: 0;
   border: none;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  
   .ps-sidebar-container {
     display: flex;
     flex-direction: column;
-    // Use a darker gradient for the sidebar
     background-color: var(--background-color); // Fallback color
     background-image: var(--color-surface-gradient);
-  }
-  .ps-menu-icon {
-    margin-right: 1rem;
-  }
-  .ps-menu-button {
-    background-color: transparent; // Make it transparent to show the gradient
-    border-bottom: 1px solid rgba(0, 0, 0, 0.3);
-    color: white; // Ensure text is white
-    span {
-      display: flex;
-      justify-content: left;
-      align-items: center;
-      svg {
-        display: inline;
-        font-size: 1.5rem;
-        margin-right: 1rem;
-        color: #ffffff; // Ensure icons are white
-      }
-    }
-  }
-  .ps-submenu-content {
-    background-color: rgba(0, 0, 0, 0.3) !important; // Darkened submenu
-    .ps-menuitem-root:not(.active) .ps-menu-button:hover {
-      background-color: rgba(255, 255, 255, 0.05) !important; // Subtle hover effect
-    }
-  }
-  .ps-menuitem-root.active .ps-menu-button {
-    background-color: rgba(255, 255, 255, 0.1) !important; // Lighter active background
-    color: white !important; // White text for active items
-    width: 100%; // Ensure the NavLink takes up the full space
-  }
-  .ps-menuitem-root:not(.active) .ps-menu-button:hover {
-    background-color: rgba(255, 255, 255, 0.05) !important; // Subtle hover effect
+    height: 100%;
+    overflow: hidden;
   }
   
-  .ps-menuitem-root .ps-menuitem-root .ps-menu-button {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.3);
-    span {
-      display: flex;
-      justify-content: left;
-      align-items: center;
-      font-size: 0.8rem;
-      svg {
-        font-size: 1.5rem;
-        display: span;
-        margin-right: 1rem;
+  .sidebar-header {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    
+    .app-title {
+      font-weight: 600;
+      color: var(--accent-color);
+      letter-spacing: 0.5px;
+    }
+  }
+  
+  /* User profile styling */
+  .user-profile {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    width: 100%;
+    position: relative;
+    
+    .sidebar-avatar {
+      width: 40px;
+      height: 40px;
+      margin-right: 12px;
+      border: 2px solid var(--accent-color);
+    }
+    
+    .user-name {
+      font-weight: 500;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: white;
+      max-width: 125px;
+    }
+    
+    .profile-chevron {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 10px;
+      height: 10px;
+      color: var(--accent-color);
+      transition: transform 0.3s ease;
+      
+      &.chevron-open {
+        transform: translateY(-50%) rotate(180deg);
       }
     }
   }
-  .sidebar-menu {
-    a {
-      text-decoration: none;
-      color: white;
+  
+  /* Hide default submenu expand icon */
+  .custom-expand-icon {
+    display: none !important;
+  }
+  
+  /* Hide all built-in submenu expand icons */
+  .ps-submenu-expand-icon {
+    display: none !important;
+  }
+  
+  /* Menu items styling */
+  .ps-menu-button {
+    transition: all 0.2s ease;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin: 0.25rem 0.75rem;
+    overflow: visible !important;
+    
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1) !important;
+      transform: translateX(3px);
+    }
+    
+    .ps-menu-icon {
+      margin-right: 0.75rem;
       display: flex;
       align-items: center;
-      justify-content: flex-start;
-      gap: 1rem;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      
+      svg {
+        font-size: 1.2rem;
+        color: var(--accent-color);
+      }
     }
   }
+  
+  /* Active menu item */
+  .ps-active {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    
+    .ps-menu-button {
+      font-weight: 600;
+    }
+  }
+  
+  /* Submenu styling */
+  .ps-submenu-content:not(.ps-open) {
+    display: none !important;
+  }
+  
+  .ps-submenu-content {
+    background-color: rgba(0, 0, 0, 0.15) !important;
+    padding: 0.5rem 0;
+    margin: 0.25rem 0.75rem 0;
+    border-radius: 6px;
+    overflow: visible !important;
+    width: calc(100% - 1.5rem) !important;
+    
+    .ps-menu-button {
+      margin: 0.25rem 0.5rem;
+      padding: 0.5rem 0.75rem;
+    }
+  }
+  
+  /* Sidebar footer positioning */
   .sidebar-footer {
     margin-top: auto;
+    padding-bottom: 1rem;
+    
+    .signout-button {
+      background-color: rgba(255, 75, 75, 0.1);
+      border-radius: 6px;
+      margin: 0 0.75rem;
+      
+      .ps-menu-icon svg {
+        color: #ff4b4b;
+      }
+      
+      &:hover {
+        background-color: rgba(255, 75, 75, 0.2) !important;
+      }
+    }
   }
-  #sidebar-account {
-    margin-top: 2rem;
-    border: none;
-    span:nth-child(2) {
-      padding-left: 1rem;
-      color: var(--accent-color);
+  
+  /* NavLink styling */
+  a {
+    text-decoration: none;
+    color: white;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    border-radius: 4px;
+    
+    &.active-menu-item {
+      font-weight: 600;
+      color: white;
+    }
+  }
+  
+  /* User menu item when not in submenu */
+  .user-menu-item {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* For the sidebar account submenu */
+  .sidebar-account {
+    > .ps-menu-button {
+      background-color: rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      margin-bottom: 0.25rem;
+      padding: 0.5rem;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      position: relative;
+      
+      &:hover {
+        transform: none;
+      }
+    }
+    
+    .ps-collapsed {
+      min-height: 56px !important;
     }
   }
 }
-#sidebar .ps-menuitem-root .ps-menuitem-root .ps-menu-button {
-  background-color: rgba(0, 0, 0, 0.2);
+
+/* Fix overflow issues */
+.ps-menuitem-root {
+  overflow: visible !important;
 }
 
-
-  
-  .sidebar.hidden {
-    width: 100px; /* Shrink the sidebar to the width of the icons */
-  }
-  
-  .sidebar.visible {
-    width: 250px; /* Full width when the sidebar is open */
-  }
-  
-  .sidebar-content {
-    display: flex;
-    flex-direction: column;
-    height: 100%; /* Ensure it takes full height */
-    padding: 1rem;
-  }
-  
-  .sidebar-logo {
-    margin-bottom: 30px;
-    font-size: 3rem;
-    max-width: 3rem;
-  }
-  
-  
-  .sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    flex-grow: 1; /* Allow the nav to grow and fill space */
-  }
-  
-  .sidebar-link {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    transition: none;
-  }
-  
-
-  
-  .link-item {
-    display: flex;
-    align-items: center;
-    text-decoration: none;
-    color: white;
-    gap: 10px;
-  }
-  
-  .icon-circle {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background-color: #444;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: white;
-    font-size: 20px;
-    transition: none;
-    margin-right: 10px;
-  }
-  
-  /* Hide the text links when the sidebar is collapsed */
-  .text-link {
-    white-space: nowrap;
-    overflow: hidden; // Hide any overflow text
-    text-overflow: ellipsis; // Add ellipsis for overflow text
-    opacity: 1;
-    transition: opacity 0.3s ease 0.3s;
-  }
-  
-  .sidebar.hidden .text-link {
-    opacity: 0;
-  }
-  
-  .sidebar-signout {
-    margin-top: auto; /* Push the signout button to the bottom */
-    margin-bottom: 3rem; /* Add margin to bring it up slightly */
-    white-space: nowrap;
-    overflow: hidden; // Hide any overflow text
-    text-overflow: ellipsis; // Add ellipsis for overflow text
-    opacity: 1;
-    transition: opacity 0.3s ease 0.3s;
-  }
-  
-
-  
-  /* Menu button for mobile or small screens */
-.sidebar-toggle {
-  position: absolute;
-  top: 1rem;
-  right: -15px;
-  background-color: #333;
-  border: none;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  aspect-ratio: 1;
-  z-index: 1001;
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-  padding: 0.8rem;
+.ps-menu {
+  overflow: visible !important;
 }
 
-.toggle-icon {
-  color: #fff;
-}
-
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+  #sidebar {
+    width: 230px;
+    
+    .user-profile .user-name {
+      font-size: 0.8rem;
+      max-width: 110px;
+    }
+    
+    .ps-menu-button {
+      padding: 0.6rem 0.8rem;
+      margin: 0.2rem 0.6rem;
+    }
+  }
+} 

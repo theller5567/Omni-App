@@ -6,7 +6,6 @@ import MediaDetail from './components/MediaDetail/MediaDetail';
 import Account from './pages/Account';
 import Home from './components/Home';
 import AuthPage from './pages/AuthPage';
-import ThemeToggle from './components/ThemeToggle/ThemeToggle';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { lightTheme, darkTheme } from './theme';
@@ -25,9 +24,16 @@ import AccountMediaTypes from './pages/AccountMediaTypes';
 import AccountAdminDashboard from './pages/AccountAdminDashboard';
 import { AppDispatch } from './store/store';
 
+// Create a context for theme toggling
+export const ThemeContext = React.createContext({
+  isDarkMode: true,
+  toggleTheme: (newTheme: 'light' | 'dark') => {}
+});
 
 const App: React.FC = () => {
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  // Check localStorage for saved theme preference
+  const savedTheme = localStorage.getItem('theme');
+  const [isDarkMode, setIsDarkMode] = useState(savedTheme ? savedTheme === 'dark' : true);
   const dispatch = useDispatch<AppDispatch>();
   const isLoading = useSelector((state: RootState) => state.user.currentUser.isLoading);
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
@@ -36,6 +42,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+    // Save preference to localStorage
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
   useEffect(() => {
@@ -77,13 +85,9 @@ const App: React.FC = () => {
     initializeApp();
   }, [dispatch, isInitialized]);
 
-  const toggleTheme = (
-    event: React.MouseEvent<HTMLElement>,
-    newTheme: 'light' | 'dark' | null
-  ) => {
-    if (newTheme !== null) {
-      setIsDarkMode(newTheme === 'dark');
-    }
+  // Updated to handle direct theme changes
+  const toggleTheme = (newTheme: 'light' | 'dark') => {
+    setIsDarkMode(newTheme === 'dark');
   };
 
   if (isLoading) {
@@ -93,38 +97,39 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
       <CssBaseline />
-      <Router>
-        <div id="app-container" style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-          {userState.email && <Sidebar />}
-          <ThemeToggle theme={isDarkMode ? 'dark' : 'light'} toggleTheme={toggleTheme} />
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: '100vw',
-              overflow: 'auto',
-            }}
-          >
-            <Routes>
-              <Route path="/media/slug/:slug" element={<ProtectedRoute element={<MediaDetail />} />} />
-              <Route path="/media-library" element={<ProtectedRoute element={<MediaLibraryPage />} />} />
-              <Route path="/account" element={<ProtectedRoute element={<Account />} />} />
-              <Route path="/admin-users" element={<ProtectedRoute element={<AccountUsers />} />} />
-              <Route path="/admin-tags" element={<ProtectedRoute element={<AccountTags />} />} />
-              <Route path="/admin-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} />} />
-              {userRole === 'superAdmin' && (
-                <Route path="/manage-media-types" element={<AccountMediaTypes />} />
-               )}
-              <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} />} />
-              <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
-              <Route path="/password-setup" element={<PasswordSetupPage />} />
-              <Route path="/" element={<AuthPage />} />
-            </Routes>
+      <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
+        <Router>
+          <div id="app-container" style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+            {userState.email && <Sidebar />}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: '100vw',
+                overflow: 'auto',
+              }}
+            >
+              <Routes>
+                <Route path="/media/slug/:slug" element={<ProtectedRoute element={<MediaDetail />} />} />
+                <Route path="/media-library" element={<ProtectedRoute element={<MediaLibraryPage />} />} />
+                <Route path="/account" element={<ProtectedRoute element={<Account />} />} />
+                <Route path="/admin-users" element={<ProtectedRoute element={<AccountUsers />} />} />
+                <Route path="/admin-tags" element={<ProtectedRoute element={<AccountTags />} />} />
+                <Route path="/admin-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} />} />
+                {userRole === 'superAdmin' && (
+                  <Route path="/manage-media-types" element={<AccountMediaTypes />} />
+                )}
+                <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} />} />
+                <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
+                <Route path="/password-setup" element={<PasswordSetupPage />} />
+                <Route path="/" element={<AuthPage />} />
+              </Routes>
+            </div>
           </div>
-        </div>
-      </Router>
+        </Router>
+      </ThemeContext.Provider>
     </ThemeProvider>
   );
 };

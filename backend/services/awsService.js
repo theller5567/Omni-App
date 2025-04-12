@@ -1,15 +1,16 @@
-import AWS from 'aws-sdk';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 
-// Configure AWS
-AWS.config.update({
+// Configure AWS S3 client
+const s3Client = new S3Client({
   region: process.env.AWS_REGION,
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
 });
 
-const s3 = new AWS.S3();
 const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
 
 // Helper function to format the filename
@@ -82,23 +83,27 @@ export const uploadFileToS3 = async (file, prefix = '') => {
       ContentType: file.mimetype
     };
 
-    // Upload to S3
-    const result = await s3.upload(uploadParams).promise();
+    // Upload to S3 using the v3 SDK
+    const command = new PutObjectCommand(uploadParams);
+    const result = await s3Client.send(command);
     
-    if (!result.Location) {
+    // V3 doesn't return Location directly, so we need to construct it
+    const location = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFilename}`;
+    
+    if (!location) {
       throw new Error('S3 upload successful but location not returned');
     }
 
     console.log('S3 upload successful:', {
-      location: result.Location,
-      key: result.Key,
-      bucket: result.Bucket
+      location: location,
+      key: uniqueFilename,
+      bucket: BUCKET_NAME
     });
 
     return {
-      Location: result.Location,
-      Key: result.Key,
-      Bucket: result.Bucket
+      Location: location,
+      Key: uniqueFilename,
+      Bucket: BUCKET_NAME
     };
   } catch (error) {
     console.error('Error uploading to S3:', error);
@@ -142,7 +147,9 @@ export const deleteFileFromS3 = async (fileUrl) => {
       key: key
     });
 
-    await s3.deleteObject(deleteParams).promise();
+    // Delete using v3 SDK
+    const command = new DeleteObjectCommand(deleteParams);
+    await s3Client.send(command);
     
     console.log('Successfully deleted from S3:', {
       bucket: BUCKET_NAME,

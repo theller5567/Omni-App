@@ -3,16 +3,31 @@ import { Sidebar, Menu, MenuItem, SubMenu } from "react-pro-sidebar";
 import { Box, Avatar } from "@mui/material";
 import { motion } from "framer-motion";
 import "./sidebar.scss";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/store";
-import { FaHubspot, FaImages, FaSignOutAlt } from "react-icons/fa";
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import logoLight from "../../assets/Omni-new-logo-revvity-grey.png";
+import logoDark from "../../assets/Omni-new-logo-revvity-white.png";
+import { useTheme } from "@mui/material/styles";
+import { 
+  FaHubspot, 
+  FaImages, 
+  FaSignOutAlt, 
+  FaUser, 
+  FaTachometerAlt, 
+  FaTags, 
+  FaUsers, 
+  FaLayerGroup,
+  FaChevronDown
+} from "react-icons/fa";
+import { useState, useEffect } from "react";
 
 const CustomSidebar: React.FC = () => {
   const userData = useSelector((state: RootState) => state.user);
   const location = useLocation();
+  const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
+  const theme = useTheme();
+  const isAdmin = userData.currentUser.role === "admin" || userData.currentUser.role === "superAdmin";
 
   const handleSignOut = () => {
     console.log("User signed out");
@@ -20,120 +35,128 @@ const CustomSidebar: React.FC = () => {
     window.location.href = "/";
   };
 
-  // Function to update active class on parent elements
-  const updateActiveClass = () => {
-    // Remove 'active' class from all parent elements
-    document.querySelectorAll('.ps-menuitem-root.active').forEach(parent => {
-      parent.classList.remove('active');
-    });
-
-    // Add 'active' class to parent elements of active links
-    document.querySelectorAll('.active-menu-item').forEach(child => {
-      const parent = child.closest('.ps-menuitem-root');
-      if (parent) {
-        parent.classList.add('active');
-      }
-    });
-  };
-
-  // Call the function initially to set the active classes
-  updateActiveClass();
-
-  // Optionally, you can call this function whenever the route changes
-  // For example, using a useEffect hook in a React component
+  // Detect active submenu based on current route
   useEffect(() => {
-    updateActiveClass();
-  }, [location.pathname]); // Assuming you have access to the location object
+    // Check if the current path matches any admin routes
+    if (
+      location.pathname === "/account" ||
+      location.pathname === "/admin-dashboard" ||
+      location.pathname === "/admin-tags" ||
+      location.pathname === "/admin-users" ||
+      location.pathname === "/admin-media-types"
+    ) {
+      setOpenSubMenu("admin");
+    }
+  }, [location.pathname]);
 
   return (
-    <Box style={{ display: "flex", height: "100vh" }}>
+    <Box className="sidebar-container">
       <motion.div
         transition={{ duration: 0.5 }}
-        style={{
-          height: "100vh",
-          backgroundColor: "var(--secondary-color)",
-          color: "#fff",
-          overflow: "hidden",
-          position: "relative",
-        }}
+        className="sidebar-wrapper"
       >
         <Sidebar id="sidebar">
-          {/* <Box style={{ position: 'absolute', display: 'block', top: '1rem', right: '0', padding: '10px' }}>
-            <IconButton onClick={toggleSidebar}>
-              <FaBars style={{ color: '#fff' }} />
-            </IconButton>
-          </Box> */}
+          <div className="sidebar-header">
+            { theme.palette.mode === "light" ? <img src={logoLight} alt="logo" className="sidebar-logo" /> : <img src={logoDark} alt="logo" className="sidebar-logo" /> }
+          </div>
+
           <Menu className="sidebar-menu">
-            {(userData.currentUser.role === "admin" || userData.currentUser.role === "superAdmin") ? (
+            {isAdmin ? (
               <SubMenu
-                title="Admin Options"
+                label={
+                  <div className="user-profile">
+                    <Avatar 
+                      className="sidebar-avatar" 
+                      src={userData.currentUser.avatar} 
+                      alt={`${userData.currentUser.firstName} ${userData.currentUser.lastName}`}
+                    />
+                    <span className="user-name">
+                      {userData.currentUser.firstName} {userData.currentUser.lastName}
+                    </span>
+                    <FaChevronDown className={`profile-chevron ${openSubMenu === "admin" ? 'chevron-open' : ''}`} />
+                  </div>
+                }
+                icon={null}
                 className="sidebar-account"
-                label={userData.currentUser.firstName + " " + userData.currentUser.lastName}
-                icon={<Avatar className="sidebar-avatar-icon" src={userData.currentUser.avatar} />}
-                style={{
-                  padding: "20px",
-                  height: "auto"
-                }}
+                defaultOpen={openSubMenu === "admin"}
+                open={openSubMenu === "admin"}
+                onOpenChange={(open) => setOpenSubMenu(open ? "admin" : null)}
               >
-                <MenuItem component="div">
-                  <NavLink to="/account" className={({ isActive }) => (isActive ? "active-menu-item" : "")}>
-                    Account
-                  </NavLink>
+                <MenuItem 
+                  icon={<FaUser />} 
+                  component={<NavLink to="/account" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
+                >
+                  Account
                 </MenuItem>
-                <MenuItem component="div">
-                  <NavLink to="/admin-dashboard" className={({ isActive }) => (isActive ? "active-menu-item" : "")}>
-                    Admin Dashboard
-                  </NavLink>
+                <MenuItem 
+                  icon={<FaTachometerAlt />} 
+                  component={<NavLink to="/admin-dashboard" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
+                >
+                  Dashboard
                 </MenuItem>
-                <MenuItem component="div">
-                  <NavLink to="/admin-tags" className={({ isActive }) => (isActive ? "active-menu-item" : "")}>
-                    Tags
-                  </NavLink>
+                <MenuItem 
+                  icon={<FaTags />} 
+                  component={<NavLink to="/admin-tags" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
+                >
+                  Tags
                 </MenuItem>
-                <MenuItem component="div">
-                  <NavLink to="/admin-users" className={({ isActive }) => (isActive ? "active-menu-item" : "")}>
-                    Users
-                  </NavLink>
+                <MenuItem 
+                  icon={<FaUsers />} 
+                  component={<NavLink to="/admin-users" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
+                >
+                  Users
                 </MenuItem>
-                <MenuItem component="div">
-                  <NavLink to="/admin-media-types" className={({ isActive }) => (isActive ? "active-menu-item" : "")}>
-                    Media Types
-                  </NavLink>
+                <MenuItem 
+                  icon={<FaLayerGroup />} 
+                  component={<NavLink to="/admin-media-types" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
+                >
+                  Media Types
                 </MenuItem>
               </SubMenu>
             ) : (
-             
-                <MenuItem component="div" id="sidebar-account">
-                  <NavLink to="/account" className={({ isActive }) => (isActive ? "active-menu-item" : "")}>
-                    <Avatar src={userData.currentUser.avatar} />
-                    <span>
-                      {userData.currentUser.firstName} {userData.currentUser.lastName}
-                    </span>
-                  </NavLink>
-                </MenuItem>
-
+              <MenuItem 
+                className="user-menu-item"
+                component={<NavLink to="/account" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
+              >
+                <div className="user-profile">
+                  <Avatar 
+                    className="sidebar-avatar" 
+                    src={userData.currentUser.avatar} 
+                    alt={`${userData.currentUser.firstName} ${userData.currentUser.lastName}`}
+                  />
+                  <span className="user-name">
+                    {userData.currentUser.firstName} {userData.currentUser.lastName}
+                  </span>
+                </div>
+              </MenuItem>
             )}
-            <MenuItem component="div">
-              <NavLink to="/home" className={({ isActive }) => (isActive ? "active-menu-item" : "")}>
-                <FaHubspot /> HubSpot
-              </NavLink>
+
+            <MenuItem 
+              icon={<FaHubspot />} 
+              component={<NavLink to="/home" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
+            >
+              HubSpot
             </MenuItem>
-            <MenuItem component="div">
-              <NavLink to="/media-library" className={({ isActive }) => (isActive ? "active-menu-item" : "")}>
-                <FaImages /> Media Library
-              </NavLink>
+            
+            <MenuItem 
+              icon={<FaImages />} 
+              component={<NavLink to="/media-library" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
+            >
+              Media Library
             </MenuItem>
           </Menu>
+          
           <Menu className="sidebar-footer">
-            <MenuItem onClick={handleSignOut}>
-              <FaSignOutAlt /> Sign Out
+            <MenuItem 
+              icon={<FaSignOutAlt />} 
+              onClick={handleSignOut}
+              className="signout-button"
+            >
+              Sign Out
             </MenuItem>
           </Menu>
         </Sidebar>
       </motion.div>
-      <Box style={{ flex: 1, padding: "20px" }}>
-        {/* Main content goes here */}
-      </Box>
     </Box>
   );
 };

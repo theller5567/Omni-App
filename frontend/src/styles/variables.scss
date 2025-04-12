@@ -205,6 +205,7 @@
   --neutral-color: #444444;
   --text-color: var(--color-text-primary);
   --accent-color: var(--color-primary);
+  --accent-color-rgb: 25, 118, 210; // RGB values for #1976d2
   --accent-color-hover: #1565c0; // Darker blue for hover state
   --accent-color2: var(--color-secondary);
   --border-color: var(--color-border);
@@ -238,6 +239,7 @@
   --neutral-color: #b3b2b0;
   --text-color: var(--color-text-primary);
   --accent-color: var(--color-primary);
+  --accent-color-rgb: 144, 202, 249; // RGB values for #90caf9
   --accent-color-hover: #42a5f5; // Lighter blue for hover state in dark mode
   --accent-color2: var(--color-secondary);
   --border-color: var(--color-border);

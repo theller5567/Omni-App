@@ -97,91 +97,117 @@
       display: flex;
       flex-direction: column;
       position: relative;
-      // Remove fixed flex-basis to let grid system handle it
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      }
+      
       .media-type-color {
         position: absolute;
         top: 0.5rem;
         left: 0.5rem;
-        width: 10px;
-        height: 10px;
+        width: 8px;
+        height: 8px;
         display: block;
         border-radius: 50%;
+        z-index: 2;
       }
       
       // Status indicator for deprecated/archived media types
       .media-type-status {
         position: absolute;
-        top: 0;
-        right: 0;
-        padding: 5px;
-        z-index: 1;
+        top: 8px;
+        right: 8px;
+        z-index: 2;
+        
+        .MuiChip-root {
+          height: 20px;
+          font-size: 0.65rem;
+        }
       }
       
       // Styling for deprecated media types
       &.media-type-card--deprecated {
-        opacity: 0.7;
-        border: 1px solid orange;
+        opacity: 0.85;
+        border: 1px solid var(--color-warning);
         
         .media-type-title {
           position: relative;
           
           &::after {
             content: "(Deprecated)";
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             opacity: 0.8;
             margin-left: 6px;
             font-weight: normal;
+            color: var(--color-warning);
+            vertical-align: middle;
           }
         }
       }
       
       // Styling for archived media types
       &.media-type-card--archived {
-        opacity: 0.5;
-        border: 1px solid #f44336;
-        background-color: rgba(244, 67, 54, 0.08);
+        opacity: 0.7;
+        border: 1px solid var(--color-error);
         
         .media-type-title {
           position: relative;
           
           &::after {
             content: "(Archived)";
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             opacity: 0.8;
             margin-left: 6px;
             font-weight: normal;
+            color: var(--color-error);
+            vertical-align: middle;
           }
         }
       }
       
       .media-type-title {
-        margin-bottom: 1rem;
+        margin-bottom: 0.75rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      // Default tags section styling
+      .default-tags-section {
+        font-size: 0.8rem;
+        
+        .MuiChip-root {
+          margin: 2px;
+          background-color: rgba(var(--accent-color-rgb), 0.08);
+        }
       }
       
       .card-actions {
         margin-top: auto;
-        display: flex;
-        justify-content: space-between;
+        
+        .MuiButton-root {
+          min-width: 0;
+          
+          &:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+          }
+        }
       }
       
       .field-name {
-        font-weight: bold;
-        
-        .field-type {
-          font-size: 0.8rem;
-          opacity: 0.7;
-          font-weight: normal;
-        }
-        
-        .required-badge {
-          color: red;
-          margin-left: 2px;
-        }
+        font-weight: 500;
       }
       
-      .field-options {
-        font-style: italic;
-        color: rgba(255, 255, 255, 0.7);
+      .required-badge {
+        color: var(--color-error);
+        margin-left: 2px;
+      }
+      
+      .fields-preview {
+        box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
       }
     }
     
@@ -213,6 +239,13 @@
       
       .card-actions {
         border-top-color: rgba(255, 255, 255, 0.1);
+      }
+
+      .default-tags-section {
+        .MuiChip-root {
+          border-color: var(--primary-color);
+          color: var(--primary-color);
+        }
       }
     }
   }

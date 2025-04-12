@@ -48,9 +48,19 @@ const initialState: MediaTypeState = {
   affectedMediaCount: 0
 };
 
+// Add a type interface for response data
+interface CountResponse {
+  count: number;
+}
+
+interface MigrationResult {
+  source: MediaType;
+  target: MediaType;
+}
+
 export const initializeMediaTypes = createAsyncThunk(
   'mediaTypes/initialize',
-  async (_, { dispatch }) => {
+  async () => {
     try {
       console.log('Fetching media types from backend');
       const response = await axios.get<MediaType[]>(`${env.BASE_URL}/api/media-types`);
@@ -61,7 +71,7 @@ export const initializeMediaTypes = createAsyncThunk(
         response.data.map(async (mediaType) => {
           try {
             // Fetch the usage count for this media type
-            const countResponse = await axios.get(`${env.BASE_URL}/api/media-types/${mediaType._id}/usage`);
+            const countResponse = await axios.get<CountResponse>(`${env.BASE_URL}/api/media-types/${mediaType._id}/usage`);
             return {
               ...mediaType,
               usageCount: countResponse.data.count || 0
@@ -113,7 +123,7 @@ export const checkMediaTypeUsage = createAsyncThunk(
   'mediaTypes/checkUsage',
   async (id: string, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${env.BASE_URL}/api/media-types/${id}/usage`);
+      const response = await axios.get<CountResponse>(`${env.BASE_URL}/api/media-types/${id}/usage`);
       return { id, count: response.data.count };
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to check media type usage');
@@ -125,7 +135,7 @@ export const migrateMediaFiles = createAsyncThunk(
   'mediaTypes/migrate',
   async ({ sourceId, targetId }: { sourceId: string, targetId: string }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${env.BASE_URL}/api/media-types/migrate`, {
+      const response = await axios.post<MigrationResult>(`${env.BASE_URL}/api/media-types/migrate`, {
         sourceId,
         targetId
       });
