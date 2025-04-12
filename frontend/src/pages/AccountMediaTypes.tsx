@@ -115,8 +115,14 @@ const AccountMediaTypes: React.FC = () => {
       setCheckingMediaTypes(false);
     };
     
-    checkMediaTypesWithDefaultTags();
-  }, [mediaTypes]);
+    // Only run this check when the component mounts and when mediaTypes actually changes
+    // in a meaningful way (like after a create/update/delete operation)
+    const timeoutId = setTimeout(() => {
+      checkMediaTypesWithDefaultTags();
+    }, 500); // Debounce by 500ms
+    
+    return () => clearTimeout(timeoutId);
+  }, [mediaTypes.length]); // Only depend on the length, not the entire array
 
   const handleEditClick = (mediaTypeId: string) => {
     setEditMediaTypeId(mediaTypeId);

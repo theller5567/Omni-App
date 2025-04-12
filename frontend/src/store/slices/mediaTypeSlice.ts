@@ -66,28 +66,12 @@ export const initializeMediaTypes = createAsyncThunk(
       const response = await axios.get<MediaType[]>(`${env.BASE_URL}/api/media-types`);
       console.log('Media types received:', response.data);
       
-      // For each media type, fetch its usage count
-      const mediaTypesWithCounts = await Promise.all(
-        response.data.map(async (mediaType) => {
-          try {
-            // Fetch the usage count for this media type
-            const countResponse = await axios.get<CountResponse>(`${env.BASE_URL}/api/media-types/${mediaType._id}/usage`);
-            return {
-              ...mediaType,
-              usageCount: countResponse.data.count || 0
-            };
-          } catch (error) {
-            console.error(`Failed to fetch usage count for ${mediaType.name}:`, error);
-            return {
-              ...mediaType,
-              usageCount: 0
-            };
-          }
-        })
-      );
-      
-      console.log('Media types with counts:', mediaTypesWithCounts);
-      return mediaTypesWithCounts;
+      // Return media types as is, we don't need to fetch usage counts individually
+      // as they should already be included in the response
+      return response.data.map(mediaType => ({
+        ...mediaType,
+        usageCount: mediaType.usageCount || 0
+      }));
     } catch (error: any) {
       console.error('Error fetching media types:', error);
       throw error;

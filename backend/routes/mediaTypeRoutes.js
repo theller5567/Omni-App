@@ -11,7 +11,8 @@ import {
   updateMediaType,
   applyDefaultTagsToExistingFiles,
   debugMediaType,
-  setProductImageDefaultTags
+  setProductImageDefaultTags,
+  getFilesNeedingTags
 } from '../controllers/mediaTypeController.js';
 
 const router = express.Router();
@@ -47,5 +48,8 @@ router.post('/migrate', migrateMediaFiles);
 
 // Apply default tags to existing media files
 router.post('/:id/apply-default-tags', applyDefaultTagsToExistingFiles);
+
+// Check files needing default tags
+router.get('/:id/files-needing-tags', getFilesNeedingTags);
 
 export default router;

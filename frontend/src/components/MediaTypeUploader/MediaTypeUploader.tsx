@@ -100,6 +100,22 @@ interface MediaTypeUploaderProps {
 }
 
 const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, editMediaTypeId }) => {
+  // Return early if not open to avoid unnecessary processing
+  if (!open) {
+    return (
+      <Dialog
+        open={false}
+        onClose={onClose}
+        aria-labelledby="media-type-dialog-title"
+        maxWidth="md"
+        fullWidth
+      >
+        {/* Empty dialog when closed */}
+      </Dialog>
+    );
+  }
+  
+  // Rest of the component code that only runs when the dialog is open
   const dispatch = useDispatch<AppDispatch>();
   const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
   // Get the current user role
@@ -161,14 +177,18 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
     const colors = mediaTypes
       .filter(type => mediaTypeConfig._id !== type._id) // Exclude the current media type
       .map(type => {
-        console.log('Processing media type:', type.name, 'catColor:', type.catColor);
+        if (open) {
+          console.log('Processing media type:', type.name, 'catColor:', type.catColor);
+        }
         return type.catColor;
       })
       .filter(color => color !== undefined && color !== null) as string[];
     
-    console.log('Used colors:', colors);
+    if (open) {
+      console.log('Used colors:', colors);
+    }
     return colors;
-  }, [mediaTypes, mediaTypeConfig._id]);
+  }, [mediaTypes, mediaTypeConfig._id, open]);
 
   const handleNext = () => {
     // Only validate name and file types in step 1
@@ -403,11 +423,10 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
   );
 
   // Debug mediaTypeConfig before rendering
-  console.log('MediaTypeUploader - Current mediaTypeConfig:', {
-    ...mediaTypeConfig,
-    catColor: mediaTypeConfig.catColor
-  });
-  console.log('MediaTypeUploader - Current step:', activeStep);
+  if (open) {
+    console.log('MediaTypeUploader - Current mediaTypeConfig:', mediaTypeConfig);
+    console.log('MediaTypeUploader - Current step:', activeStep);
+  }
 
   // Update dialog title to reflect create/edit mode
   const dialogTitle = isEditMode ? 'Edit Media Type' : 'Create New Media Type';
@@ -563,4 +582,5 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
   );
 };
 
-export default MediaTypeUploader; 
+// Export the memoized component to prevent unnecessary re-renders
+export default React.memo(MediaTypeUploader); 

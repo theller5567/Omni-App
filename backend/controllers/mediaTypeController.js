@@ -607,3 +607,63 @@ export const setProductImageDefaultTags = async (req, res) => {
     res.status(500).json({ message: 'Error updating Product Image media type', error });
   }
 };
+
+// Check files needing default tags
+export const getFilesNeedingTags = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log('⭐ Checking files needing default tags for media type ID:', id);
+    
+    // Find the media type to get its default tags
+    const mediaType = await MediaType.findById(id);
+    
+    if (!mediaType) {
+      console.log('❌ Media type not found with ID:', id);
+      return res.status(404).json({ message: 'Media type not found' });
+    }
+    
+    console.log('📋 Media type found:', mediaType.name, 'with ID:', mediaType._id);
+    console.log('🏷️ Default tags:', mediaType.defaultTags);
+    
+    if (!mediaType.defaultTags || mediaType.defaultTags.length === 0) {
+      console.log('⚠️ No default tags defined for this media type');
+      return res.status(200).json({ count: 0 });
+    }
+    
+    // Find all media files with this media type
+    const mediaFiles = await Media.find({
+      $or: [
+        { mediaType: id },
+        { mediaType: mediaType.name }
+      ]
+    });
+    
+    console.log('🔍 Found', mediaFiles.length, 'media files with media type:', mediaType.name);
+    
+    if (mediaFiles.length === 0) {
+      return res.status(200).json({ count: 0 });
+    }
+    
+    // Count files that need tags (missing one or more default tags)
+    let filesNeedingTags = 0;
+    
+    for (const file of mediaFiles) {
+      const existingTags = file.metadata?.tags || [];
+      
+      // Check if any default tag is missing
+      const needsUpdate = mediaType.defaultTags.some(tag => !existingTags.includes(tag));
+      
+      if (needsUpdate) {
+        filesNeedingTags++;
+      }
+    }
+    
+    console.log('🔍 Found', filesNeedingTags, 'files needing default tags for media type:', mediaType.name);
+    
+    return res.status(200).json({ count: filesNeedingTags });
+  } catch (error) {
+    console.error('❌ Error checking files needing tags:', error);
+    res.status(500).json({ message: 'Error checking files needing tags', error });
+  }
+};
