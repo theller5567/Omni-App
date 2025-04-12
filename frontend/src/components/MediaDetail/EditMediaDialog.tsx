@@ -20,7 +20,11 @@ import {
   Box,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  useMediaQuery,
+  Theme,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -63,6 +67,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   // Get user role from Redux
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
   const isSuperAdmin = userRole === 'superAdmin';
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
 
   const [newTag, setNewTag] = useState('');
   const { control, handleSubmit, watch, setValue } = useForm<FormValues>({
@@ -114,6 +119,13 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
     }
   }, [mediaType, setValue, watch]);
 
+  // Reset the tag input field when the dialog opens or closes
+  useEffect(() => {
+    // Reset any tag-related state when dialog visibility changes
+    setNewTag('');
+    setUnsavedTag(null);
+  }, [open]);
+
   const handleAddTag = (event: React.KeyboardEvent) => {
     // Check if user is a superAdmin for default tags
     const isDefaultTag = mediaType.defaultTags?.includes(newTag.trim());
@@ -148,6 +160,9 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
     setValue('tags', currentTags.filter(tag => tag !== tagToDelete));
   };
 
+  // Replace tagWarningOpen with a state to track unsaved tag warning
+  const [unsavedTag, setUnsavedTag] = useState<string | null>(null);
+
   // Before submission, ensure all default tags are included
   const onSubmit = async (data: FormValues) => {
     console.log('EditMediaDialog - Form submission data:', {
@@ -155,6 +170,53 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
       originalMediaFile: mediaFile
     });
 
+    // Check if there's an unpressed tag in the input
+    if (newTag.trim()) {
+      // Set the unsaved tag to show the inline notification
+      setUnsavedTag(newTag.trim());
+      return; // Stop submission flow until user decides
+    }
+    
+    // If no unsaved tag, proceed with normal submission
+    handleFormSubmission(data);
+  };
+
+  // Add these handlers for the inline alert buttons
+  const handleAddUnsavedTag = () => {
+    if (unsavedTag) {
+      const currentTags = watch('tags');
+      if (!currentTags.includes(unsavedTag)) {
+        // Add the tag
+        const updatedTags = [...currentTags, unsavedTag];
+        setValue('tags', updatedTags);
+        
+        // Proceed with form submission after adding tag
+        const currentData = watch();
+        currentData.tags = updatedTags;
+        handleFormSubmission(currentData);
+      }
+    }
+    setNewTag('');
+    setUnsavedTag(null);
+  };
+
+  const handleIgnoreUnsavedTag = () => {
+    // Skip adding tag and continue with form submission
+    setUnsavedTag(null);
+    setNewTag(''); // Clear the tag input
+    handleFormSubmission(watch());
+  };
+
+  // Create a handler for when the dialog is closed
+  const handleDialogClose = () => {
+    // Clear any unsaved tag input when closing the dialog
+    setNewTag('');
+    setUnsavedTag(null);
+    onClose();
+  };
+
+  // Extract the submission logic to a separate function to avoid duplication
+  const handleFormSubmission = async (data: FormValues) => {
     // Ensure all default tags are included
     if (mediaType && mediaType.defaultTags) {
       const finalTags = [...data.tags];
@@ -175,20 +237,59 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
       }
     }
 
-    // Format the data before sending
-    const formattedData = {
-      ...data,
-      customFields: {
-        ...data.customFields,
-        'Webinar Title': data.customFields?.['Webinar Title'] || '',
-        'Webinar Summary': data.customFields?.['Webinar Summary'] || '',
-        'Webinar CTA': data.customFields?.['Webinar CTA'] || ''
-      }
-    };
+    // Check if any values have actually changed before saving
+    const hasChanged = 
+      data.title !== mediaFile.title ||
+      data.fileName !== mediaFile.fileName ||
+      data.altText !== mediaFile.altText ||
+      data.description !== mediaFile.description ||
+      data.visibility !== mediaFile.visibility ||
+      !compareArrays(data.tags, mediaFile.tags || []) ||
+      !compareObjects(data.customFields, mediaFile.customFields || {});
+    
+    // Only proceed with save if changes were made
+    if (hasChanged) {
+      // Format the data before sending
+      const formattedData = {
+        ...data,
+        customFields: {
+          ...data.customFields,
+          'Webinar Title': data.customFields?.['Webinar Title'] || '',
+          'Webinar Summary': data.customFields?.['Webinar Summary'] || '',
+          'Webinar CTA': data.customFields?.['Webinar CTA'] || ''
+        }
+      };
 
-    console.log('EditMediaDialog - Formatted submission data:', formattedData);
-    await onSave(formattedData);
-    onClose();
+      console.log('EditMediaDialog - Formatted submission data:', formattedData);
+      await onSave(formattedData);
+    } else {
+      console.log('No changes detected. Skipping save operation.');
+    }
+    
+    // Use handleDialogClose instead of directly calling onClose to ensure we clear the tag input
+    handleDialogClose();
+  };
+
+  // Helper function to compare arrays (for tags)
+  const compareArrays = (arr1: any[], arr2: any[]): boolean => {
+    if (arr1.length !== arr2.length) return false;
+    const sorted1 = [...arr1].sort();
+    const sorted2 = [...arr2].sort();
+    return sorted1.every((val, i) => val === sorted2[i]);
+  };
+
+  // Helper function to compare objects (for customFields)
+  const compareObjects = (obj1: Record<string, any>, obj2: Record<string, any>): boolean => {
+    const keys1 = Object.keys(obj1).filter(key => obj1[key] !== undefined && obj1[key] !== '');
+    const keys2 = Object.keys(obj2).filter(key => obj2[key] !== undefined && obj2[key] !== '');
+    
+    if (keys1.length !== keys2.length) return false;
+    
+    return keys1.every(key => {
+      // Skip special fields that are managed differently
+      if (['thumbnailUrl'].includes(key)) return true;
+      return obj1[key] === obj2[key];
+    });
   };
 
   const renderCustomField = (field: MediaType['fields'][0], value: any, onChange: (value: any) => void) => {
@@ -311,7 +412,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
               label="Add Tags"
               value={newTag}
               onChange={(e) => setNewTag(e.target.value)}
-              onKeyPress={handleAddTag}
+              onKeyDown={handleAddTag}
               fullWidth
               size="small"
               helperText="Press Enter to add a tag"
@@ -346,28 +447,59 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleDialogClose}
       className="edit-media-dialog"
       maxWidth="md"
       fullWidth
+      fullScreen={isMobile}
     >
       <DialogTitle className="dialog-title">
         Edit Media Details
         <IconButton
-          onClick={onClose}
+          onClick={handleDialogClose}
           sx={{ position: 'absolute', right: 8, top: 8 }}
+          size={isMobile ? "small" : "medium"}
         >
-          <CloseIcon />
+          <CloseIcon fontSize={isMobile ? "small" : "medium"} />
         </IconButton>
       </DialogTitle>
       
       <DialogContent className="dialog-content">
         <form onSubmit={handleSubmit(onSubmit)} className="edit-form">
+          {/* Unsaved tag warning alert */}
+          {unsavedTag && (
+            <Alert 
+              severity="warning" 
+              sx={{ mb: 2 }}
+              action={
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Button 
+                    color="primary" 
+                    size="small" 
+                    onClick={handleAddUnsavedTag}
+                    sx={{ mr: 1 }}
+                  >
+                    Add Tag
+                  </Button>
+                  <Button 
+                    color="inherit" 
+                    size="small" 
+                    onClick={handleIgnoreUnsavedTag}
+                  >
+                    Ignore
+                  </Button>
+                </Box>
+              }
+            >
+              You have an unsaved tag: <strong>"{unsavedTag}"</strong>
+            </Alert>
+          )}
+
           {/* Basic Information Section */}
-          <Box className="form-section" sx={{ marginTop: 4, padding: 2, marginBottom: 0 }}>
-            <Typography variant="h6" gutterBottom>Basic Information</Typography>
-            <Grid container spacing={4}>
-              <Grid item xs={12} md={6}>
+          <Box className="form-section" sx={{ marginTop: isMobile ? 2 : 4, padding: 2, marginBottom: 0 }}>
+            <Typography variant={isMobile ? "subtitle1" : "h6"} gutterBottom>Basic Information</Typography>
+            <Grid container spacing={isMobile ? 2 : 4}>
+              <Grid item xs={12} sm={6}>
                 <Controller
                   name="title"
                   control={control}
@@ -381,7 +513,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                   )}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} sm={6}>
                 <Controller
                   name="fileName"
                   control={control}
@@ -395,7 +527,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                   )}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} sm={6}>
                 <Controller
                   name="altText"
                   control={control}
@@ -409,7 +541,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                   )}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} sm={6}>
                 <Controller
                   name="visibility"
                   control={control}
@@ -434,7 +566,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                       label="Description"
                       fullWidth
                       multiline
-                      rows={2}
+                      rows={isMobile ? 3 : 2}
                       size="small"
                     />
                   )}
@@ -445,11 +577,11 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
 
           {/* Custom Fields Section */}
           {mediaType.fields.length > 0 && (
-            <Box className="form-section" sx={{ marginTop: 4, padding: 2 }}>
-              <Typography variant="h6" gutterBottom>{mediaType.name} Fields</Typography>
-              <Grid container spacing={4}>
+            <Box className="form-section" sx={{ marginTop: isMobile ? 2 : 4, padding: 2 }}>
+              <Typography variant={isMobile ? "subtitle1" : "h6"} gutterBottom>{mediaType.name} Fields</Typography>
+              <Grid container spacing={isMobile ? 2 : 4}>
                 {mediaType.fields.map((field) => (
-                  <Grid item xs={12} md={6} key={field.name}>
+                  <Grid item xs={12} sm={6} key={field.name}>
                     <Controller
                       name={`customFields.${field.name}`}
                       control={control}
@@ -462,12 +594,51 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
             </Box>
           )}
 
-          {renderTagsSection()}
+          <Box className="form-section" sx={{ marginTop: isMobile ? 2 : 4, padding: 2 }}>
+            <Typography variant={isMobile ? "subtitle1" : "h6"} gutterBottom>Tags</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: isMobile ? 1 : 2, display: 'block', fontSize: isMobile ? '0.7rem' : '0.75rem' }}>
+              Default tags from the media type cannot be removed here. They can only be modified by superAdmins in the Media Types settings.
+            </Typography>
+            <Grid container spacing={isMobile ? 2 : 4}>
+              <Grid item xs={12}>
+                <TextField
+                  label="Add Tags"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyDown={handleAddTag}
+                  fullWidth
+                  size="small"
+                  helperText="Press Enter to add a tag"
+                />
+                <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {watch('tags').map((tag) => {
+                    const isDefaultTag = mediaType.defaultTags?.includes(tag);
+                    return (
+                      <Chip
+                        key={tag}
+                        label={tag}
+                        onDelete={isDefaultTag ? undefined : () => handleDeleteTag(tag)}
+                        size="small"
+                        color={isDefaultTag ? "primary" : "default"}
+                        sx={isDefaultTag ? {
+                          borderWidth: isMobile ? '1px' : '2px',
+                          borderStyle: 'solid',
+                          borderColor: 'var(--secondary-color)',
+                          position: 'relative',
+                        } : {}}
+                        title={isDefaultTag ? "This is a default tag from the media type and cannot be removed" : "Click 'x' to remove this tag"}
+                      />
+                    );
+                  })}
+                </Box>
+              </Grid>
+            </Grid>
+          </Box>
 
           {/* Video Thumbnail Section */}
           {showVideoThumbnailSelector && mediaFile.url && mediaFile.id && (
             <>
-              <Box className="form-section" sx={{ marginTop: 2 }}>
+              <Box className="form-section" sx={{ marginTop: isMobile ? 1 : 2 }}>
                 <Accordion 
                   expanded={expandedAccordion === 'videoThumbnail'} 
                   onChange={handleAccordionChange('videoThumbnail')}
@@ -480,7 +651,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                   }}
                 >
                   <AccordionSummary
-                    expandIcon={<ExpandMoreIcon />}
+                    expandIcon={<ExpandMoreIcon fontSize={isMobile ? "small" : "medium"} />}
                     aria-controls="video-thumbnail-content"
                     id="video-thumbnail-header"
                     sx={{ 
@@ -492,7 +663,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
+                      <Typography variant={isMobile ? "body1" : "subtitle1"} sx={{ fontWeight: 'medium', fontSize: isMobile ? '0.85rem' : 'inherit' }}>
                         Edit Video Thumbnail
                       </Typography>
                       {mediaFile.customFields?.thumbnailUrl && (
@@ -503,14 +674,14 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                           gap: 1,
                           opacity: 0.7,
                           '& img': { 
-                            width: 36,
-                            height: 20,
+                            width: isMobile ? 30 : 36,
+                            height: isMobile ? 16 : 20,
                             objectFit: 'cover',
                             borderRadius: 0.5,
                             border: '1px solid var(--border-color)'
                           }
                         }}>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: isMobile ? '0.65rem' : '0.75rem' }}>
                             Custom thumbnail set
                           </Typography>
                           <img 
@@ -521,7 +692,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                       )}
                     </Box>
                   </AccordionSummary>
-                  <AccordionDetails sx={{ padding: 2, paddingLeft: 3, paddingRight: 3, mt: 2 }}>
+                  <AccordionDetails sx={{ padding: isMobile ? 1 : 2, paddingLeft: isMobile ? 2 : 3, paddingRight: isMobile ? 2 : 3, mt: isMobile ? 1 : 2 }}>
                     <VideoThumbnailSelector
                       videoUrl={mediaFile.url}
                       mediaId={mediaFile.id}
@@ -539,11 +710,12 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
       </DialogContent>
 
       <DialogActions className="dialog-actions">
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={handleDialogClose} size={isMobile ? "small" : "medium"}>Cancel</Button>
         <Button
           onClick={handleSubmit(onSubmit)}
           variant="contained"
           color="primary"
+          size={isMobile ? "small" : "medium"}
         >
           Save Changes
         </Button>

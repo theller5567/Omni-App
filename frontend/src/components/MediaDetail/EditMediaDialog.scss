@@ -1,9 +1,24 @@
 .edit-media-dialog {
+  // Mobile mixin
+  @mixin mobile {
+    @media (max-width: 768px) {
+      @content;
+    }
+  }
+
   .MuiDialog-paper {
     min-width: 600px;
     max-width: 1200px;
     max-height: 90vh;
     background-color: var(--background-color);
+    
+    @include mobile {
+      min-width: unset;
+      width: 100%;
+      max-height: 95vh;
+      margin: 0.5rem;
+      border-radius: 8px;
+    }
   }
 
   .MuiDialogTitle-root {
@@ -12,19 +27,38 @@
     margin-bottom: 0;
     border-bottom: 1px solid var(--border-color);
     
+    @include mobile {
+      padding: 12px 16px;
+    }
+    
     h2 {
       font-size: 1.25rem;
       font-weight: 500;
+      
+      @include mobile {
+        font-size: 1.1rem;
+      }
     }
   }
 
   .dialog-content {
     padding: 1rem;
     overflow-y: auto;
+    
+    @include mobile {
+      padding: 0.75rem 0.5rem;
+    }
+    
     .edit-form {
       .form-section {
         margin-bottom: 0.5rem;
         margin-top: 0.5rem;
+        
+        @include mobile {
+          margin-bottom: 0.25rem;
+          margin-top: 0.25rem;
+          padding: 1rem !important;
+        }
 
         &:last-child {
           margin-bottom: 0;
@@ -34,6 +68,11 @@
           font-size: 1rem;
           font-weight: 500;
           color: var(--accent-color);
+          
+          @include mobile {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem !important;
+          }
         }
         
         // Video thumbnail accordion styling
@@ -45,21 +84,38 @@
             min-height: 48px;
             padding: 0 16px;
             
+            @include mobile {
+              min-height: 40px;
+              padding: 0 12px;
+            }
+            
             &:hover {
               background-color: var(--input-background-hover);
             }
             
             .MuiAccordionSummary-content {
               margin: 12px 0;
+              
+              @include mobile {
+                margin: 10px 0;
+              }
             }
             
             .MuiTypography-subtitle1 {
               color: var(--color-primary);
+              
+              @include mobile {
+                font-size: 0.85rem;
+              }
             }
             
             .MuiSvgIcon-root {
               color: var(--color-primary);
               transition: transform 0.3s ease;
+              
+              @include mobile {
+                font-size: 1.25rem;
+              }
             }
           }
           
@@ -76,6 +132,11 @@
           .MuiAccordionDetails-root {
             padding-top: 24px;
             border-top: 1px solid var(--border-color-light);
+            
+            @include mobile {
+              padding-top: 16px;
+              padding: 16px 8px !important;
+            }
           }
         }
       }
@@ -83,6 +144,10 @@
       .MuiGrid-container {
         margin-top: -8px;
         margin-bottom: -8px;
+        
+        @include mobile {
+          row-gap: 16px !important;
+        }
       }
 
       .MuiFormControl-root {
@@ -90,6 +155,10 @@
 
         .MuiInputBase-root {
           background-color: var(--input-background);
+          
+          @include mobile {
+            font-size: 0.85rem;
+          }
           
           &:hover {
             background-color: var(--input-background-hover);
@@ -102,10 +171,19 @@
 
         .MuiInputLabel-root {
           font-size: 0.875rem;
+          
+          @include mobile {
+            font-size: 0.8rem;
+          }
         }
 
         .MuiInputBase-input {
           font-size: 0.875rem;
+          
+          @include mobile {
+            font-size: 0.85rem;
+            padding: 10px 14px;
+          }
         }
       }
 
@@ -114,11 +192,20 @@
         color: var(--text-color);
         font-size: 0.75rem;
         height: 24px;
+        
+        @include mobile {
+          font-size: 0.7rem;
+          height: 22px;
+        }
 
         .MuiChip-deleteIcon {
           font-size: 16px;
           color: var(--text-color);
           opacity: 0.7;
+          
+          @include mobile {
+            font-size: 14px;
+          }
 
           &:hover {
             opacity: 1;
@@ -136,6 +223,10 @@
         
         .MuiFormControlLabel-label {
           font-size: 0.875rem;
+          
+          @include mobile {
+            font-size: 0.8rem;
+          }
         }
       }
     }
@@ -147,16 +238,31 @@
     color: var(--text-color);
     font-weight: 700;
     font-size: 1.25rem;
+    
+    @include mobile {
+      padding: 12px 16px;
+      font-size: 1.1rem;
+    }
   }
 
   .dialog-actions {
     padding: 16px 24px;
     border-top: 1px solid var(--border-color);
+    
+    @include mobile {
+      padding: 12px 16px;
+    }
 
     .MuiButton-root {
       min-width: 100px;
       font-size: 0.875rem;
       transition: all 0.2s ease-in-out;
+      
+      @include mobile {
+        min-width: 80px;
+        font-size: 0.8rem;
+        padding: 6px 12px;
+      }
       
       &.MuiButton-contained {
         background-color: var(--accent-color);

@@ -10,6 +10,17 @@
   box-shadow: 0 2px 6px var(--search-input-shadow);
   color: var(--header-text-color);
   
+  /* Responsive styles for mobile */
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+    
+    > div {
+      width: 100%;
+    }
+  }
+  
   .MuiToggleButtonGroup-root {
     background-color: rgba(0, 0, 0, 0.03);
     border-radius: 6px;
@@ -36,6 +47,20 @@
   
   .MuiButtonGroup-root {
     margin-left: 1rem;
+    
+    @media (max-width: 768px) {
+      margin-left: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: flex-start;
+      
+      .MuiButton-root {
+        flex: 1 1 auto;
+        min-width: auto;
+        margin: 0 !important;
+      }
+    }
     
     .MuiButton-root {
       text-transform: none;

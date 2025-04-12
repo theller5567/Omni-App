@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Box, Typography, Grid, Toolbar, IconButton, Tooltip } from '@mui/material';
+import React, { useState, useRef, useMemo } from 'react';
+import { Box, Typography, Grid, Toolbar, IconButton, Tooltip, useMediaQuery, Theme } from '@mui/material';
 import { motion } from 'framer-motion';
 import './mediaLibrary.scss';
 import { useNavigate } from 'react-router-dom';
@@ -47,10 +47,11 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
   const [selected, setSelected] = useState<GridRowSelectionModel>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [isToolbarDelete, setIsToolbarDelete] = useState(false);
-  const prevDataRef = React.useRef<string>('');
+  const prevDataRef = useRef<string>('');
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   
   // Process rows only when mediaFilesData or filter changes
-  const rows = React.useMemo(() => {
+  const rows = useMemo(() => {
     const newRows = mediaFilesData
       .filter(file => selectedMediaType === 'All' || file.mediaType === selectedMediaType)
       .map((file) => ({
@@ -163,7 +164,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
       )}
       {numSelected > 0 ? (
         <Tooltip title="Delete">
-          <IconButton onClick={handleDeleteSelected}>
+          <IconButton onClick={handleDeleteSelected} size={isMobile ? "small" : "medium"}>
             <FaTrash />
           </IconButton>
         </Tooltip>
@@ -171,16 +172,23 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     </Toolbar>
   );
 
+  // Motion animation adjusted for mobile
+  const motionProps = {
+    initial: { opacity: 0, x: isMobile ? -100 : -350 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: isMobile ? -100 : -350 },
+    transition: { duration: isMobile ? 0.3 : 0.5 }
+  };
+
   return (
     <motion.div
       id="media-library"
-      initial={{ opacity: 0, x: -350 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -350 }}
-      transition={{ duration: 0.5 }}
+      {...motionProps}
     >
       <Box className="media-library" sx={{ width: '100%', overflow: 'hidden' }}>
-        <Typography variant="h1" align="left" sx={{ paddingBottom: '2rem' }}>OMNI Media Library</Typography>
+        <Typography variant="h1" align="left" sx={{ paddingBottom: isMobile ? '1rem' : '2rem' }}>
+          OMNI Media Library
+        </Typography>
         <HeaderComponent
           view={viewMode}
           toggleView={toggleView}
@@ -190,17 +198,26 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
           handleMediaTypeChange={handleMediaTypeChange}
           onAddMedia={onAddMedia}
         />
-        <Box sx={{ width: '100%', height: 'calc(100% - 4rem)', overflow: 'hidden' }}>
+        <Box sx={{ 
+          width: '100%', 
+          height: 'calc(100% - 4rem)', 
+          overflow: 'hidden',
+          mt: isMobile ? 1 : 2
+        }}>
           {selected.length > 0 && (
             <EnhancedTableToolbar numSelected={selected.length} />
           )}
           <CustomGrid
             id="media-library-container"
             container
-            spacing={2}
+            spacing={isMobile ? 1 : 2}
             justifyContent="start"
             className={viewMode === 'list' ? 'list-view' : 'grid-view'}
-            sx={{ height: '100%', overflow: 'hidden' }}
+            sx={{ 
+              height: '100%', 
+              overflow: 'hidden', 
+              pb: isMobile ? 6 : 2 // Add padding at bottom for mobile to account for bottom nav
+            }}
           >
             {viewMode === 'list' ? (
               <DataTable 
@@ -217,7 +234,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
           </CustomGrid>
         </Box>
       </Box>
-      <ToastContainer />
+      <ToastContainer position={isMobile ? "bottom-center" : "top-right"} />
       <ConfirmationModal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}

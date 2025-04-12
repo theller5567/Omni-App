@@ -12,6 +12,22 @@
   cursor: pointer;
   border: var(--border-width-thin) solid var(--color-border-light);
   
+  @media (max-width: 768px) {
+    /* On mobile, make cards more compact and easier to tap */
+    box-shadow: var(--shadow-sm);
+    
+    &:hover {
+      transform: none; /* Remove hover effects that don't make sense on mobile */
+    }
+    
+    /* For touch devices, always show info */
+    .media-info {
+      transform: translateY(0) !important;
+      opacity: 1 !important;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.8) 80%, rgba(0, 0, 0, 0.5) 90%);
+    }
+  }
+  
   &:hover {
     transform: translateY(-4px) scale(1.02);
     box-shadow: var(--shadow-lg);
@@ -69,6 +85,10 @@
     transition: all var(--transition-normal) var(--transition-curve-decelerate);
     opacity: 0.9;
     
+    @media (max-width: 768px) {
+      padding: var(--space-2) !important;
+    }
+    
     .media-title {
       white-space: nowrap;
       overflow: hidden;
@@ -78,6 +98,11 @@
       color: white;
       margin-bottom: var(--space-2);
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+      
+      @media (max-width: 768px) {
+        font-size: var(--font-size-sm);
+        margin-bottom: var(--space-1);
+      }
     }
     
     .media-meta {
@@ -95,6 +120,11 @@
         padding: var(--space-1) var(--space-2);
         border-radius: var(--border-radius-sm);
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        
+        @media (max-width: 768px) {
+          font-size: calc(var(--font-size-xs) - 1px);
+          padding: 2px 4px;
+        }
       }
       
       .media-size {
@@ -120,6 +150,13 @@
     text-transform: uppercase;
     z-index: 3;
     opacity: 0.9;
+    
+    @media (max-width: 768px) {
+      font-size: calc(var(--font-size-xs) - 1px);
+      padding: 2px 5px;
+      top: var(--space-1);
+      right: var(--space-1);
+    }
   }
   
   // Media type color indicator
@@ -135,12 +172,24 @@
     border: 2px solid rgba(255, 255, 255, 0.8);
     box-shadow: var(--shadow-md);
     transition: transform var(--transition-fast) var(--transition-curve-default);
+    
+    @media (max-width: 768px) {
+      width: 12px;
+      height: 12px;
+      top: var(--space-1);
+      left: var(--space-1);
+      border-width: 1px;
+    }
   }
 }
 
 .MuiGrid-container {
   margin-top: 0;
   padding: 1rem;
+  
+  @media (max-width: 768px) {
+    padding: 0.5rem;
+  }
 }
 
 
@@ -162,6 +211,13 @@
         background-color: var(--secondary-color);
         background-image: linear-gradient(to bottom right, var(--secondary-color), var(--background-color));
         // box-shadow: 0 0 10px 0 var(--background-color);
+        
+        @media (max-width: 768px) {
+          width: 120px;
+          height: 120px;
+          padding: 5px;
+        }
+        
         .content {
             .img-wrapper {
                 width: 120px;
@@ -170,6 +226,12 @@
                 display: flex;
                 justify-content: center;
                 align-items: center;
+                
+                @media (max-width: 768px) {
+                  width: 100px;
+                  height: 60px;
+                }
+                
                 img {
                     width: 100%;
                     height: 100%;
@@ -183,6 +245,11 @@
               padding: 0.5rem 0;
               font-weight: 400;
               font-size: 0.8rem;
+              
+              @media (max-width: 768px) {
+                font-size: 0.7rem;
+                padding: 0.3rem 0;
+              }
             }
         }
       }

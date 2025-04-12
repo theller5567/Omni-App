@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Box, ToggleButtonGroup, ToggleButton, Button, ButtonGroup } from '@mui/material';
+import { Box, ToggleButtonGroup, ToggleButton, Button, ButtonGroup, useMediaQuery, Theme } from '@mui/material';
 import '../HeaderComponent.scss';
 import SearchInput from '../../SearchInput/SearchInput';
 import { BaseMediaFile } from '../../../interfaces/MediaFile';
@@ -16,6 +16,9 @@ interface HeaderComponentProps {
 }
 
 const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, mediaFilesData, setSearchQuery, selectedMediaType, handleMediaTypeChange, onAddMedia }) => {
+  // Check if we're on mobile
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
+  
   // Generate media type filters dynamically from the available media types
   const availableMediaTypes = useMemo(() => {
     // Start with 'All' option
@@ -38,25 +41,38 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, med
       alignItems="center"
       justifyContent="space-between"
     >
-      <Box display="flex" alignItems="center" gap={2}>
+      <Box display="flex" alignItems={isMobile ? "stretch" : "center"} gap={2} flexDirection={isMobile ? "column" : "row"} width="100%">
         <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
-        <ButtonGroup variant="outlined" aria-label="Media type filters">
+        <ButtonGroup 
+          variant="outlined" 
+          aria-label="Media type filters"
+          orientation={isMobile ? "vertical" : "horizontal"}
+          sx={{ width: isMobile ? '100%' : 'auto' }}
+        >
           {availableMediaTypes.map((type) => (
             <Button
               key={type}
               variant={selectedMediaType === type ? 'contained' : 'outlined'}
               color="primary"
               onClick={() => handleMediaTypeChange(type)}
+              fullWidth={isMobile}
             >
               {type}
             </Button>
           ))}
-          <Button variant="contained" color="secondary" onClick={onAddMedia} startIcon={<FaPlus />}>
-            Add Media
-          </Button>
         </ButtonGroup>
+        <Button 
+          variant="contained" 
+          color="secondary" 
+          onClick={onAddMedia} 
+          startIcon={<FaPlus />}
+          fullWidth={isMobile}
+          sx={{ order: isMobile ? -1 : 0 }}
+        >
+          Add Media
+        </Button>
       </Box>
-      <Box display="flex" alignItems="center">
+      <Box display="flex" alignItems="center" sx={{ mt: isMobile ? 2 : 0 }}>
         <ToggleButtonGroup
           value={view}
           exclusive

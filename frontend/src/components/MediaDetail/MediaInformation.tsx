@@ -5,6 +5,9 @@ import {
   Accordion, 
   AccordionSummary, 
   AccordionDetails,
+  useMediaQuery,
+  Theme,
+  useTheme
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { formatFileSize } from '../../utils/formatFileSize';
@@ -44,6 +47,9 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
   baseFields,
   getMetadataField
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
+  
   // Filter out fields we don't want to display
   const filterFields = (fields: { label: string; value: any }[]) => {
     return fields.filter(field => 
@@ -106,18 +112,26 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
 
   return (
     <div className="media-information">
-      <Typography variant="h4" gutterBottom style={{ color: 'var(--accent-color2)' }}>
+      <Typography 
+        variant={isMobile ? "h5" : "h4"} 
+        gutterBottom 
+        style={{ 
+          color: 'var(--accent-color2)',
+          fontSize: isMobile ? '1.25rem' : '1.5rem',
+          marginBottom: isMobile ? '0.5rem' : '1rem'
+        }}
+      >
         {mediaFile.metadata.fileName || 'Untitled Media'}
       </Typography>
 
       {basicFileInfo.length > 0 && (
         <Accordion defaultExpanded>
           <AccordionSummary
-            expandIcon={<ExpandMoreIcon />}
+            expandIcon={<ExpandMoreIcon fontSize={isMobile ? "small" : "medium"} />}
             aria-controls="basic-info-content"
             id="basic-info-header"
           >
-            <Typography variant="subtitle1">Basic Information</Typography>
+            <Typography variant={isMobile ? "body1" : "subtitle1"}>Basic Information</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Box className="info-grid">
@@ -135,11 +149,11 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
       {standardMetadata.length > 0 && (
         <Accordion defaultExpanded>
           <AccordionSummary
-            expandIcon={<ExpandMoreIcon />}
+            expandIcon={<ExpandMoreIcon fontSize={isMobile ? "small" : "medium"} />}
             aria-controls="content-info-content"
             id="content-info-header"
           >
-            <Typography variant="subtitle1">Content Information</Typography>
+            <Typography variant={isMobile ? "body1" : "subtitle1"}>Content Information</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Box className="info-grid">
@@ -157,11 +171,11 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
       {baseSchemaProperties.length > 0 && (
         <Accordion>
           <AccordionSummary
-            expandIcon={<ExpandMoreIcon />}
+            expandIcon={<ExpandMoreIcon fontSize={isMobile ? "small" : "medium"} />}
             aria-controls="base-schema-content"
             id="base-schema-header"
           >
-            <Typography variant="subtitle1">
+            <Typography variant={isMobile ? "body1" : "subtitle1"}>
               {mediaTypeConfig?.baseType?.replace('Base', '') || 'Media'} Technical Properties
             </Typography>
           </AccordionSummary>
@@ -181,11 +195,11 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
       {customFields.length > 0 && (
         <Accordion>
           <AccordionSummary
-            expandIcon={<ExpandMoreIcon />}
+            expandIcon={<ExpandMoreIcon fontSize={isMobile ? "small" : "medium"} />}
             aria-controls="custom-fields-content"
             id="custom-fields-header"
           >
-            <Typography variant="subtitle1">
+            <Typography variant={isMobile ? "body1" : "subtitle1"}>
               {mediaTypeConfig?.name} Specific Fields
             </Typography>
           </AccordionSummary>

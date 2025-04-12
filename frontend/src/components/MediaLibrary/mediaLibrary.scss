@@ -4,6 +4,9 @@
   width: 100%;
   min-height: 100%;
   
+  @media (max-width: 768px) {
+    overflow-x: hidden;
+  }
 }
 .media-library {
   width: 100%;
@@ -12,10 +15,19 @@
   margin: 0;
   box-sizing: border-box;
   overflow: hidden;
+  
+  @media (max-width: 768px) {
+    padding: 0.5rem;
+  }
+  
   .toolbar {
     padding: 0.5rem 1rem;
     margin:0;
     max-width: calc(100% - 16px);
+    
+    @media (max-width: 768px) {
+      padding: 0.5rem;
+    }
   }
     h6 {
         margin-bottom: 2rem;
@@ -38,6 +50,13 @@
         color: var(--accent-color);
         text-decoration: none;
     }
+    
+    h1 {
+      @media (max-width: 768px) {
+        font-size: 1.75rem;
+        padding-bottom: 1rem !important;
+      }
+    }
 }
 
 label {
@@ -51,9 +70,7 @@ label {
     background-color: var(--background-color);
     color: var(--text-color);
   }
-
 }
-
 
 @media (max-width: 768px) {
   .media-library {
@@ -61,11 +78,29 @@ label {
       flex-direction: column;
     }
   }
+  
+  // Improve mobile touch targets
+  .MuiButton-root {
+    min-height: 44px;
+  }
+  
+  // Ensure tables scroll horizontally on small screens
+  .MuiDataGrid-root {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: auto;
+  }
 }
+
 #media-library-container {
   font-size: 1rem;
   margin-top: 1rem;
   padding-top: 0;
+  
+  @media (max-width: 768px) {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+  }
   
   // Grid view - used for card view
   &.grid-view {
@@ -74,6 +109,12 @@ label {
     gap: 20px !important;
     width: 100%;
     padding: 20px;
+    
+    @media (max-width: 768px) {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
+      gap: 10px !important;
+      padding: 10px;
+    }
     
     @media (min-width: 1200px) {
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
@@ -88,5 +129,9 @@ label {
   &.list-view {
     display: block !important;
     width: 100% !important;
+    
+    @media (max-width: 768px) {
+      overflow-x: auto;
+    }
   }
 }
