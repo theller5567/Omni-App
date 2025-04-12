@@ -3,7 +3,6 @@ import { DataGrid, GridColDef, GridToolbar, GridRowSelectionModel } from '@mui/x
 import { Link } from 'react-router-dom';
 import { Button, Box } from '@mui/material';
 import { FaEdit, FaTrash } from 'react-icons/fa';
-import { FaFileVideo, FaFileAudio, FaFilePdf, FaFileWord, FaFileExcel, FaFile } from 'react-icons/fa';
 import { formatFileSize } from '../../../utils/formatFileSize';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../store/store';

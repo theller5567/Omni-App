@@ -27,7 +27,7 @@ import { AppDispatch } from './store/store';
 // Create a context for theme toggling
 export const ThemeContext = React.createContext({
   isDarkMode: true,
-  toggleTheme: (newTheme: 'light' | 'dark') => {}
+  toggleTheme: (_: 'light' | 'dark') => {}
 });
 
 const App: React.FC = () => {

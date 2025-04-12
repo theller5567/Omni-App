@@ -1,7 +1,7 @@
 [build]
   base = "."
   publish = "frontend/dist"
-  command = "cd frontend && npm install --legacy-peer-deps && npm install -g typescript && (npx tsc -b || true) && npm run build"
+  command = "./build.sh"
 
 [[redirects]]
   from = "/*"

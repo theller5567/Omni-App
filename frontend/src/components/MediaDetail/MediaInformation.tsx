@@ -6,8 +6,7 @@ import {
   AccordionSummary, 
   AccordionDetails,
   useMediaQuery,
-  Theme,
-  useTheme
+  Theme
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { formatFileSize } from '../../utils/formatFileSize';
@@ -47,7 +46,6 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
   baseFields,
   getMetadataField
 }) => {
-  const theme = useTheme();
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   
   // Filter out fields we don't want to display

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ToggleButtonGroup, ToggleButton, Box, Tooltip, Typography } from '@mui/material';
+import { ToggleButtonGroup, ToggleButton, Box, Typography } from '@mui/material';
 import { FaSun, FaMoon } from 'react-icons/fa';
 import './themeToggle.scss';
 
@@ -10,7 +10,7 @@ interface ThemeToggleProps {
 }
 
 const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, toggleTheme, showLabel = false }) => {
-  const handleChange = (event: React.MouseEvent<HTMLElement>, newTheme: string | null) => {
+  const handleChange = (_: React.MouseEvent<HTMLElement>, newTheme: string | null) => {
     if (newTheme !== null) {
       toggleTheme(newTheme as 'light' | 'dark');
     }

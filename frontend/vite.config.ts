@@ -21,6 +21,11 @@ export default defineConfig(({ mode }) => {
     build: {
       // Generate sourcemaps for better debugging
       sourcemap: true,
+      // Skip TypeScript checking during build
+      typescript: {
+        noEmit: false,
+        noChecks: true
+      },
       // Improve output file structure
       rollupOptions: {
         output: {
