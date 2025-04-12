@@ -39,7 +39,6 @@
   .sidebar-header {
     padding: 1.5rem 1rem;
     text-align: center;
-    margin-bottom: 1rem;
     
     .app-title {
       font-weight: 600;
@@ -60,7 +59,6 @@
       width: 40px;
       height: 40px;
       margin-right: 12px;
-      border: 2px solid var(--accent-color);
     }
     
     .user-name {
@@ -69,8 +67,15 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      display: flex;
+      flex-direction: column;
       color: white;
       max-width: 125px;
+    }
+
+    .username-tag {
+      font-size: 0.8rem;
+      color: var(--accent-color);
     }
     
     .profile-chevron {
@@ -102,14 +107,10 @@
   /* Menu items styling */
   .ps-menu-button {
     transition: all 0.2s ease;
-    padding: 0.75rem 1rem;
-    border-radius: 6px;
-    margin: 0.25rem 0.75rem;
     overflow: visible !important;
     
     &:hover {
       background-color: rgba(255, 255, 255, 0.1) !important;
-      transform: translateX(3px);
     }
     
     .ps-menu-icon {
@@ -148,11 +149,6 @@
     border-radius: 6px;
     overflow: visible !important;
     width: calc(100% - 1.5rem) !important;
-    
-    .ps-menu-button {
-      margin: 0.25rem 0.5rem;
-      padding: 0.5rem 0.75rem;
-    }
   }
   
   /* Sidebar footer positioning */

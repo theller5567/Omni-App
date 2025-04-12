@@ -72,6 +72,7 @@ const CustomSidebar: React.FC = () => {
                     />
                     <span className="user-name">
                       {userData.currentUser.firstName} {userData.currentUser.lastName}
+                      <span className="username-tag">@{userData.currentUser.username}</span>
                     </span>
                     <FaChevronDown className={`profile-chevron ${openSubMenu === "admin" ? 'chevron-open' : ''}`} />
                   </div>
