@@ -46,10 +46,16 @@ export const register = createAsyncThunk(
   async (userData: UserRegistrationData, { rejectWithValue }) => {
     try {
       console.log("Sending registration data:", userData);
-      const response = await axios.post(
-        `${env.BASE_URL}/auth/register`, 
-        userData
-      );
+      
+      // Hardcode the correct URL for Netlify deployment
+      const isNetlify = window.location.hostname.includes('netlify');
+      const registerUrl = isNetlify 
+        ? '/.netlify/functions/api/auth/register'
+        : `${env.BASE_URL}/api/auth/register`;
+      
+      console.log("Using register URL:", registerUrl);
+      
+      const response = await axios.post(registerUrl, userData);
       console.log("Registration response:", response.data);
       return response.data as AuthResponse;
     } catch (error: any) {
@@ -66,8 +72,14 @@ export const login = createAsyncThunk(
   async (credentials: UserLoginCredentials, { rejectWithValue }) => {
     try {
       console.log("Logging in with:", credentials.email);
-      const loginUrl = `${env.BASE_URL}/auth/login`;
-      console.log("Login URL:", loginUrl);
+      
+      // Hardcode the correct URL for Netlify deployment
+      const isNetlify = window.location.hostname.includes('netlify');
+      const loginUrl = isNetlify 
+        ? '/.netlify/functions/api/auth/login'
+        : `${env.BASE_URL}/api/auth/login`;
+      
+      console.log("Using login URL:", loginUrl);
       
       const response = await axios.post(loginUrl, credentials);
       

@@ -94,9 +94,11 @@ const handleLogin = async (req, res) => {
   }
 };
 
-// Support multiple path patterns for login
+// Support ALL possible path patterns for login
 app.post('/auth/login', handleLogin);
 app.post('/api/auth/login', handleLogin);
+app.post('/.netlify/functions/api/auth/login', handleLogin);
+app.post('/api/.netlify/functions/api/auth/login', handleLogin);
 
 const handleRegister = async (req, res) => {
   try {
@@ -148,16 +150,16 @@ const handleRegister = async (req, res) => {
   }
 };
 
-// Support multiple path patterns for register
+// Support ALL possible path patterns for register
 app.post('/auth/register', handleRegister);
 app.post('/api/auth/register', handleRegister);
+app.post('/.netlify/functions/api/auth/register', handleRegister);
+app.post('/api/.netlify/functions/api/auth/register', handleRegister);
 
 // Add a test endpoint
 app.get('/test', (req, res) => {
   res.json({ message: 'API is working' });
 });
-
-// Add other API endpoints as needed
 
 // Export the serverless handler
 exports.handler = serverless(app); 
