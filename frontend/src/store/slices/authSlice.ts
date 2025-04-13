@@ -46,7 +46,10 @@ export const register = createAsyncThunk(
   async (userData: UserRegistrationData, { rejectWithValue }) => {
     try {
       console.log("Sending registration data:", userData);
-      const response = await axios.post(`${env.BASE_URL}/api/auth/register`, userData);
+      const response = await axios.post(
+        `${env.BASE_URL}${env.BASE_URL.includes('/.netlify/functions') ? '' : '/api'}/auth/register`, 
+        userData
+      );
       console.log("Registration response:", response.data);
       return response.data as AuthResponse;
     } catch (error: any) {
@@ -63,7 +66,10 @@ export const login = createAsyncThunk(
   async (credentials: UserLoginCredentials, { rejectWithValue }) => {
     try {
       console.log("Logging in with:", credentials.email);
-      const response = await axios.post(`${env.BASE_URL}/api/auth/login`, credentials);
+      const response = await axios.post(
+        `${env.BASE_URL}${env.BASE_URL.includes('/.netlify/functions') ? '' : '/api'}/auth/login`, 
+        credentials
+      );
       
       // Type assertion for response data
       const authData = response.data as AuthResponse;
