@@ -22,6 +22,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Debug middleware to log all requests
+app.use((req, res, next) => {
+  console.log('Request URL:', req.url);
+  console.log('Request Method:', req.method);
+  console.log('Request Body:', req.body);
+  next();
+});
+
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
@@ -30,8 +38,8 @@ mongoose.connect(process.env.MONGODB_URI)
 // Define models
 const User = mongoose.models.User || mongoose.model('User', UserSchema);
 
-// Auth routes
-app.post('/auth/login', async (req, res) => {
+// Auth routes - handle multiple path patterns
+const handleLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
     
@@ -50,14 +58,14 @@ app.post('/auth/login', async (req, res) => {
     // Generate token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'default_jwt_secret',
       { expiresIn: '24h' }
     );
     
     // Generate refresh token
     const refreshToken = jwt.sign(
       { id: user.id },
-      process.env.JWT_REFRESH_SECRET,
+      process.env.JWT_REFRESH_SECRET || 'default_refresh_secret',
       { expiresIn: '7d' }
     );
     
@@ -76,9 +84,13 @@ app.post('/auth/login', async (req, res) => {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
-});
+};
 
-app.post('/auth/register', async (req, res) => {
+// Support multiple path patterns for login
+app.post('/auth/login', handleLogin);
+app.post('/api/auth/login', handleLogin);
+
+const handleRegister = async (req, res) => {
   try {
     const { firstName, lastName, email, username, password } = req.body;
     
@@ -106,7 +118,7 @@ app.post('/auth/register', async (req, res) => {
     // Generate token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'default_jwt_secret',
       { expiresIn: '24h' }
     );
     
@@ -126,6 +138,15 @@ app.post('/auth/register', async (req, res) => {
     console.error('Registration error:', error);
     res.status(500).json({ message: 'Server error' });
   }
+};
+
+// Support multiple path patterns for register
+app.post('/auth/register', handleRegister);
+app.post('/api/auth/register', handleRegister);
+
+// Add a test endpoint
+app.get('/test', (req, res) => {
+  res.json({ message: 'API is working' });
 });
 
 // Add other API endpoints as needed

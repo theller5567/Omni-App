@@ -47,7 +47,7 @@ export const register = createAsyncThunk(
     try {
       console.log("Sending registration data:", userData);
       const response = await axios.post(
-        `${env.BASE_URL}${env.BASE_URL.includes('/.netlify/functions') ? '' : '/api'}/auth/register`, 
+        `${env.BASE_URL}/auth/register`, 
         userData
       );
       console.log("Registration response:", response.data);
@@ -66,10 +66,10 @@ export const login = createAsyncThunk(
   async (credentials: UserLoginCredentials, { rejectWithValue }) => {
     try {
       console.log("Logging in with:", credentials.email);
-      const response = await axios.post(
-        `${env.BASE_URL}${env.BASE_URL.includes('/.netlify/functions') ? '' : '/api'}/auth/login`, 
-        credentials
-      );
+      const loginUrl = `${env.BASE_URL}/auth/login`;
+      console.log("Login URL:", loginUrl);
+      
+      const response = await axios.post(loginUrl, credentials);
       
       // Type assertion for response data
       const authData = response.data as AuthResponse;

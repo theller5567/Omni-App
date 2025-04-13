@@ -4,9 +4,21 @@
   command = "./build.sh"
   functions = "netlify/functions"
 
+# Redirect for SPA
 [[redirects]]
   from = "/*"
   to = "/index.html"
+  status = 200
+  
+# API redirects
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/.netlify/functions/api/api/*"
+  to = "/.netlify/functions/api/:splat"
   status = 200
   
 [build.environment]
