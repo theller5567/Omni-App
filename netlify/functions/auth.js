@@ -41,11 +41,21 @@ exports.handler = async (event, context) => {
   // Keep alive DB connection during function warmup
   context.callbackWaitsForEmptyEventLoop = false;
   
+  // Log the raw request for debugging
+  console.log('Raw request:', {
+    path: event.path,
+    httpMethod: event.httpMethod,
+    headers: event.headers,
+    queryStringParameters: event.queryStringParameters,
+    body: event.body ? event.body.substring(0, 100) + '...' : null
+  });
+  
   // Set CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json'
   };
   
   // Handle preflight requests
@@ -65,10 +75,6 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ message: 'Method not allowed' })
     };
   }
-  
-  // Parse the path to determine if this is a login or register request
-  const path = event.path.toLowerCase();
-  console.log('Request path:', path);
   
   // Connect to database
   try {
@@ -99,8 +105,73 @@ exports.handler = async (event, context) => {
     };
   }
   
-  // Handle login request
-  if (path.includes('/login')) {
+  // Determine if this is login or register based on request body
+  const isRegister = requestBody.firstName && requestBody.lastName;
+  
+  // Handle requests
+  if (isRegister) {
+    // This is a registration request
+    try {
+      const { firstName, lastName, email, username, password } = requestBody;
+      
+      // Check if user exists
+      let user = await User.findOne({ email });
+      if (user) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ message: 'User already exists' })
+        };
+      }
+      
+      // Hash password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      
+      // Create user
+      user = new User({
+        firstName,
+        lastName,
+        email,
+        username,
+        password: hashedPassword
+      });
+      
+      await user.save();
+      
+      // Generate token
+      const token = jwt.sign(
+        { id: user.id, email: user.email, role: user.role },
+        process.env.JWT_SECRET || 'default_jwt_secret',
+        { expiresIn: '24h' }
+      );
+      
+      return {
+        statusCode: 201,
+        headers,
+        body: JSON.stringify({
+          token,
+          refreshToken: '',
+          user: {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            role: user.role
+          },
+          message: 'User registered successfully'
+        })
+      };
+    } catch (error) {
+      console.error('Registration error:', error);
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ message: 'Server error' })
+      };
+    }
+  } else {
+    // This is a login request
     try {
       const { email, password } = requestBody;
       
@@ -162,74 +233,4 @@ exports.handler = async (event, context) => {
       };
     }
   }
-  
-  // Handle registration request
-  if (path.includes('/register')) {
-    try {
-      const { firstName, lastName, email, username, password } = requestBody;
-      
-      // Check if user exists
-      let user = await User.findOne({ email });
-      if (user) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ message: 'User already exists' })
-        };
-      }
-      
-      // Hash password
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      
-      // Create user
-      user = new User({
-        firstName,
-        lastName,
-        email,
-        username,
-        password: hashedPassword
-      });
-      
-      await user.save();
-      
-      // Generate token
-      const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role },
-        process.env.JWT_SECRET || 'default_jwt_secret',
-        { expiresIn: '24h' }
-      );
-      
-      return {
-        statusCode: 201,
-        headers,
-        body: JSON.stringify({
-          token,
-          refreshToken: '',
-          user: {
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            role: user.role
-          },
-          message: 'User registered successfully'
-        })
-      };
-    } catch (error) {
-      console.error('Registration error:', error);
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ message: 'Server error' })
-      };
-    }
-  }
-  
-  // If we get here, it's an unknown endpoint
-  return {
-    statusCode: 404,
-    headers,
-    body: JSON.stringify({ message: 'Endpoint not found' })
-  };
 }; 
