@@ -47,12 +47,8 @@ export const register = createAsyncThunk(
     try {
       console.log("Sending registration data:", userData);
       
-      // Hardcode the correct URL for Netlify deployment
-      const isNetlify = window.location.hostname.includes('netlify');
-      const registerUrl = isNetlify 
-        ? '/.netlify/functions/api/auth/register'
-        : `${env.BASE_URL}/api/auth/register`;
-      
+      // Use the direct auth function URL
+      const registerUrl = '/.netlify/functions/auth';
       console.log("Using register URL:", registerUrl);
       
       const response = await axios.post(registerUrl, userData);
@@ -73,12 +69,9 @@ export const login = createAsyncThunk(
     try {
       console.log("Logging in with:", credentials.email);
       
-      // Hardcode the correct URL for Netlify deployment
-      const isNetlify = window.location.hostname.includes('netlify');
-      const loginUrl = isNetlify 
-        ? '/.netlify/functions/api/auth/login'
-        : `${env.BASE_URL}/api/auth/login`;
-      
+      // Use the direct auth function URL
+      // We'll detect login vs register in the function itself
+      const loginUrl = '/.netlify/functions/auth';
       console.log("Using login URL:", loginUrl);
       
       const response = await axios.post(loginUrl, credentials);
