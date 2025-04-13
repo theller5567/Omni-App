@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import MediaUploader from '../components/MediaUploader/MediaUploader';
 import MediaLibrary from '../components/MediaLibrary/MediaLibrary';
 import axios from 'axios';
-import '../components/MediaLibrary/MediaContainer.scss';
+import '../components/MediaLibrary/mediaContainer.scss';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../store/store';
 import { deleteMedia, initializeMedia } from '../store/slices/mediaSlice';
