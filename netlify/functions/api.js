@@ -5,6 +5,14 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const AWS = require('aws-sdk');
+
+// Configure AWS with prefixed environment variables
+AWS.config.update({
+  region: process.env.MY_AWS_REGION || 'us-east-2',
+  accessKeyId: process.env.MY_AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.MY_AWS_SECRET_ACCESS_KEY
+});
 
 // Import any necessary schema definitions
 // (For simplicity, defining a basic User schema here, but you should use your existing models)
