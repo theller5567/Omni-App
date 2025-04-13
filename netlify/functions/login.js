@@ -48,10 +48,20 @@ exports.handler = async (event, context) => {
           button:hover { background-color: #2980b9; }
           .message { color: #e74c3c; margin-top: 1rem; }
           .success { color: #27ae60; }
+          .note { 
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+          }
         </style>
       </head>
       <body>
         <h1>Omni App Login</h1>
+        <div class="note">
+          <strong>Test Account:</strong> You can use <code>test@example.com</code> with password <code>password123</code> for testing.
+        </div>
         <div id="message"></div>
         <form id="loginForm">
           <div class="form-group">
