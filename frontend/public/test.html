@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Static Test Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: white;
+      color: black;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin: 10px 0;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      min-height: 100px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Static Test Page</h1>
+  <p>This is a static HTML file deployed with your app.</p>
+  <p>Current time: <span id="current-time"></span></p>
+  
+  <div>
+    <button id="test-hello">Test Hello Function</button>
+    <button id="test-simple-auth">Test Simple Auth</button>
+  </div>
+  
+  <div id="status"></div>
+  <pre id="result">Results will appear here...</pre>
+  
+  <script>
+    // Update current time
+    document.getElementById('current-time').textContent = new Date().toLocaleTimeString();
+    
+    // Test hello function
+    document.getElementById('test-hello').addEventListener('click', async () => {
+      const statusEl = document.getElementById('status');
+      const resultEl = document.getElementById('result');
+      
+      statusEl.textContent = 'Testing hello function...';
+      resultEl.textContent = 'Sending request...';
+      
+      try {
+        const response = await fetch('/.netlify/functions/hello');
+        const text = await response.text();
+        
+        resultEl.textContent = text;
+        statusEl.textContent = `Status: ${response.status} ${response.statusText}`;
+      } catch (error) {
+        resultEl.textContent = error.toString();
+        statusEl.textContent = 'Error making request';
+      }
+    });
+    
+    // Test simple auth function
+    document.getElementById('test-simple-auth').addEventListener('click', async () => {
+      const statusEl = document.getElementById('status');
+      const resultEl = document.getElementById('result');
+      
+      statusEl.textContent = 'Testing simple-auth function...';
+      resultEl.textContent = 'Sending request...';
+      
+      try {
+        const response = await fetch('/.netlify/functions/simple-auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'test@example.com', password: 'password123' })
+        });
+        
+        const text = await response.text();
+        resultEl.textContent = text;
+        
+        try {
+          const data = JSON.parse(text);
+          if (data.token) {
+            statusEl.textContent = 'Auth successful!';
+            localStorage.setItem('authToken', data.token);
+            if (data.refreshToken) {
+              localStorage.setItem('refreshToken', data.refreshToken);
+            }
+            
+            // Add continue link
+            const continueLink = document.createElement('a');
+            continueLink.href = '/home';
+            continueLink.textContent = 'Continue to App';
+            continueLink.style = 'display: block; margin-top: 10px; color: blue;';
+            document.body.appendChild(continueLink);
+          }
+        } catch (e) {
+          statusEl.textContent = 'Error parsing response as JSON';
+        }
+      } catch (error) {
+        resultEl.textContent = error.toString();
+        statusEl.textContent = 'Error making request';
+      }
+    });
+  </script>
+</body>
+</html> 

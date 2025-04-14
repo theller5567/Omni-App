@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
-import env from '../../config/env';
 
 // Define the type for the authentication state
 interface AuthState {
@@ -47,8 +46,8 @@ export const register = createAsyncThunk(
     try {
       console.log("Sending registration data:", userData);
       
-      // Use the direct auth function URL
-      const registerUrl = '/.netlify/functions/auth';
+      // Use the simple-auth function for testing
+      const registerUrl = '/.netlify/functions/simple-auth';
       console.log("Using register URL:", registerUrl);
       
       const response = await axios.post(registerUrl, userData);
@@ -69,9 +68,8 @@ export const login = createAsyncThunk(
     try {
       console.log("Logging in with:", credentials.email);
       
-      // Use the direct auth function URL
-      // We'll detect login vs register in the function itself
-      const loginUrl = '/.netlify/functions/auth';
+      // Use the simple-auth function for testing
+      const loginUrl = '/.netlify/functions/simple-auth';
       console.log("Using login URL:", loginUrl);
       
       const response = await axios.post(loginUrl, credentials);
