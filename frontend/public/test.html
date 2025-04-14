@@ -41,6 +41,7 @@
   <div>
     <button id="test-hello">Test Hello Function</button>
     <button id="test-simple-auth">Test Simple Auth</button>
+    <button id="test-mongo">Test MongoDB Connection</button>
   </div>
   
   <div id="status"></div>
@@ -107,6 +108,26 @@
         } catch (e) {
           statusEl.textContent = 'Error parsing response as JSON';
         }
+      } catch (error) {
+        resultEl.textContent = error.toString();
+        statusEl.textContent = 'Error making request';
+      }
+    });
+    
+    // Test MongoDB connection
+    document.getElementById('test-mongo').addEventListener('click', async () => {
+      const statusEl = document.getElementById('status');
+      const resultEl = document.getElementById('result');
+      
+      statusEl.textContent = 'Testing MongoDB connection...';
+      resultEl.textContent = 'Sending request...';
+      
+      try {
+        const response = await fetch('/.netlify/functions/mongo-test');
+        const text = await response.text();
+        
+        resultEl.textContent = text;
+        statusEl.textContent = `Status: ${response.status} ${response.statusText}`;
       } catch (error) {
         resultEl.textContent = error.toString();
         statusEl.textContent = 'Error making request';
