@@ -338,7 +338,7 @@ const MediaDetail: React.FC = () => {
       <Box className="media-detail">
         <Box className="media-preview">
           <Box className="media-preview-header">
-            <Typography variant="body2"><span style={{ color: mediaTypes.find(type => type.name === mediaFile.mediaType)?.catColor || '#999' }}>Media Type:</span> <span> {mediaFile.mediaType}</span></Typography>
+            <Typography variant="body2"><span>Media Type:</span> <span style={{ color: mediaTypes.find(type => type.name === mediaFile.mediaType)?.catColor || '#999' }}> {mediaFile.mediaType}</span></Typography>
             
             <Box className="size-container">
               <Typography variant="body2">Size:<span> {formatFileSize(mediaFile.fileSize || 0)}</span></Typography>

@@ -143,11 +143,12 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Box 
             sx={{ 
-              width: 12, 
-              height: 12, 
+              width: 10, 
+              height: 10, 
               bgcolor: mediaTypeColor, 
               borderRadius: '50%',
-              border: '1px solid rgba(0,0,0,0.1)'
+              border: '1px solid rgba(0,0,0,0.1)',
+              boxShadow: `0 0 3px ${mediaTypeColor}`
             }}
           />
           <span>{params.row.mediaType}</span>

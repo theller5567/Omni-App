@@ -1,17 +1,18 @@
 import { createTheme, Theme } from '@mui/material/styles';
 
 /**
- * Function to get CSS variable value
+ * Function to get CSS variable value with fallback
  * This lets us use our CSS variables in the MUI theme
  */
-const getCssVar = (varName: string): string => {
+const getCssVar = (varName: string, fallback: string = ''): string => {
   // Ensure we're running in browser environment
   if (typeof window !== 'undefined' && window.document) {
     const computedStyle = getComputedStyle(document.documentElement);
-    return computedStyle.getPropertyValue(varName).trim();
+    const value = computedStyle.getPropertyValue(varName).trim();
+    return value || fallback; // Return fallback if value is empty
   }
   // Fallback values for SSR
-  return '';
+  return fallback;
 };
 
 // Function to create a theme based on the CSS variables
@@ -21,8 +22,8 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
     document.documentElement.setAttribute('data-theme', mode);
   }
   
-  // Light mode colors
-  const lightColors = {
+  // Default colors for light and dark modes
+  const lightDefaults = {
     primary: '#1976d2',
     primaryLight: '#90caf9',
     primaryDark: '#1565c0',
@@ -43,8 +44,7 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
     divider: '#e0e0e0'
   };
   
-  // Dark mode colors
-  const darkColors = {
+  const darkDefaults = {
     primary: '#90caf9',
     primaryLight: '#bbdefb',
     primaryDark: '#42a5f5',
@@ -65,8 +65,30 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
     divider: '#444444'
   };
   
-  // Select the appropriate color set based on the theme mode
-  const colors = mode === 'light' ? lightColors : darkColors;
+  // Choose default fallbacks based on mode
+  const defaults = mode === 'light' ? lightDefaults : darkDefaults;
+  
+  // Using CSS variables with fallbacks
+  const colors = {
+    primary: getCssVar('--color-primary', defaults.primary),
+    primaryLight: getCssVar('--color-primary-light', defaults.primaryLight),
+    primaryDark: getCssVar('--color-primary-dark', defaults.primaryDark),
+    secondary: getCssVar('--color-secondary', defaults.secondary),
+    secondaryLight: getCssVar('--color-secondary-light', defaults.secondaryLight),
+    secondaryDark: getCssVar('--color-secondary-dark', defaults.secondaryDark),
+    background: getCssVar('--color-background', defaults.background),
+    surface: getCssVar('--color-surface', defaults.surface),
+    textPrimary: getCssVar('--color-text-primary', defaults.textPrimary),
+    textSecondary: getCssVar('--color-text-secondary', defaults.textSecondary),
+    textDisabled: getCssVar('--color-text-disabled', defaults.textDisabled),
+    textOnPrimary: getCssVar('--color-text-on-primary', defaults.textOnPrimary),
+    textOnSecondary: getCssVar('--color-text-on-secondary', defaults.textOnSecondary),
+    error: getCssVar('--color-error', defaults.error),
+    warning: getCssVar('--color-warning', defaults.warning),
+    info: getCssVar('--color-info', defaults.info),
+    success: getCssVar('--color-success', defaults.success),
+    divider: getCssVar('--color-border', defaults.divider)
+  };
   
   return createTheme({
     palette: {
@@ -107,83 +129,82 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
       divider: colors.divider,
     },
     shape: {
-      borderRadius: parseInt(getCssVar('--border-radius-md'), 10) || 8,
+      borderRadius: parseInt(getCssVar('--border-radius-md', '8'), 10) || 8,
     },
     typography: {
-      fontFamily: getCssVar('--font-family-base') || 
-        '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+      fontFamily: getCssVar('--font-family-base', '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'),
       fontSize: 16,
       htmlFontSize: 16,
       h1: {
-        fontSize: getCssVar('--font-size-4xl') || '2.25rem',
-        fontWeight: getCssVar('--font-weight-bold') || 700,
-        lineHeight: getCssVar('--line-height-tight') || 1.25,
+        fontSize: getCssVar('--font-size-4xl', '2.25rem'),
+        fontWeight: getCssVar('--font-weight-bold', '700'),
+        lineHeight: getCssVar('--line-height-tight', '1.25'),
       },
       h2: {
-        fontSize: getCssVar('--font-size-3xl') || '1.875rem',
-        fontWeight: getCssVar('--font-weight-bold') || 700,
-        lineHeight: getCssVar('--line-height-tight') || 1.25,
+        fontSize: getCssVar('--font-size-3xl', '1.875rem'),
+        fontWeight: getCssVar('--font-weight-bold', '700'),
+        lineHeight: getCssVar('--line-height-tight', '1.25'),
       },
       h3: {
-        fontSize: getCssVar('--font-size-2xl') || '1.5rem',
-        fontWeight: getCssVar('--font-weight-semibold') || 600,
-        lineHeight: getCssVar('--line-height-tight') || 1.25,
+        fontSize: getCssVar('--font-size-2xl', '1.5rem'),
+        fontWeight: getCssVar('--font-weight-semibold', '600'),
+        lineHeight: getCssVar('--line-height-tight', '1.25'),
       },
       h4: {
-        fontSize: getCssVar('--font-size-xl') || '1.25rem',
-        fontWeight: getCssVar('--font-weight-semibold') || 600,
-        lineHeight: getCssVar('--line-height-tight') || 1.25,
+        fontSize: getCssVar('--font-size-xl', '1.25rem'),
+        fontWeight: getCssVar('--font-weight-semibold', '600'),
+        lineHeight: getCssVar('--line-height-tight', '1.25'),
       },
       h5: {
-        fontSize: getCssVar('--font-size-lg') || '1.125rem',
-        fontWeight: getCssVar('--font-weight-medium') || 500,
-        lineHeight: getCssVar('--line-height-tight') || 1.25,
+        fontSize: getCssVar('--font-size-lg', '1.125rem'),
+        fontWeight: getCssVar('--font-weight-medium', '500'),
+        lineHeight: getCssVar('--line-height-tight', '1.25'),
       },
       h6: {
-        fontSize: getCssVar('--font-size-md') || '1rem',
-        fontWeight: getCssVar('--font-weight-medium') || 500,
-        lineHeight: getCssVar('--line-height-tight') || 1.25,
+        fontSize: getCssVar('--font-size-md', '1rem'),
+        fontWeight: getCssVar('--font-weight-medium', '500'),
+        lineHeight: getCssVar('--line-height-tight', '1.25'),
       },
       subtitle1: {
-        fontSize: getCssVar('--font-size-md') || '1rem',
-        fontWeight: getCssVar('--font-weight-medium') || 500,
+        fontSize: getCssVar('--font-size-md', '1rem'),
+        fontWeight: getCssVar('--font-weight-medium', '500'),
       },
       subtitle2: {
-        fontSize: getCssVar('--font-size-sm') || '0.875rem',
-        fontWeight: getCssVar('--font-weight-medium') || 500,
+        fontSize: getCssVar('--font-size-sm', '0.875rem'),
+        fontWeight: getCssVar('--font-weight-medium', '500'),
       },
       body1: {
-        fontSize: getCssVar('--font-size-md') || '1rem',
+        fontSize: getCssVar('--font-size-md', '1rem'),
       },
       body2: {
-        fontSize: getCssVar('--font-size-sm') || '0.875rem',
+        fontSize: getCssVar('--font-size-sm', '0.875rem'),
       },
       button: {
-        fontSize: getCssVar('--font-size-sm') || '0.875rem',
-        fontWeight: getCssVar('--font-weight-medium') || 500,
+        fontSize: getCssVar('--font-size-sm', '0.875rem'),
+        fontWeight: getCssVar('--font-weight-medium', '500'),
         textTransform: 'none', // Override MUI's default uppercase
       },
       caption: {
-        fontSize: getCssVar('--font-size-xs') || '0.75rem',
+        fontSize: getCssVar('--font-size-xs', '0.75rem'),
       },
       overline: {
-        fontSize: getCssVar('--font-size-xs') || '0.75rem',
+        fontSize: getCssVar('--font-size-xs', '0.75rem'),
         textTransform: 'uppercase',
-        fontWeight: getCssVar('--font-weight-semibold') || 600,
+        fontWeight: getCssVar('--font-weight-semibold', '600'),
         letterSpacing: '0.08em',
       },
     },
     spacing: (factor: number) => {
       const spaceMap: Record<number, string> = {
-        1: '0.25rem',   // 4px
-        2: '0.5rem',    // 8px
-        3: '0.75rem',   // 12px
-        4: '1rem',      // 16px
-        5: '1.5rem',    // 24px
-        6: '2rem',      // 32px
-        8: '3rem',      // 48px
-        10: '4rem',     // 64px
-        12: '5rem',     // 80px
+        1: getCssVar('--space-1', '0.25rem'),
+        2: getCssVar('--space-2', '0.5rem'),
+        3: getCssVar('--space-3', '0.75rem'),
+        4: getCssVar('--space-4', '1rem'),
+        5: getCssVar('--space-5', '1.5rem'),
+        6: getCssVar('--space-6', '2rem'),
+        8: getCssVar('--space-8', '3rem'),
+        10: getCssVar('--space-10', '4rem'),
+        12: getCssVar('--space-12', '5rem'),
       };
       return spaceMap[factor] || `${factor * 0.25}rem`;
     },
@@ -199,12 +220,12 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
       MuiButton: {
         styleOverrides: {
           root: {
-            borderRadius: getCssVar('--border-radius-md') || '8px',
+            borderRadius: getCssVar('--border-radius-md', '8px'),
             textTransform: 'none',
-            boxShadow: mode === 'light' ? '0 1px 2px rgba(0,0,0,0.05)' : '0 1px 3px rgba(0,0,0,0.3)',
-            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: mode === 'light' ? getCssVar('--shadow-sm', '0 1px 2px rgba(0, 0, 0, 0.05)') : getCssVar('--shadow-md', '0 4px 6px rgba(0, 0, 0, 0.1)'),
+            transition: `all ${getCssVar('--transition-normal', '250ms')} ${getCssVar('--transition-curve-default', 'cubic-bezier(0.4, 0, 0.2, 1)')}`,
             '&:hover': {
-              boxShadow: mode === 'light' ? '0 4px 6px rgba(0,0,0,0.1)' : '0 4px 8px rgba(0,0,0,0.4)',
+              boxShadow: mode === 'light' ? getCssVar('--shadow-md', '0 4px 6px rgba(0, 0, 0, 0.1)') : getCssVar('--shadow-lg', '0 10px 15px rgba(0, 0, 0, 0.1)'),
             }
           },
         },
@@ -213,8 +234,8 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
         styleOverrides: {
           root: {
             backgroundColor: colors.surface,
-            borderRadius: getCssVar('--border-radius-md') || '8px',
-            boxShadow: mode === 'light' ? '0 4px 6px rgba(0,0,0,0.1)' : '0 4px 8px rgba(0,0,0,0.4)',
+            borderRadius: getCssVar('--border-radius-md', '8px'),
+            boxShadow: mode === 'light' ? getCssVar('--shadow-md', '0 4px 6px rgba(0, 0, 0, 0.1)') : getCssVar('--shadow-lg', '0 10px 15px rgba(0, 0, 0, 0.1)'),
           },
         },
       },
@@ -222,8 +243,8 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
         styleOverrides: {
           paper: {
             backgroundColor: colors.surface,
-            borderRadius: getCssVar('--border-radius-lg') || '12px',
-            boxShadow: mode === 'light' ? '0 20px 25px rgba(0,0,0,0.15)' : '0 20px 30px rgba(0,0,0,0.6)',
+            borderRadius: getCssVar('--border-radius-lg', '12px'),
+            boxShadow: mode === 'light' ? getCssVar('--shadow-xl', '0 20px 25px rgba(0, 0, 0, 0.15)') : getCssVar('--shadow-xl', '0 20px 30px rgba(0, 0, 0, 0.6)'),
           },
         },
       },
@@ -233,34 +254,34 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
             backgroundColor: colors.surface,
           },
           elevation1: {
-            boxShadow: mode === 'light' ? '0 1px 2px rgba(0,0,0,0.05)' : '0 1px 3px rgba(0,0,0,0.3)',
+            boxShadow: mode === 'light' ? getCssVar('--shadow-sm', '0 1px 2px rgba(0, 0, 0, 0.05)') : getCssVar('--shadow-sm', '0 1px 3px rgba(0, 0, 0, 0.3)'),
           },
           elevation2: {
-            boxShadow: mode === 'light' ? '0 4px 6px rgba(0,0,0,0.1)' : '0 4px 8px rgba(0,0,0,0.4)',
+            boxShadow: mode === 'light' ? getCssVar('--shadow-md', '0 4px 6px rgba(0, 0, 0, 0.1)') : getCssVar('--shadow-md', '0 4px 8px rgba(0, 0, 0, 0.4)'),
           },
           elevation3: {
-            boxShadow: mode === 'light' ? '0 10px 15px rgba(0,0,0,0.1)' : '0 10px 20px rgba(0,0,0,0.5)',
+            boxShadow: mode === 'light' ? getCssVar('--shadow-lg', '0 10px 15px rgba(0, 0, 0, 0.1)') : getCssVar('--shadow-lg', '0 10px 20px rgba(0, 0, 0, 0.5)'),
           },
           elevation4: {
-            boxShadow: mode === 'light' ? '0 20px 25px rgba(0,0,0,0.15)' : '0 20px 30px rgba(0,0,0,0.6)',
+            boxShadow: mode === 'light' ? getCssVar('--shadow-xl', '0 20px 25px rgba(0, 0, 0, 0.15)') : getCssVar('--shadow-xl', '0 20px 30px rgba(0, 0, 0, 0.6)'),
           },
         },
       },
       MuiInputBase: {
         styleOverrides: {
           root: {
-            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: `all ${getCssVar('--transition-normal')} ${getCssVar('--transition-curve-default')}`,
             // Add specific styling for light mode inputs
             ...(mode === 'light' && {
               backgroundColor: 'transparent',
               '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: colors.divider,
+                borderColor: getCssVar('--color-border'),
               },
               '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: colors.primary,
+                borderColor: getCssVar('--color-primary'),
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderColor: colors.primary,
+                borderColor: getCssVar('--color-primary'),
               }
             })
           },
@@ -277,7 +298,7 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
                 backgroundColor: 'transparent',
                 '&.MuiInputLabel-outlined': {
                   padding: '0 4px',
-                  backgroundColor: colors.surface
+                  backgroundColor: getCssVar('--color-surface')
                 }
               })
             }
@@ -305,9 +326,9 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
         styleOverrides: {
           root: {
             '& .MuiSwitch-switchBase.Mui-checked': {
-              color: colors.primary,
+              color: getCssVar('--color-primary'),
               '& + .MuiSwitch-track': {
-                backgroundColor: colors.primaryLight,
+                backgroundColor: getCssVar('--color-primary-light'),
               },
             },
           },
@@ -317,10 +338,10 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
         styleOverrides: {
           root: {
             '&.Mui-selected': {
-              backgroundColor: colors.primary,
-              color: colors.textOnPrimary,
+              backgroundColor: getCssVar('--color-primary'),
+              color: getCssVar('--color-text-on-primary'),
               '&:hover': {
-                backgroundColor: colors.primaryDark,
+                backgroundColor: getCssVar('--color-primary-dark'),
               },
             },
           },
@@ -329,7 +350,7 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
       MuiTableCell: {
         styleOverrides: {
           root: {
-            borderBottom: `1px solid ${colors.divider}`,
+            borderBottom: `1px solid ${getCssVar('--color-border')}`,
           },
           head: {
             fontWeight: getCssVar('--font-weight-semibold') || 600,
@@ -342,16 +363,16 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
             ...(mode === 'light' && {
               backgroundColor: 'transparent',
               '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.03)',
+                backgroundColor: getCssVar('--color-overlay-light'),
               },
               '&.Mui-focused': {
-                backgroundColor: 'rgba(0, 0, 0, 0.03)',
+                backgroundColor: getCssVar('--color-overlay-light'),
               },
               '&.MuiFilledInput-underline:before': {
-                borderBottomColor: colors.divider,
+                borderBottomColor: getCssVar('--color-border'),
               },
               '&.MuiFilledInput-underline:hover:before': {
-                borderBottomColor: colors.primary,
+                borderBottomColor: getCssVar('--color-primary'),
               }
             })
           }

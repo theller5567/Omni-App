@@ -114,8 +114,8 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
         variant={isMobile ? "h5" : "h4"} 
         gutterBottom 
         style={{ 
-          color: 'var(--accent-color2)',
-          fontSize: isMobile ? '1.25rem' : '1.5rem',
+          color: 'var(--accent-color)',
+          fontSize: isMobile ? '1.25rem' : '2rem',
           marginBottom: isMobile ? '0.5rem' : '1rem'
         }}
       >

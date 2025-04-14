@@ -190,11 +190,13 @@ const DataTable: React.FC<DataTableProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Box 
             sx={{ 
-              width: 12, 
-              height: 12, 
+              width: 10, 
+              height: 10, 
               bgcolor: mediaTypeColor, 
+              className: 'media-type-color',
               borderRadius: '50%',
-              border: '1px solid rgba(0,0,0,0.1)'
+              border: '1px solid rgba(0,0,0,0.1)',
+              boxShadow: `0 2px 4px ${mediaTypeColor}`
             }}
           />
           <span>{params.row.mediaType}</span>
