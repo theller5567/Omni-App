@@ -96,10 +96,18 @@ const AccountMediaTypes: React.FC = () => {
         await Promise.all(typesWithDefaultTags.map(async (mediaType) => {
           try {
             const response = await axios.get<{count: number}>(
-              `${env.BASE_URL}/api/media-types/${mediaType._id}/files-needing-tags`
+              `${env.BASE_URL}/api/media-types/${mediaType._id}/files-needing-tags`,
+              {
+                headers: {
+                  'Cache-Control': 'no-cache, no-store, must-revalidate',
+                  'Pragma': 'no-cache',
+                  'Expires': '0'
+                }
+              }
             );
             const count = response.data.count || 0;
             if (count > 0) {
+              console.log(`Found ${count} files needing tags for ${mediaType.name}`);
               results[mediaType._id] = count;
             }
           } catch (error) {
@@ -107,6 +115,7 @@ const AccountMediaTypes: React.FC = () => {
           }
         }));
         
+        console.log('Files needing tags by media type:', results);
         setMediaTypesWithFilesNeedingTags(results);
       } catch (error) {
         console.error('Error checking media types with files needing tags:', error);
@@ -309,17 +318,55 @@ const AccountMediaTypes: React.FC = () => {
       }
 
       // Call backend API to update all media files with this media type
-      await axios.post(`${env.BASE_URL}/api/media-types/${syncingMediaTypeId}/apply-default-tags`);
+      const applyResponse = await axios.post<{
+        count: number,
+        totalFiles: number,
+        tagsApplied: string[]
+      }>(`${env.BASE_URL}/api/media-types/${syncingMediaTypeId}/apply-default-tags`);
+      console.log('Applied default tags response:', applyResponse.data);
+      
+      // Directly check the files-needing-tags endpoint again to verify the changes
+      const verifyResponse = await axios.get<{
+        count: number,
+        filesWithIssues?: Array<{
+          id: string,
+          title: string,
+          existingTags: string[],
+          missingTags: string[]
+        }>
+      }>(`${env.BASE_URL}/api/media-types/${syncingMediaTypeId}/files-needing-tags`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      console.log('Verification after applying tags:', verifyResponse.data);
+
+      // If there are still files needing tags, show a warning
+      if (verifyResponse.data.count > 0) {
+        console.warn('⚠️ There are still files needing tags after the update:', verifyResponse.data);
+        toast.warning(`Applied tags, but ${verifyResponse.data.count} files still need updating. Please try again.`);
+      }
       
       setSyncingStatus('success');
-      toast.success(`Default tags applied to all ${affectedFilesCount} media files with type "${mediaType.name}"`);
+      toast.success(`Default tags applied to ${applyResponse.data.count} media files with type "${mediaType.name}"`);
       
-      // Update the count for this media type
+      // Update the count for this media type in the state
       setMediaTypesWithFilesNeedingTags(prev => {
         const updated = {...prev};
-        delete updated[syncingMediaTypeId];
+        if (verifyResponse.data.count > 0) {
+          updated[syncingMediaTypeId] = verifyResponse.data.count;
+        } else {
+          delete updated[syncingMediaTypeId];
+        }
         return updated;
       });
+      
+      // Refresh all media types to ensure the state is up to date
+      setTimeout(() => {
+        dispatch(initializeMediaTypes());
+      }, 500);
       
       setTimeout(() => {
         setSyncTagsDialogOpen(false);

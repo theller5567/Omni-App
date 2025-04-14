@@ -1,0 +1,2137 @@
+MongoDB URI: mongodb+srv://theller5567:Noel1124%23%24%23%24%23%24@omniapp.efzkv.mongodb.net/myappdb?retryWrites=true&w=majority&ssl=true
+MongoDB connected
+Server is running on port 5002
+[0;36mMongoose:[0m users.createIndex({ email: [33m1[39m }, { unique: [33mtrue[39m, background: [33mtrue[39m })
+[0;36mMongoose:[0m tags.createIndex({ name: [33m1[39m }, { unique: [33mtrue[39m, background: [33mtrue[39m })
+[0;36mMongoose:[0m users.createIndex({ username: [33m1[39m }, { unique: [33mtrue[39m, sparse: [33mtrue[39m, background: [33mtrue[39m })
+⭐ Checking files needing default tags for media type ID: 67f54cfce7a624343173a28a
+[0;36mMongoose:[0m mediatypes.findOne({ _id: ObjectId("67f54cfce7a624343173a28a") }, {})
+📋 Media type found: Product Image with ID: new ObjectId('67f54cfce7a624343173a28a')
+🏷️ Default tags: [ 'Product image' ]
+[0;36mMongoose:[0m media.find({ [32m'$or'[39m: [ { mediaType: [32m'67f54cfce7a624343173a28a'[39m }, { mediaType: [32m'Product Image'[39m } ]}, {})
+🔍 Found 1 media files with media type: Product Image
+DEBUG - Media file raw data: [
+  {
+    "_id": "67f54d5ce7a624343173a28f",
+    "id": "edb7884b-6878-4da1-9614-e76dd9f8d387",
+    "title": "Employee Spotlight - Rodney.jpg",
+    "location": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/Employee Spotlight - Rodney.jpg_Tue Apr 08 2025 12:22:48 GMT-0400 (Eastern Daylight Time)",
+    "slug": "employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c",
+    "fileSize": 1237474,
+    "fileExtension": "JPG",
+    "modifiedDate": "2025-04-08T16:22:52.217Z",
+    "uploadedBy": "67c732b32af71c02fcd8fe24",
+    "modifiedBy": "67c732b32af71c02fcd8fe24",
+    "mediaType": "67f54cfce7a624343173a28a",
+    "metadata": {
+      "imageWidth": 1920,
+      "imageHeight": 1080,
+      "fileName": "Rodney4000",
+      "altText": "Rodney",
+      "description": "Rodney like science",
+      "visibility": "public",
+      "tags": [
+        "Product image"
+      ],
+      "Webinar Title": "",
+      "Webinar Summary": "",
+      "Webinar CTA": "",
+      "recordedDate": "2025-04-08T16:21:20.505Z",
+      "uploadedBy": "67c732b32af71c02fcd8fe24",
+      "modifiedBy": "67c732b32af71c02fcd8fe24",
+      "mediaType": "67f54cfce7a624343173a28a",
+      "Product Name": "Rodney200022",
+      "Product Category": "Homogenizers",
+      "Product SKU": "343-4R"
+    },
+    "__t": "BaseImage",
+    "createdAt": "2025-04-08T16:22:52.644Z",
+    "updatedAt": "2025-04-14T15:07:28.997Z",
+    "__v": 1
+  }
+]
+DEBUG - Processing file: Employee Spotlight - Rodney.jpg
+DEBUG - File metadata: {
+  "imageWidth": 1920,
+  "imageHeight": 1080,
+  "fileName": "Rodney4000",
+  "altText": "Rodney",
+  "description": "Rodney like science",
+  "visibility": "public",
+  "tags": [
+    "Product image"
+  ],
+  "Webinar Title": "",
+  "Webinar Summary": "",
+  "Webinar CTA": "",
+  "recordedDate": "2025-04-08T16:21:20.505Z",
+  "uploadedBy": "67c732b32af71c02fcd8fe24",
+  "modifiedBy": "67c732b32af71c02fcd8fe24",
+  "mediaType": "67f54cfce7a624343173a28a",
+  "Product Name": "Rodney200022",
+  "Product Category": "Homogenizers",
+  "Product SKU": "343-4R"
+}
+DEBUG - Existing tags converted to lowercase: [ 'product image' ]
+DEBUG - Default tags converted to lowercase: [ 'product image' ]
+DEBUG - Missing tags: []
+DEBUG - Needs update: false
+🔍 Found 0 files needing default tags for media type: Product Image
+⭐ Checking files needing default tags for media type ID: 67f54cfce7a624343173a28a
+[0;36mMongoose:[0m mediatypes.findOne({ _id: ObjectId("67f54cfce7a624343173a28a") }, {})
+📋 Media type found: Product Image with ID: new ObjectId('67f54cfce7a624343173a28a')
+🏷️ Default tags: [ 'Product image' ]
+[0;36mMongoose:[0m media.find({ [32m'$or'[39m: [ { mediaType: [32m'67f54cfce7a624343173a28a'[39m }, { mediaType: [32m'Product Image'[39m } ]}, {})
+🔍 Found 1 media files with media type: Product Image
+DEBUG - Media file raw data: [
+  {
+    "_id": "67f54d5ce7a624343173a28f",
+    "id": "edb7884b-6878-4da1-9614-e76dd9f8d387",
+    "title": "Employee Spotlight - Rodney.jpg",
+    "location": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/Employee Spotlight - Rodney.jpg_Tue Apr 08 2025 12:22:48 GMT-0400 (Eastern Daylight Time)",
+    "slug": "employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c",
+    "fileSize": 1237474,
+    "fileExtension": "JPG",
+    "modifiedDate": "2025-04-08T16:22:52.217Z",
+    "uploadedBy": "67c732b32af71c02fcd8fe24",
+    "modifiedBy": "67c732b32af71c02fcd8fe24",
+    "mediaType": "67f54cfce7a624343173a28a",
+    "metadata": {
+      "imageWidth": 1920,
+      "imageHeight": 1080,
+      "fileName": "Rodney4000",
+      "altText": "Rodney",
+      "description": "Rodney like science",
+      "visibility": "public",
+      "tags": [
+        "Product image"
+      ],
+      "Webinar Title": "",
+      "Webinar Summary": "",
+      "Webinar CTA": "",
+      "recordedDate": "2025-04-08T16:21:20.505Z",
+      "uploadedBy": "67c732b32af71c02fcd8fe24",
+      "modifiedBy": "67c732b32af71c02fcd8fe24",
+      "mediaType": "67f54cfce7a624343173a28a",
+      "Product Name": "Rodney200022",
+      "Product Category": "Homogenizers",
+      "Product SKU": "343-4R"
+    },
+    "__t": "BaseImage",
+    "createdAt": "2025-04-08T16:22:52.644Z",
+    "updatedAt": "2025-04-14T15:07:28.997Z",
+    "__v": 1
+  }
+]
+DEBUG - Processing file: Employee Spotlight - Rodney.jpg
+DEBUG - File metadata: {
+  "imageWidth": 1920,
+  "imageHeight": 1080,
+  "fileName": "Rodney4000",
+  "altText": "Rodney",
+  "description": "Rodney like science",
+  "visibility": "public",
+  "tags": [
+    "Product image"
+  ],
+  "Webinar Title": "",
+  "Webinar Summary": "",
+  "Webinar CTA": "",
+  "recordedDate": "2025-04-08T16:21:20.505Z",
+  "uploadedBy": "67c732b32af71c02fcd8fe24",
+  "modifiedBy": "67c732b32af71c02fcd8fe24",
+  "mediaType": "67f54cfce7a624343173a28a",
+  "Product Name": "Rodney200022",
+  "Product Category": "Homogenizers",
+  "Product SKU": "343-4R"
+}
+DEBUG - Existing tags converted to lowercase: [ 'product image' ]
+DEBUG - Default tags converted to lowercase: [ 'product image' ]
+DEBUG - Missing tags: []
+DEBUG - Needs update: false
+🔍 Found 0 files needing default tags for media type: Product Image
+[0;36mMongoose:[0m media.find({}, {})
+Getting media types {}
+[0;36mMongoose:[0m mediatypes.find({}, {})
+[0;36mMongoose:[0m media.find({}, {})
+[0;36mMongoose:[0m users.findOne({ email: [32m'travis.heller@revvity.com'[39m }, {})
+Getting media types {}
+[0;36mMongoose:[0m mediatypes.find({}, {})
+[0;36mMongoose:[0m users.findOne({ email: [32m'travis.heller@revvity.com'[39m }, {})
+Found media types: [
+  {
+    _id: new ObjectId('67f410af4234448e0a3620d9'),
+    name: 'Testing',
+    fields: [ [Object], [Object] ],
+    __v: 0,
+    updatedAt: 2025-04-12T17:54:56.166Z,
+    usageCount: 0,
+    isDeleting: false,
+    status: 'archived'
+  },
+  {
+    _id: new ObjectId('67f54cfce7a624343173a28a'),
+    name: 'Product Image',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'image/jpeg', 'image/webp' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:21:16.637Z,
+    updatedAt: 2025-04-12T17:54:56.447Z,
+    __v: 1,
+    catColor: '#2196f3',
+    defaultTags: [ 'Product image' ]
+  },
+  {
+    _id: new ObjectId('67f5547408eae3913c8dc628'),
+    name: 'Webinar Video',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 3,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'video/mp4', 'video/webm' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:53:08.893Z,
+    updatedAt: 2025-04-14T14:44:29.831Z,
+    __v: 2,
+    catColor: '#8bc34a',
+    defaultTags: [ 'Webinar', 'Video', 'Educational' ]
+  },
+  {
+    _id: new ObjectId('67f6db4580ce5846bca45c83'),
+    name: 'Application',
+    fields: [ [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-09T20:40:37.237Z,
+    updatedAt: 2025-04-12T17:54:56.455Z,
+    __v: 0,
+    catColor: '#ff9800'
+  },
+  {
+    _id: new ObjectId('67f801059ebbcda7d2670c63'),
+    name: 'Protocol',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'application/pdf' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    catColor: '#e91e63',
+    createdAt: 2025-04-10T17:33:57.947Z,
+    updatedAt: 2025-04-12T17:54:56.454Z,
+    __v: 0
+  }
+]
+// Fetching all users
+[0;36mMongoose:[0m users.find({}, {})
+Getting media types {}
+[0;36mMongoose:[0m mediatypes.find({}, {})
+Getting media types {}
+[0;36mMongoose:[0m mediatypes.find({}, {})
+Found media types: [
+  {
+    _id: new ObjectId('67f410af4234448e0a3620d9'),
+    name: 'Testing',
+    fields: [ [Object], [Object] ],
+    __v: 0,
+    updatedAt: 2025-04-12T17:54:56.166Z,
+    usageCount: 0,
+    isDeleting: false,
+    status: 'archived'
+  },
+  {
+    _id: new ObjectId('67f54cfce7a624343173a28a'),
+    name: 'Product Image',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'image/jpeg', 'image/webp' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:21:16.637Z,
+    updatedAt: 2025-04-12T17:54:56.447Z,
+    __v: 1,
+    catColor: '#2196f3',
+    defaultTags: [ 'Product image' ]
+  },
+  {
+    _id: new ObjectId('67f5547408eae3913c8dc628'),
+    name: 'Webinar Video',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 3,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'video/mp4', 'video/webm' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:53:08.893Z,
+    updatedAt: 2025-04-14T14:44:29.831Z,
+    __v: 2,
+    catColor: '#8bc34a',
+    defaultTags: [ 'Webinar', 'Video', 'Educational' ]
+  },
+  {
+    _id: new ObjectId('67f6db4580ce5846bca45c83'),
+    name: 'Application',
+    fields: [ [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-09T20:40:37.237Z,
+    updatedAt: 2025-04-12T17:54:56.455Z,
+    __v: 0,
+    catColor: '#ff9800'
+  },
+  {
+    _id: new ObjectId('67f801059ebbcda7d2670c63'),
+    name: 'Protocol',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'application/pdf' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    catColor: '#e91e63',
+    createdAt: 2025-04-10T17:33:57.947Z,
+    updatedAt: 2025-04-12T17:54:56.454Z,
+    __v: 0
+  }
+]
+Found media types: [
+  {
+    _id: new ObjectId('67f410af4234448e0a3620d9'),
+    name: 'Testing',
+    fields: [ [Object], [Object] ],
+    __v: 0,
+    updatedAt: 2025-04-12T17:54:56.166Z,
+    usageCount: 0,
+    isDeleting: false,
+    status: 'archived'
+  },
+  {
+    _id: new ObjectId('67f54cfce7a624343173a28a'),
+    name: 'Product Image',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'image/jpeg', 'image/webp' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:21:16.637Z,
+    updatedAt: 2025-04-12T17:54:56.447Z,
+    __v: 1,
+    catColor: '#2196f3',
+    defaultTags: [ 'Product image' ]
+  },
+  {
+    _id: new ObjectId('67f5547408eae3913c8dc628'),
+    name: 'Webinar Video',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 3,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'video/mp4', 'video/webm' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:53:08.893Z,
+    updatedAt: 2025-04-14T14:44:29.831Z,
+    __v: 2,
+    catColor: '#8bc34a',
+    defaultTags: [ 'Webinar', 'Video', 'Educational' ]
+  },
+  {
+    _id: new ObjectId('67f6db4580ce5846bca45c83'),
+    name: 'Application',
+    fields: [ [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-09T20:40:37.237Z,
+    updatedAt: 2025-04-12T17:54:56.455Z,
+    __v: 0,
+    catColor: '#ff9800'
+  },
+  {
+    _id: new ObjectId('67f801059ebbcda7d2670c63'),
+    name: 'Protocol',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'application/pdf' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    catColor: '#e91e63',
+    createdAt: 2025-04-10T17:33:57.947Z,
+    updatedAt: 2025-04-12T17:54:56.454Z,
+    __v: 0
+  }
+]
+Found media types: [
+  {
+    _id: new ObjectId('67f410af4234448e0a3620d9'),
+    name: 'Testing',
+    fields: [ [Object], [Object] ],
+    __v: 0,
+    updatedAt: 2025-04-12T17:54:56.166Z,
+    usageCount: 0,
+    isDeleting: false,
+    status: 'archived'
+  },
+  {
+    _id: new ObjectId('67f54cfce7a624343173a28a'),
+    name: 'Product Image',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'image/jpeg', 'image/webp' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:21:16.637Z,
+    updatedAt: 2025-04-12T17:54:56.447Z,
+    __v: 1,
+    catColor: '#2196f3',
+    defaultTags: [ 'Product image' ]
+  },
+  {
+    _id: new ObjectId('67f5547408eae3913c8dc628'),
+    name: 'Webinar Video',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 3,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'video/mp4', 'video/webm' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:53:08.893Z,
+    updatedAt: 2025-04-14T14:44:29.831Z,
+    __v: 2,
+    catColor: '#8bc34a',
+    defaultTags: [ 'Webinar', 'Video', 'Educational' ]
+  },
+  {
+    _id: new ObjectId('67f6db4580ce5846bca45c83'),
+    name: 'Application',
+    fields: [ [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-09T20:40:37.237Z,
+    updatedAt: 2025-04-12T17:54:56.455Z,
+    __v: 0,
+    catColor: '#ff9800'
+  },
+  {
+    _id: new ObjectId('67f801059ebbcda7d2670c63'),
+    name: 'Protocol',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'application/pdf' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    catColor: '#e91e63',
+    createdAt: 2025-04-10T17:33:57.947Z,
+    updatedAt: 2025-04-12T17:54:56.454Z,
+    __v: 0
+  }
+]
+// Fetching all users
+[0;36mMongoose:[0m users.find({}, {})
+⭐ Checking files needing default tags for media type ID: 67f54cfce7a624343173a28a
+[0;36mMongoose:[0m mediatypes.findOne({ _id: ObjectId("67f54cfce7a624343173a28a") }, {})
+⭐ Checking files needing default tags for media type ID: 67f5547408eae3913c8dc628
+[0;36mMongoose:[0m mediatypes.findOne({ _id: ObjectId("67f5547408eae3913c8dc628") }, {})
+📋 Media type found: Webinar Video with ID: new ObjectId('67f5547408eae3913c8dc628')
+🏷️ Default tags: [ 'Webinar', 'Video', 'Educational' ]
+[0;36mMongoose:[0m media.find({ [32m'$or'[39m: [ { mediaType: [32m'67f5547408eae3913c8dc628'[39m }, { mediaType: [32m'Webinar Video'[39m } ]}, {})
+📋 Media type found: Product Image with ID: new ObjectId('67f54cfce7a624343173a28a')
+🏷️ Default tags: [ 'Product image' ]
+[0;36mMongoose:[0m media.find({ [32m'$or'[39m: [ { mediaType: [32m'67f54cfce7a624343173a28a'[39m }, { mediaType: [32m'Product Image'[39m } ]}, {})
+🔍 Found 3 media files with media type: Webinar Video
+DEBUG - Media file raw data: [
+  {
+    "_id": "67f6d6ee80ce5846bca45c46",
+    "id": "the-love-note-video-mp4-849ad7fa-5eac-4350-8bda-4c3990b3339e",
+    "title": "The Love Note Video.mp4",
+    "location": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/the_love_note_video_mp4_04092025",
+    "slug": "the-love-note-video-mp4-dc9a7f80-2a14-4e44-beb1-d55d977e7493",
+    "fileSize": 46613795,
+    "fileExtension": "MP4",
+    "modifiedDate": "2025-04-09T20:22:06.376Z",
+    "uploadedBy": "67c732b32af71c02fcd8fe24",
+    "modifiedBy": "67c732b32af71c02fcd8fe24",
+    "mediaType": "Webinar Video",
+    "metadata": {
+      "fileName": "The Love Note Video",
+      "altText": "The Love Note",
+      "visibility": "public",
+      "tags": [
+        "love",
+        "note",
+        "lab",
+        "Derek",
+        "Webinar",
+        "Video",
+        "Educational"
+      ],
+      "description": "The Love Note SUMMARY and then some",
+      "Webinar Title": "The Love Note",
+      "Webinar Summary": "The Love Note",
+      "Webinar CTA": "Show love",
+      "recordedDate": "2025-04-09T20:20:23.884Z",
+      "uploadedBy": "67c732b32af71c02fcd8fe24",
+      "modifiedBy": "67c732b32af71c02fcd8fe24",
+      "mediaType": "67f5547408eae3913c8dc628",
+      "v_thumbnail": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/the_love_note_video_thumbnail_04092025.jpg",
+      "v_thumbnailTimestamp": "00:00:29"
+    },
+    "createdAt": "2025-04-09T20:22:06.425Z",
+    "updatedAt": "2025-04-14T14:44:46.814Z",
+    "__v": 1
+  },
+  {
+    "_id": "67f936b3022f90788b1fb20a",
+    "id": "witch-video-mp4-f9f73fea-3351-449d-a3c0-70c92ba5f9d8",
+    "title": "Witch Video.mp4",
+    "location": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/witch_video_mp4_04112025",
+    "slug": "witch-video-mp4-acc52437-f821-4617-a4c9-0e36b3e4512e",
+    "fileSize": 35561864,
+    "fileExtension": "MP4",
+    "modifiedDate": "2025-04-11T15:35:15.883Z",
+    "uploadedBy": "67c732b32af71c02fcd8fe24",
+    "modifiedBy": "67c732b32af71c02fcd8fe24",
+    "mediaType": "Webinar Video",
+    "metadata": {
+      "fileName": "Witch Video.mp4",
+      "altText": "Witch Video",
+      "visibility": "public",
+      "tags": [
+        "witch",
+        "video",
+        "lab",
+        "Webinar",
+        "Video",
+        "Educational"
+      ],
+      "description": "Witch Video description",
+      "recordedDate": "2025-04-11T15:33:23.125Z",
+      "uploadedBy": "67c732b32af71c02fcd8fe24",
+      "modifiedBy": "67c732b32af71c02fcd8fe24",
+      "mediaType": "67f5547408eae3913c8dc628",
+      "Webinar Title": "Witch Video",
+      "Webinar Summary": "Witch Video",
+      "Webinar CTA": "Witch Video",
+      "v_thumbnail": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/witch_video_thumbnail_04112025.jpg",
+      "v_thumbnailTimestamp": "00:00:24"
+    },
+    "createdAt": "2025-04-11T15:35:15.933Z",
+    "updatedAt": "2025-04-14T14:44:46.957Z",
+    "__v": 1
+  },
+  {
+    "_id": "67fa854840c6ac69eda657e9",
+    "id": "pumpkin-pie-video-mp4-b59a0deb-74a6-443f-ae0b-56cc2ac24917",
+    "title": "Pumpkin Pie Video",
+    "location": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/pumpkin_pie_video_mp4_04122025",
+    "slug": "pumpkin-pie-video-mp4-bb19f15d-c1bc-4929-a6ee-504637a1c88b",
+    "fileSize": 46754600,
+    "fileExtension": "MP4",
+    "modifiedDate": "2025-04-12T15:22:48.062Z",
+    "uploadedBy": "67c732b32af71c02fcd8fe24",
+    "modifiedBy": "67c732b32af71c02fcd8fe24",
+    "mediaType": "Webinar Video",
+    "metadata": {
+      "fileName": "Pumpkin Pie Video",
+      "altText": "Pumpkin Pie Video",
+      "visibility": "public",
+      "tags": [
+        "Pumpkin",
+        "Pie",
+        "Webinar",
+        "Video",
+        "Educational"
+      ],
+      "description": "Pumpkin Pie Video",
+      "Webinar Title": "Pumpkin Pie Video",
+      "Webinar Summary": "Pumpkin Pie Video",
+      "Webinar CTA": "Pumpkin Pie Video",
+      "recordedDate": "2025-04-12T15:21:16.969Z",
+      "uploadedBy": "67c732b32af71c02fcd8fe24",
+      "modifiedBy": "67c732b32af71c02fcd8fe24",
+      "mediaType": "67f5547408eae3913c8dc628",
+      "v_thumbnail": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/pumpkin_pie_video_thumbnail_04122025.jpg",
+      "v_thumbnailTimestamp": "00:00:33"
+    },
+    "createdAt": "2025-04-12T15:22:48.105Z",
+    "updatedAt": "2025-04-14T14:44:46.993Z",
+    "__v": 1
+  }
+]
+DEBUG - Processing file: The Love Note Video.mp4
+DEBUG - File metadata: {
+  "fileName": "The Love Note Video",
+  "altText": "The Love Note",
+  "visibility": "public",
+  "tags": [
+    "love",
+    "note",
+    "lab",
+    "Derek",
+    "Webinar",
+    "Video",
+    "Educational"
+  ],
+  "description": "The Love Note SUMMARY and then some",
+  "Webinar Title": "The Love Note",
+  "Webinar Summary": "The Love Note",
+  "Webinar CTA": "Show love",
+  "recordedDate": "2025-04-09T20:20:23.884Z",
+  "uploadedBy": "67c732b32af71c02fcd8fe24",
+  "modifiedBy": "67c732b32af71c02fcd8fe24",
+  "mediaType": "67f5547408eae3913c8dc628",
+  "v_thumbnail": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/the_love_note_video_thumbnail_04092025.jpg",
+  "v_thumbnailTimestamp": "00:00:29"
+}
+DEBUG - Existing tags converted to lowercase: [ 'love', 'note', 'lab', 'derek', 'webinar', 'video', 'educational' ]
+DEBUG - Default tags converted to lowercase: [ 'webinar', 'video', 'educational' ]
+DEBUG - Missing tags: []
+DEBUG - Needs update: false
+DEBUG - Processing file: Witch Video.mp4
+DEBUG - File metadata: {
+  "fileName": "Witch Video.mp4",
+  "altText": "Witch Video",
+  "visibility": "public",
+  "tags": [
+    "witch",
+    "video",
+    "lab",
+    "Webinar",
+    "Video",
+    "Educational"
+  ],
+  "description": "Witch Video description",
+  "recordedDate": "2025-04-11T15:33:23.125Z",
+  "uploadedBy": "67c732b32af71c02fcd8fe24",
+  "modifiedBy": "67c732b32af71c02fcd8fe24",
+  "mediaType": "67f5547408eae3913c8dc628",
+  "Webinar Title": "Witch Video",
+  "Webinar Summary": "Witch Video",
+  "Webinar CTA": "Witch Video",
+  "v_thumbnail": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/witch_video_thumbnail_04112025.jpg",
+  "v_thumbnailTimestamp": "00:00:24"
+}
+DEBUG - Existing tags converted to lowercase: [ 'witch', 'video', 'lab', 'webinar', 'video', 'educational' ]
+DEBUG - Default tags converted to lowercase: [ 'webinar', 'video', 'educational' ]
+DEBUG - Missing tags: []
+DEBUG - Needs update: false
+DEBUG - Processing file: Pumpkin Pie Video
+DEBUG - File metadata: {
+  "fileName": "Pumpkin Pie Video",
+  "altText": "Pumpkin Pie Video",
+  "visibility": "public",
+  "tags": [
+    "Pumpkin",
+    "Pie",
+    "Webinar",
+    "Video",
+    "Educational"
+  ],
+  "description": "Pumpkin Pie Video",
+  "Webinar Title": "Pumpkin Pie Video",
+  "Webinar Summary": "Pumpkin Pie Video",
+  "Webinar CTA": "Pumpkin Pie Video",
+  "recordedDate": "2025-04-12T15:21:16.969Z",
+  "uploadedBy": "67c732b32af71c02fcd8fe24",
+  "modifiedBy": "67c732b32af71c02fcd8fe24",
+  "mediaType": "67f5547408eae3913c8dc628",
+  "v_thumbnail": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/pumpkin_pie_video_thumbnail_04122025.jpg",
+  "v_thumbnailTimestamp": "00:00:33"
+}
+DEBUG - Existing tags converted to lowercase: [ 'pumpkin', 'pie', 'webinar', 'video', 'educational' ]
+DEBUG - Default tags converted to lowercase: [ 'webinar', 'video', 'educational' ]
+DEBUG - Missing tags: []
+DEBUG - Needs update: false
+🔍 Found 0 files needing default tags for media type: Webinar Video
+🔍 Found 1 media files with media type: Product Image
+DEBUG - Media file raw data: [
+  {
+    "_id": "67f54d5ce7a624343173a28f",
+    "id": "edb7884b-6878-4da1-9614-e76dd9f8d387",
+    "title": "Employee Spotlight - Rodney.jpg",
+    "location": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/Employee Spotlight - Rodney.jpg_Tue Apr 08 2025 12:22:48 GMT-0400 (Eastern Daylight Time)",
+    "slug": "employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c",
+    "fileSize": 1237474,
+    "fileExtension": "JPG",
+    "modifiedDate": "2025-04-08T16:22:52.217Z",
+    "uploadedBy": "67c732b32af71c02fcd8fe24",
+    "modifiedBy": "67c732b32af71c02fcd8fe24",
+    "mediaType": "67f54cfce7a624343173a28a",
+    "metadata": {
+      "imageWidth": 1920,
+      "imageHeight": 1080,
+      "fileName": "Rodney4000",
+      "altText": "Rodney",
+      "description": "Rodney like science",
+      "visibility": "public",
+      "tags": [
+        "Product image"
+      ],
+      "Webinar Title": "",
+      "Webinar Summary": "",
+      "Webinar CTA": "",
+      "recordedDate": "2025-04-08T16:21:20.505Z",
+      "uploadedBy": "67c732b32af71c02fcd8fe24",
+      "modifiedBy": "67c732b32af71c02fcd8fe24",
+      "mediaType": "67f54cfce7a624343173a28a",
+      "Product Name": "Rodney200022",
+      "Product Category": "Homogenizers",
+      "Product SKU": "343-4R"
+    },
+    "__t": "BaseImage",
+    "createdAt": "2025-04-08T16:22:52.644Z",
+    "updatedAt": "2025-04-14T15:07:28.997Z",
+    "__v": 1
+  }
+]
+DEBUG - Processing file: Employee Spotlight - Rodney.jpg
+DEBUG - File metadata: {
+  "imageWidth": 1920,
+  "imageHeight": 1080,
+  "fileName": "Rodney4000",
+  "altText": "Rodney",
+  "description": "Rodney like science",
+  "visibility": "public",
+  "tags": [
+    "Product image"
+  ],
+  "Webinar Title": "",
+  "Webinar Summary": "",
+  "Webinar CTA": "",
+  "recordedDate": "2025-04-08T16:21:20.505Z",
+  "uploadedBy": "67c732b32af71c02fcd8fe24",
+  "modifiedBy": "67c732b32af71c02fcd8fe24",
+  "mediaType": "67f54cfce7a624343173a28a",
+  "Product Name": "Rodney200022",
+  "Product Category": "Homogenizers",
+  "Product SKU": "343-4R"
+}
+DEBUG - Existing tags converted to lowercase: [ 'product image' ]
+DEBUG - Default tags converted to lowercase: [ 'product image' ]
+DEBUG - Missing tags: []
+DEBUG - Needs update: false
+🔍 Found 0 files needing default tags for media type: Product Image
+Fetching media with slug: employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c
+[0;36mMongoose:[0m media.findOne({ slug: [32m'employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c'[39m}, {})
+Fetching media with slug: employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c
+[0;36mMongoose:[0m media.findOne({ slug: [32m'employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c'[39m}, {})
+Fetched media file: {
+  metadata: {
+    imageWidth: 1920,
+    imageHeight: 1080,
+    fileName: 'Rodney4000',
+    altText: 'Rodney',
+    description: 'Rodney like science',
+    visibility: 'public',
+    tags: [ 'Product image' ],
+    'Webinar Title': '',
+    'Webinar Summary': '',
+    'Webinar CTA': '',
+    recordedDate: '2025-04-08T16:21:20.505Z',
+    uploadedBy: '67c732b32af71c02fcd8fe24',
+    modifiedBy: '67c732b32af71c02fcd8fe24',
+    mediaType: '67f54cfce7a624343173a28a',
+    'Product Name': 'Rodney200022',
+    'Product Category': 'Homogenizers',
+    'Product SKU': '343-4R'
+  },
+  _id: new ObjectId('67f54d5ce7a624343173a28f'),
+  id: 'edb7884b-6878-4da1-9614-e76dd9f8d387',
+  title: 'Employee Spotlight - Rodney.jpg',
+  location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/Employee Spotlight - Rodney.jpg_Tue Apr 08 2025 12:22:48 GMT-0400 (Eastern Daylight Time)',
+  slug: 'employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c',
+  fileSize: 1237474,
+  fileExtension: 'JPG',
+  modifiedDate: 2025-04-08T16:22:52.217Z,
+  uploadedBy: '67c732b32af71c02fcd8fe24',
+  modifiedBy: '67c732b32af71c02fcd8fe24',
+  mediaType: '67f54cfce7a624343173a28a',
+  __t: 'BaseImage',
+  createdAt: 2025-04-08T16:22:52.644Z,
+  updatedAt: 2025-04-14T15:07:28.997Z,
+  __v: 1
+}
+Fetched media file: {
+  metadata: {
+    imageWidth: 1920,
+    imageHeight: 1080,
+    fileName: 'Rodney4000',
+    altText: 'Rodney',
+    description: 'Rodney like science',
+    visibility: 'public',
+    tags: [ 'Product image' ],
+    'Webinar Title': '',
+    'Webinar Summary': '',
+    'Webinar CTA': '',
+    recordedDate: '2025-04-08T16:21:20.505Z',
+    uploadedBy: '67c732b32af71c02fcd8fe24',
+    modifiedBy: '67c732b32af71c02fcd8fe24',
+    mediaType: '67f54cfce7a624343173a28a',
+    'Product Name': 'Rodney200022',
+    'Product Category': 'Homogenizers',
+    'Product SKU': '343-4R'
+  },
+  _id: new ObjectId('67f54d5ce7a624343173a28f'),
+  id: 'edb7884b-6878-4da1-9614-e76dd9f8d387',
+  title: 'Employee Spotlight - Rodney.jpg',
+  location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/Employee Spotlight - Rodney.jpg_Tue Apr 08 2025 12:22:48 GMT-0400 (Eastern Daylight Time)',
+  slug: 'employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c',
+  fileSize: 1237474,
+  fileExtension: 'JPG',
+  modifiedDate: 2025-04-08T16:22:52.217Z,
+  uploadedBy: '67c732b32af71c02fcd8fe24',
+  modifiedBy: '67c732b32af71c02fcd8fe24',
+  mediaType: '67f54cfce7a624343173a28a',
+  __t: 'BaseImage',
+  createdAt: 2025-04-08T16:22:52.644Z,
+  updatedAt: 2025-04-14T15:07:28.997Z,
+  __v: 1
+}
+[0;36mMongoose:[0m users.findOne({ _id: ObjectId("67c732b32af71c02fcd8fe24") }, {})
+Received upload request
+Files: [Object: null prototype] {
+  file: [
+    {
+      fieldname: 'file',
+      originalname: 'Peter_4372.jpg',
+      encoding: '7bit',
+      mimetype: 'image/jpeg',
+      buffer: <Buffer ff d8 ff e1 37 d5 45 78 69 66 00 00 49 49 2a 00 08 00 00 00 0a 00 0f 01 02 00 06 00 00 00 86 00 00 00 10 01 02 00 0e 00 00 00 8c 00 00 00 1a 01 05 00 ... 6111328 more bytes>,
+      size: 6111378
+    }
+  ]
+}
+Body: {
+  mediaType: 'Product Image',
+  metadata: '{"fileName":"Peter","tags":["Peter","photographer"],"visibility":"public","altText":"Peter","description":"Peter","recordedDate":"2025-04-14T15:16:10.644Z","uploadedBy":"67c732b32af71c02fcd8fe24","modifiedBy":"67c732b32af71c02fcd8fe24","mediaType":"67f54cfce7a624343173a28a","imageWidth":4777,"imageHeight":3456,"Product Name":"Peter","Product Category":"Peter","Product SKU":"Peter"}',
+  title: 'Peter_4372.jpg'
+}
+Received media type: Product Image
+[0;36mMongoose:[0m mediatypes.find({}, {})
+Available media types: [
+  'Testing',
+  'Product Image',
+  'Webinar Video',
+  'Application',
+  'Protocol'
+]
+Validating file: {
+  filename: 'Peter_4372.jpg',
+  mimetype: 'image/jpeg',
+  size: 6111378,
+  mediaType: 'Product Image'
+}
+[0;36mMongoose:[0m mediatypes.findOne({ name: [32m'Product Image'[39m }, {})
+Validating file type: image/jpeg for media type: Product Image
+File type validation passed for media type: Product Image
+Attempting S3 upload: {
+  bucket: 'omnimedialibrarybucket',
+  key: 'peter_4372_jpg_04142025',
+  contentType: 'image/jpeg',
+  fileSize: 6111378,
+  originalName: 'Peter_4372.jpg',
+  formattedName: 'peter_4372_jpg_04142025',
+  isThumbnail: false
+}
+S3 upload successful: {
+  location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/peter_4372_jpg_04142025',
+  key: 'peter_4372_jpg_04142025',
+  bucket: 'omnimedialibrarybucket'
+}
+Main file uploaded to S3: {
+  Location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/peter_4372_jpg_04142025',
+  Key: 'peter_4372_jpg_04142025',
+  Bucket: 'omnimedialibrarybucket'
+}
+Generated slug: peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f
+[0;36mMongoose:[0m mediatypes.findOne({ name: [32m'Product Image'[39m }, {})
+[0;36mMongoose:[0m media.insertOne({ id: [32m'peter-4372-jpg-073ead22-7a3c-441a-ba0a-3d94c82bef0a'[39m, title: [32m'Peter_4372.jpg'[39m, location: [32m'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/peter_4372_jpg_04142025'[39m, slug: [32m'peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f'[39m, fileSize: [33m6111378[39m, fileExtension: [32m'JPG'[39m, modifiedDate: new Date("Mon, 14 Apr 2025 15:17:44 GMT"), uploadedBy: [32m'67c732b32af71c02fcd8fe24'[39m, modifiedBy: [32m'67c732b32af71c02fcd8fe24'[39m, mediaType: [32m'Product Image'[39m, metadata: { fileName: [32m'Peter_4372.jpg'[39m, altText: [32m'Peter'[39m, visibility: [32m'public'[39m, tags: [ [32m'Peter'[39m, [32m'photographer'[39m ], description: [32m'Peter'[39m, recordedDate: [32m'2025-04-14T15:16:10.644Z'[39m, uploadedBy: [32m'67c732b32af71c02fcd8fe24'[39m, modifiedBy: [32m'67c732b32af71c02fcd8fe24'[39m, mediaType: [32m'67f54cfce7a624343173a28a'[39m, imageWidth: [33m4777[39m, imageHeight: [33m3456[39m, [32m'Product Name'[39m: [32m'Peter'[39m, [32m'Product Category'[39m: [32m'Peter'[39m, [32m'Product SKU'[39m: [32m'Peter'[39m }, _id: ObjectId("67fd2718f912a4cc611b4aad"), createdAt: new Date("Mon, 14 Apr 2025 15:17:44 GMT"), updatedAt: new Date("Mon, 14 Apr 2025 15:17:44 GMT"), __v: [33m0[39m}, {})
+Saved media document: {
+  id: 'peter-4372-jpg-073ead22-7a3c-441a-ba0a-3d94c82bef0a',
+  title: 'Peter_4372.jpg',
+  location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/peter_4372_jpg_04142025',
+  slug: 'peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f',
+  fileSize: 6111378,
+  fileExtension: 'JPG',
+  modifiedDate: 2025-04-14T15:17:44.384Z,
+  uploadedBy: '67c732b32af71c02fcd8fe24',
+  modifiedBy: '67c732b32af71c02fcd8fe24',
+  mediaType: 'Product Image',
+  metadata: {
+    fileName: 'Peter_4372.jpg',
+    altText: 'Peter',
+    visibility: 'public',
+    tags: [ 'Peter', 'photographer' ],
+    description: 'Peter',
+    recordedDate: '2025-04-14T15:16:10.644Z',
+    uploadedBy: '67c732b32af71c02fcd8fe24',
+    modifiedBy: '67c732b32af71c02fcd8fe24',
+    mediaType: '67f54cfce7a624343173a28a',
+    imageWidth: 4777,
+    imageHeight: 3456,
+    'Product Name': 'Peter',
+    'Product Category': 'Peter',
+    'Product SKU': 'Peter'
+  },
+  _id: new ObjectId('67fd2718f912a4cc611b4aad'),
+  createdAt: 2025-04-14T15:17:44.422Z,
+  updatedAt: 2025-04-14T15:17:44.422Z,
+  __v: 0
+}
+Sending response: {
+  _id: new ObjectId('67fd2718f912a4cc611b4aad'),
+  id: 'peter-4372-jpg-073ead22-7a3c-441a-ba0a-3d94c82bef0a',
+  location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/peter_4372_jpg_04142025',
+  slug: 'peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f',
+  title: 'Peter_4372.jpg',
+  metadata: {
+    fileName: 'Peter_4372.jpg',
+    altText: 'Peter',
+    visibility: 'public',
+    tags: [ 'Peter', 'photographer' ],
+    description: 'Peter',
+    recordedDate: '2025-04-14T15:16:10.644Z',
+    uploadedBy: '67c732b32af71c02fcd8fe24',
+    modifiedBy: '67c732b32af71c02fcd8fe24',
+    mediaType: '67f54cfce7a624343173a28a',
+    imageWidth: 4777,
+    imageHeight: 3456,
+    'Product Name': 'Peter',
+    'Product Category': 'Peter',
+    'Product SKU': 'Peter'
+  },
+  fileSize: 6111378,
+  fileExtension: 'JPG',
+  modifiedDate: 2025-04-14T15:17:44.384Z,
+  uploadedBy: '67c732b32af71c02fcd8fe24',
+  modifiedBy: '67c732b32af71c02fcd8fe24',
+  mediaType: 'Product Image',
+  __t: undefined
+}
+Fetching media with slug: peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f
+[0;36mMongoose:[0m media.findOne({ slug: [32m'peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f'[39m }, {})
+Fetching media with slug: peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f
+[0;36mMongoose:[0m media.findOne({ slug: [32m'peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f'[39m }, {})
+Fetched media file: {
+  metadata: {
+    fileName: 'Peter_4372.jpg',
+    altText: 'Peter',
+    visibility: 'public',
+    tags: [ 'Peter', 'photographer' ],
+    description: 'Peter',
+    recordedDate: '2025-04-14T15:16:10.644Z',
+    uploadedBy: '67c732b32af71c02fcd8fe24',
+    modifiedBy: '67c732b32af71c02fcd8fe24',
+    mediaType: '67f54cfce7a624343173a28a',
+    imageWidth: 4777,
+    imageHeight: 3456,
+    'Product Name': 'Peter',
+    'Product Category': 'Peter',
+    'Product SKU': 'Peter'
+  },
+  _id: new ObjectId('67fd2718f912a4cc611b4aad'),
+  id: 'peter-4372-jpg-073ead22-7a3c-441a-ba0a-3d94c82bef0a',
+  title: 'Peter_4372.jpg',
+  location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/peter_4372_jpg_04142025',
+  slug: 'peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f',
+  fileSize: 6111378,
+  fileExtension: 'JPG',
+  modifiedDate: 2025-04-14T15:17:44.384Z,
+  uploadedBy: '67c732b32af71c02fcd8fe24',
+  modifiedBy: '67c732b32af71c02fcd8fe24',
+  mediaType: 'Product Image',
+  createdAt: 2025-04-14T15:17:44.422Z,
+  updatedAt: 2025-04-14T15:17:44.422Z,
+  __v: 0
+}
+Fetched media file: {
+  metadata: {
+    fileName: 'Peter_4372.jpg',
+    altText: 'Peter',
+    visibility: 'public',
+    tags: [ 'Peter', 'photographer' ],
+    description: 'Peter',
+    recordedDate: '2025-04-14T15:16:10.644Z',
+    uploadedBy: '67c732b32af71c02fcd8fe24',
+    modifiedBy: '67c732b32af71c02fcd8fe24',
+    mediaType: '67f54cfce7a624343173a28a',
+    imageWidth: 4777,
+    imageHeight: 3456,
+    'Product Name': 'Peter',
+    'Product Category': 'Peter',
+    'Product SKU': 'Peter'
+  },
+  _id: new ObjectId('67fd2718f912a4cc611b4aad'),
+  id: 'peter-4372-jpg-073ead22-7a3c-441a-ba0a-3d94c82bef0a',
+  title: 'Peter_4372.jpg',
+  location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/peter_4372_jpg_04142025',
+  slug: 'peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f',
+  fileSize: 6111378,
+  fileExtension: 'JPG',
+  modifiedDate: 2025-04-14T15:17:44.384Z,
+  uploadedBy: '67c732b32af71c02fcd8fe24',
+  modifiedBy: '67c732b32af71c02fcd8fe24',
+  mediaType: 'Product Image',
+  createdAt: 2025-04-14T15:17:44.422Z,
+  updatedAt: 2025-04-14T15:17:44.422Z,
+  __v: 0
+}
+Received update request for slug: peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f
+Request body: {
+  "title": "Peter",
+  "metadata": {
+    "fileName": "Peter",
+    "altText": "Peter",
+    "description": "Peter",
+    "visibility": "public",
+    "tags": [
+      "Peter",
+      "photographer",
+      "Product image"
+    ],
+    "Webinar Title": "",
+    "Webinar Summary": "",
+    "Webinar CTA": "",
+    "recordedDate": "2025-04-14T15:16:10.644Z",
+    "uploadedBy": "67c732b32af71c02fcd8fe24",
+    "modifiedBy": "67c732b32af71c02fcd8fe24",
+    "mediaType": "67f54cfce7a624343173a28a",
+    "imageWidth": 4777,
+    "imageHeight": 3456,
+    "Product Name": "Peter",
+    "Product Category": "Peter",
+    "Product SKU": "Peter"
+  }
+}
+Request URL: /media/update/peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f
+Request method: PUT
+Request headers: {
+  host: 'localhost:5002',
+  'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:137.0) Gecko/20100101 Firefox/137.0',
+  accept: 'application/json',
+  'accept-language': 'en-US,en;q=0.5',
+  'accept-encoding': 'gzip, deflate, br, zstd',
+  referer: 'http://localhost:5173/',
+  'content-type': 'application/json',
+  'content-length': '486',
+  origin: 'http://localhost:5173',
+  'sec-gpc': '1',
+  connection: 'keep-alive',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-site',
+  priority: 'u=0'
+}
+Attempting to find media with slug: peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f
+[0;36mMongoose:[0m media.findOne({ slug: [32m'peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f'[39m }, {})
+Found document before update: {
+  metadata: {
+    fileName: 'Peter_4372.jpg',
+    altText: 'Peter',
+    visibility: 'public',
+    tags: [ 'Peter', 'photographer' ],
+    description: 'Peter',
+    recordedDate: '2025-04-14T15:16:10.644Z',
+    uploadedBy: '67c732b32af71c02fcd8fe24',
+    modifiedBy: '67c732b32af71c02fcd8fe24',
+    mediaType: '67f54cfce7a624343173a28a',
+    imageWidth: 4777,
+    imageHeight: 3456,
+    'Product Name': 'Peter',
+    'Product Category': 'Peter',
+    'Product SKU': 'Peter'
+  },
+  _id: new ObjectId('67fd2718f912a4cc611b4aad'),
+  id: 'peter-4372-jpg-073ead22-7a3c-441a-ba0a-3d94c82bef0a',
+  title: 'Peter_4372.jpg',
+  location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/peter_4372_jpg_04142025',
+  slug: 'peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f',
+  fileSize: 6111378,
+  fileExtension: 'JPG',
+  modifiedDate: 2025-04-14T15:17:44.384Z,
+  uploadedBy: '67c732b32af71c02fcd8fe24',
+  modifiedBy: '67c732b32af71c02fcd8fe24',
+  mediaType: 'Product Image',
+  createdAt: 2025-04-14T15:17:44.422Z,
+  updatedAt: 2025-04-14T15:17:44.422Z,
+  __v: 0
+}
+Constructed updateFields: {
+  "title": "Peter",
+  "metadata": {
+    "fileName": "Peter",
+    "altText": "Peter",
+    "visibility": "public",
+    "tags": [
+      "Peter",
+      "photographer",
+      "Product image"
+    ],
+    "description": "Peter",
+    "Webinar Title": "",
+    "Webinar Summary": "",
+    "Webinar CTA": "",
+    "recordedDate": "2025-04-14T15:16:10.644Z",
+    "uploadedBy": "67c732b32af71c02fcd8fe24",
+    "modifiedBy": "67c732b32af71c02fcd8fe24",
+    "mediaType": "67f54cfce7a624343173a28a",
+    "imageWidth": 4777,
+    "imageHeight": 3456,
+    "Product Name": "Peter",
+    "Product Category": "Peter",
+    "Product SKU": "Peter"
+  }
+}
+[0;36mMongoose:[0m media.findOneAndUpdate({ slug: [32m'peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f'[39m }, { [32m'$setOnInsert'[39m: { createdAt: new Date("Mon, 14 Apr 2025 15:18:05 GMT") }, [32m'$set'[39m: { title: [32m'Peter'[39m, metadata: { fileName: [32m'Peter'[39m, altText: [32m'Peter'[39m, visibility: [32m'public'[39m, tags: [ [32m'Peter'[39m, [32m'photographer'[39m, [32m'Product image'[39m ], description: [32m'Peter'[39m, [32m'Webinar Title'[39m: [32m''[39m, [32m'Webinar Summary'[39m: [32m''[39m, [32m'Webinar CTA'[39m: [32m''[39m, recordedDate: [32m'2025-04-14T15:16:10.644Z'[39m, uploadedBy: [32m'67c732b32af71c02fcd8fe24'[39m, modifiedBy: [32m'67c732b32af71c02fcd8fe24'[39m, mediaType: [32m'67f54cfce7a624343173a28a'[39m, imageWidth: [33m4777[39m, imageHeight: [33m3456[39m, [32m'Product Name'[39m: [32m'Peter'[39m, [32m'Product Category'[39m: [32m'Peter'[39m, [32m'Product SKU'[39m: [32m'Peter'[39m }, updatedAt: new Date("Mon, 14 Apr 2025 15:18:05 GMT") }}, { runValidators: [33mtrue[39m, returnDocument: [32m'after'[39m, returnOriginal: [33mfalse[39m })
+Updated media file: {
+  "_id": "67fd2718f912a4cc611b4aad",
+  "id": "peter-4372-jpg-073ead22-7a3c-441a-ba0a-3d94c82bef0a",
+  "title": "Peter",
+  "location": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/peter_4372_jpg_04142025",
+  "slug": "peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f",
+  "fileSize": 6111378,
+  "fileExtension": "JPG",
+  "modifiedDate": "2025-04-14T15:17:44.384Z",
+  "uploadedBy": "67c732b32af71c02fcd8fe24",
+  "modifiedBy": "67c732b32af71c02fcd8fe24",
+  "mediaType": "Product Image",
+  "metadata": {
+    "fileName": "Peter",
+    "altText": "Peter",
+    "visibility": "public",
+    "tags": [
+      "Peter",
+      "photographer",
+      "Product image"
+    ],
+    "description": "Peter",
+    "Webinar Title": "",
+    "Webinar Summary": "",
+    "Webinar CTA": "",
+    "recordedDate": "2025-04-14T15:16:10.644Z",
+    "uploadedBy": "67c732b32af71c02fcd8fe24",
+    "modifiedBy": "67c732b32af71c02fcd8fe24",
+    "mediaType": "67f54cfce7a624343173a28a",
+    "imageWidth": 4777,
+    "imageHeight": 3456,
+    "Product Name": "Peter",
+    "Product Category": "Peter",
+    "Product SKU": "Peter"
+  },
+  "createdAt": "2025-04-14T15:17:44.422Z",
+  "updatedAt": "2025-04-14T15:18:05.623Z",
+  "__v": 0
+}
+Getting media types {}
+[0;36mMongoose:[0m mediatypes.find({}, {})
+Getting media types {}
+[0;36mMongoose:[0m mediatypes.find({}, {})
+Found media types: [
+  {
+    _id: new ObjectId('67f410af4234448e0a3620d9'),
+    name: 'Testing',
+    fields: [ [Object], [Object] ],
+    __v: 0,
+    updatedAt: 2025-04-12T17:54:56.166Z,
+    usageCount: 0,
+    isDeleting: false,
+    status: 'archived'
+  },
+  {
+    _id: new ObjectId('67f54cfce7a624343173a28a'),
+    name: 'Product Image',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'image/jpeg', 'image/webp' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:21:16.637Z,
+    updatedAt: 2025-04-12T17:54:56.447Z,
+    __v: 1,
+    catColor: '#2196f3',
+    defaultTags: [ 'Product image' ]
+  },
+  {
+    _id: new ObjectId('67f5547408eae3913c8dc628'),
+    name: 'Webinar Video',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 3,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'video/mp4', 'video/webm' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:53:08.893Z,
+    updatedAt: 2025-04-14T14:44:29.831Z,
+    __v: 2,
+    catColor: '#8bc34a',
+    defaultTags: [ 'Webinar', 'Video', 'Educational' ]
+  },
+  {
+    _id: new ObjectId('67f6db4580ce5846bca45c83'),
+    name: 'Application',
+    fields: [ [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-09T20:40:37.237Z,
+    updatedAt: 2025-04-12T17:54:56.455Z,
+    __v: 0,
+    catColor: '#ff9800'
+  },
+  {
+    _id: new ObjectId('67f801059ebbcda7d2670c63'),
+    name: 'Protocol',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'application/pdf' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    catColor: '#e91e63',
+    createdAt: 2025-04-10T17:33:57.947Z,
+    updatedAt: 2025-04-12T17:54:56.454Z,
+    __v: 0
+  }
+]
+Found media types: [
+  {
+    _id: new ObjectId('67f410af4234448e0a3620d9'),
+    name: 'Testing',
+    fields: [ [Object], [Object] ],
+    __v: 0,
+    updatedAt: 2025-04-12T17:54:56.166Z,
+    usageCount: 0,
+    isDeleting: false,
+    status: 'archived'
+  },
+  {
+    _id: new ObjectId('67f54cfce7a624343173a28a'),
+    name: 'Product Image',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'image/jpeg', 'image/webp' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:21:16.637Z,
+    updatedAt: 2025-04-12T17:54:56.447Z,
+    __v: 1,
+    catColor: '#2196f3',
+    defaultTags: [ 'Product image' ]
+  },
+  {
+    _id: new ObjectId('67f5547408eae3913c8dc628'),
+    name: 'Webinar Video',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 3,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'video/mp4', 'video/webm' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:53:08.893Z,
+    updatedAt: 2025-04-14T14:44:29.831Z,
+    __v: 2,
+    catColor: '#8bc34a',
+    defaultTags: [ 'Webinar', 'Video', 'Educational' ]
+  },
+  {
+    _id: new ObjectId('67f6db4580ce5846bca45c83'),
+    name: 'Application',
+    fields: [ [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-09T20:40:37.237Z,
+    updatedAt: 2025-04-12T17:54:56.455Z,
+    __v: 0,
+    catColor: '#ff9800'
+  },
+  {
+    _id: new ObjectId('67f801059ebbcda7d2670c63'),
+    name: 'Protocol',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'application/pdf' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    catColor: '#e91e63',
+    createdAt: 2025-04-10T17:33:57.947Z,
+    updatedAt: 2025-04-12T17:54:56.454Z,
+    __v: 0
+  }
+]
+⭐ Checking files needing default tags for media type ID: 67f54cfce7a624343173a28a
+[0;36mMongoose:[0m mediatypes.findOne({ _id: ObjectId("67f54cfce7a624343173a28a") }, {})
+⭐ Checking files needing default tags for media type ID: 67f5547408eae3913c8dc628
+[0;36mMongoose:[0m mediatypes.findOne({ _id: ObjectId("67f5547408eae3913c8dc628") }, {})
+📋 Media type found: Product Image with ID: new ObjectId('67f54cfce7a624343173a28a')
+🏷️ Default tags: [ 'Product image' ]
+[0;36mMongoose:[0m media.find({ [32m'$or'[39m: [ { mediaType: [32m'67f54cfce7a624343173a28a'[39m }, { mediaType: [32m'Product Image'[39m } ]}, {})
+📋 Media type found: Webinar Video with ID: new ObjectId('67f5547408eae3913c8dc628')
+🏷️ Default tags: [ 'Webinar', 'Video', 'Educational' ]
+[0;36mMongoose:[0m media.find({ [32m'$or'[39m: [ { mediaType: [32m'67f5547408eae3913c8dc628'[39m }, { mediaType: [32m'Webinar Video'[39m } ]}, {})
+🔍 Found 2 media files with media type: Product Image
+DEBUG - Media file raw data: [
+  {
+    "_id": "67f54d5ce7a624343173a28f",
+    "id": "edb7884b-6878-4da1-9614-e76dd9f8d387",
+    "title": "Employee Spotlight - Rodney.jpg",
+    "location": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/Employee Spotlight - Rodney.jpg_Tue Apr 08 2025 12:22:48 GMT-0400 (Eastern Daylight Time)",
+    "slug": "employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c",
+    "fileSize": 1237474,
+    "fileExtension": "JPG",
+    "modifiedDate": "2025-04-08T16:22:52.217Z",
+    "uploadedBy": "67c732b32af71c02fcd8fe24",
+    "modifiedBy": "67c732b32af71c02fcd8fe24",
+    "mediaType": "67f54cfce7a624343173a28a",
+    "metadata": {
+      "imageWidth": 1920,
+      "imageHeight": 1080,
+      "fileName": "Rodney4000",
+      "altText": "Rodney",
+      "description": "Rodney like science",
+      "visibility": "public",
+      "tags": [
+        "Product image"
+      ],
+      "Webinar Title": "",
+      "Webinar Summary": "",
+      "Webinar CTA": "",
+      "recordedDate": "2025-04-08T16:21:20.505Z",
+      "uploadedBy": "67c732b32af71c02fcd8fe24",
+      "modifiedBy": "67c732b32af71c02fcd8fe24",
+      "mediaType": "67f54cfce7a624343173a28a",
+      "Product Name": "Rodney200022",
+      "Product Category": "Homogenizers",
+      "Product SKU": "343-4R"
+    },
+    "__t": "BaseImage",
+    "createdAt": "2025-04-08T16:22:52.644Z",
+    "updatedAt": "2025-04-14T15:07:28.997Z",
+    "__v": 1
+  },
+  {
+    "_id": "67fd2718f912a4cc611b4aad",
+    "id": "peter-4372-jpg-073ead22-7a3c-441a-ba0a-3d94c82bef0a",
+    "title": "Peter",
+    "location": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/peter_4372_jpg_04142025",
+    "slug": "peter-4372-jpg-6d122a98-d966-4612-a9ce-58beba9f204f",
+    "fileSize": 6111378,
+    "fileExtension": "JPG",
+    "modifiedDate": "2025-04-14T15:17:44.384Z",
+    "uploadedBy": "67c732b32af71c02fcd8fe24",
+    "modifiedBy": "67c732b32af71c02fcd8fe24",
+    "mediaType": "Product Image",
+    "metadata": {
+      "fileName": "Peter",
+      "altText": "Peter",
+      "visibility": "public",
+      "tags": [
+        "Peter",
+        "photographer",
+        "Product image"
+      ],
+      "description": "Peter",
+      "Webinar Title": "",
+      "Webinar Summary": "",
+      "Webinar CTA": "",
+      "recordedDate": "2025-04-14T15:16:10.644Z",
+      "uploadedBy": "67c732b32af71c02fcd8fe24",
+      "modifiedBy": "67c732b32af71c02fcd8fe24",
+      "mediaType": "67f54cfce7a624343173a28a",
+      "imageWidth": 4777,
+      "imageHeight": 3456,
+      "Product Name": "Peter",
+      "Product Category": "Peter",
+      "Product SKU": "Peter"
+    },
+    "createdAt": "2025-04-14T15:17:44.422Z",
+    "updatedAt": "2025-04-14T15:18:05.623Z",
+    "__v": 0
+  }
+]
+DEBUG - Processing file: Employee Spotlight - Rodney.jpg
+DEBUG - File metadata: {
+  "imageWidth": 1920,
+  "imageHeight": 1080,
+  "fileName": "Rodney4000",
+  "altText": "Rodney",
+  "description": "Rodney like science",
+  "visibility": "public",
+  "tags": [
+    "Product image"
+  ],
+  "Webinar Title": "",
+  "Webinar Summary": "",
+  "Webinar CTA": "",
+  "recordedDate": "2025-04-08T16:21:20.505Z",
+  "uploadedBy": "67c732b32af71c02fcd8fe24",
+  "modifiedBy": "67c732b32af71c02fcd8fe24",
+  "mediaType": "67f54cfce7a624343173a28a",
+  "Product Name": "Rodney200022",
+  "Product Category": "Homogenizers",
+  "Product SKU": "343-4R"
+}
+DEBUG - Existing tags converted to lowercase: [ 'product image' ]
+DEBUG - Default tags converted to lowercase: [ 'product image' ]
+DEBUG - Missing tags: []
+DEBUG - Needs update: false
+DEBUG - Processing file: Peter
+DEBUG - File metadata: {
+  "fileName": "Peter",
+  "altText": "Peter",
+  "visibility": "public",
+  "tags": [
+    "Peter",
+    "photographer",
+    "Product image"
+  ],
+  "description": "Peter",
+  "Webinar Title": "",
+  "Webinar Summary": "",
+  "Webinar CTA": "",
+  "recordedDate": "2025-04-14T15:16:10.644Z",
+  "uploadedBy": "67c732b32af71c02fcd8fe24",
+  "modifiedBy": "67c732b32af71c02fcd8fe24",
+  "mediaType": "67f54cfce7a624343173a28a",
+  "imageWidth": 4777,
+  "imageHeight": 3456,
+  "Product Name": "Peter",
+  "Product Category": "Peter",
+  "Product SKU": "Peter"
+}
+DEBUG - Existing tags converted to lowercase: [ 'peter', 'photographer', 'product image' ]
+DEBUG - Default tags converted to lowercase: [ 'product image' ]
+DEBUG - Missing tags: []
+DEBUG - Needs update: false
+🔍 Found 0 files needing default tags for media type: Product Image
+🔍 Found 3 media files with media type: Webinar Video
+DEBUG - Media file raw data: [
+  {
+    "_id": "67f6d6ee80ce5846bca45c46",
+    "id": "the-love-note-video-mp4-849ad7fa-5eac-4350-8bda-4c3990b3339e",
+    "title": "The Love Note Video.mp4",
+    "location": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/the_love_note_video_mp4_04092025",
+    "slug": "the-love-note-video-mp4-dc9a7f80-2a14-4e44-beb1-d55d977e7493",
+    "fileSize": 46613795,
+    "fileExtension": "MP4",
+    "modifiedDate": "2025-04-09T20:22:06.376Z",
+    "uploadedBy": "67c732b32af71c02fcd8fe24",
+    "modifiedBy": "67c732b32af71c02fcd8fe24",
+    "mediaType": "Webinar Video",
+    "metadata": {
+      "fileName": "The Love Note Video",
+      "altText": "The Love Note",
+      "visibility": "public",
+      "tags": [
+        "love",
+        "note",
+        "lab",
+        "Derek",
+        "Webinar",
+        "Video",
+        "Educational"
+      ],
+      "description": "The Love Note SUMMARY and then some",
+      "Webinar Title": "The Love Note",
+      "Webinar Summary": "The Love Note",
+      "Webinar CTA": "Show love",
+      "recordedDate": "2025-04-09T20:20:23.884Z",
+      "uploadedBy": "67c732b32af71c02fcd8fe24",
+      "modifiedBy": "67c732b32af71c02fcd8fe24",
+      "mediaType": "67f5547408eae3913c8dc628",
+      "v_thumbnail": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/the_love_note_video_thumbnail_04092025.jpg",
+      "v_thumbnailTimestamp": "00:00:29"
+    },
+    "createdAt": "2025-04-09T20:22:06.425Z",
+    "updatedAt": "2025-04-14T14:44:46.814Z",
+    "__v": 1
+  },
+  {
+    "_id": "67f936b3022f90788b1fb20a",
+    "id": "witch-video-mp4-f9f73fea-3351-449d-a3c0-70c92ba5f9d8",
+    "title": "Witch Video.mp4",
+    "location": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/witch_video_mp4_04112025",
+    "slug": "witch-video-mp4-acc52437-f821-4617-a4c9-0e36b3e4512e",
+    "fileSize": 35561864,
+    "fileExtension": "MP4",
+    "modifiedDate": "2025-04-11T15:35:15.883Z",
+    "uploadedBy": "67c732b32af71c02fcd8fe24",
+    "modifiedBy": "67c732b32af71c02fcd8fe24",
+    "mediaType": "Webinar Video",
+    "metadata": {
+      "fileName": "Witch Video.mp4",
+      "altText": "Witch Video",
+      "visibility": "public",
+      "tags": [
+        "witch",
+        "video",
+        "lab",
+        "Webinar",
+        "Video",
+        "Educational"
+      ],
+      "description": "Witch Video description",
+      "recordedDate": "2025-04-11T15:33:23.125Z",
+      "uploadedBy": "67c732b32af71c02fcd8fe24",
+      "modifiedBy": "67c732b32af71c02fcd8fe24",
+      "mediaType": "67f5547408eae3913c8dc628",
+      "Webinar Title": "Witch Video",
+      "Webinar Summary": "Witch Video",
+      "Webinar CTA": "Witch Video",
+      "v_thumbnail": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/witch_video_thumbnail_04112025.jpg",
+      "v_thumbnailTimestamp": "00:00:24"
+    },
+    "createdAt": "2025-04-11T15:35:15.933Z",
+    "updatedAt": "2025-04-14T14:44:46.957Z",
+    "__v": 1
+  },
+  {
+    "_id": "67fa854840c6ac69eda657e9",
+    "id": "pumpkin-pie-video-mp4-b59a0deb-74a6-443f-ae0b-56cc2ac24917",
+    "title": "Pumpkin Pie Video",
+    "location": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/pumpkin_pie_video_mp4_04122025",
+    "slug": "pumpkin-pie-video-mp4-bb19f15d-c1bc-4929-a6ee-504637a1c88b",
+    "fileSize": 46754600,
+    "fileExtension": "MP4",
+    "modifiedDate": "2025-04-12T15:22:48.062Z",
+    "uploadedBy": "67c732b32af71c02fcd8fe24",
+    "modifiedBy": "67c732b32af71c02fcd8fe24",
+    "mediaType": "Webinar Video",
+    "metadata": {
+      "fileName": "Pumpkin Pie Video",
+      "altText": "Pumpkin Pie Video",
+      "visibility": "public",
+      "tags": [
+        "Pumpkin",
+        "Pie",
+        "Webinar",
+        "Video",
+        "Educational"
+      ],
+      "description": "Pumpkin Pie Video",
+      "Webinar Title": "Pumpkin Pie Video",
+      "Webinar Summary": "Pumpkin Pie Video",
+      "Webinar CTA": "Pumpkin Pie Video",
+      "recordedDate": "2025-04-12T15:21:16.969Z",
+      "uploadedBy": "67c732b32af71c02fcd8fe24",
+      "modifiedBy": "67c732b32af71c02fcd8fe24",
+      "mediaType": "67f5547408eae3913c8dc628",
+      "v_thumbnail": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/pumpkin_pie_video_thumbnail_04122025.jpg",
+      "v_thumbnailTimestamp": "00:00:33"
+    },
+    "createdAt": "2025-04-12T15:22:48.105Z",
+    "updatedAt": "2025-04-14T14:44:46.993Z",
+    "__v": 1
+  }
+]
+DEBUG - Processing file: The Love Note Video.mp4
+DEBUG - File metadata: {
+  "fileName": "The Love Note Video",
+  "altText": "The Love Note",
+  "visibility": "public",
+  "tags": [
+    "love",
+    "note",
+    "lab",
+    "Derek",
+    "Webinar",
+    "Video",
+    "Educational"
+  ],
+  "description": "The Love Note SUMMARY and then some",
+  "Webinar Title": "The Love Note",
+  "Webinar Summary": "The Love Note",
+  "Webinar CTA": "Show love",
+  "recordedDate": "2025-04-09T20:20:23.884Z",
+  "uploadedBy": "67c732b32af71c02fcd8fe24",
+  "modifiedBy": "67c732b32af71c02fcd8fe24",
+  "mediaType": "67f5547408eae3913c8dc628",
+  "v_thumbnail": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/the_love_note_video_thumbnail_04092025.jpg",
+  "v_thumbnailTimestamp": "00:00:29"
+}
+DEBUG - Existing tags converted to lowercase: [ 'love', 'note', 'lab', 'derek', 'webinar', 'video', 'educational' ]
+DEBUG - Default tags converted to lowercase: [ 'webinar', 'video', 'educational' ]
+DEBUG - Missing tags: []
+DEBUG - Needs update: false
+DEBUG - Processing file: Witch Video.mp4
+DEBUG - File metadata: {
+  "fileName": "Witch Video.mp4",
+  "altText": "Witch Video",
+  "visibility": "public",
+  "tags": [
+    "witch",
+    "video",
+    "lab",
+    "Webinar",
+    "Video",
+    "Educational"
+  ],
+  "description": "Witch Video description",
+  "recordedDate": "2025-04-11T15:33:23.125Z",
+  "uploadedBy": "67c732b32af71c02fcd8fe24",
+  "modifiedBy": "67c732b32af71c02fcd8fe24",
+  "mediaType": "67f5547408eae3913c8dc628",
+  "Webinar Title": "Witch Video",
+  "Webinar Summary": "Witch Video",
+  "Webinar CTA": "Witch Video",
+  "v_thumbnail": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/witch_video_thumbnail_04112025.jpg",
+  "v_thumbnailTimestamp": "00:00:24"
+}
+DEBUG - Existing tags converted to lowercase: [ 'witch', 'video', 'lab', 'webinar', 'video', 'educational' ]
+DEBUG - Default tags converted to lowercase: [ 'webinar', 'video', 'educational' ]
+DEBUG - Missing tags: []
+DEBUG - Needs update: false
+DEBUG - Processing file: Pumpkin Pie Video
+DEBUG - File metadata: {
+  "fileName": "Pumpkin Pie Video",
+  "altText": "Pumpkin Pie Video",
+  "visibility": "public",
+  "tags": [
+    "Pumpkin",
+    "Pie",
+    "Webinar",
+    "Video",
+    "Educational"
+  ],
+  "description": "Pumpkin Pie Video",
+  "Webinar Title": "Pumpkin Pie Video",
+  "Webinar Summary": "Pumpkin Pie Video",
+  "Webinar CTA": "Pumpkin Pie Video",
+  "recordedDate": "2025-04-12T15:21:16.969Z",
+  "uploadedBy": "67c732b32af71c02fcd8fe24",
+  "modifiedBy": "67c732b32af71c02fcd8fe24",
+  "mediaType": "67f5547408eae3913c8dc628",
+  "v_thumbnail": "https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/pumpkin_pie_video_thumbnail_04122025.jpg",
+  "v_thumbnailTimestamp": "00:00:33"
+}
+DEBUG - Existing tags converted to lowercase: [ 'pumpkin', 'pie', 'webinar', 'video', 'educational' ]
+DEBUG - Default tags converted to lowercase: [ 'webinar', 'video', 'educational' ]
+DEBUG - Missing tags: []
+DEBUG - Needs update: false
+🔍 Found 0 files needing default tags for media type: Webinar Video
+Fetching media with slug: employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c
+[0;36mMongoose:[0m media.findOne({ slug: [32m'employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c'[39m}, {})
+Fetching media with slug: employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c
+[0;36mMongoose:[0m media.findOne({ slug: [32m'employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c'[39m}, {})
+Fetched media file: {
+  metadata: {
+    imageWidth: 1920,
+    imageHeight: 1080,
+    fileName: 'Rodney4000',
+    altText: 'Rodney',
+    description: 'Rodney like science',
+    visibility: 'public',
+    tags: [ 'Product image' ],
+    'Webinar Title': '',
+    'Webinar Summary': '',
+    'Webinar CTA': '',
+    recordedDate: '2025-04-08T16:21:20.505Z',
+    uploadedBy: '67c732b32af71c02fcd8fe24',
+    modifiedBy: '67c732b32af71c02fcd8fe24',
+    mediaType: '67f54cfce7a624343173a28a',
+    'Product Name': 'Rodney200022',
+    'Product Category': 'Homogenizers',
+    'Product SKU': '343-4R'
+  },
+  _id: new ObjectId('67f54d5ce7a624343173a28f'),
+  id: 'edb7884b-6878-4da1-9614-e76dd9f8d387',
+  title: 'Employee Spotlight - Rodney.jpg',
+  location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/Employee Spotlight - Rodney.jpg_Tue Apr 08 2025 12:22:48 GMT-0400 (Eastern Daylight Time)',
+  slug: 'employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c',
+  fileSize: 1237474,
+  fileExtension: 'JPG',
+  modifiedDate: 2025-04-08T16:22:52.217Z,
+  uploadedBy: '67c732b32af71c02fcd8fe24',
+  modifiedBy: '67c732b32af71c02fcd8fe24',
+  mediaType: '67f54cfce7a624343173a28a',
+  __t: 'BaseImage',
+  createdAt: 2025-04-08T16:22:52.644Z,
+  updatedAt: 2025-04-14T15:07:28.997Z,
+  __v: 1
+}
+Fetched media file: {
+  metadata: {
+    imageWidth: 1920,
+    imageHeight: 1080,
+    fileName: 'Rodney4000',
+    altText: 'Rodney',
+    description: 'Rodney like science',
+    visibility: 'public',
+    tags: [ 'Product image' ],
+    'Webinar Title': '',
+    'Webinar Summary': '',
+    'Webinar CTA': '',
+    recordedDate: '2025-04-08T16:21:20.505Z',
+    uploadedBy: '67c732b32af71c02fcd8fe24',
+    modifiedBy: '67c732b32af71c02fcd8fe24',
+    mediaType: '67f54cfce7a624343173a28a',
+    'Product Name': 'Rodney200022',
+    'Product Category': 'Homogenizers',
+    'Product SKU': '343-4R'
+  },
+  _id: new ObjectId('67f54d5ce7a624343173a28f'),
+  id: 'edb7884b-6878-4da1-9614-e76dd9f8d387',
+  title: 'Employee Spotlight - Rodney.jpg',
+  location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/Employee Spotlight - Rodney.jpg_Tue Apr 08 2025 12:22:48 GMT-0400 (Eastern Daylight Time)',
+  slug: 'employee-spotlight-rodney-jpg-fb60d73d-2563-4300-89d2-3dca91a60b4c',
+  fileSize: 1237474,
+  fileExtension: 'JPG',
+  modifiedDate: 2025-04-08T16:22:52.217Z,
+  uploadedBy: '67c732b32af71c02fcd8fe24',
+  modifiedBy: '67c732b32af71c02fcd8fe24',
+  mediaType: '67f54cfce7a624343173a28a',
+  __t: 'BaseImage',
+  createdAt: 2025-04-08T16:22:52.644Z,
+  updatedAt: 2025-04-14T15:07:28.997Z,
+  __v: 1
+}
+[0;36mMongoose:[0m media.find({}, {})
+Getting media types {}
+[0;36mMongoose:[0m mediatypes.find({}, {})
+[0;36mMongoose:[0m users.findOne({ email: [32m'travis.heller@revvity.com'[39m }, {})
+[0;36mMongoose:[0m users.findOne({ email: [32m'travis.heller@revvity.com'[39m }, {})
+[0;36mMongoose:[0m media.find({}, {})
+Getting media types {}
+[0;36mMongoose:[0m mediatypes.find({}, {})
+Found media types: [
+  {
+    _id: new ObjectId('67f410af4234448e0a3620d9'),
+    name: 'Testing',
+    fields: [ [Object], [Object] ],
+    __v: 0,
+    updatedAt: 2025-04-12T17:54:56.166Z,
+    usageCount: 0,
+    isDeleting: false,
+    status: 'archived'
+  },
+  {
+    _id: new ObjectId('67f54cfce7a624343173a28a'),
+    name: 'Product Image',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'image/jpeg', 'image/webp' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:21:16.637Z,
+    updatedAt: 2025-04-12T17:54:56.447Z,
+    __v: 1,
+    catColor: '#2196f3',
+    defaultTags: [ 'Product image' ]
+  },
+  {
+    _id: new ObjectId('67f5547408eae3913c8dc628'),
+    name: 'Webinar Video',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 3,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'video/mp4', 'video/webm' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:53:08.893Z,
+    updatedAt: 2025-04-14T14:44:29.831Z,
+    __v: 2,
+    catColor: '#8bc34a',
+    defaultTags: [ 'Webinar', 'Video', 'Educational' ]
+  },
+  {
+    _id: new ObjectId('67f6db4580ce5846bca45c83'),
+    name: 'Application',
+    fields: [ [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-09T20:40:37.237Z,
+    updatedAt: 2025-04-12T17:54:56.455Z,
+    __v: 0,
+    catColor: '#ff9800'
+  },
+  {
+    _id: new ObjectId('67f801059ebbcda7d2670c63'),
+    name: 'Protocol',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'application/pdf' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    catColor: '#e91e63',
+    createdAt: 2025-04-10T17:33:57.947Z,
+    updatedAt: 2025-04-12T17:54:56.454Z,
+    __v: 0
+  }
+]
+Found media types: [
+  {
+    _id: new ObjectId('67f410af4234448e0a3620d9'),
+    name: 'Testing',
+    fields: [ [Object], [Object] ],
+    __v: 0,
+    updatedAt: 2025-04-12T17:54:56.166Z,
+    usageCount: 0,
+    isDeleting: false,
+    status: 'archived'
+  },
+  {
+    _id: new ObjectId('67f54cfce7a624343173a28a'),
+    name: 'Product Image',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'image/jpeg', 'image/webp' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:21:16.637Z,
+    updatedAt: 2025-04-12T17:54:56.447Z,
+    __v: 1,
+    catColor: '#2196f3',
+    defaultTags: [ 'Product image' ]
+  },
+  {
+    _id: new ObjectId('67f5547408eae3913c8dc628'),
+    name: 'Webinar Video',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 3,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'video/mp4', 'video/webm' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-08T16:53:08.893Z,
+    updatedAt: 2025-04-14T14:44:29.831Z,
+    __v: 2,
+    catColor: '#8bc34a',
+    defaultTags: [ 'Webinar', 'Video', 'Educational' ]
+  },
+  {
+    _id: new ObjectId('67f6db4580ce5846bca45c83'),
+    name: 'Application',
+    fields: [ [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    createdAt: 2025-04-09T20:40:37.237Z,
+    updatedAt: 2025-04-12T17:54:56.455Z,
+    __v: 0,
+    catColor: '#ff9800'
+  },
+  {
+    _id: new ObjectId('67f801059ebbcda7d2670c63'),
+    name: 'Protocol',
+    fields: [ [Object], [Object], [Object] ],
+    status: 'active',
+    usageCount: 1,
+    replacedBy: null,
+    isDeleting: false,
+    acceptedFileTypes: [ 'application/pdf' ],
+    baseType: 'Media',
+    includeBaseFields: true,
+    catColor: '#e91e63',
+    createdAt: 2025-04-10T17:33:57.947Z,
+    updatedAt: 2025-04-12T17:54:56.454Z,
+    __v: 0
+  }
+]
+// Fetching all users
+[0;36mMongoose:[0m users.find({}, {})
+// Fetching all users
+[0;36mMongoose:[0m users.find({}, {})
+Fetching media with slug: the-love-note-video-mp4-dc9a7f80-2a14-4e44-beb1-d55d977e7493
+[0;36mMongoose:[0m media.findOne({ slug: [32m'the-love-note-video-mp4-dc9a7f80-2a14-4e44-beb1-d55d977e7493'[39m}, {})
+Fetching media with slug: the-love-note-video-mp4-dc9a7f80-2a14-4e44-beb1-d55d977e7493
+[0;36mMongoose:[0m media.findOne({ slug: [32m'the-love-note-video-mp4-dc9a7f80-2a14-4e44-beb1-d55d977e7493'[39m}, {})
+Fetched media file: {
+  metadata: {
+    fileName: 'The Love Note Video',
+    altText: 'The Love Note',
+    visibility: 'public',
+    tags: [
+      'love',
+      'note',
+      'lab',
+      'Derek',
+      'Webinar',
+      'Video',
+      'Educational'
+    ],
+    description: 'The Love Note SUMMARY and then some',
+    'Webinar Title': 'The Love Note',
+    'Webinar Summary': 'The Love Note',
+    'Webinar CTA': 'Show love',
+    recordedDate: '2025-04-09T20:20:23.884Z',
+    uploadedBy: '67c732b32af71c02fcd8fe24',
+    modifiedBy: '67c732b32af71c02fcd8fe24',
+    mediaType: '67f5547408eae3913c8dc628',
+    v_thumbnail: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/the_love_note_video_thumbnail_04092025.jpg',
+    v_thumbnailTimestamp: '00:00:29'
+  },
+  _id: new ObjectId('67f6d6ee80ce5846bca45c46'),
+  id: 'the-love-note-video-mp4-849ad7fa-5eac-4350-8bda-4c3990b3339e',
+  title: 'The Love Note Video.mp4',
+  location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/the_love_note_video_mp4_04092025',
+  slug: 'the-love-note-video-mp4-dc9a7f80-2a14-4e44-beb1-d55d977e7493',
+  fileSize: 46613795,
+  fileExtension: 'MP4',
+  modifiedDate: 2025-04-09T20:22:06.376Z,
+  uploadedBy: '67c732b32af71c02fcd8fe24',
+  modifiedBy: '67c732b32af71c02fcd8fe24',
+  mediaType: 'Webinar Video',
+  createdAt: 2025-04-09T20:22:06.425Z,
+  updatedAt: 2025-04-14T14:44:46.814Z,
+  __v: 1
+}
+Fetched media file: {
+  metadata: {
+    fileName: 'The Love Note Video',
+    altText: 'The Love Note',
+    visibility: 'public',
+    tags: [
+      'love',
+      'note',
+      'lab',
+      'Derek',
+      'Webinar',
+      'Video',
+      'Educational'
+    ],
+    description: 'The Love Note SUMMARY and then some',
+    'Webinar Title': 'The Love Note',
+    'Webinar Summary': 'The Love Note',
+    'Webinar CTA': 'Show love',
+    recordedDate: '2025-04-09T20:20:23.884Z',
+    uploadedBy: '67c732b32af71c02fcd8fe24',
+    modifiedBy: '67c732b32af71c02fcd8fe24',
+    mediaType: '67f5547408eae3913c8dc628',
+    v_thumbnail: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/the_love_note_video_thumbnail_04092025.jpg',
+    v_thumbnailTimestamp: '00:00:29'
+  },
+  _id: new ObjectId('67f6d6ee80ce5846bca45c46'),
+  id: 'the-love-note-video-mp4-849ad7fa-5eac-4350-8bda-4c3990b3339e',
+  title: 'The Love Note Video.mp4',
+  location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/the_love_note_video_mp4_04092025',
+  slug: 'the-love-note-video-mp4-dc9a7f80-2a14-4e44-beb1-d55d977e7493',
+  fileSize: 46613795,
+  fileExtension: 'MP4',
+  modifiedDate: 2025-04-09T20:22:06.376Z,
+  uploadedBy: '67c732b32af71c02fcd8fe24',
+  modifiedBy: '67c732b32af71c02fcd8fe24',
+  mediaType: 'Webinar Video',
+  createdAt: 2025-04-09T20:22:06.425Z,
+  updatedAt: 2025-04-14T14:44:46.814Z,
+  __v: 1
+}
+[0;36mMongoose:[0m users.findOne({ _id: ObjectId("67c732b32af71c02fcd8fe24") }, {})
+Fetching media with slug: the-love-note-video-mp4-dc9a7f80-2a14-4e44-beb1-d55d977e7493
+[0;36mMongoose:[0m media.findOne({ slug: [32m'the-love-note-video-mp4-dc9a7f80-2a14-4e44-beb1-d55d977e7493'[39m}, {})
+Fetching media with slug: the-love-note-video-mp4-dc9a7f80-2a14-4e44-beb1-d55d977e7493
+[0;36mMongoose:[0m media.findOne({ slug: [32m'the-love-note-video-mp4-dc9a7f80-2a14-4e44-beb1-d55d977e7493'[39m}, {})
+Fetched media file: {
+  metadata: {
+    fileName: 'The Love Note Video',
+    altText: 'The Love Note',
+    visibility: 'public',
+    tags: [
+      'love',
+      'note',
+      'lab',
+      'Derek',
+      'Webinar',
+      'Video',
+      'Educational'
+    ],
+    description: 'The Love Note SUMMARY and then some',
+    'Webinar Title': 'The Love Note',
+    'Webinar Summary': 'The Love Note',
+    'Webinar CTA': 'Show love',
+    recordedDate: '2025-04-09T20:20:23.884Z',
+    uploadedBy: '67c732b32af71c02fcd8fe24',
+    modifiedBy: '67c732b32af71c02fcd8fe24',
+    mediaType: '67f5547408eae3913c8dc628',
+    v_thumbnail: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/the_love_note_video_thumbnail_04092025.jpg',
+    v_thumbnailTimestamp: '00:00:29'
+  },
+  _id: new ObjectId('67f6d6ee80ce5846bca45c46'),
+  id: 'the-love-note-video-mp4-849ad7fa-5eac-4350-8bda-4c3990b3339e',
+  title: 'The Love Note Video.mp4',
+  location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/the_love_note_video_mp4_04092025',
+  slug: 'the-love-note-video-mp4-dc9a7f80-2a14-4e44-beb1-d55d977e7493',
+  fileSize: 46613795,
+  fileExtension: 'MP4',
+  modifiedDate: 2025-04-09T20:22:06.376Z,
+  uploadedBy: '67c732b32af71c02fcd8fe24',
+  modifiedBy: '67c732b32af71c02fcd8fe24',
+  mediaType: 'Webinar Video',
+  createdAt: 2025-04-09T20:22:06.425Z,
+  updatedAt: 2025-04-14T14:44:46.814Z,
+  __v: 1
+}
+Fetched media file: {
+  metadata: {
+    fileName: 'The Love Note Video',
+    altText: 'The Love Note',
+    visibility: 'public',
+    tags: [
+      'love',
+      'note',
+      'lab',
+      'Derek',
+      'Webinar',
+      'Video',
+      'Educational'
+    ],
+    description: 'The Love Note SUMMARY and then some',
+    'Webinar Title': 'The Love Note',
+    'Webinar Summary': 'The Love Note',
+    'Webinar CTA': 'Show love',
+    recordedDate: '2025-04-09T20:20:23.884Z',
+    uploadedBy: '67c732b32af71c02fcd8fe24',
+    modifiedBy: '67c732b32af71c02fcd8fe24',
+    mediaType: '67f5547408eae3913c8dc628',
+    v_thumbnail: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/thumbnails/the_love_note_video_thumbnail_04092025.jpg',
+    v_thumbnailTimestamp: '00:00:29'
+  },
+  _id: new ObjectId('67f6d6ee80ce5846bca45c46'),
+  id: 'the-love-note-video-mp4-849ad7fa-5eac-4350-8bda-4c3990b3339e',
+  title: 'The Love Note Video.mp4',
+  location: 'https://omnimedialibrarybucket.s3.us-east-2.amazonaws.com/the_love_note_video_mp4_04092025',
+  slug: 'the-love-note-video-mp4-dc9a7f80-2a14-4e44-beb1-d55d977e7493',
+  fileSize: 46613795,
+  fileExtension: 'MP4',
+  modifiedDate: 2025-04-09T20:22:06.376Z,
+  uploadedBy: '67c732b32af71c02fcd8fe24',
+  modifiedBy: '67c732b32af71c02fcd8fe24',
+  mediaType: 'Webinar Video',
+  createdAt: 2025-04-09T20:22:06.425Z,
+  updatedAt: 2025-04-14T14:44:46.814Z,
+  __v: 1
+}

@@ -1,7 +1,7 @@
 import "./sidebar.scss";
 import { Sidebar, Menu, MenuItem, SubMenu } from "react-pro-sidebar";
 import { Box, Avatar } from "@mui/material";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import "./sidebar.scss";
 import { NavLink, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -20,7 +20,66 @@ import {
   FaLayerGroup,
   FaChevronDown
 } from "react-icons/fa";
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactNode } from "react";
+
+// Custom animated submenu component to replace the default SubMenu
+interface AnimatedSubMenuProps {
+  label: ReactNode;
+  icon?: ReactNode;
+  children: ReactNode;
+  defaultOpen?: boolean;
+  open: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  className?: string;
+}
+
+const AnimatedSubMenu: React.FC<AnimatedSubMenuProps> = ({ 
+  label, 
+  icon, 
+  children, 
+  defaultOpen, 
+  open, 
+  onOpenChange, 
+  className 
+}) => {
+  return (
+    <Box className={className}>
+      <Box 
+        onClick={() => onOpenChange(!open)} 
+        sx={{ 
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0.75rem 1.5rem',
+          borderRadius: '4px',
+          '&:hover': {
+            backgroundColor: 'rgba(0, 0, 0, 0.04)'
+          }
+        }}
+      >
+        {label}
+      </Box>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ 
+              duration: 0.3,
+              ease: [0.4, 0, 0.2, 1]
+            }}
+            style={{ overflow: 'hidden' }}
+          >
+            <Box sx={{ paddingLeft: '1rem' }}>
+              {children}
+            </Box>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Box>
+  );
+};
 
 const CustomSidebar: React.FC = () => {
   const userData = useSelector((state: RootState) => state.user);
@@ -62,7 +121,8 @@ const CustomSidebar: React.FC = () => {
 
           <Menu className="sidebar-menu">
             {isAdmin ? (
-              <SubMenu
+              // Replace SubMenu with our custom AnimatedSubMenu
+              <AnimatedSubMenu
                 label={
                   <div className="user-profile">
                     <Avatar 
@@ -113,7 +173,7 @@ const CustomSidebar: React.FC = () => {
                 >
                   Media Types
                 </MenuItem>
-              </SubMenu>
+              </AnimatedSubMenu>
             ) : (
               <MenuItem 
                 className="user-menu-item"

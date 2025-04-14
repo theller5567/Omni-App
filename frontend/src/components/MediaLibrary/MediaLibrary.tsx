@@ -3,32 +3,24 @@ import { Box, Typography, Grid, Toolbar, IconButton, Tooltip, useMediaQuery, The
 import { motion } from 'framer-motion';
 import './mediaLibrary.scss';
 import { useNavigate } from 'react-router-dom';
-import { styled } from '@mui/material/styles';
-import { FaTrash } from 'react-icons/fa';
+import { FaTrash, FaDownload } from 'react-icons/fa';
 import { BaseMediaFile } from '../../interfaces/MediaFile';
 import { alpha } from '@mui/material/styles';
 import { toast } from 'react-toastify';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { GridRowSelectionModel } from '@mui/x-data-grid';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store/store';
+import axios from 'axios';
+import env from '../../config/env';
 import { 
-  DataTable, 
+  VirtualizedDataTable,
   HeaderComponent, 
   MediaCard, 
   ConfirmationModal 
 } from './components';
 
-const CustomGrid = styled(Grid)({
-  '&.grid-view': {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-    gap: '16px',
-  },
-  '&.list-view': {
-    display: 'block',
-    width: '100%'
-  },
-});
 
 interface MediaLibraryProps {
   mediaFilesData: BaseMediaFile[];
@@ -40,7 +32,10 @@ interface MediaLibraryProps {
 }
 
 const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQuery, onAddMedia, onDeleteMedia }) => {
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>(() => {
+    // Get saved view mode from localStorage or default to 'card'
+    return localStorage.getItem('mediaLibraryViewMode') as 'list' | 'card' || 'card';
+  });
   const [selectedMediaType, setSelectedMediaType] = useState<string>('All');
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,6 +44,8 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
   const [isToolbarDelete, setIsToolbarDelete] = useState(false);
   const prevDataRef = useRef<string>('');
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
+  // Get user role from Redux store
+  const userRole = useSelector((state: RootState) => state.user.currentUser.role);
   
   // Process rows only when mediaFilesData or filter changes
   const rows = useMemo(() => {
@@ -88,7 +85,10 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
   }, [mediaFilesData, selectedMediaType]);
 
   const toggleView = () => {
-    setViewMode((prevView) => (prevView === 'list' ? 'card' : 'list'));
+    const newViewMode = viewMode === 'list' ? 'card' : 'list';
+    setViewMode(newViewMode);
+    // Save to localStorage
+    localStorage.setItem('mediaLibraryViewMode', newViewMode);
   };
 
   const handleFileClick = (file: BaseMediaFile) => {
@@ -97,11 +97,6 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
 
   const handleMediaTypeChange = (type: string) => {
     setSelectedMediaType(type);
-  };
-
-  const handleEdit = (id: string) => {
-    // Implement edit logic here
-    console.log(`Edit record with id: ${id}`);
   };
 
   const handleDeleteClick = (id: string) => {
@@ -142,6 +137,75 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     }
   };
 
+  const handleDownloadSelected = async () => {
+    if (selected.length > 0) {
+      try {
+        // Convert selection model to string array of IDs
+        const fileIds = selected.map(id => String(id));
+        
+        if (selected.length === 1) {
+          // For single file, use simple download approach
+          const file = rows.find(row => row.id === selected[0]);
+          if (file && file.location) {
+            const link = document.createElement('a');
+            link.href = file.location;
+            
+            // Create a filename that includes original extension
+            const fileName = file.metadata.fileName || file.title || 'download';
+            const extension = file.fileExtension ? `.${file.fileExtension.toLowerCase()}` : '';
+            link.download = fileName + (fileName.endsWith(extension) ? '' : extension);
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            toast.success('Download started', {
+              position: isMobile ? "bottom-center" : "top-right",
+              autoClose: 3000
+            });
+          }
+        } else {
+          // For multiple files, use batch download endpoint
+          toast.info(`Preparing ${selected.length} files for download...`, {
+            position: isMobile ? "bottom-center" : "top-right",
+            autoClose: 2000
+          });
+          
+          // Use axios to make the request with responseType blob
+          const response = await axios.post<Blob>(
+            `${env.BASE_URL}/media/batch-download`,
+            { fileIds }, // Send as JSON in request body
+            { responseType: 'blob' } // Set response type to blob
+          );
+          
+          // Create a download link for the blob
+          const blob = new Blob([response.data]);
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', `omni_media_${Date.now()}.zip`);
+          document.body.appendChild(link);
+          link.click();
+          
+          // Clean up
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(link);
+          
+          toast.success(`Downloaded ${selected.length} files`, {
+            position: isMobile ? "bottom-center" : "top-right",
+            autoClose: 3000
+          });
+        }
+      } catch (error) {
+        console.error('Download error:', error);
+        toast.error('Failed to download files. Please try again.', {
+          position: isMobile ? "bottom-center" : "top-right",
+          autoClose: 4000
+        });
+      }
+    }
+  };
+
   const EnhancedTableToolbar = ({ numSelected }: { numSelected: number }) => (
     <Toolbar
       className="toolbar"
@@ -162,13 +226,22 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
           {numSelected} selected
         </Typography>
       )}
-      {numSelected > 0 ? (
-        <Tooltip title="Delete">
-          <IconButton onClick={handleDeleteSelected} size={isMobile ? "small" : "medium"}>
-            <FaTrash />
-          </IconButton>
-        </Tooltip>
-      ) : null}
+      {numSelected > 0 && (
+        <>
+          <Tooltip title="Download">
+            <IconButton onClick={handleDownloadSelected} size={isMobile ? "small" : "medium"} color="primary">
+              <FaDownload />
+            </IconButton>
+          </Tooltip>
+          {userRole === 'superAdmin' && (
+            <Tooltip title="Delete">
+              <IconButton onClick={handleDeleteSelected} size={isMobile ? "small" : "medium"} color="error">
+                <FaTrash />
+              </IconButton>
+            </Tooltip>
+          )}
+        </>
+      )}
     </Toolbar>
   );
 
@@ -207,31 +280,38 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
           {selected.length > 0 && (
             <EnhancedTableToolbar numSelected={selected.length} />
           )}
-          <CustomGrid
-            id="media-library-container"
-            container
-            spacing={isMobile ? 1 : 2}
-            justifyContent="start"
-            className={viewMode === 'list' ? 'list-view' : 'grid-view'}
-            sx={{ 
-              height: '100%', 
-              overflow: 'hidden', 
-              pb: isMobile ? 6 : 2 // Add padding at bottom for mobile to account for bottom nav
-            }}
-          >
-            {viewMode === 'list' ? (
-              <DataTable 
+          
+          {viewMode === 'list' ? (
+            <Box sx={{ width: '100%', height: '100%', overflow: 'auto' }}>
+              <VirtualizedDataTable 
                 rows={rows}
-                onEdit={handleEdit}
-                onDelete={handleDeleteClick}
                 onSelectionChange={setSelected}
               />
-            ) : (
-              rows.map((file) => (
-                <MediaCard key={file.id} file={file} onClick={() => handleFileClick(file)} />
-              ))
-            )}
-          </CustomGrid>
+            </Box>
+          ) : (
+            <Box sx={{ width: '100%', height: '100%', overflow: 'auto', p: 2 }}>
+              <Grid 
+                container 
+                spacing={2}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 220px))',
+                  gap: '16px',
+                  justifyContent: 'center'
+                }}
+              >
+                {rows.map((file) => (
+                  <Box key={file.id} sx={{ width: '100%', maxWidth: '220px' }}>
+                    <MediaCard 
+                      file={file} 
+                      handleFileClick={() => handleFileClick(file)} 
+                      onDeleteClick={userRole === 'superAdmin' ? () => handleDeleteClick(file.id) : undefined}
+                    />
+                  </Box>
+                ))}
+              </Grid>
+            </Box>
+          )}
         </Box>
       </Box>
       <ToastContainer position={isMobile ? "bottom-center" : "top-right"} />

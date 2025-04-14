@@ -4,6 +4,15 @@
   height: 100vh;
   max-width: 250px;
   overflow: hidden;
+
+  .profile-chevron {
+    transition: transform 0.3s ease;
+    margin-left: 0.5rem;
+    
+    &.chevron-open {
+      transform: rotate(-180deg);
+    }
+  }
 }
 
 .sidebar-wrapper {
@@ -51,45 +60,32 @@
   .user-profile {
     display: flex;
     align-items: center;
-    padding: 0.5rem;
     width: 100%;
-    position: relative;
+    padding: 0.5rem;
+    transition: background-color 0.2s ease;
+    border-radius: 4px;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
     
     .sidebar-avatar {
-      width: 40px;
-      height: 40px;
-      margin-right: 12px;
+      width: 32px;
+      height: 32px;
+      margin-right: 10px;
     }
     
     .user-name {
-      font-weight: 500;
-      font-size: 0.9rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
       display: flex;
       flex-direction: column;
-      color: white;
-      max-width: 125px;
-    }
-
-    .username-tag {
-      font-size: 0.8rem;
-      color: var(--accent-color);
-    }
-    
-    .profile-chevron {
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 10px;
-      height: 10px;
-      color: var(--accent-color);
-      transition: transform 0.3s ease;
+      font-size: 0.9rem;
+      font-weight: 500;
+      flex: 1;
       
-      &.chevron-open {
-        transform: translateY(-50%) rotate(180deg);
+      .username-tag {
+        font-size: 0.7rem;
+        opacity: 0.8;
+        margin-top: 2px;
       }
     }
   }
@@ -198,22 +194,21 @@
   
   /* For the sidebar account submenu */
   .sidebar-account {
-    > .ps-menu-button {
-      background-color: rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
-      margin-bottom: 0.25rem;
-      padding: 0.5rem;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      position: relative;
+    margin-bottom: 1rem;
+    
+    .ps-menu-button {
+      transition: all 0.2s ease;
+      margin: 0.2rem 0;
+      border-radius: 4px;
       
       &:hover {
-        transform: none;
+        background-color: rgba(0, 0, 0, 0.04);
       }
-    }
-    
-    .ps-collapsed {
-      min-height: 56px !important;
+      
+      &.active-menu-item {
+        background-color: var(--primary-color);
+        color: white !important;
+      }
     }
   }
 }

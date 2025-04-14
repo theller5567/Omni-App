@@ -17,7 +17,24 @@ const initialState: MediaState = {
 
 export const initializeMedia = createAsyncThunk(
   'media/initialize',
-  async () => {
+  async (_, { getState }) => {
+    // Get the current state
+    const state = getState() as { media: MediaState };
+    
+    // Only skip if we have successfully loaded data AND we have actual media items
+    if (state.media.status === 'succeeded' && state.media.allMedia.length > 0) {
+      console.log('Skipping media fetch - already loaded successfully with', state.media.allMedia.length, 'items');
+      return state.media.allMedia;
+    }
+    
+    // If we're currently loading AND there's no data, we should force a reload
+    if (state.media.status === 'loading' && state.media.allMedia.length === 0) {
+      console.log('Media fetch is in progress, but no data exists yet - continuing with fetch');
+    } else if (state.media.status === 'loading') {
+      console.log('Skipping media fetch - request already in progress with data');
+      return state.media.allMedia;
+    }
+    
     try {
       console.log('Fetching media from backend');
       const response = await axios.get<BaseMediaFile[]>(`${env.BASE_URL}/media/all`);

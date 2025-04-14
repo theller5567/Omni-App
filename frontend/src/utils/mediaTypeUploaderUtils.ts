@@ -67,14 +67,37 @@ export const updateFieldOptions = (field: SelectField, options: string[]): Selec
 
 // Transform config data for API
 export const transformConfigToApiData = (config: MediaTypeConfig) => {
-  return {
+  console.log('transformConfigToApiData - Input config:', JSON.stringify(config, null, 2));
+  
+  const result = {
     name: config.name,
     fields: config.fields,
     baseType: config.baseType || 'Media',
     includeBaseFields: config.includeBaseFields !== false,
     acceptedFileTypes: config.acceptedFileTypes || [],
-    status: config.status || 'active'
+    status: config.status || 'active',
+    defaultTags: config.defaultTags || []
   };
+  
+  console.log('transformConfigToApiData - Output result:', JSON.stringify(result, null, 2));
+  return result;
+};
+
+// Normalize tags to ensure consistent format
+export const normalizeTag = (tag: string): string => {
+  if (!tag) return '';
+  
+  // Trim whitespace and convert to lowercase
+  let normalizedTag = tag.trim().toLowerCase();
+  
+  // Remove duplicate spaces
+  normalizedTag = normalizedTag.replace(/\s+/g, ' ');
+  
+  // Remove any invalid characters that might cause issues
+  // Only allow alphanumeric, spaces, hyphens, and underscores
+  normalizedTag = normalizedTag.replace(/[^\w\s-]/g, '');
+  
+  return normalizedTag;
 };
 
 // Check if a category is fully selected

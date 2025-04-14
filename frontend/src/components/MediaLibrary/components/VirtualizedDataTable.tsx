@@ -1,21 +1,19 @@
 import React from 'react';
 import { DataGrid, GridColDef, GridToolbar, GridRowSelectionModel, GridRowParams } from '@mui/x-data-grid';
 import { Link, useNavigate } from 'react-router-dom';
-import { Box } from '@mui/material';
+import { Box, Chip, Stack } from '@mui/material';
 import { formatFileSize } from '../../../utils/formatFileSize';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../store/store';
 import { isImageFile, isVideoFile, getFileIcon } from '../utils';
 
-interface DataTableProps {
+interface VirtualizedDataTableProps {
   rows: any[];
-  onDelete: (id: string) => void;
   onSelectionChange: (selection: GridRowSelectionModel) => void;
 }
 
-const DataTable: React.FC<DataTableProps> = ({ 
-  rows, 
-  onDelete, 
+const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({ 
+  rows,
   onSelectionChange 
 }) => {
   const navigate = useNavigate();
@@ -62,6 +60,7 @@ const DataTable: React.FC<DataTableProps> = ({
                   objectFit: 'cover',
                   objectPosition: 'center',
                 }} 
+                loading="lazy" // Add lazy loading for images
               />
             </div>
           </div>
@@ -101,6 +100,7 @@ const DataTable: React.FC<DataTableProps> = ({
                     objectFit: 'cover',
                     objectPosition: 'center',
                   }} 
+                  loading="lazy" // Add lazy loading for images
                 />
               </div>
             </div>
@@ -173,30 +173,76 @@ const DataTable: React.FC<DataTableProps> = ({
         return new Date(value).toLocaleDateString();
       }
     },
-    { field: 'tags', headerName: 'Tags', flex: 0.5, renderCell: (params) => {
+    { field: 'tags', headerName: 'Tags', flex: 1, renderCell: (params) => {
       const tags = params.row.metadata.tags;
-      if (Array.isArray(tags)) {
-        return tags.map((tag, index) => (
-          <span key={index} className="tag">
-            {tag}{index < params.row.metadata.tags.length - 1 ? ', ' : ''}
-          </span>
-        ));
+      if (Array.isArray(tags) && tags.length > 0) {
+        return (
+          <Stack 
+            direction="row" 
+            spacing={0.5} 
+            sx={{ 
+              flexWrap: 'wrap', 
+              gap: '4px',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+              height: '100%',
+              overflow: 'hidden',
+              py: 0.5
+            }}
+          >
+            {tags.slice(0, 3).map((tag, index) => (
+              <Chip 
+                key={index} 
+                label={tag} 
+                size="small" 
+                variant="outlined"
+                sx={{ 
+                  fontSize: '0.7rem', 
+                  height: '20px',
+                  maxWidth: '80px',
+                  my: 0,
+                  '& .MuiChip-label': {
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    py: 0,
+                    px: 1
+                  }
+                }}
+              />
+            ))}
+            {tags.length > 3 && (
+              <Chip 
+                label={`+${tags.length - 3}`}
+                size="small"
+                sx={{ 
+                  fontSize: '0.7rem',
+                  height: '20px',
+                  my: 0,
+                  backgroundColor: 'rgba(0,0,0,0.1)'
+                }}
+              />
+            )}
+          </Stack>
+        );
       } else {
-        return <span>No tags available</span>;
+        return (
+          <Box sx={{ height: '100%', display: 'flex', alignItems: 'center' }}>
+            <span style={{ opacity: 0.5 }}>No tags</span>
+          </Box>
+        );
       }
     }},
   ];
 
+  // Set up DataGrid with virtualization features
   return (
     <div style={{ height: '100%', width: '100%', overflow: 'auto' }}>
       <DataGrid
-        slots={{
-          toolbar: GridToolbar,
-        }}
         rows={rows}
         columns={columns}
         getRowId={(row) => row.id}
-        pageSizeOptions={[5, 10, 20]}
+        pageSizeOptions={[5, 10, 20, 50, 100]}
         initialState={{
           pagination: {
             paginationModel: { pageSize: 10 },
@@ -205,12 +251,29 @@ const DataTable: React.FC<DataTableProps> = ({
             sortModel: [{ field: 'modifiedDate', sort: 'desc' }],
           },
         }}
+        slots={{
+          toolbar: GridToolbar,
+        }}
         checkboxSelection
         onRowClick={handleRowClick}
         onRowSelectionModelChange={onSelectionChange}
+        rowHeight={52} // Fixed row height for better virtualization
+        rowBufferPx={100} // Increase buffer size for smoother scrolling
+        columnBufferPx={100} // Increase column buffer for smoother horizontal scrolling
+        loading={rows.length === 0}
+        getRowClassName={(params) => `row-${params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd'}`}
+        sx={{
+          '& .row-even': {
+            backgroundColor: theme => theme.palette.mode === 'dark' ? '#2d2d2d' : '#f5f5f5',
+          },
+          '& .MuiDataGrid-cell': {
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          },
+        }}
       />
     </div>
   );
 };
 
-export default DataTable; 
+export default VirtualizedDataTable; 

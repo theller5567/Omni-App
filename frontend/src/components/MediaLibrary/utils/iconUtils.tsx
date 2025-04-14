@@ -1,5 +1,6 @@
+import React from 'react';
 import { FaFileVideo, FaFileAudio, FaFilePdf, FaFileWord, FaFileExcel, FaFile } from 'react-icons/fa';
-import { isVideoFile, isAudioFile } from './fileUtils';
+import { isImageFile, isVideoFile, isAudioFile, isDocumentFile } from './fileUtils';
 
 /**
  * Get appropriate icon for a file based on file extension and media type

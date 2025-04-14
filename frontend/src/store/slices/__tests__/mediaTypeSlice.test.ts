@@ -43,7 +43,6 @@ const sampleMediaType = {
   usageCount: 0,
   replacedBy: null,
   isDeleting: false,
-  acceptedFileTypes: [],
   createdAt: '2023-01-01',
   updatedAt: '2023-01-01'
 };

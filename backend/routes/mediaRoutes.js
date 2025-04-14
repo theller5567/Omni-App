@@ -2,6 +2,12 @@ import express from 'express';
 import multer from 'multer';
 import MediaType from '../models/MediaType.js';
 import Media from '../models/Media.js';
+import fs from 'fs';
+import path from 'path';
+import axios from 'axios';
+import { pipeline } from 'stream/promises';
+import archiver from 'archiver';
+import { fileURLToPath } from 'url';
 import { 
   getAllMedia, 
   getMediaById, 
@@ -167,6 +173,71 @@ router.get('/:id/debug', debugMediaFile);
 
 // Get specific media by ID
 router.get('/:id', getMediaById);
+
+// Batch download route
+router.post('/batch-download', async (req, res) => {
+  try {
+    const { fileIds } = req.body;
+    
+    if (!fileIds || !Array.isArray(fileIds) || fileIds.length === 0) {
+      return res.status(400).json({ error: 'No file IDs provided for batch download' });
+    }
+
+    console.log(`Batch download request received for ${fileIds.length} files`);
+    
+    // Find all requested media files
+    const mediaFiles = await Media.find({ _id: { $in: fileIds } });
+    
+    if (!mediaFiles || mediaFiles.length === 0) {
+      return res.status(404).json({ error: 'No files found for the provided IDs' });
+    }
+    
+    console.log(`Found ${mediaFiles.length} files for batch download`);
+
+    // Create a zip file for the batch download
+    const archive = archiver('zip', {
+      zlib: { level: 9 } // Maximum compression
+    });
+    
+    // Set the appropriate headers for the response
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename=media_files_${Date.now()}.zip`);
+    
+    // Pipe the archive to the response
+    archive.pipe(res);
+    
+    // Download each file and add it to the archive
+    for (const mediaFile of mediaFiles) {
+      try {
+        // Get the file name from the location URL
+        const fileName = mediaFile.title || 
+                         mediaFile.metadata?.fileName || 
+                         mediaFile.location.split('/').pop();
+        
+        // Create a readable stream from the file URL
+        const response = await axios({
+          method: 'get',
+          url: mediaFile.location,
+          responseType: 'stream'
+        });
+        
+        // Add the file to the archive
+        archive.append(response.data, { name: fileName });
+        console.log(`Added ${fileName} to the archive`);
+      } catch (error) {
+        console.error(`Error adding file ${mediaFile._id} to archive:`, error);
+        // Continue with other files even if one fails
+      }
+    }
+    
+    // Finalize the archive
+    await archive.finalize();
+    console.log('Batch download archive finalized successfully');
+  } catch (error) {
+    console.error('Error processing batch download:', error);
+    res.status(500).json({ error: 'Error processing batch download: ' + error.message });
+  }
+});
 
 export default router;
 

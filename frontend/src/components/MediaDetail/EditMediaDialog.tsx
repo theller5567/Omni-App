@@ -32,6 +32,7 @@ import './EditMediaDialog.scss';
 import VideoThumbnailSelector from '../VideoThumbnailSelector/VideoThumbnailSelector';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
+import { normalizeTag } from '../../utils/mediaTypeUploaderUtils';
 
 interface EditMediaDialogProps {
   open: boolean;
@@ -126,26 +127,34 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   }, [open]);
 
   const handleAddTag = (event: React.KeyboardEvent) => {
-    // Check if user is a superAdmin for default tags
-    const isDefaultTag = mediaType.defaultTags?.includes(newTag.trim());
-    
-    // Only allow adding tags if not a default tag, or if user is a superAdmin
-    if (isDefaultTag && !isSuperAdmin) {
-      return;
-    }
-    
     if (event.key === 'Enter' && newTag.trim()) {
+      // Normalize the tag
+      const normalizedTag = normalizeTag(newTag.trim());
+      
+      // Check if user is a superAdmin for default tags
+      const isDefaultTag = mediaType.defaultTags?.map(t => normalizeTag(t)).includes(normalizedTag);
+      
+      // Only allow adding tags if not a default tag, or if user is a superAdmin
+      if (isDefaultTag && !isSuperAdmin) {
+        return;
+      }
+      
       const currentTags = watch('tags');
-      if (!currentTags.includes(newTag.trim())) {
-        setValue('tags', [...currentTags, newTag.trim()]);
+      // Check if normalized tag already exists (case-insensitive)
+      if (!currentTags.map(t => normalizeTag(t)).includes(normalizedTag)) {
+        setValue('tags', [...currentTags, normalizedTag]);
       }
       setNewTag('');
     }
   };
 
   const handleDeleteTag = (tagToDelete: string) => {
-    // Check if the tag is a default tag
-    const isDefaultTag = mediaType.defaultTags?.includes(tagToDelete);
+    const normalizedTagToDelete = normalizeTag(tagToDelete);
+    
+    // Check if the tag is a default tag (using normalized comparison)
+    const isDefaultTag = mediaType.defaultTags?.some(tag => 
+      normalizeTag(tag) === normalizedTagToDelete
+    );
     
     // Do not allow removing default tags from this UI
     if (isDefaultTag) {
@@ -156,7 +165,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
     }
     
     const currentTags = watch('tags');
-    setValue('tags', currentTags.filter(tag => tag !== tagToDelete));
+    setValue('tags', currentTags.filter(tag => normalizeTag(tag) !== normalizedTagToDelete));
   };
 
   // Replace tagWarningOpen with a state to track unsaved tag warning
@@ -183,10 +192,13 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   // Add these handlers for the inline alert buttons
   const handleAddUnsavedTag = () => {
     if (unsavedTag) {
+      const normalizedTag = normalizeTag(unsavedTag);
       const currentTags = watch('tags');
-      if (!currentTags.includes(unsavedTag)) {
+      
+      // Check if normalized tag already exists (case-insensitive)
+      if (!currentTags.map(t => normalizeTag(t)).includes(normalizedTag)) {
         // Add the tag
-        const updatedTags = [...currentTags, unsavedTag];
+        const updatedTags = [...currentTags, normalizedTag];
         setValue('tags', updatedTags);
         
         // Proceed with form submission after adding tag
@@ -223,7 +235,9 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
       
       // Add any missing default tags
       mediaType.defaultTags.forEach(tag => {
-        if (!finalTags.includes(tag)) {
+        const normalizedDefaultTag = normalizeTag(tag);
+        // Check if this default tag is missing (using normalized comparison)
+        if (!finalTags.some(t => normalizeTag(t) === normalizedDefaultTag)) {
           finalTags.push(tag);
           tagsChanged = true;
         }
@@ -272,8 +286,11 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   // Helper function to compare arrays (for tags)
   const compareArrays = (arr1: any[], arr2: any[]): boolean => {
     if (arr1.length !== arr2.length) return false;
-    const sorted1 = [...arr1].sort();
-    const sorted2 = [...arr2].sort();
+    
+    // Sort and normalize tags for comparison
+    const sorted1 = [...arr1].map(tag => normalizeTag(tag)).sort();
+    const sorted2 = [...arr2].map(tag => normalizeTag(tag)).sort();
+    
     return sorted1.every((val, i) => val === sorted2[i]);
   };
 

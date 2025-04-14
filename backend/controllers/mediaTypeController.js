@@ -273,6 +273,7 @@ export const updateMediaType = async (req, res) => {
     const { name, fields, acceptedFileTypes, catColor, defaultTags } = req.body;
     
     console.log('Updating media type with data:', { id, requestBody: req.body });
+    console.log('Received defaultTags:', defaultTags);
     
     // Find the media type
     const mediaType = await MediaType.findById(id);
@@ -280,6 +281,8 @@ export const updateMediaType = async (req, res) => {
     if (!mediaType) {
       return res.status(404).json({ message: 'Media type not found' });
     }
+    
+    console.log('Original media type defaultTags:', mediaType.defaultTags);
     
     // Check if this media type is in use
     const count = await Media.countDocuments({
@@ -290,8 +293,11 @@ export const updateMediaType = async (req, res) => {
     });
     
     // We always allow updating defaultTags
-    if (defaultTags) {
+    if (defaultTags !== undefined) {
+      console.log('Setting defaultTags from', mediaType.defaultTags, 'to', defaultTags);
       mediaType.defaultTags = defaultTags;
+    } else {
+      console.log('defaultTags not provided in request');
     }
     
     if (count > 0) {
@@ -309,17 +315,17 @@ export const updateMediaType = async (req, res) => {
         updated = true;
       }
       
-      if (updated || defaultTags) {
-        await mediaType.save();
+      if (updated || defaultTags !== undefined) {
+        const savedMediaType = await mediaType.save();
         
         console.log('Updated media type in use:', {
           id,
           name: mediaType.name,
-          defaultTags: mediaType.defaultTags
+          defaultTags: savedMediaType.defaultTags
         });
         
         return res.status(200).json({
-          ...mediaType._doc,
+          ...savedMediaType._doc,
           usageCount: count,
           warningMessage: "Only acceptedFileTypes, catColor, and defaultTags were updated as this media type is in use by existing files"
         });
@@ -337,16 +343,18 @@ export const updateMediaType = async (req, res) => {
     if (acceptedFileTypes) mediaType.acceptedFileTypes = acceptedFileTypes;
     if (catColor) mediaType.catColor = catColor;
     
-    await mediaType.save();
+    console.log('Before saving non-used media type, defaultTags:', mediaType.defaultTags);
+    const savedMediaType = await mediaType.save();
+    console.log('After saving non-used media type, defaultTags:', savedMediaType.defaultTags);
     
     console.log('Updated media type:', {
       id,
-      name: mediaType.name,
-      defaultTags: mediaType.defaultTags
+      name: savedMediaType.name,
+      defaultTags: savedMediaType.defaultTags
     });
     
     res.status(200).json({
-      ...mediaType._doc,
+      ...savedMediaType._doc,
       usageCount: count
     });
   } catch (error) {
@@ -394,39 +402,64 @@ export const applyDefaultTagsToExistingFiles = async (req, res) => {
     
     // Update each media file by adding default tags if they don't already have them
     let updatedCount = 0;
+    let fileUpdateResults = [];
     
     console.log('🔄 Starting to update media files with default tags');
     
     for (const file of mediaFiles) {
       console.log('📄 Processing file:', file.title || file.id, 'Current metadata:', file.metadata);
       
-      const existingTags = file.metadata?.tags || [];
-      console.log('   Existing tags:', existingTags);
+      // Ensure the metadata object exists
+      if (!file.metadata) {
+        file.metadata = { tags: [] };
+      }
       
-      // Create a new array with all tags, removing duplicates
-      const newTags = [...new Set([...existingTags, ...mediaType.defaultTags])];
+      // Ensure the tags array exists
+      if (!file.metadata.tags) {
+        file.metadata.tags = [];
+      }
+      
+      // Convert existing tags to lowercase for comparison
+      const existingTagsLower = file.metadata.tags.map(tag => 
+        typeof tag === 'string' ? tag.toLowerCase() : tag
+      );
+      console.log('   Existing tags (lowercase):', existingTagsLower);
+      
+      // Check which default tags are missing (case-insensitive)
+      const missingTags = mediaType.defaultTags.filter(tag => {
+        const tagLower = typeof tag === 'string' ? tag.toLowerCase() : tag;
+        return !existingTagsLower.includes(tagLower);
+      });
+      
+      // Only add the missing tags in their original case
+      const newTags = [...file.metadata.tags];
+      let tagsAdded = false;
+      
+      for (const tag of missingTags) {
+        newTags.push(tag);
+        tagsAdded = true;
+      }
+      
       console.log('   New tags after merge:', newTags);
       
       // Only update if there are new tags to add
-      if (newTags.length > existingTags.length) {
-        console.log('   ✅ Adding new tags to file');
+      if (tagsAdded) {
+        console.log('   ✅ Adding missing tags:', missingTags);
         
-        // Initialize metadata object if it doesn't exist
-        if (!file.metadata) {
-          file.metadata = { tags: [] };
-        }
-        
-        // Ensure the tags property exists
-        if (!file.metadata.tags) {
-          file.metadata.tags = [];
-        }
-        
+        // Update the tags
         file.metadata.tags = newTags;
         
         try {
-          await file.save();
-          console.log('   ✅ Successfully saved file with new tags');
+          const savedFile = await file.save();
+          console.log('   ✅ Successfully saved file with new tags:', savedFile.metadata.tags);
           updatedCount++;
+          
+          fileUpdateResults.push({
+            id: file._id,
+            title: file.title || 'No title',
+            addedTags: missingTags,
+            newTagsTotal: newTags.length
+          });
         } catch (saveError) {
           console.error('   ❌ Error saving file:', saveError);
         }
@@ -437,11 +470,17 @@ export const applyDefaultTagsToExistingFiles = async (req, res) => {
     
     console.log('🎉 Successfully updated', updatedCount, 'out of', mediaFiles.length, 'files');
     
+    // Add cache busting header to prevent browser caching
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     res.status(200).json({ 
       message: `Default tags applied to ${updatedCount} media files`, 
       tagsApplied: mediaType.defaultTags,
       count: updatedCount,
-      totalFiles: mediaFiles.length 
+      totalFiles: mediaFiles.length,
+      updatedFiles: fileUpdateResults
     });
   } catch (error) {
     console.error('❌ Error applying default tags:', error);
@@ -578,7 +617,15 @@ export const setProductImageDefaultTags = async (req, res) => {
     let updatedCount = 0;
     
     for (const file of mediaFiles) {
-      const existingTags = file.metadata?.tags || [];
+      // Ensure we're working with an array of tags, converting to lowercase for case-insensitive comparison
+      const existingTags = Array.isArray(file.metadata?.tags) 
+        ? file.metadata.tags.map(tag => typeof tag === 'string' ? tag.toLowerCase() : tag)
+        : [];
+      
+      // Convert default tags to lowercase for case-insensitive comparison
+      const defaultTagsLower = mediaType.defaultTags.map(tag => 
+        typeof tag === 'string' ? tag.toLowerCase() : tag
+      );
       const newTags = [...new Set([...existingTags, 'Product image'])];
       
       if (newTags.length > existingTags.length) {
@@ -637,9 +684,10 @@ export const getFilesNeedingTags = async (req, res) => {
         { mediaType: id },
         { mediaType: mediaType.name }
       ]
-    });
+    }).lean();
     
     console.log('🔍 Found', mediaFiles.length, 'media files with media type:', mediaType.name);
+    console.log('DEBUG - Media file raw data:', JSON.stringify(mediaFiles, null, 2));
     
     if (mediaFiles.length === 0) {
       return res.status(200).json({ count: 0 });
@@ -647,23 +695,151 @@ export const getFilesNeedingTags = async (req, res) => {
     
     // Count files that need tags (missing one or more default tags)
     let filesNeedingTags = 0;
+    let filesWithIssues = [];
     
     for (const file of mediaFiles) {
-      const existingTags = file.metadata?.tags || [];
+      console.log('DEBUG - Processing file:', file.title);
+      console.log('DEBUG - File metadata:', JSON.stringify(file.metadata, null, 2));
       
-      // Check if any default tag is missing
-      const needsUpdate = mediaType.defaultTags.some(tag => !existingTags.includes(tag));
+      // Ensure we're working with an array of tags, converting to lowercase for case-insensitive comparison
+      const existingTags = Array.isArray(file.metadata?.tags) 
+        ? file.metadata.tags.map(tag => typeof tag === 'string' ? tag.toLowerCase() : tag)
+        : [];
+      
+      console.log('DEBUG - Existing tags converted to lowercase:', existingTags);
+      
+      // Convert default tags to lowercase for case-insensitive comparison
+      const defaultTagsLower = mediaType.defaultTags.map(tag => 
+        typeof tag === 'string' ? tag.toLowerCase() : tag
+      );
+      
+      console.log('DEBUG - Default tags converted to lowercase:', defaultTagsLower);
+      
+      // Check if any default tag is missing using case-insensitive comparison
+      const missingTags = defaultTagsLower.filter(defaultTag => 
+        !existingTags.includes(defaultTag)
+      );
+      
+      console.log('DEBUG - Missing tags:', missingTags);
+      
+      const needsUpdate = missingTags.length > 0;
+      
+      console.log('DEBUG - Needs update:', needsUpdate);
       
       if (needsUpdate) {
+        console.log(`File "${file.title || file._id}" needs tags. Existing tags:`, file.metadata?.tags);
         filesNeedingTags++;
+        filesWithIssues.push({
+          id: file._id,
+          title: file.title || 'No title',
+          existingTags: file.metadata?.tags || [],
+          missingTags: mediaType.defaultTags.filter(tag => 
+            !existingTags.includes(tag.toLowerCase())
+          )
+        });
       }
     }
     
     console.log('🔍 Found', filesNeedingTags, 'files needing default tags for media type:', mediaType.name);
+    if (filesNeedingTags > 0) {
+      console.log('📄 Files with issues:', JSON.stringify(filesWithIssues, null, 2));
+    }
     
-    return res.status(200).json({ count: filesNeedingTags });
+    // Add cache busting header to prevent browser caching
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    return res.status(200).json({ 
+      count: filesNeedingTags,
+      filesWithIssues: filesNeedingTags > 0 ? filesWithIssues : [] 
+    });
   } catch (error) {
     console.error('❌ Error checking files needing tags:', error);
     res.status(500).json({ message: 'Error checking files needing tags', error });
+  }
+};
+
+// Fix a specific media file's tags
+export const fixSpecificMediaFile = async (req, res) => {
+  try {
+    const { mediaTypeId, fileId } = req.params;
+    
+    console.log('⭐ Fixing specific media file:', fileId, 'for media type:', mediaTypeId);
+    
+    // Find the media type
+    const mediaType = await MediaType.findById(mediaTypeId);
+    if (!mediaType) {
+      console.log('❌ Media type not found with ID:', mediaTypeId);
+      return res.status(404).json({ message: 'Media type not found' });
+    }
+    
+    console.log('📋 Media type found:', mediaType.name, 'with ID:', mediaType._id);
+    console.log('🏷️ Default tags:', mediaType.defaultTags);
+    
+    if (!mediaType.defaultTags || mediaType.defaultTags.length === 0) {
+      console.log('⚠️ No default tags defined for this media type');
+      return res.status(400).json({ message: 'No default tags to apply' });
+    }
+    
+    // Find the specific file
+    const file = await Media.findById(fileId);
+    if (!file) {
+      console.log('❌ Media file not found with ID:', fileId);
+      return res.status(404).json({ message: 'Media file not found' });
+    }
+    
+    console.log('📄 Found file:', file.title || file._id.toString());
+    console.log('   Current state:', JSON.stringify({
+      hasMetadata: !!file.metadata,
+      tags: file.metadata?.tags || [],
+      mediaType: file.mediaType
+    }, null, 2));
+    
+    // Ensure metadata exists
+    if (!file.metadata) {
+      file.metadata = {};
+    }
+    
+    // Save the old tags for reporting
+    const oldTags = [...(file.metadata.tags || [])];
+    
+    // Completely reset the file's metadata.tags with the default tags
+    // This ensures we're using the exact same strings as the default tags
+    file.metadata.tags = [...mediaType.defaultTags];
+    
+    try {
+      // Force save to update in database
+      await Media.updateOne(
+        { _id: fileId },
+        { $set: { 'metadata.tags': mediaType.defaultTags } }
+      );
+      
+      // Also save using the model to trigger any middleware
+      await file.save();
+      
+      console.log('✅ Successfully reset file tags. Old:', oldTags, 'New:', file.metadata.tags);
+      
+      // Add cache busting header to prevent browser caching
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      return res.status(200).json({
+        message: 'Successfully fixed media file tags',
+        file: {
+          id: file._id,
+          title: file.title || 'Untitled',
+          oldTags,
+          newTags: file.metadata.tags
+        }
+      });
+    } catch (saveError) {
+      console.error('❌ Error saving file:', saveError);
+      return res.status(500).json({ message: 'Error saving file', error: saveError.message });
+    }
+  } catch (error) {
+    console.error('❌ Error fixing specific media file:', error);
+    return res.status(500).json({ message: 'Error fixing specific media file', error: error.message });
   }
 };

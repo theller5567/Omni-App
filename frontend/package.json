@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "jest",
@@ -18,10 +18,12 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "@mui/icons-material": "^6.4.3",
+    "@mui/icons-material": "^7.0.1",
     "@mui/material": "^6.4.3",
     "@mui/x-data-grid": "^7.27.1",
     "@reduxjs/toolkit": "^2.6.0",
+    "@sentry/react": "^9.12.0",
+    "@sentry/tracing": "^7.120.3",
     "@types/react-icons": "^2.2.7",
     "axios": "^1.7.9",
     "formik": "^2.4.6",
@@ -36,6 +38,7 @@
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.1.5",
     "react-toastify": "^11.0.3",
+    "react-window": "^1.8.11",
     "yup": "^1.6.1"
   },
   "devDependencies": {
@@ -48,6 +51,7 @@
     "@types/node": "^22.13.9",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@types/react-window": "^1.8.8",
     "@vitejs/plugin-react": "^4.3.4",
     "babel-jest": "^29.7.0",
     "eslint": "^9.19.0",
@@ -56,6 +60,7 @@
     "globals": "^15.14.0",
     "jest-environment-jsdom": "^29.7.0",
     "netlify-cli": "^17.17.1",
+    "react-virtualized-auto-sizer": "^1.0.26",
     "sass": "^1.84.0",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.22.0",

@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
+import env from '../../config/env';
 
 // Define the type for the authentication state
 interface AuthState {
@@ -45,12 +46,7 @@ export const register = createAsyncThunk(
   async (userData: UserRegistrationData, { rejectWithValue }) => {
     try {
       console.log("Sending registration data:", userData);
-      
-      // Use the simple-auth function for testing
-      const registerUrl = '/.netlify/functions/simple-auth';
-      console.log("Using register URL:", registerUrl);
-      
-      const response = await axios.post(registerUrl, userData);
+      const response = await axios.post(`${env.BASE_URL}/api/auth/register`, userData);
       console.log("Registration response:", response.data);
       return response.data as AuthResponse;
     } catch (error: any) {
@@ -67,12 +63,7 @@ export const login = createAsyncThunk(
   async (credentials: UserLoginCredentials, { rejectWithValue }) => {
     try {
       console.log("Logging in with:", credentials.email);
-      
-      // Use the simple-auth function for testing
-      const loginUrl = '/.netlify/functions/simple-auth';
-      console.log("Using login URL:", loginUrl);
-      
-      const response = await axios.post(loginUrl, credentials);
+      const response = await axios.post(`${env.BASE_URL}/api/auth/login`, credentials);
       
       // Type assertion for response data
       const authData = response.data as AuthResponse;

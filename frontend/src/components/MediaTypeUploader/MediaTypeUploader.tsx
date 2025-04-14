@@ -40,7 +40,8 @@ import {
 import {
   transformConfigToApiData,
   FileTypeCategory,
-  predefinedColors
+  predefinedColors,
+  normalizeTag
 } from '../../utils/mediaTypeUploaderUtils';
 import { FaImage, FaVideo, FaFileAudio, FaFileWord } from 'react-icons/fa';
 
@@ -254,11 +255,16 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       const catColor = mediaTypeConfig.catColor || '#2196f3';
       const colorName = predefinedColors.find(c => c.hex === catColor)?.name || 'Default Blue';
       
+      console.log('Before API call - mediaTypeConfig:', JSON.stringify(mediaTypeConfig, null, 2));
+      console.log('Before API call - defaultTags:', mediaTypeConfig.defaultTags);
+      
       // Create API data from the media type config
       const apiData = {
         ...transformConfigToApiData(mediaTypeConfig),
         catColor // Make sure catColor is explicitly included
       };
+      
+      console.log('Final API data being sent:', JSON.stringify(apiData, null, 2));
 
       if (isEditMode && mediaTypeConfig._id) {
         // Update existing media type
@@ -270,6 +276,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
         );
 
         console.log('Media type updated successfully:', response.data);
+        console.log('Response defaultTags:', response.data.defaultTags);
         
         // Refresh all media types to ensure store is updated
         dispatch(initializeMediaTypes());
@@ -322,30 +329,39 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
     onClose();
   };
 
-  const handleAddTag = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    // Only superAdmins can add tags
-    if (!isSuperAdmin) return;
-    
-    if (event.key === 'Enter' && newTag.trim()) {
-      if (!mediaTypeConfig.defaultTags?.includes(newTag.trim())) {
-        setMediaTypeConfig(prev => ({
-          ...prev,
-          defaultTags: [...(prev.defaultTags || []), newTag.trim()]
-        }));
-      }
-      setNewTag('');
-      event.preventDefault(); // Prevent form submission
-    }
-  };
-
   const handleDeleteTag = (tagToDelete: string) => {
     // Only superAdmins can delete tags
     if (!isSuperAdmin) return;
     
+    const normalizedTagToDelete = normalizeTag(tagToDelete);
     setMediaTypeConfig(prev => ({
       ...prev,
-      defaultTags: prev.defaultTags?.filter(tag => tag !== tagToDelete) || []
+      defaultTags: prev.defaultTags?.filter(tag => normalizeTag(tag) !== normalizedTagToDelete) || []
     }));
+  };
+  
+  // Function to add a new tag and handle validation
+  const addNewTag = (tag: string) => {
+    if (!isSuperAdmin) return;
+    
+    const normalizedTag = normalizeTag(tag);
+    if (normalizedTag && !mediaTypeConfig.defaultTags?.map(t => normalizeTag(t)).includes(normalizedTag)) {
+      setMediaTypeConfig(prev => ({
+        ...prev,
+        defaultTags: [...(prev.defaultTags || []), normalizedTag]
+      }));
+      setNewTag('');
+    } else if (normalizedTag) {
+      // Tag already exists, just clear the input
+      setNewTag('');
+    }
+  };
+
+  const handleAddTag = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      addNewTag(newTag);
+      event.preventDefault(); // Prevent form submission
+    }
   };
 
   const renderFirstStep = () => (
@@ -371,16 +387,26 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
         </Typography>
         
         {isSuperAdmin && (
-          <TextField
-            label="Add Default Tags"
-            value={newTag}
-            onChange={(e) => setNewTag(e.target.value)}
-            onKeyPress={handleAddTag}
-            fullWidth
-            size="small"
-            helperText="Press Enter to add a tag"
-            className="input-field text-input"
-          />
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', width: '100%' }}>
+            <TextField
+              label="Add Default Tags"
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+              onKeyPress={handleAddTag}
+              onBlur={() => addNewTag(newTag)}
+              fullWidth
+              size="small"
+              helperText="Press Enter to add a tag or click Add"
+              className="input-field text-input"
+            />
+            <Button 
+              variant="outlined"
+              onClick={() => addNewTag(newTag)}
+              sx={{ mt: 0.5 }}
+            >
+              Add
+            </Button>
+          </Box>
         )}
         
         {mediaTypeConfig.defaultTags && mediaTypeConfig.defaultTags.length > 0 && (

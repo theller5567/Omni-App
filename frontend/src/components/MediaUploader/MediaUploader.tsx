@@ -37,6 +37,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import env from '../../config/env';
 import { getBaseFieldsForMimeType } from '../../utils/mediaTypeUtils';
 import UploadThumbnailSelector from '../VideoThumbnailSelector/UploadThumbnailSelector';
+import { normalizeTag } from '../../utils/mediaTypeUploaderUtils';
 
 interface MediaTypeUploaderProps {
   open: boolean;
@@ -413,9 +414,19 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     if (selectedType && selectedType.defaultTags && selectedType.defaultTags.length > 0) {
       console.log('Applying default tags:', selectedType.defaultTags);
       
-      // Merge existing tags with default tags, removing duplicates
+      // Get existing tags and normalize them for comparison
       const existingTags = metadata.tags || [];
-      const newTags = [...new Set([...existingTags, ...selectedType.defaultTags])];
+      const normalizedExistingTags = existingTags.map(tag => normalizeTag(tag));
+      
+      // Only add default tags that don't already exist (case-insensitive)
+      const newTags = [...existingTags];
+      
+      selectedType.defaultTags.forEach(defaultTag => {
+        const normalizedDefaultTag = normalizeTag(defaultTag);
+        if (!normalizedExistingTags.includes(normalizedDefaultTag)) {
+          newTags.push(defaultTag);
+        }
+      });
       
       handleMetadataChange("tags", newTags);
     }
@@ -474,9 +485,13 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     if (metadata.tagsInput) {
       const newTags = metadata.tagsInput
         .split(",")
-        .map((tag) => tag.trim())
+        .map((tag) => normalizeTag(tag))
         .filter((tag) => tag !== "");
-      handleMetadataChange("tags", newTags);
+      
+      // Remove duplicates after normalization
+      const uniqueTags = Array.from(new Set(newTags));
+      
+      handleMetadataChange("tags", uniqueTags);
     }
   };
 

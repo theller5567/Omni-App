@@ -60,7 +60,24 @@ interface MigrationResult {
 
 export const initializeMediaTypes = createAsyncThunk(
   'mediaTypes/initialize',
-  async () => {
+  async (_, { getState }) => {
+    // Get the current state
+    const state = getState() as { mediaTypes: MediaTypeState };
+    
+    // Only skip if we have successfully loaded data AND we have actual media type items
+    if (state.mediaTypes.status === 'succeeded' && state.mediaTypes.mediaTypes.length > 0) {
+      console.log('Skipping media types fetch - already loaded successfully with', state.mediaTypes.mediaTypes.length, 'items');
+      return state.mediaTypes.mediaTypes;
+    }
+    
+    // If we're currently loading AND there's no data, we should force a reload
+    if (state.mediaTypes.status === 'loading' && state.mediaTypes.mediaTypes.length === 0) {
+      console.log('Media types fetch is in progress, but no data exists yet - continuing with fetch');
+    } else if (state.mediaTypes.status === 'loading') {
+      console.log('Skipping media types fetch - request already in progress with data');
+      return state.mediaTypes.mediaTypes;
+    }
+    
     try {
       console.log('Fetching media types from backend');
       const response = await axios.get<MediaType[]>(`${env.BASE_URL}/api/media-types`);

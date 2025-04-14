@@ -62,7 +62,17 @@ export const fetchAllUsers = createAsyncThunk(
 
 export const initializeUser = createAsyncThunk(
   'user/initialize',
-  async (_, { dispatch, rejectWithValue }) => {
+  async (_, { dispatch, rejectWithValue, getState }) => {
+    // Get the current state
+    const state = getState() as { user: UserState };
+    
+    // Skip the request if user is already fully loaded with a valid ID
+    // We don't skip if there was an error or if the user is still loading
+    if (state.user.currentUser._id && !state.user.currentUser.isLoading && state.user.currentUser.error === null) {
+      console.log('Skipping user profile fetch - already loaded with valid ID:', state.user.currentUser._id);
+      return { currentUser: state.user.currentUser };
+    }
+    
     try {
       const token = localStorage.getItem('authToken');
       if (!token) {
@@ -90,7 +100,12 @@ export const initializeUser = createAsyncThunk(
       if (profileResponse.data.role === 'admin' || 
           profileResponse.data.role === 'superAdmin') {
         console.log('User is admin/super-admin, fetching all users');
-        dispatch(fetchAllUsers());
+        // Only check for succeeded status, retry if failed
+        if (state.user.users.status !== 'succeeded') {
+          dispatch(fetchAllUsers());
+        } else {
+          console.log('Skipping users fetch - already loaded successfully');
+        }
       }
 
       return userData;

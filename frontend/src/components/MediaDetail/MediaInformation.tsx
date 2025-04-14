@@ -6,7 +6,7 @@ import {
   AccordionSummary, 
   AccordionDetails,
   useMediaQuery,
-  Theme
+  Theme,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { formatFileSize } from '../../utils/formatFileSize';

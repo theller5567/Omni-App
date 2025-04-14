@@ -27,7 +27,7 @@ import { AppDispatch } from './store/store';
 // Create a context for theme toggling
 export const ThemeContext = React.createContext({
   isDarkMode: true,
-  toggleTheme: (_: 'light' | 'dark') => {}
+  toggleTheme: (_newTheme: 'light' | 'dark') => {}
 });
 
 const App: React.FC = () => {
@@ -55,14 +55,52 @@ const App: React.FC = () => {
     const initializeApp = async () => {
       if (token) {
         try {
-          await Promise.all([
-            dispatch(initializeUser()).unwrap(),
-            dispatch(initializeMedia()).unwrap(),
-            dispatch(initializeMediaTypes()).unwrap()
-          ]);
+          // First initialize user (authentication)
+          console.log('Starting data initialization sequence...');
+          const userResult = await dispatch(initializeUser()).unwrap();
+          
+          // Skip media initialization if we're not signed in
+          if (!userResult.currentUser?._id) {
+            console.log('User initialization did not return a valid user - skipping media initialization');
+            setIsInitialized(true);
+            return;
+          }
+          
+          // Split media types and media fetches to ensure they run sequentially
+          // This prevents race conditions between loading states
+          console.log('Starting media types initialization...');
+          try {
+            await dispatch(initializeMediaTypes()).unwrap();
+            console.log('Media types initialization complete, starting media initialization...');
+          } catch (mediaTypesError) {
+            console.error('Media types initialization failed:', mediaTypesError);
+          }
+          
+          try {
+            await dispatch(initializeMedia()).unwrap();
+            console.log('Media initialization complete');
+          } catch (mediaError) {
+            console.error('Media initialization failed:', mediaError);
+          }
+          
           console.log('App initialization complete');
-        } catch (error) {
-          console.error('App initialization failed:', error);
+        } catch (authError) {
+          console.error('Authentication failed:', authError);
+          // Handle auth error - clear token and set empty user
+          localStorage.removeItem('authToken');
+          dispatch(setUser({ 
+            id: '', 
+            email: '', 
+            firstName: '', 
+            lastName: '', 
+            avatar: '', 
+            isLoading: false, 
+            _id: '', 
+            username: '', 
+            role: 'user', 
+            error: null, 
+            token: '' 
+          }));
         }
       } else {
         dispatch(setUser({ 
@@ -79,6 +117,7 @@ const App: React.FC = () => {
           token: '' 
         }));
       }
+      // Always set initialized to true, even if there were errors
       setIsInitialized(true);
     };
 

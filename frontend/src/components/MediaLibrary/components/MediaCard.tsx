@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, Typography, Box } from '@mui/material';
+import { Card, CardContent, Typography, Box} from '@mui/material';
 import '../MediaCard.scss';
 import { isImageFile, isVideoFile, getFileIcon } from '../utils';
 import { useSelector } from 'react-redux';
@@ -7,18 +7,22 @@ import { RootState } from '../../../store/store';
 
 interface MediaCardProps {
   file: any;
-  onClick: () => void;
+  handleFileClick: () => void;
+  onDeleteClick?: () => void;
 }
 
-const MediaCard: React.FC<MediaCardProps> = ({ file, onClick }) => {
+const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
   // Get media types to find the color
   const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  // Get current user role
   
   // Find the media type color
   const mediaTypeColor = React.useMemo(() => {
     const mediaType = mediaTypes.find(type => type.name === file.mediaType);
     return mediaType?.catColor || '#4dabf5';
   }, [file.mediaType, mediaTypes]);
+
+
 
   const renderPreview = () => {
     if (isImageFile(file.fileExtension)) {
@@ -27,6 +31,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, onClick }) => {
           src={file.location} 
           alt={file.metadata?.fileName || file.title} 
           className="preview-image"
+          loading="lazy"
         />
       );
     } 
@@ -38,6 +43,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, onClick }) => {
             src={file.metadata.v_thumbnail} 
             alt={file.metadata?.fileName || file.title} 
             className="preview-image"
+            loading="lazy"
           />
         );
       }
@@ -56,7 +62,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, onClick }) => {
   return (
     <Card 
       className="media-card" 
-      onClick={onClick}
+      onClick={handleFileClick}
       data-extension={fileExtension}
     >
       {/* Color indicator circle */}

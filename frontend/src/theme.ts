@@ -250,8 +250,56 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
         styleOverrides: {
           root: {
             transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            // Add specific styling for light mode inputs
+            ...(mode === 'light' && {
+              backgroundColor: 'transparent',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: colors.divider,
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: colors.primary,
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: colors.primary,
+              }
+            })
           },
         },
+      },
+      MuiInputLabel: {
+        styleOverrides: {
+          root: {
+            ...(mode === 'light' && {
+              backgroundColor: 'transparent',
+            }),
+            '&.MuiInputLabel-shrink': {
+              ...(mode === 'light' && {
+                backgroundColor: 'transparent',
+                '&.MuiInputLabel-outlined': {
+                  padding: '0 4px',
+                  backgroundColor: colors.surface
+                }
+              })
+            }
+          }
+        }
+      },
+      MuiTextField: {
+        styleOverrides: {
+          root: {
+            ...(mode === 'light' && {
+              '& .MuiInputBase-root': {
+                backgroundColor: 'transparent'
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                backgroundColor: 'transparent'
+              },
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: 'transparent'
+              }
+            })
+          }
+        }
       },
       MuiSwitch: {
         styleOverrides: {
@@ -287,6 +335,27 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
             fontWeight: getCssVar('--font-weight-semibold') || 600,
           },
         },
+      },
+      MuiFilledInput: {
+        styleOverrides: {
+          root: {
+            ...(mode === 'light' && {
+              backgroundColor: 'transparent',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.03)',
+              },
+              '&.Mui-focused': {
+                backgroundColor: 'rgba(0, 0, 0, 0.03)',
+              },
+              '&.MuiFilledInput-underline:before': {
+                borderBottomColor: colors.divider,
+              },
+              '&.MuiFilledInput-underline:hover:before': {
+                borderBottomColor: colors.primary,
+              }
+            })
+          }
+        }
       },
     },
   });

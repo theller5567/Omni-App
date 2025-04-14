@@ -10,7 +10,7 @@ interface ThemeToggleProps {
 }
 
 const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, toggleTheme, showLabel = false }) => {
-  const handleChange = (_: React.MouseEvent<HTMLElement>, newTheme: string | null) => {
+  const handleChange = (_event: React.MouseEvent<HTMLElement>, newTheme: string | null) => {
     if (newTheme !== null) {
       toggleTheme(newTheme as 'light' | 'dark');
     }

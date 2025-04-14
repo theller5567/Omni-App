@@ -30,6 +30,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import BrushIcon from '@mui/icons-material/Brush';
 import ThemeToggle from '../components/ThemeToggle/ThemeToggle';
 import { ThemeContext } from '../App';
+import ViewModeToggle from '../components/ViewModeToggle/ViewModeToggle';
 
 // Define a User interface if not already defined elsewhere
 interface User {
@@ -123,6 +124,18 @@ const Account: React.FC = () => {
     const firstInitial = formik.values.firstName?.charAt(0) || '';
     const lastInitial = formik.values.lastName?.charAt(0) || '';
     return (firstInitial + lastInitial).toUpperCase();
+  };
+
+  // Add state for the view mode
+  const [preferredViewMode, setPreferredViewMode] = useState<'list' | 'card'>(() => {
+    return localStorage.getItem('mediaLibraryViewMode') as 'list' | 'card' || 'card';
+  });
+  
+  // Add a function to handle view mode changes
+  const handleViewModeChange = (newViewMode: 'list' | 'card') => {
+    setPreferredViewMode(newViewMode);
+    localStorage.setItem('mediaLibraryViewMode', newViewMode);
+    toast.success(`Default view mode set to ${newViewMode === 'list' ? 'List' : 'Card'}`);
   };
 
   return (
@@ -361,58 +374,34 @@ const Account: React.FC = () => {
         </form>
       </Paper>
 
-      {/* Theme Preferences Section */}
-      <Paper 
-        elevation={3}
-        sx={{ 
-          padding: isMobile ? '1.5rem 1rem' : '2rem',
-          borderRadius: '12px',
-          backgroundColor: 'var(--bg-secondary)',
-        }}
-      >
-        <Typography 
-          variant={isMobile ? "h4" : "h3"} 
-          sx={{ 
-            color: 'var(--accent-color)',
-            fontWeight: 500,
-            marginBottom: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}
-        >
-          <BrushIcon fontSize="inherit" />
-          Appearance
-        </Typography>
-
-        <Card sx={{ mb: 2, p: 1 }}>
-          <CardContent sx={{ p: 1 }}>
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              flexDirection: isMobile ? 'column' : 'row', 
-              gap: 2 
-            }}>
-              <Box>
-                <Typography variant="h6">Theme</Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Choose between light and dark mode
-                </Typography>
-              </Box>
+      {/* Appearance Section */}
+      <Card sx={{ marginTop: 3 }}>
+        <CardContent>
+          <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', mb: 6 }}>
+            <BrushIcon sx={{ mr: 1, color: 'var(--accent-color)' }} /> Appearance Settings
+          </Typography>
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography>Color Theme</Typography>
               <ThemeToggle 
-                theme={isDarkMode ? 'dark' : 'light'} 
-                toggleTheme={toggleTheme} 
-                showLabel={false}
+                theme={isDarkMode ? 'dark' : 'light'}
+                toggleTheme={(theme) => toggleTheme(theme)}
               />
             </Box>
-          </CardContent>
-        </Card>
-
-        <Typography variant="body2" color="textSecondary" sx={{ mt: 2, fontStyle: 'italic' }}>
-          Your theme preference will be saved and applied across all pages.
-        </Typography>
-      </Paper>
+            
+            <Divider />
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography>Default View Mode</Typography>
+              <ViewModeToggle 
+                viewMode={preferredViewMode}
+                toggleViewMode={handleViewModeChange}
+              />
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
 
       <ToastContainer position="bottom-right" />
     </Box>
