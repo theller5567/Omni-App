@@ -1,13 +1,13 @@
-// Simple test function with no dependencies
+// Ultra simple test function with no dependencies
 exports.handler = async (event, context) => {
-  // CORS headers
+  // Set headers for CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json'
   };
 
-  // Handle preflight
+  // Handle preflight requests
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
@@ -16,25 +16,25 @@ exports.handler = async (event, context) => {
     };
   }
 
-  // Basic response for all HTTP methods
   try {
+    // Return a simple success response
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
-        message: 'Function is working!',
+        success: true,
+        message: 'Netlify Function is working!',
+        timestamp: new Date().toISOString(),
         method: event.httpMethod,
         path: event.path,
-        timestamp: new Date().toISOString(),
-        env: {
+        envCheck: {
           hasMongoUri: !!process.env.MONGODB_URI,
           hasJwtSecret: !!process.env.JWT_SECRET,
-          nodeEnv: process.env.NODE_ENV
+          hasMyAwsRegion: !!process.env.MY_AWS_REGION
         },
-        // Return a test user token
-        token: 'test-token-123',
+        token: 'test-token-' + Date.now(),
         user: {
-          id: 'test123',
+          id: 'test-user-123',
           email: 'test@example.com',
           firstName: 'Test',
           lastName: 'User',
@@ -43,12 +43,15 @@ exports.handler = async (event, context) => {
       })
     };
   } catch (error) {
+    // Return any errors
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
+        success: false,
         message: 'Error in function',
-        error: error.message
+        error: error.message,
+        stack: error.stack
       })
     };
   }
