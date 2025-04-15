@@ -21,6 +21,8 @@ export default defineConfig(({ mode }) => {
     build: {
       // Generate sourcemaps for better debugging
       sourcemap: true,
+      // Increase the warning limit to avoid the warning
+      chunkSizeWarningLimit: 1200,
       // Improve output file structure
       rollupOptions: {
         output: {
@@ -28,6 +30,8 @@ export default defineConfig(({ mode }) => {
             vendor: ['react', 'react-dom', 'react-router-dom'],
             mui: ['@mui/material', '@mui/icons-material'],
             redux: ['redux', 'react-redux', '@reduxjs/toolkit'],
+            // Simplified chunks with only packages we know are installed
+            utils: ['axios']
           }
         }
       }

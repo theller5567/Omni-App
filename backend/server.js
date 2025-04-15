@@ -18,7 +18,10 @@ const app = express();
 // Enable CORS
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || 'https://your-frontend-domain.com' // Update this with your actual deployed frontend URL
+    ? [
+        process.env.FRONTEND_URL || 'https://your-netlify-app.netlify.app', // Update with your Netlify URL
+        'https://omni-app-mern.onrender.com'  // Allow the backend URL for local testing
+      ]
     : 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
