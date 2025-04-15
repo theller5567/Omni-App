@@ -1,6 +1,6 @@
 # netlify.toml
 [build]
-  command = "npm run build"
+  command = "npm install --legacy-peer-deps && npm run build"
   publish = "dist"
 
 # Handle routing for SPA
@@ -11,4 +11,5 @@
 
 # Environment variable settings
 [context.production.environment]
-  VITE_NODE_ENV = "production" 
+  VITE_NODE_ENV = "production"
+  VITE_BASE_URL = "https://omni-app-mern.onrender.com" 
