@@ -15,19 +15,47 @@ dotenv.config();
 
 const app = express();
 
-// Enable CORS
+// Enable CORS - more permissive configuration
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? [
-        process.env.FRONTEND_URL, // Primary frontend URL from environment variable
-        'https://omni-app-mern.onrender.com',  // Allow the backend URL for local testing
-        /\.netlify\.app$/, // Allow all Netlify subdomains during development/testing
-        /\.netlify\.live$/ // Allow Netlify live preview URLs
-      ].filter(Boolean) // Remove undefined/null values
-    : 'http://localhost:5173',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl requests)
+    if(!origin) return callback(null, true);
+    
+    // List of allowed origins
+    const allowedOrigins = [
+      'https://omni-app-mern.onrender.com',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://omni-media-library.netlify.app', // Netlify subdomain
+      'https://nerdycoder.com',                 // Primary domain
+      'https://www.nerdycoder.com',             // www subdomain
+      'http://nerdycoder.com',                  // Non-https versions
+      'http://www.nerdycoder.com'
+    ];
+    
+    // Check if the origin is in our allowed list
+    // Also allow all netlify.app and netlify.live domains
+    if(allowedOrigins.indexOf(origin) !== -1 || 
+       origin.endsWith('.netlify.app') || 
+       origin.endsWith('.netlify.live')) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      // Allow all origins temporarily for debugging
+      callback(null, true);
+      // To restrict again, use:
+      // callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// Add preflight OPTIONS handler for all routes
+app.options('*', cors());
 
 // Middleware
 app.use(bodyParser.json({ limit: '50mb' }));
