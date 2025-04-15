@@ -745,10 +745,7 @@ export const getFilesNeedingTags = async (req, res) => {
       console.log('📄 Files with issues:', JSON.stringify(filesWithIssues, null, 2));
     }
     
-    // Add cache busting header to prevent browser caching
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+    // Note: Cache control headers are now handled by the CORS middleware
     
     return res.status(200).json({ 
       count: filesNeedingTags,

@@ -15,7 +15,7 @@ dotenv.config();
 
 const app = express();
 
-// Enable CORS - more permissive configuration
+// Enable CORS - with wildcard to allow all headers
 app.use(cors({
   origin: function(origin, callback) {
     // Allow requests with no origin (like mobile apps, curl requests)
@@ -49,17 +49,8 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
-    'X-Requested-With', 
-    'cache-control', 
-    'Cache-Control',  // Include both capitalizations
-    'Content-Length',
-    'Accept',
-    'Origin',
-    'X-Auth-Token'
-  ],
+  // Use a wildcard to allow all headers - this is the most permissive option
+  allowedHeaders: '*',
   exposedHeaders: ['Content-Length', 'Content-Type', 'X-Auth-Token'],
   preflightContinue: false,
   optionsSuccessStatus: 204,
@@ -72,6 +63,31 @@ app.options('*', cors());
 // Middleware
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+// Add special CORS handling for the problematic route
+app.use('/api/media-types/:id/files-needing-tags', (req, res, next) => {
+  // CORS headers
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', '*');
+  
+  // Explicitly set Access-Control-Expose-Headers to allow the client to read response headers
+  res.header('Access-Control-Expose-Headers', 'Cache-Control, Pragma, Expires, Content-Length, Content-Type');
+  
+  // Add cache busting headers to prevent browser caching
+  res.header('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.header('Pragma', 'no-cache');
+  res.header('Expires', '0');
+  
+  if (req.method === 'OPTIONS') {
+    // Set permissive headers on OPTIONS request
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma, Expires');
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
