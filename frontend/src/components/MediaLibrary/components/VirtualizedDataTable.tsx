@@ -177,6 +177,18 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
     { field: 'tags', headerName: 'Tags', flex: 1, renderCell: (params) => {
       const tags = params.row.metadata.tags;
       if (Array.isArray(tags) && tags.length > 0) {
+        // Get the media type to check for default tags
+        const mediaType = mediaTypes.find(type => type.name === params.row.mediaType);
+        const defaultTags = mediaType?.defaultTags || [];
+        
+        // Sort tags to display default tags first
+        const sortedTags = [...tags].sort((a, b) => {
+          const aIsDefault = defaultTags.includes(a);
+          const bIsDefault = defaultTags.includes(b);
+          if (aIsDefault === bIsDefault) return 0;
+          return aIsDefault ? -1 : 1;
+        });
+        
         return (
           <Stack 
             direction="row" 
@@ -191,27 +203,35 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
               py: 0.5
             }}
           >
-            {tags.slice(0, 3).map((tag, index) => (
-              <Chip 
-                key={index} 
-                label={tag} 
-                size="small" 
-                variant="outlined"
-                sx={{ 
-                  fontSize: '0.7rem', 
-                  height: '20px',
-                  maxWidth: '80px',
-                  my: 0,
-                  '& .MuiChip-label': {
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    py: 0,
-                    px: 1
-                  }
-                }}
-              />
-            ))}
+            {sortedTags.slice(0, 3).map((tag, index) => {
+              const isDefaultTag = defaultTags.includes(tag);
+              return (
+                <Chip 
+                  key={index} 
+                  label={tag} 
+                  size="small" 
+                  variant={isDefaultTag ? "filled" : "outlined"}
+                  className={isDefaultTag ? "default-tag" : "custom-tag"}
+                  sx={{ 
+                    fontSize: '0.7rem', 
+                    height: '20px',
+                    maxWidth: '80px',
+                    my: 0,
+                    ...(isDefaultTag && {
+                      backgroundColor: 'var(--secondary-color)',
+                      color: 'white',
+                    }),
+                    '& .MuiChip-label': {
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      py: 0,
+                      px: 2
+                    }
+                  }}
+                />
+              );
+            })}
             {tags.length > 3 && (
               <Chip 
                 label={`+${tags.length - 3}`}

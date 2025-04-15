@@ -209,10 +209,36 @@ router.post('/batch-download', async (req, res) => {
     // Download each file and add it to the archive
     for (const mediaFile of mediaFiles) {
       try {
-        // Get the file name from the location URL
-        const fileName = mediaFile.title || 
-                         mediaFile.metadata?.fileName || 
-                         mediaFile.location.split('/').pop();
+        // Get the file extension from the mimetype or location
+        let fileExtension = '';
+        if (mediaFile.fileExtension) {
+          fileExtension = `.${mediaFile.fileExtension.toLowerCase()}`;
+        } else if (mediaFile.location) {
+          const locationExt = mediaFile.location.split('.').pop();
+          if (locationExt && locationExt.length <= 5) { // Reasonable extension length
+            fileExtension = `.${locationExt.toLowerCase()}`;
+          }
+        }
+        
+        // Get base filename without extension
+        let baseFileName = mediaFile.title || 
+                        mediaFile.metadata?.fileName || 
+                        mediaFile.location.split('/').pop() || 
+                        `file_${mediaFile._id}`;
+                        
+        // Remove any existing extension from the baseFileName
+        if (baseFileName.includes('.')) {
+          const parts = baseFileName.split('.');
+          if (parts.length > 1 && parts[parts.length - 1].length <= 5) {
+            // If the last part looks like a file extension, remove it
+            baseFileName = parts.slice(0, -1).join('.');
+          }
+        }
+        
+        // Create the full filename with proper extension
+        const fileName = baseFileName + fileExtension;
+        
+        console.log(`Processing file for download: ${fileName}`);
         
         // Create a readable stream from the file URL
         const response = await axios({
@@ -221,7 +247,7 @@ router.post('/batch-download', async (req, res) => {
           responseType: 'stream'
         });
         
-        // Add the file to the archive
+        // Add the file to the archive with proper filename and extension
         archive.append(response.data, { name: fileName });
         console.log(`Added ${fileName} to the archive`);
       } catch (error) {

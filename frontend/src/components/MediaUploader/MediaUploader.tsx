@@ -594,7 +594,9 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     });
     
     formData.append("file", file);
-    formData.append("title", file.name);
+    // Use the metadata title if it exists, otherwise use the original filename
+    const fileTitle = metadata.fileName || file.name;
+    formData.append("title", fileTitle);
     formData.append(
       "fileExtension",
       file.name.split(".").pop()?.toUpperCase() || "UNKNOWN"

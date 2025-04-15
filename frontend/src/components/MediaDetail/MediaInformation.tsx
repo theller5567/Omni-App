@@ -61,7 +61,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
   // Group basic file information
   const basicFileInfo = filterFields([
     { label: 'Title', value: mediaFile.title || 'Untitled' },
-    { label: 'File Name', value: getMetadataField(mediaFile, 'fileName', 'Unknown') },
+    { label: 'File Name', value: getMetadataField(mediaFile, 'fileName') || mediaFile.title || 'Unknown' },
     { label: 'File Size', value: mediaFile.fileSize ? formatFileSize(mediaFile.fileSize) : 'Unknown' },
     { label: 'File Type', value: mediaFile.fileExtension ? `.${mediaFile.fileExtension}` : 'Unknown' },
     { label: 'Media Type', value: mediaFile.mediaType || 'Unknown' },
@@ -119,7 +119,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
           marginBottom: isMobile ? '0.5rem' : '1rem'
         }}
       >
-        {mediaFile.metadata.fileName || 'Untitled Media'}
+        {getMetadataField(mediaFile, 'fileName') || mediaFile.title || 'Untitled Media'}
       </Typography>
 
       {basicFileInfo.length > 0 && (

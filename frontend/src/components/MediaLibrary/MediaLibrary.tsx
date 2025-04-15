@@ -3,7 +3,7 @@ import { Box, Typography, Grid, Toolbar, IconButton, Tooltip, useMediaQuery, The
 import { motion } from 'framer-motion';
 import './mediaLibrary.scss';
 import { useNavigate } from 'react-router-dom';
-import { FaTrash, FaDownload } from 'react-icons/fa';
+import { FaTrash, FaDownload, FaSpinner } from 'react-icons/fa';
 import { BaseMediaFile } from '../../interfaces/MediaFile';
 import { alpha } from '@mui/material/styles';
 import { toast } from 'react-toastify';
@@ -46,6 +46,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   // Get user role from Redux store
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
+  const [downloading, setDownloading] = useState<boolean>(false);
   
   // Process rows only when mediaFilesData or filter changes
   const rows = useMemo(() => {
@@ -138,44 +139,38 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
   };
 
   const handleDownloadSelected = async () => {
-    if (selected.length > 0) {
-      try {
-        // Convert selection model to string array of IDs
-        const fileIds = selected.map(id => String(id));
+    if (selected.length === 0) {
+      toast.info('No files selected for download', {
+        position: isMobile ? "bottom-center" : "top-right",
+        autoClose: 2000
+      });
+      return;
+    }
+
+    try {
+      setDownloading(true);
+      
+      // Get file IDs from selected items
+      const fileIds = selected.map(id => {
+        const file = rows.find(row => row.id === id);
+        return file?.id || '';
+      }).filter(id => id !== '');
+      
+      if (fileIds.length > 0) {
+        toast.info(`Preparing ${fileIds.length} files for download...`, {
+          position: isMobile ? "bottom-center" : "top-right",
+          autoClose: 2000
+        });
         
-        if (selected.length === 1) {
-          // For single file, use simple download approach
-          const file = rows.find(row => row.id === selected[0]);
-          if (file && file.location) {
-            const link = document.createElement('a');
-            link.href = file.location;
-            
-            // Create a filename that includes original extension
-            const fileName = file.metadata.fileName || file.title || 'download';
-            const extension = file.fileExtension ? `.${file.fileExtension.toLowerCase()}` : '';
-            link.download = fileName + (fileName.endsWith(extension) ? '' : extension);
-            
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            toast.success('Download started', {
-              position: isMobile ? "bottom-center" : "top-right",
-              autoClose: 3000
-            });
-          }
-        } else {
-          // For multiple files, use batch download endpoint
-          toast.info(`Preparing ${selected.length} files for download...`, {
-            position: isMobile ? "bottom-center" : "top-right",
-            autoClose: 2000
-          });
-          
+        try {
           // Use axios to make the request with responseType blob
           const response = await axios.post<Blob>(
             `${env.BASE_URL}/media/batch-download`,
             { fileIds }, // Send as JSON in request body
-            { responseType: 'blob' } // Set response type to blob
+            { 
+              responseType: 'blob',
+              timeout: fileIds.length > 10 ? 60000 : 30000 // Longer timeout for larger batches
+            }
           );
           
           // Create a download link for the blob
@@ -195,14 +190,45 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
             position: isMobile ? "bottom-center" : "top-right",
             autoClose: 3000
           });
+        } catch (downloadError: unknown) {
+          console.error('Download error:', downloadError);
+          
+          // Check if error is an object with a code property
+          if (downloadError && typeof downloadError === 'object' && 'code' in downloadError) {
+            const error = downloadError as { code?: string, response?: { status?: number } };
+            
+            if (error.code === 'ECONNABORTED') {
+              toast.error('Download timed out. Please try downloading fewer files at once.', {
+                position: isMobile ? "bottom-center" : "top-right",
+                autoClose: 4000
+              });
+            } else if (error.response && error.response.status === 413) {
+              toast.error('Batch too large. Please select fewer files and try again.', {
+                position: isMobile ? "bottom-center" : "top-right",
+                autoClose: 4000
+              });
+            } else {
+              toast.error('Failed to download files. Please try again.', {
+                position: isMobile ? "bottom-center" : "top-right",
+                autoClose: 4000
+              });
+            }
+          } else {
+            toast.error('Failed to download files. Please try again.', {
+              position: isMobile ? "bottom-center" : "top-right",
+              autoClose: 4000
+            });
+          }
         }
-      } catch (error) {
-        console.error('Download error:', error);
-        toast.error('Failed to download files. Please try again.', {
-          position: isMobile ? "bottom-center" : "top-right",
-          autoClose: 4000
-        });
       }
+    } catch (error) {
+      console.error('Download preparation error:', error);
+      toast.error('Failed to prepare files for download. Please try again.', {
+        position: isMobile ? "bottom-center" : "top-right",
+        autoClose: 4000
+      });
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -228,14 +254,24 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
       )}
       {numSelected > 0 && (
         <>
-          <Tooltip title="Download">
-            <IconButton onClick={handleDownloadSelected} size={isMobile ? "small" : "medium"} color="primary">
-              <FaDownload />
+          <Tooltip title={downloading ? "Downloading..." : "Download"}>
+            <IconButton 
+              onClick={handleDownloadSelected} 
+              size={isMobile ? "small" : "medium"} 
+              color="primary"
+              disabled={downloading}
+            >
+              {downloading ? <FaSpinner className="fa-spin" /> : <FaDownload />}
             </IconButton>
           </Tooltip>
           {userRole === 'superAdmin' && (
             <Tooltip title="Delete">
-              <IconButton onClick={handleDeleteSelected} size={isMobile ? "small" : "medium"} color="error">
+              <IconButton 
+                onClick={handleDeleteSelected} 
+                size={isMobile ? "small" : "medium"} 
+                color="error" 
+                disabled={downloading}
+              >
                 <FaTrash />
               </IconButton>
             </Tooltip>

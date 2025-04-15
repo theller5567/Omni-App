@@ -131,6 +131,35 @@ export const uploadMedia = async (req, res) => {
     const slug = generateSlug(req.body.title);
     console.log('Generated slug:', slug);
 
+    // Parse metadata from the request
+    const parsedMetadata = parseMetadata(req.body.metadata);
+    
+    // Find the media type to get default tags
+    const mediaType = await MediaType.findOne({ name: req.body.mediaType });
+    if (!mediaType) {
+      throw new Error('Media type not found');
+    }
+    
+    // Apply default tags if they exist and ensure we don't have duplicates
+    let combinedTags = [...(parsedMetadata.tags || [])];
+    if (mediaType.defaultTags && Array.isArray(mediaType.defaultTags)) {
+      // Add each default tag that doesn't already exist in the tags array
+      mediaType.defaultTags.forEach(defaultTag => {
+        const normalizedDefaultTag = defaultTag.toLowerCase().trim();
+        const tagExists = combinedTags.some(
+          tag => tag.toLowerCase().trim() === normalizedDefaultTag
+        );
+        
+        if (!tagExists) {
+          combinedTags.push(defaultTag);
+        }
+      });
+      
+      console.log('Applied default tags from media type:', 
+        mediaType.name, 
+        'Tags:', combinedTags);
+    }
+
     // Create the media document
     const mediaData = {
       id: generateSlug(req.body.title),
@@ -144,8 +173,8 @@ export const uploadMedia = async (req, res) => {
       modifiedBy: req.body.modifiedBy,
       mediaType: req.body.mediaType,
       metadata: {
-        ...parseMetadata(req.body.metadata),
-        fileName: req.body.title,
+        ...parsedMetadata,
+        tags: combinedTags, // Use the combined tags with defaults
       },
     };
 
@@ -156,11 +185,6 @@ export const uploadMedia = async (req, res) => {
     }
 
     // Save to database
-    const mediaType = await MediaType.findOne({ name: req.body.mediaType });
-    if (!mediaType) {
-      throw new Error('Media type not found');
-    }
-
     const baseType = mediaType.baseType || 'Media';
     const MediaModel = mongoose.model(baseType);
     

@@ -117,6 +117,29 @@ export const initializeUser = createAsyncThunk(
   }
 );
 
+export const updateUser = createAsyncThunk(
+  'user/updateUser',
+  async (userData: Partial<User> & { _id: string }, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        return rejectWithValue('No authentication token found');
+      }
+
+      const response = await axios.put(
+        `${env.BASE_URL}/api/users/${userData._id}`,
+        userData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to update user:', error.response?.data || error.message);
+      return rejectWithValue(error.response?.data?.message || 'Failed to update user');
+    }
+  }
+);
+
 const userSlice = createSlice({
   name: 'user',
   initialState,
@@ -157,6 +180,28 @@ const userSlice = createSlice({
       .addCase(fetchAllUsers.rejected, (state, action) => {
         state.users.status = 'failed';
         state.users.error = action.error.message ?? 'An unknown error occurred';
+      })
+      .addCase(updateUser.pending, (state) => {
+        // Optional loading state for the specific update operation if needed
+      })
+      .addCase(updateUser.fulfilled, (state, action) => {
+        // Update the user in the allUsers array
+        const updatedUser = action.payload as User;
+        const index = state.users.allUsers.findIndex(user => user._id === updatedUser._id);
+        if (index !== -1) {
+          state.users.allUsers[index] = updatedUser;
+        }
+        
+        // If the updated user is the current user, update currentUser state as well
+        if (state.currentUser._id === updatedUser._id) {
+          state.currentUser = { 
+            ...state.currentUser,
+            ...updatedUser as any
+          };
+        }
+      })
+      .addCase(updateUser.rejected, (state, action) => {
+        // Handle error state if needed
       });
   },
 });

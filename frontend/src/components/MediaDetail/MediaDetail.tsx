@@ -469,20 +469,40 @@ const MediaDetail: React.FC = () => {
           </Box>
           <Box className="media-preview-footer">
             <Box className="tags-container">
-              Tags: {mediaFile.metadata?.tags?.map((tag, index) => (
-                <Chip 
-                  key={index} 
-                  size="small" 
-                  label={tag} 
-                  sx={{ 
-                    backgroundColor: 'var(--accent-color)', 
-                    fontSize: isMobile ? '0.7rem' : '0.8rem', 
-                    padding: '0px', 
-                    color: 'var(--background-color)', 
-                    marginRight: '0.5rem' 
-                  }}
-                />
-              ))}
+              Tags: {mediaFile.metadata?.tags && mediaFile.metadata.tags.length > 0 ? (
+                <>
+                  {/* Sort tags to display default tags first */}
+                  {(mediaFile.metadata.tags).sort((a, b) => {
+                    const aIsDefault = mediaTypeForEdit.defaultTags?.includes(a) || false;
+                    const bIsDefault = mediaTypeForEdit.defaultTags?.includes(b) || false;
+                    if (aIsDefault === bIsDefault) return 0;
+                    return aIsDefault ? -1 : 1;
+                  }).map((tag, index) => {
+                    const isDefaultTag = mediaTypeForEdit.defaultTags?.includes(tag);
+                    return (
+                      <Chip 
+                        key={index} 
+                        size="small" 
+                        label={tag}
+                        className={isDefaultTag ? "default-tag" : "custom-tag"}
+                        sx={{ 
+                          backgroundColor: isDefaultTag ? 'var(--accent-color)' : 'var(--accent-color2)', 
+                          fontSize: isMobile ? '0.7rem' : '0.8rem', 
+                          padding: '0px', 
+                          color: 'var(--background-color)', 
+                          marginRight: '0.5rem',
+                          ...(isDefaultTag && {
+                            border: '1px solid var(--accent-color)',
+                            fontWeight: '500'
+                          })
+                        }}
+                      />
+                    );
+                  })}
+                </>
+              ) : (
+                <Typography variant="body2" sx={{ opacity: 0.6, fontStyle: 'italic' }}>No tags</Typography>
+              )}
             </Box>
             <Box className="media-actions">
               <Box className="action-buttons">

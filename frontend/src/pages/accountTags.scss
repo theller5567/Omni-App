@@ -4,6 +4,12 @@
     overflow: hidden;
     margin-left: 250px;
     padding: 1rem;
+    
+    @media (max-width: 768px) {
+      width: 100%;
+      margin-left: 0;
+      padding: 0.75rem;
+    }
 }
 
 .account-tags {
@@ -13,29 +19,91 @@
     margin: 0;
     box-sizing: border-box;
     overflow: hidden;
+    
+    @media (max-width: 768px) {
+      padding: 0.5rem;
+    }
+    
     .toolbar {
       padding: 0.5rem 1rem;
-      margin:0;
+      margin: 0;
       max-width: calc(100% - 16px);
     }
-      h6 {
-          margin-bottom: 2rem;
-      }
-      .MuiDataGrid-cell[data-field="actions"] {
-          display: flex;
-          align-items: center;
-      }
-    .folder, .folder-content {
-      transition: opacity 0.3s ease;
-      cursor: pointer;
-      &:hover {
-        opacity: 0.8;
+    
+    h2 {
+      margin-bottom: 2rem;
+      
+      @media (max-width: 768px) {
+        margin-bottom: 1rem;
+        font-size: 1.75rem;
       }
     }
-    .subfolder {
-      margin-top: 10px;
+    
+    .tags-container {
       display: flex;
-      justify-content: center;
-      gap: 1rem;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 2rem;
+      
+      @media (max-width: 768px) {
+        gap: 8px;
+      }
     }
-  }
+    
+    .account-tag {
+      padding: 10px 15px;
+      font-size: 0.95rem;
+      border-radius: 20px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      background-color: var(--background-color);
+      border: 1px solid var(--accent-color);
+      transition: all 0.2s ease;
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        border: 1px solid var(--accent-color);
+      }
+      
+      @media (max-width: 768px) {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+      }
+    }
+    
+    .MuiPaper-root {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      
+      @media (max-width: 768px) {
+        padding: 1rem !important;
+      }
+    }
+    
+    .MuiTextField-root {
+      margin-bottom: 1.5rem;
+      
+      .MuiInputBase-root {
+        background-color: var(--background-color);
+      }
+      
+      fieldset {
+        border-color: var(--border-color);
+      }
+    }
+    
+    .MuiButton-contained {
+      background-color: var(--accent-color);
+      color: white;
+      font-weight: 500;
+      
+      &:hover {
+        background-color: var(--accent-color-dark);
+      }
+      
+      &:disabled {
+        background-color: rgba(0, 0, 0, 0.1);
+      }
+    }
+}
