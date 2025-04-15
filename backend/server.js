@@ -19,9 +19,11 @@ const app = express();
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? [
-        process.env.FRONTEND_URL || 'https://your-netlify-app.netlify.app', // Update with your Netlify URL
-        'https://omni-app-mern.onrender.com'  // Allow the backend URL for local testing
-      ]
+        process.env.FRONTEND_URL, // Primary frontend URL from environment variable
+        'https://omni-app-mern.onrender.com',  // Allow the backend URL for local testing
+        /\.netlify\.app$/, // Allow all Netlify subdomains during development/testing
+        /\.netlify\.live$/ // Allow Netlify live preview URLs
+      ].filter(Boolean) // Remove undefined/null values
     : 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
