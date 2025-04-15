@@ -49,9 +49,21 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With', 
+    'cache-control', 
+    'Cache-Control',  // Include both capitalizations
+    'Content-Length',
+    'Accept',
+    'Origin',
+    'X-Auth-Token'
+  ],
+  exposedHeaders: ['Content-Length', 'Content-Type', 'X-Auth-Token'],
   preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
+  maxAge: 86400 // 24 hours
 }));
 
 // Add preflight OPTIONS handler for all routes
