@@ -398,7 +398,7 @@ const AccountMediaTypes: React.FC = () => {
         className="account-media-types"
         sx={{ width: "100%", overflow: "hidden" }}
       >
-        <Typography variant="h2" align="left" sx={{ paddingBottom: "2rem" }}>
+        <Typography variant="h1" align="left" sx={{ paddingBottom: "2rem" }}>
           Account Media Types
         </Typography>
 

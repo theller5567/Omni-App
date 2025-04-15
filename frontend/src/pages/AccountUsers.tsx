@@ -328,7 +328,7 @@ const AccountUsers = () => {
       exit="exit"
     >
       <Box className="account-users" sx={{ width: '100%', overflow: 'hidden' }}>
-        <Typography variant="h2" align="left" sx={{ paddingBottom: isMobile ? '1rem' : '2rem' }}>
+        <Typography variant="h1" align="left" sx={{ paddingBottom: isMobile ? '1rem' : '2rem' }}>
           Manage Users
         </Typography>
         

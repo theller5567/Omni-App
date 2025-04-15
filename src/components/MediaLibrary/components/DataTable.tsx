@@ -1,0 +1,5 @@
+const DataTable = ({ 
+  rows,
+  onSelectionChange,
+}) => {
+} 

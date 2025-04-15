@@ -285,7 +285,7 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
         getRowClassName={(params) => `row-${params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd'}`}
         sx={{
           '& .row-even': {
-            backgroundColor: theme => theme.palette.mode === 'dark' ? '#2d2d2d' : '#f5f5f5',
+            backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(45, 45, 45, 0.4)' : 'rgba(245, 245, 245, 0.5)',
           },
           '& .MuiDataGrid-cell': {
             overflow: 'hidden',

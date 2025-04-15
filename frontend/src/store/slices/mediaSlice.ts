@@ -53,7 +53,12 @@ const mediaSlice = createSlice({
   reducers: {
     addMedia: (state, action: PayloadAction<BaseMediaFile>) => {
       console.log('Adding media:', action.payload);
-      state.allMedia.push(action.payload);
+      // Ensure consistent date formatting
+      const formattedMedia = {
+        ...action.payload,
+        modifiedDate: action.payload.modifiedDate ? new Date(action.payload.modifiedDate).toISOString() : new Date().toISOString()
+      };
+      state.allMedia.unshift(formattedMedia); // Add to beginning of array for better visibility
     },
     updateMedia: (state, action: PayloadAction<BaseMediaFile>) => {
       console.log('Updating media:', action.payload);

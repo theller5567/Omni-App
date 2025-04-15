@@ -34,17 +34,16 @@ const initialTestState: MediaTypeState = {
 };
 
 const sampleMediaType = {
-  _id: '123456',
+  _id: '123abc',
   name: 'Test Media Type',
-  fields: [
-    { name: 'title', type: 'Text', required: true }
-  ],
-  status: 'active' as 'active' | 'deprecated' | 'archived',
+  fields: [{ name: 'test', type: 'text', required: true }],
+  status: 'active' as const,
   usageCount: 0,
   replacedBy: null,
   isDeleting: false,
-  createdAt: '2023-01-01',
-  updatedAt: '2023-01-01'
+  createdAt: '2023-01-01T00:00:00.000Z',
+  updatedAt: '2023-01-01T00:00:00.000Z',
+  acceptedFileTypes: ['.jpg', '.png'],
 };
 
 describe('mediaTypeSlice reducer', () => {

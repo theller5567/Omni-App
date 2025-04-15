@@ -94,6 +94,7 @@
         .MuiTypography-body1 {
           font-size: 0.8rem;
           font-weight: 500;
+          color: var(--text-secondary);
         }
       }
     }
@@ -164,6 +165,7 @@
         font-size: 0.85rem;
         word-break: break-word;
         line-height: 1.4;
+        color: var(--accent-color);
         
         @include mobile {
           font-size: 0.8rem;

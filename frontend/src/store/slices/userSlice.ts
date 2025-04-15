@@ -181,7 +181,7 @@ const userSlice = createSlice({
         state.users.status = 'failed';
         state.users.error = action.error.message ?? 'An unknown error occurred';
       })
-      .addCase(updateUser.pending, (state) => {
+      .addCase(updateUser.pending, () => {
         // Optional loading state for the specific update operation if needed
       })
       .addCase(updateUser.fulfilled, (state, action) => {
@@ -200,7 +200,7 @@ const userSlice = createSlice({
           };
         }
       })
-      .addCase(updateUser.rejected, (state, action) => {
+      .addCase(updateUser.rejected, () => {
         // Handle error state if needed
       });
   },

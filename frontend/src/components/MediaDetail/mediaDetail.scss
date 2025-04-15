@@ -331,7 +331,7 @@ $border-radius: 0.5rem;
   select,
   .MuiFormControl-root {
     width: 100%;
-    color: var(--accent-color2);
+    color: var(--accent-color);
     border-radius: $border-radius;
   }
 
@@ -434,21 +434,15 @@ $border-radius: 0.5rem;
 }
 
 // Tag styling
+.default-tag, .custom-tag {
+  &.MuiChip-root {
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+}
+
 .default-tag {
   position: relative;
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: var(--secondary-color);
-    box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
-  }
-  
   &.MuiChip-root {
     font-weight: 500;
   }

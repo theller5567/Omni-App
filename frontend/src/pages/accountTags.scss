@@ -4,6 +4,7 @@
     overflow: hidden;
     margin-left: 250px;
     padding: 1rem;
+    text-align: left;
     
     @media (max-width: 768px) {
       width: 100%;
@@ -106,4 +107,186 @@
         background-color: rgba(0, 0, 0, 0.1);
       }
     }
+}
+
+#account-tags {
+  .account-tags {
+    max-width: 1200px;
+    margin: 0 auto;
+    
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 300;
+      margin-bottom: 2rem;
+      
+      @media (max-width: 768px) {
+        font-size: 2rem;
+      }
+    }
+    
+    .MuiPaper-root {
+      background-color: var(--color-surface, #1e1e1e);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+      
+      &:hover {
+        box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
+      }
+      
+      h6 {
+        font-size: 1.25rem;
+        font-weight: 500;
+        position: relative;
+        display: inline-block;
+        
+        &:after {
+          content: '';
+          position: absolute;
+          bottom: -8px;
+          left: 0;
+          width: 2.5rem;
+          height: 3px;
+          background-color: var(--accent-color, #b2c200);
+        }
+      }
+    }
+    
+    // Input field styling
+    .MuiTextField-root {
+      max-width: 400px;
+      .MuiInputBase-root {
+        border-radius: 8px;
+        
+        &.Mui-focused {
+          .MuiOutlinedInput-notchedOutline {
+            border-color: var(--accent-color, #b2c200);
+            border-width: 2px;
+          }
+        }
+        
+        .MuiInputAdornment-root {
+          svg {
+            transition: color 0.2s ease;
+          }
+        }
+      }
+      
+      .MuiFormHelperText-root {
+        margin-top: 4px;
+        font-size: 0.75rem;
+        
+        &.Mui-error {
+          color: var(--color-error, #f44336);
+        }
+      }
+    }
+    
+    // Button styling
+    .MuiButton-contained {
+      text-transform: none;
+      font-weight: 500;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      
+      &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+      
+      &:disabled {
+        opacity: 0.7;
+      }
+    }
+    
+    // Tags container styling
+    .tags-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+      
+      @media (max-width: 600px) {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      }
+      
+      .account-tag {
+        width: 100%;
+        transition: all 0.2s ease;
+        height: auto;
+        min-height: 40px;
+        display: flex;
+        justify-content: space-between;
+        
+        &:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+          border-color: var(--accent-color2, #dae339);
+        }
+        
+        .MuiChip-label {
+          font-size: 0.9rem;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          flex: 1;
+          padding-left: 12px;
+        }
+        
+        .MuiChip-deleteIcon {
+          margin: 0 4px;
+          
+          .MuiIconButton-root {
+            padding: 4px;
+            transition: all 0.2s ease;
+            
+            &:hover {
+              background-color: rgba(var(--primary-color-rgb, 25, 118, 210), 0.1);
+            }
+            
+            svg {
+              font-size: 0.9rem;
+            }
+          }
+        }
+      }
+    }
+    
+    // Dialog styling
+    .MuiDialog-paper {
+      border-radius: 12px;
+      overflow: hidden;
+      
+      .MuiDialogTitle-root {
+        background-color: var(--color-surface, #1e1e1e);
+        padding: 20px 24px;
+        font-weight: 500;
+      }
+      
+      .MuiDialogContent-root {
+        padding: 24px;
+      }
+      
+      .MuiDialogActions-root {
+        padding: 16px 24px;
+        
+        .MuiButton-root {
+          text-transform: none;
+          font-weight: 500;
+        }
+      }
+    }
+    
+    // Empty state styling
+    .no-tags {
+      background-color: rgba(var(--primary-color-rgb, 25, 118, 210), 0.05);
+      border-radius: 12px;
+      border: 1px dashed rgba(var(--primary-color-rgb, 25, 118, 210), 0.2);
+      padding: 32px;
+      
+      .MuiTypography-root {
+        font-style: italic;
+        opacity: 0.8;
+      }
+    }
+  }
 }

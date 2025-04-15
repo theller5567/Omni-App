@@ -1,5 +1,5 @@
 import "./sidebar.scss";
-import { Sidebar, Menu, MenuItem, SubMenu } from "react-pro-sidebar";
+import { Sidebar, Menu, MenuItem } from "react-pro-sidebar";
 import { Box, Avatar } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import "./sidebar.scss";
@@ -18,16 +18,32 @@ import {
   FaTags, 
   FaUsers, 
   FaLayerGroup,
-  FaChevronDown
+  FaChevronDown,
+  FaPalette
 } from "react-icons/fa";
 import { useState, useEffect, ReactNode } from "react";
+
+// Define CSS variables for the components
+const setCssVariables = (theme: any) => {
+  const root = document.documentElement;
+  const primaryColor = theme.palette.primary.main;
+  // Convert hex to RGB for rgba usage
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result 
+      ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+      : null;
+  };
+  
+  root.style.setProperty('--primary-color', primaryColor);
+  root.style.setProperty('--primary-color-rgb', hexToRgb(primaryColor));
+  root.style.setProperty('--text-color', theme.palette.mode === 'light' ? '#333' : '#fff');
+};
 
 // Custom animated submenu component to replace the default SubMenu
 interface AnimatedSubMenuProps {
   label: ReactNode;
-  icon?: ReactNode;
   children: ReactNode;
-  defaultOpen?: boolean;
   open: boolean;
   onOpenChange: (isOpen: boolean) => void;
   className?: string;
@@ -35,9 +51,7 @@ interface AnimatedSubMenuProps {
 
 const AnimatedSubMenu: React.FC<AnimatedSubMenuProps> = ({ 
   label, 
-  icon, 
   children, 
-  defaultOpen, 
   open, 
   onOpenChange, 
   className 
@@ -88,6 +102,11 @@ const CustomSidebar: React.FC = () => {
   const theme = useTheme();
   const isAdmin = userData.currentUser.role === "admin" || userData.currentUser.role === "superAdmin";
 
+  // Apply CSS variables when theme changes
+  useEffect(() => {
+    setCssVariables(theme);
+  }, [theme]);
+
   const handleSignOut = () => {
     console.log("User signed out");
     localStorage.removeItem("authToken");
@@ -137,43 +156,79 @@ const CustomSidebar: React.FC = () => {
                     <FaChevronDown className={`profile-chevron ${openSubMenu === "admin" ? 'chevron-open' : ''}`} />
                   </div>
                 }
-                icon={null}
-                className="sidebar-account"
-                defaultOpen={openSubMenu === "admin"}
+                children={
+                  <>
+                    <MenuItem 
+                      icon={<FaUser />} 
+                      className={location.pathname === "/account" ? "active-item" : ""}
+                      component={
+                        <NavLink 
+                          to="/account" 
+                          className={({isActive}) => isActive ? "active-menu-item" : ""}
+                          end
+                        />
+                      }
+                    >
+                      Account
+                    </MenuItem>
+                    <MenuItem 
+                      icon={<FaTachometerAlt />} 
+                      className={location.pathname === "/admin-dashboard" ? "active-item" : ""}
+                      component={
+                        <NavLink 
+                          to="/admin-dashboard" 
+                          className={({isActive}) => isActive ? "active-menu-item" : ""}
+                          end
+                        />
+                      }
+                    >
+                      Dashboard
+                    </MenuItem>
+                    <MenuItem 
+                      icon={<FaTags />} 
+                      className={location.pathname === "/admin-tags" ? "active-item" : ""}
+                      component={
+                        <NavLink 
+                          to="/admin-tags" 
+                          className={({isActive}) => isActive ? "active-menu-item" : ""}
+                          end
+                        />
+                      }
+                    >
+                      Tags
+                    </MenuItem>
+                    <MenuItem 
+                      icon={<FaUsers />} 
+                      className={location.pathname === "/admin-users" ? "active-item" : ""}
+                      component={
+                        <NavLink 
+                          to="/admin-users" 
+                          className={({isActive}) => isActive ? "active-menu-item" : ""}
+                          end
+                        />
+                      }
+                    >
+                      Users
+                    </MenuItem>
+                    <MenuItem 
+                      icon={<FaLayerGroup />} 
+                      className={location.pathname === "/admin-media-types" ? "active-item" : ""}
+                      component={
+                        <NavLink 
+                          to="/admin-media-types" 
+                          className={({isActive}) => isActive ? "active-menu-item" : ""}
+                          end
+                        />
+                      }
+                    >
+                      Media Types
+                    </MenuItem>
+                  </>
+                }
                 open={openSubMenu === "admin"}
                 onOpenChange={(open) => setOpenSubMenu(open ? "admin" : null)}
-              >
-                <MenuItem 
-                  icon={<FaUser />} 
-                  component={<NavLink to="/account" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
-                >
-                  Account
-                </MenuItem>
-                <MenuItem 
-                  icon={<FaTachometerAlt />} 
-                  component={<NavLink to="/admin-dashboard" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
-                >
-                  Dashboard
-                </MenuItem>
-                <MenuItem 
-                  icon={<FaTags />} 
-                  component={<NavLink to="/admin-tags" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
-                >
-                  Tags
-                </MenuItem>
-                <MenuItem 
-                  icon={<FaUsers />} 
-                  component={<NavLink to="/admin-users" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
-                >
-                  Users
-                </MenuItem>
-                <MenuItem 
-                  icon={<FaLayerGroup />} 
-                  component={<NavLink to="/admin-media-types" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
-                >
-                  Media Types
-                </MenuItem>
-              </AnimatedSubMenu>
+                className="sidebar-account"
+              />
             ) : (
               <MenuItem 
                 className="user-menu-item"
@@ -194,17 +249,47 @@ const CustomSidebar: React.FC = () => {
 
             <MenuItem 
               icon={<FaHubspot />} 
-              component={<NavLink to="/home" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
+              className={location.pathname === "/home" ? "active-item" : ""}
+              component={
+                <NavLink 
+                  to="/home" 
+                  className={({isActive}) => isActive ? "active-menu-item" : ""}
+                  end
+                />
+              }
             >
               HubSpot
             </MenuItem>
             
             <MenuItem 
               icon={<FaImages />} 
-              component={<NavLink to="/media-library" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
+              className={location.pathname === "/media-library" ? "active-item" : ""}
+              component={
+                <NavLink 
+                  to="/media-library" 
+                  className={({isActive}) => isActive ? "active-menu-item" : ""}
+                  end
+                />
+              }
             >
               Media Library
             </MenuItem>
+            
+            {isAdmin && (
+              <MenuItem 
+                icon={<FaPalette />} 
+                className={location.pathname === "/style-guide" ? "active-item" : ""}
+                component={
+                  <NavLink 
+                    to="/style-guide" 
+                    className={({isActive}) => isActive ? "active-menu-item" : ""}
+                    end
+                  />
+                }
+              >
+                Style Guide
+              </MenuItem>
+            )}
           </Menu>
           
           <Menu className="sidebar-footer">

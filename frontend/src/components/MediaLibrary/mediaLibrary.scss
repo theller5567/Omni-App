@@ -135,28 +135,27 @@ label {
 }
 
 // Tag styling
-.default-tag {
-  position: relative;
-  background-color: var(--accent-color);
-  &::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: var(--accent-color);
-    box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
-  }
-  
+
+.default-tag, .custom-tag {
   &.MuiChip-root {
     font-weight: 500;
+    border: 1px solid var(--border-color);
+    background-color: var(--background-color);
+  }
+}
+.default-tag {
+  position: relative;
+  &.MuiChip-root {
+    font-weight: 500;
+    border: 1px solid var(--border-color);
+    background-color: var(--secondary-color);
   }
 }
 
 .custom-tag {
   &.MuiChip-root {
     font-weight: 400;
+    border: 1px solid var(--border-color);
+    
   }
 }

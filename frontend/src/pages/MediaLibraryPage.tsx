@@ -15,6 +15,7 @@ const MediaContainer: React.FC = () => {
   const [selectedMediaType, setSelectedMediaType] = useState<string>('All');
   const mediaState = useSelector((state: RootState) => state.media);
   const dispatch = useDispatch<AppDispatch>();
+  const [needsRefresh, setNeedsRefresh] = useState(false);
 
   // Single initialization effect
   useEffect(() => {
@@ -22,6 +23,15 @@ const MediaContainer: React.FC = () => {
       dispatch(initializeMedia());
     }
   }, [dispatch, mediaState.status, mediaState.allMedia.length]);
+
+  // Add effect to handle refresh after upload
+  useEffect(() => {
+    if (needsRefresh) {
+      console.log('MediaLibraryPage - Refreshing data after upload');
+      dispatch(initializeMedia());
+      setNeedsRefresh(false);
+    }
+  }, [needsRefresh, dispatch]);
 
   // Track meaningful state changes
   const prevStateRef = React.useRef({
@@ -60,8 +70,8 @@ const MediaContainer: React.FC = () => {
   const handleUploadComplete = (newFile: any | null) => {
     if (newFile) {
       console.log('Upload complete, new file:', newFile);
-      // The new file will be added to the Redux store through the addMedia action
-      // which will be dispatched in the MediaUploader component
+      // Set flag to refresh data after upload
+      setNeedsRefresh(true);
     }
     // Do not automatically close the modal - let the user choose when to close it
   };

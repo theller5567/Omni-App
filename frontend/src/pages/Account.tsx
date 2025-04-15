@@ -17,8 +17,7 @@ import {
   useMediaQuery,
   useTheme,
   Alert,
-  Card,
-  CardContent
+  Container
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useSelector } from 'react-redux';
@@ -139,251 +138,250 @@ const Account: React.FC = () => {
   };
 
   return (
-    <Box
-      component={motion.div}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      sx={{
-        width: '100%',
-        maxWidth: '900px',
-        margin: 'auto',
-        padding: isMobile ? '1rem' : '2rem',
-        marginTop: isMobile ? '1rem' : '2rem',
-        marginBottom: isMobile ? '5rem' : '2rem',
-      }}
-    >
-      <Paper 
-        elevation={3}
-        sx={{ 
-          padding: isMobile ? '1.5rem 1rem' : '2rem',
-          borderRadius: '12px',
-          backgroundColor: 'var(--bg-secondary)',
-          marginBottom: '2rem'
+    <Container maxWidth="xl">
+      <Box
+        component={motion.div}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        sx={{
+          width: `calc(100% - 250px)`,
+          marginLeft: '250px',
+          padding: isMobile ? '1rem' : '2rem',
+          marginTop: isMobile ? '1rem' : '2rem',
+          marginBottom: isMobile ? '5rem' : '2rem',
+          textAlign: 'left',
         }}
       >
         <Typography 
-          variant={isMobile ? "h3" : "h2"} 
-          align="center" 
+          variant={isMobile ? "h3" : "h1"} 
           gutterBottom
           sx={{ 
-            color: 'var(--accent-color)',
-            fontWeight: 600,
             marginBottom: '1.5rem' 
           }}
         >
           Account Settings
         </Typography>
 
-        <Box 
+        <Paper 
+          elevation={3}
           sx={{ 
-            display: 'flex', 
-            flexDirection: isMobile ? 'column' : 'row',
-            alignItems: 'center',
-            justifyContent: isMobile ? 'center' : 'flex-start',
-            mb: 4,
-            gap: 3
+            padding: isMobile ? '1.5rem 1rem' : '2rem',
+            borderRadius: '12px',
+            backgroundColor: 'var(--bg-secondary)',
+            marginBottom: '2rem'
           }}
         >
-          <Avatar
-            src={currentUser.avatar || undefined}
+          <Box 
             sx={{ 
-              width: 100, 
-              height: 100,
-              fontSize: '2.5rem',
-              bgcolor: 'var(--accent-color)',
-              border: '3px solid var(--primary-color)',
-              boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: 'center',
+              justifyContent: isMobile ? 'center' : 'flex-start',
+              mb: 4,
+              gap: 3
             }}
           >
-            {!currentUser.avatar && getInitials()}
-          </Avatar>
-          
-          <Box>
-            <Typography 
-              variant="h4" 
+            <Avatar
+              src={currentUser.avatar || undefined}
               sx={{ 
-                fontWeight: 500, 
-                marginBottom: '0.5rem',
-                textAlign: isMobile ? 'center' : 'left'
+                width: 75, 
+                height: 75,
+                fontSize: '2.5rem',
+                bgcolor: 'var(--accent-color)',
+                border: '3px solid var(--primary-color)',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
               }}
             >
-              {`${currentUser.firstName} ${currentUser.lastName}`}
-            </Typography>
+              {!currentUser.avatar && getInitials()}
+            </Avatar>
             
-            <Typography 
-              variant="body1" 
-              color="textSecondary" 
-              sx={{ 
-                marginBottom: '0.5rem',
-                textAlign: isMobile ? 'center' : 'left'
-              }}
-            >
-              @{currentUser.username}
-            </Typography>
-            
-            <Typography 
-              variant="body2" 
-              color="textSecondary"
-              sx={{ 
-                textAlign: isMobile ? 'center' : 'left'
-              }}
-            >
-              Role: {currentUser.role || 'User'}
-            </Typography>
+            <Box>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 500, 
+                  marginBottom: '0.2rem',
+                  textAlign: isMobile ? 'center' : 'left'
+                }}
+              >
+                {`${currentUser.firstName} ${currentUser.lastName}`}
+              </Typography>
+              
+              <Typography 
+                variant="body1" 
+                color="textSecondary" 
+                sx={{ 
+                  marginBottom: '0.2rem',
+                  paddingLeft: '0.5rem',
+                  textAlign: isMobile ? 'center' : 'left'
+                }}
+              >
+                @{currentUser.username}
+              </Typography>
+              
+              <Typography 
+                variant="body2" 
+                color="textSecondary"
+                sx={{ 
+                  textAlign: isMobile ? 'center' : 'left',
+                  paddingLeft: '0.5rem',
+                }}
+              >
+                Role: {currentUser.role || 'User'}
+              </Typography>
+            </Box>
           </Box>
-        </Box>
 
-        <Divider sx={{ marginBottom: 3 }} />
+          <Divider sx={{ marginBottom: 3 }} />
 
-        {changesMade && (
-          <Alert 
-            severity="info" 
-            sx={{ mb: 3 }}
-          >
-            You have unsaved changes. Click Save Changes to update your profile.
-          </Alert>
-        )}
-
-        <form onSubmit={formik.handleSubmit}>
-          <Grid container spacing={isMobile ? 2 : 3}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                id="firstName"
-                name="firstName"
-                label="First Name"
-                value={formik.values.firstName}
-                onChange={(e) => {
-                  formik.handleChange(e);
-                }}
-                error={formik.touched.firstName && Boolean(formik.errors.firstName)}
-                helperText={formik.touched.firstName && formik.errors.firstName}
-                InputProps={{
-                  startAdornment: <PersonIcon color="action" sx={{ mr: 1 }} />
-                }}
-                variant="outlined"
-                sx={{ mb: 2 }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                id="lastName"
-                name="lastName"
-                label="Last Name"
-                value={formik.values.lastName}
-                onChange={formik.handleChange}
-                error={formik.touched.lastName && Boolean(formik.errors.lastName)}
-                helperText={formik.touched.lastName && formik.errors.lastName}
-                InputProps={{
-                  startAdornment: <PersonIcon color="action" sx={{ mr: 1 }} />
-                }}
-                variant="outlined"
-                sx={{ mb: 2 }}
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                id="email"
-                name="email"
-                label="Email"
-                value={formik.values.email}
-                onChange={formik.handleChange}
-                error={formik.touched.email && Boolean(formik.errors.email)}
-                helperText={formik.touched.email && formik.errors.email}
-                InputProps={{
-                  startAdornment: <EditIcon color="action" sx={{ mr: 1 }} />
-                }}
-                variant="outlined"
-                sx={{ mb: 2 }}
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                id="username"
-                name="username"
-                label="Username"
-                value={formik.values.username}
-                onChange={formik.handleChange}
-                error={formik.touched.username && Boolean(formik.errors.username)}
-                helperText={formik.touched.username && formik.errors.username}
-                InputProps={{
-                  startAdornment: <EditIcon color="action" sx={{ mr: 1 }} />
-                }}
-                variant="outlined"
-                sx={{ mb: 2 }}
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                id="password"
-                name="password"
-                label="New Password (optional)"
-                type="password"
-                value={formik.values.password}
-                onChange={formik.handleChange}
-                error={formik.touched.password && Boolean(formik.errors.password)}
-                helperText={formik.touched.password ? formik.errors.password : "Leave blank to keep current password"}
-                InputProps={{
-                  startAdornment: <LockIcon color="action" sx={{ mr: 1 }} />
-                }}
-                variant="outlined"
-                sx={{ mb: 2 }}
-              />
-            </Grid>
-          </Grid>
-
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            mt: 3 
-          }}>
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              disabled={loading || !changesMade}
-              size="large"
-              startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
-              sx={{ 
-                minWidth: '200px',
-                py: 1.5,
-                borderRadius: '8px',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                transition: 'transform 0.2s ease-in-out',
-                '&:hover': {
-                  transform: 'translateY(-3px)',
-                  boxShadow: '0 6px 8px rgba(0,0,0,0.15)',
-                },
-                '&:disabled': {
-                  backgroundColor: 'rgba(0,0,0,0.12)',
-                }
-              }}
+          {changesMade && (
+            <Alert 
+              severity="info" 
+              sx={{ mb: 3 }}
             >
-              {loading ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </Box>
-        </form>
-      </Paper>
+              You have unsaved changes. Click Save Changes to update your profile.
+            </Alert>
+          )}
 
-      {/* Appearance Section */}
-      <Card sx={{ marginTop: 3 }}>
-        <CardContent>
-          <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', mb: 6 }}>
+          <form onSubmit={formik.handleSubmit}>
+            <Grid container spacing={isMobile ? 2 : 3}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  id="firstName"
+                  name="firstName"
+                  label="First Name"
+                  value={formik.values.firstName}
+                  onChange={(e) => {
+                    formik.handleChange(e);
+                  }}
+                  error={formik.touched.firstName && Boolean(formik.errors.firstName)}
+                  helperText={formik.touched.firstName && formik.errors.firstName}
+                  InputProps={{
+                    startAdornment: <PersonIcon color="action" sx={{ mr: 1 }} />
+                  }}
+                  variant="outlined"
+                  sx={{ mb: 2 }}
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  id="lastName"
+                  name="lastName"
+                  label="Last Name"
+                  value={formik.values.lastName}
+                  onChange={formik.handleChange}
+                  error={formik.touched.lastName && Boolean(formik.errors.lastName)}
+                  helperText={formik.touched.lastName && formik.errors.lastName}
+                  InputProps={{
+                    startAdornment: <PersonIcon color="action" sx={{ mr: 1 }} />
+                  }}
+                  variant="outlined"
+                  sx={{ mb: 2 }}
+                />
+              </Grid>
+              <Grid container spacing={isMobile ? 2 : 3}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                  id="email"
+                  name="email"
+                  label="Email"
+                  value={formik.values.email}
+                  onChange={formik.handleChange}
+                  error={formik.touched.email && Boolean(formik.errors.email)}
+                  helperText={formik.touched.email && formik.errors.email}
+                  InputProps={{
+                    startAdornment: <EditIcon color="action" sx={{ mr: 1 }} />
+                  }}
+                  variant="outlined"
+                    sx={{ mb: 2 }}
+                  />
+                </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  id="username"
+                  name="username"
+                  label="Username"
+                  value={formik.values.username}
+                  onChange={formik.handleChange}
+                  error={formik.touched.username && Boolean(formik.errors.username)}
+                  helperText={formik.touched.username && formik.errors.username}
+                  InputProps={{
+                    startAdornment: <EditIcon color="action" sx={{ mr: 1 }} />
+                  }}
+                  variant="outlined"
+                  sx={{ mb: 2 }}
+                />
+              </Grid>
+              </Grid>
+
+              
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  id="password"
+                  name="password"
+                  label="New Password (optional)"
+                  type="password"
+                  value={formik.values.password}
+                  onChange={formik.handleChange}
+                  error={formik.touched.password && Boolean(formik.errors.password)}
+                  helperText={formik.touched.password ? formik.errors.password : "Leave blank to keep current password"}
+                  InputProps={{
+                    startAdornment: <LockIcon color="action" sx={{ mr: 1 }} />
+                  }}
+                  variant="outlined"
+                  sx={{ mb: 2 }}
+                />
+              </Grid>
+            </Grid>
+
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'left',
+              paddingLeft: '1rem',
+            }}>
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={loading || !changesMade}
+                size="large"
+                startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
+                sx={{ 
+                  minWidth: '200px',
+                  py: 1.5,
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                  transition: 'transform 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-3px)',
+                    boxShadow: '0 6px 8px rgba(0,0,0,0.15)',
+                  },
+                  '&:disabled': {
+                    backgroundColor: 'rgba(0,0,0,0.12)',
+                  }
+                }}
+              >
+                {loading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </Box>
+          </form>
+          <Divider sx={{ mb: 6, mt: 6 }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, paddingLeft: '1rem' }}>
+          <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
             <BrushIcon sx={{ mr: 1, color: 'var(--accent-color)' }} /> Appearance Settings
           </Typography>
           
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', maxWidth: '300px', gap: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography>Color Theme</Typography>
+              <Typography variant="body1">Color Theme</Typography>
               <ThemeToggle 
                 theme={isDarkMode ? 'dark' : 'light'}
                 toggleTheme={(theme) => toggleTheme(theme)}
@@ -393,18 +391,19 @@ const Account: React.FC = () => {
             <Divider />
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography>Default View Mode</Typography>
+              <Typography variant="body1">Default View Mode</Typography>
               <ViewModeToggle 
                 viewMode={preferredViewMode}
                 toggleViewMode={handleViewModeChange}
               />
             </Box>
           </Box>
-        </CardContent>
-      </Card>
+          </Box>
+        </Paper>
 
-      <ToastContainer position="bottom-right" />
-    </Box>
+        <ToastContainer position="bottom-right" />
+      </Box>
+    </Container>
   );
 };
 

@@ -9,13 +9,11 @@ import { isImageFile, isVideoFile, getFileIcon } from '../utils';
 
 interface DataTableProps {
   rows: any[];
-  onDelete: (id: string) => void;
   onSelectionChange: (selection: GridRowSelectionModel) => void;
 }
 
 const DataTable: React.FC<DataTableProps> = ({ 
   rows, 
-  onDelete, 
   onSelectionChange 
 }) => {
   const navigate = useNavigate();

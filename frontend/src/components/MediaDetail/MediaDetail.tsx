@@ -329,7 +329,7 @@ const MediaDetail: React.FC = () => {
     >
       <Button 
         className="back-button" 
-        onClick={() => navigate(-1)} 
+        onClick={() => navigate('/media-library')} 
         variant="outlined"
         size={isMobile ? "small" : "medium"}
       >
@@ -485,17 +485,6 @@ const MediaDetail: React.FC = () => {
                         size="small" 
                         label={tag}
                         className={isDefaultTag ? "default-tag" : "custom-tag"}
-                        sx={{ 
-                          backgroundColor: isDefaultTag ? 'var(--accent-color)' : 'var(--accent-color2)', 
-                          fontSize: isMobile ? '0.7rem' : '0.8rem', 
-                          padding: '0px', 
-                          color: 'var(--background-color)', 
-                          marginRight: '0.5rem',
-                          ...(isDefaultTag && {
-                            border: '1px solid var(--accent-color)',
-                            fontWeight: '500'
-                          })
-                        }}
                       />
                     );
                   })}

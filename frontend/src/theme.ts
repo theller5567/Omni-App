@@ -1,4 +1,8 @@
 import { createTheme, Theme } from '@mui/material/styles';
+import { fontFamily, fontWeights } from './utils/fontUtils';
+
+// Import our font CSS to ensure it's included in the bundle
+import './assets/fonts/fonts.css';
 
 /**
  * Function to get CSS variable value with fallback
@@ -132,65 +136,76 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
       borderRadius: parseInt(getCssVar('--border-radius-md', '8'), 10) || 8,
     },
     typography: {
-      fontFamily: getCssVar('--font-family-base', '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'),
+      fontFamily: fontFamily,
       fontSize: 16,
       htmlFontSize: 16,
       h1: {
         fontSize: getCssVar('--font-size-4xl', '2.25rem'),
-        fontWeight: getCssVar('--font-weight-bold', '700'),
+        fontWeight: fontWeights.light,
         lineHeight: getCssVar('--line-height-tight', '1.25'),
+        letterSpacing: '-0.01em',
       },
       h2: {
         fontSize: getCssVar('--font-size-3xl', '1.875rem'),
-        fontWeight: getCssVar('--font-weight-bold', '700'),
+        fontWeight: fontWeights.bold,
         lineHeight: getCssVar('--line-height-tight', '1.25'),
+        letterSpacing: '-0.01em',
       },
       h3: {
         fontSize: getCssVar('--font-size-2xl', '1.5rem'),
-        fontWeight: getCssVar('--font-weight-semibold', '600'),
+        fontWeight: fontWeights.semiBold,
         lineHeight: getCssVar('--line-height-tight', '1.25'),
+        letterSpacing: '-0.005em',
       },
       h4: {
         fontSize: getCssVar('--font-size-xl', '1.25rem'),
-        fontWeight: getCssVar('--font-weight-semibold', '600'),
+        fontWeight: fontWeights.semiBold,
         lineHeight: getCssVar('--line-height-tight', '1.25'),
+        letterSpacing: '-0.005em',
       },
       h5: {
         fontSize: getCssVar('--font-size-lg', '1.125rem'),
-        fontWeight: getCssVar('--font-weight-medium', '500'),
+        fontWeight: fontWeights.medium,
         lineHeight: getCssVar('--line-height-tight', '1.25'),
       },
       h6: {
         fontSize: getCssVar('--font-size-md', '1rem'),
-        fontWeight: getCssVar('--font-weight-medium', '500'),
+        fontWeight: fontWeights.medium,
         lineHeight: getCssVar('--line-height-tight', '1.25'),
       },
       subtitle1: {
         fontSize: getCssVar('--font-size-md', '1rem'),
-        fontWeight: getCssVar('--font-weight-medium', '500'),
+        fontWeight: fontWeights.medium,
       },
       subtitle2: {
         fontSize: getCssVar('--font-size-sm', '0.875rem'),
-        fontWeight: getCssVar('--font-weight-medium', '500'),
+        fontWeight: fontWeights.medium,
       },
       body1: {
         fontSize: getCssVar('--font-size-md', '1rem'),
+        fontWeight: fontWeights.regular,
+        letterSpacing: '0.01em',
       },
       body2: {
         fontSize: getCssVar('--font-size-sm', '0.875rem'),
+        fontWeight: fontWeights.regular,
+        letterSpacing: '0.01em',
       },
       button: {
         fontSize: getCssVar('--font-size-sm', '0.875rem'),
-        fontWeight: getCssVar('--font-weight-medium', '500'),
+        fontWeight: fontWeights.medium,
         textTransform: 'none', // Override MUI's default uppercase
+        letterSpacing: '0.05em',
       },
       caption: {
         fontSize: getCssVar('--font-size-xs', '0.75rem'),
+        fontWeight: fontWeights.light,
+        letterSpacing: '0.02em',
       },
       overline: {
         fontSize: getCssVar('--font-size-xs', '0.75rem'),
         textTransform: 'uppercase',
-        fontWeight: getCssVar('--font-weight-semibold', '600'),
+        fontWeight: fontWeights.semiBold,
         letterSpacing: '0.08em',
       },
     },

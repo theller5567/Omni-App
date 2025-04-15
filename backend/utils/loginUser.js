@@ -26,7 +26,18 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials - password' });
     }
 
-    const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    // Include important user info in the token payload
+    const token = jwt.sign({ 
+      email: user.email,
+      id: user._id,
+      role: user.role
+    }, process.env.JWT_SECRET, { expiresIn: '24h' });
+
+    console.log('Generated token with payload:', {
+      email: user.email,
+      id: user._id,
+      role: user.role
+    });
 
     // Include user information in the response
     res.status(200).json({ message: 'Login successful', token, user });

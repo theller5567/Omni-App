@@ -23,6 +23,7 @@ import AccountTags from './pages/AccountTags';
 import AccountMediaTypes from './pages/AccountMediaTypes';
 import AccountAdminDashboard from './pages/AccountAdminDashboard';
 import { AppDispatch } from './store/store';
+import StyleGuidePage from './pages/StyleGuidePage';
 
 // Create a context for theme toggling
 export const ThemeContext = React.createContext({
@@ -163,6 +164,7 @@ const App: React.FC = () => {
                 <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} />} />
                 <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
                 <Route path="/password-setup" element={<PasswordSetupPage />} />
+                <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} />} />
                 <Route path="/" element={<AuthPage />} />
               </Routes>
             </div>
