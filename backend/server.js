@@ -64,11 +64,42 @@ app.options('*', cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
+// Add request start time for performance tracking
+app.use((req, res, next) => {
+  req._startTime = Date.now();
+  next();
+});
+
 // Add special CORS handling for the problematic route
 app.use('/api/media-types/:id/files-needing-tags', (req, res, next) => {
   // CORS headers
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', '*');
+  
+  // Explicitly set Access-Control-Expose-Headers to allow the client to read response headers
+  res.header('Access-Control-Expose-Headers', 'Cache-Control, Pragma, Expires, Content-Length, Content-Type');
+  
+  // Add cache busting headers to prevent browser caching
+  res.header('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.header('Pragma', 'no-cache');
+  res.header('Expires', '0');
+  
+  if (req.method === 'OPTIONS') {
+    // Set permissive headers on OPTIONS request
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma, Expires');
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
+// Add similar CORS handling for the summary endpoint
+app.use('/api/media-types/files-needing-tags-summary', (req, res, next) => {
+  // CORS headers
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.header('Access-Control-Allow-Headers', '*');
   
   // Explicitly set Access-Control-Expose-Headers to allow the client to read response headers

@@ -13,6 +13,7 @@ import {
   debugMediaType,
   setProductImageDefaultTags,
   getFilesNeedingTags,
+  getFilesNeedingTagsSummary,
   fixSpecificMediaFile
 } from '../controllers/mediaTypeController.js';
 
@@ -20,6 +21,12 @@ const router = express.Router();
 
 // Get all media types
 router.get('/', getMediaTypes);
+
+// Summary endpoint for files needing tags (must come before :id routes)
+router.get('/files-needing-tags-summary', getFilesNeedingTagsSummary);
+
+// Utility endpoint for Product Image
+router.post('/fix-product-image-tags', setProductImageDefaultTags);
 
 // Get a specific media type
 router.get('/:id', getMediaTypeById);
@@ -59,9 +66,6 @@ router.post('/test-update-tags/:id', async (req, res) => {
     res.status(500).json({ message: 'Error updating tags', error: error.toString() });
   }
 });
-
-// Utility endpoint for Product Image
-router.post('/fix-product-image-tags', setProductImageDefaultTags);
 
 // Add a new media type
 router.post('/', addMediaType);

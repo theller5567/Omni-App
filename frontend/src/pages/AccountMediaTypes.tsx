@@ -80,45 +80,56 @@ const AccountMediaTypes: React.FC = () => {
       if (mediaTypes.length === 0 || checkingMediaTypes) return;
       
       setCheckingMediaTypes(true);
-      const typesWithDefaultTags = mediaTypes.filter(type => 
-        type.defaultTags && type.defaultTags.length > 0 && type.status === 'active'
-      );
-      
-      if (typesWithDefaultTags.length === 0) {
-        setCheckingMediaTypes(false);
-        return;
-      }
       
       try {
+        // Use the new consolidated endpoint instead of making individual requests
+        interface TagsSummaryResponse {
+          totalMediaTypes: number;
+          totalFilesNeedingTags: number;
+          mediaTypes: Array<{
+            id: string;
+            name: string;
+            count: number;
+            totalFiles: number;
+            hasDefaultTags: boolean;
+            defaultTags?: string[];
+            filesWithIssues: any[];
+          }>;
+          performanceMetrics?: {
+            mediaTypesProcessed: number;
+            executionTimeMs: number;
+            mediaTypesWithErrors: number;
+          };
+        }
+        
+        const response = await axios.get<TagsSummaryResponse>(
+          `${env.BASE_URL}/api/media-types/files-needing-tags-summary`,
+          {
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          }
+        );
+        
+        // Process the response and create a record of mediaTypeId -> count
         const results: Record<string, number> = {};
         
-        // Check each media type with default tags to see if it has files that need tags
-        await Promise.all(typesWithDefaultTags.map(async (mediaType) => {
-          try {
-            const response = await axios.get<{count: number}>(
-              `${env.BASE_URL}/api/media-types/${mediaType._id}/files-needing-tags`,
-              {
-                headers: {
-                  'Cache-Control': 'no-cache, no-store, must-revalidate',
-                  'Pragma': 'no-cache',
-                  'Expires': '0'
-                }
-              }
-            );
-            const count = response.data.count || 0;
-            if (count > 0) {
-              console.log(`Found ${count} files needing tags for ${mediaType.name}`);
-              results[mediaType._id] = count;
+        if (response.data && response.data.mediaTypes) {
+          response.data.mediaTypes.forEach((item) => {
+            if (item.count > 0) {
+              console.log(`Found ${item.count} files needing tags for ${item.name}`);
+              results[item.id] = item.count;
             }
-          } catch (error) {
-            console.error(`Failed to check files needing tags for ${mediaType.name}:`, error);
-          }
-        }));
+          });
+        }
         
         console.log('Files needing tags by media type:', results);
+        console.log('Summary response:', response.data);
         setMediaTypesWithFilesNeedingTags(results);
       } catch (error) {
-        console.error('Error checking media types with files needing tags:', error);
+        console.error('Error checking files needing tags summary:', error);
       }
       
       setCheckingMediaTypes(false);

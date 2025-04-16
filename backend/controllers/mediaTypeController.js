@@ -840,3 +840,175 @@ export const fixSpecificMediaFile = async (req, res) => {
     return res.status(500).json({ message: 'Error fixing specific media file', error: error.message });
   }
 };
+
+// Get a summary of files needing tags across all media types
+export const getFilesNeedingTagsSummary = async (req, res) => {
+  // Set a timeout for this potentially resource-intensive operation
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(new Error('Operation timed out after 30 seconds'));
+    }, 30000); // 30 second timeout
+  });
+  
+  try {
+    console.log('⭐ Checking files needing default tags across all media types');
+    
+    // Find all active media types (not archived or deprecated)
+    const mediaTypes = await MediaType.find({
+      status: { $nin: ['archived', 'deprecated'] }
+    }).lean();
+    
+    console.log(`📋 Found ${mediaTypes.length} active media types`);
+    
+    // Initialize results object
+    const results = {
+      totalMediaTypes: mediaTypes.length,
+      totalFilesNeedingTags: 0,
+      mediaTypes: []
+    };
+    
+    // Process each media type with timeout protection
+    const processMediaTypes = async () => {
+      for (const mediaType of mediaTypes) {
+        try {
+          console.log(`🔍 Processing media type: ${mediaType.name}`);
+          
+          // Skip media types without default tags
+          if (!mediaType.defaultTags || mediaType.defaultTags.length === 0) {
+            console.log(`⏭️ Skipping ${mediaType.name} - no default tags`);
+            results.mediaTypes.push({
+              id: mediaType._id,
+              name: mediaType.name,
+              count: 0,
+              hasDefaultTags: false,
+              filesWithIssues: []
+            });
+            continue;
+          }
+          
+          // Find all media files with this media type
+          const mediaFiles = await Media.find({
+            $or: [
+              { mediaType: mediaType._id },
+              { mediaType: mediaType.name }
+            ]
+          }).lean();
+          
+          if (mediaFiles.length === 0) {
+            console.log(`⏭️ No files found for media type: ${mediaType.name}`);
+            results.mediaTypes.push({
+              id: mediaType._id,
+              name: mediaType.name,
+              count: 0,
+              hasDefaultTags: true,
+              defaultTags: mediaType.defaultTags,
+              filesWithIssues: []
+            });
+            continue;
+          }
+          
+          // Count files that need tags (missing one or more default tags)
+          let filesNeedingTags = 0;
+          let filesWithIssues = [];
+          
+          // Convert default tags to lowercase for case-insensitive comparison
+          const defaultTagsLower = mediaType.defaultTags.map(tag => 
+            typeof tag === 'string' ? tag.toLowerCase() : tag
+          );
+          
+          for (const file of mediaFiles) {
+            // Ensure we're working with an array of tags, converting to lowercase for case-insensitive comparison
+            const existingTags = Array.isArray(file.metadata?.tags) 
+              ? file.metadata.tags.map(tag => typeof tag === 'string' ? tag.toLowerCase() : tag)
+              : [];
+            
+            // Check if any default tag is missing using case-insensitive comparison
+            const missingTags = defaultTagsLower.filter(defaultTag => 
+              !existingTags.includes(defaultTag)
+            );
+            
+            const needsUpdate = missingTags.length > 0;
+            
+            if (needsUpdate) {
+              filesNeedingTags++;
+              filesWithIssues.push({
+                id: file._id,
+                title: file.title || 'No title',
+                existingTags: file.metadata?.tags || [],
+                missingTags: mediaType.defaultTags.filter(tag => 
+                  !existingTags.includes(tag.toLowerCase())
+                )
+              });
+            }
+          }
+          
+          console.log(`✅ ${mediaType.name}: ${filesNeedingTags} out of ${mediaFiles.length} files need tags`);
+          
+          // Add to results
+          results.mediaTypes.push({
+            id: mediaType._id,
+            name: mediaType.name,
+            count: filesNeedingTags,
+            totalFiles: mediaFiles.length,
+            hasDefaultTags: true,
+            defaultTags: mediaType.defaultTags,
+            // Only include the first 50 files with issues to keep the response size reasonable
+            filesWithIssues: filesNeedingTags > 0 ? filesWithIssues.slice(0, 50) : [],
+            // If we truncated the list, include the total count
+            filesWithIssuesTruncated: filesWithIssues.length > 50,
+            filesWithIssuesTotal: filesWithIssues.length
+          });
+          
+          // Add to total count
+          results.totalFilesNeedingTags += filesNeedingTags;
+        } catch (mediaTypeError) {
+          console.error(`❌ Error processing media type ${mediaType.name}:`, mediaTypeError);
+          
+          // Add error information to results but continue processing other media types
+          results.mediaTypes.push({
+            id: mediaType._id,
+            name: mediaType.name,
+            error: mediaTypeError.message || 'Unknown error',
+            hasError: true
+          });
+        }
+      }
+      
+      return results;
+    };
+    
+    // Execute with timeout protection
+    const processedResults = await Promise.race([
+      processMediaTypes(),
+      timeoutPromise
+    ]);
+    
+    console.log(`🎉 Total files needing tags across all media types: ${results.totalFilesNeedingTags}`);
+    
+    // Add cache busting headers to prevent browser caching (same as the middleware for the single endpoint)
+    res.header('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.header('Pragma', 'no-cache');
+    res.header('Expires', '0');
+    
+    // Add performance metrics to the response
+    results.performanceMetrics = {
+      mediaTypesProcessed: results.mediaTypes.length,
+      executionTimeMs: Date.now() - req._startTime || 0,
+      mediaTypesWithErrors: results.mediaTypes.filter(mt => mt.hasError).length
+    };
+    
+    return res.status(200).json(results);
+  } catch (error) {
+    console.error('❌ Error generating files needing tags summary:', error);
+    
+    // Check if this is a timeout error
+    if (error.message && error.message.includes('timed out')) {
+      return res.status(503).json({ 
+        message: 'The operation timed out. The system may be under heavy load or there are too many files to process.',
+        error: error.message
+      });
+    }
+    
+    res.status(500).json({ message: 'Error generating files needing tags summary', error: error.message });
+  }
+};
