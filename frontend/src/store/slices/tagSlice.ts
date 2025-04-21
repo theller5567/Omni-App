@@ -42,11 +42,25 @@ export const updateTag = createAsyncThunk<Tags, { id: string; name: string }>('t
   return response.data;
 });
 
-export const deleteTag = createAsyncThunk<string, string>('tags/deleteTag', async (id) => {
-  console.log('Deleting tag');
-  await axios.delete(`${axios.defaults.baseURL}/tags/${id}`);
-  return id;
-});
+export const deleteTag = createAsyncThunk<string, string>(
+  'tags/deleteTag', 
+  async (id, { rejectWithValue }) => {
+    try {
+      console.log('Deleting tag with ID:', id);
+      await axios.delete(`${axios.defaults.baseURL}/tags/${id}`);
+      return id;
+    } catch (error: any) {
+      console.error('Error deleting tag:', error.response?.status, error.response?.data);
+      // If it's a 404, we consider it as if the tag is already deleted
+      if (error.response?.status === 404) {
+        console.log('Tag not found (may have been already deleted)');
+        // Still return the ID to remove it from the local state
+        return id;
+      }
+      return rejectWithValue(error.response?.data?.message || 'Failed to delete tag');
+    }
+  }
+);
 
 const tagSlice = createSlice({
   name: 'tags',
@@ -78,6 +92,11 @@ const tagSlice = createSlice({
       })
       .addCase(deleteTag.fulfilled, (state, action: PayloadAction<string>) => {
         state.tags = state.tags.filter((tag: Tags) => tag._id !== action.payload);
+      })
+      .addCase(deleteTag.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.error.message ?? 'Failed to delete tag';
+        console.error('Delete tag failed with error:', action.error);
       });
   },
 });

@@ -10,6 +10,7 @@ import hubspotRoutes from './routes/hubspotRoutes.js';
 import tagRoutes from './routes/tagRoutes.js';
 import mediaTypeRoutes from './routes/mediaTypeRoutes.js';
 import utilityRoutes from './routes/utilityRoutes.js';
+import tagCategoryRoutes from './routes/tagCategoryRoutes.js';
 // Load environment variables from .env file
 dotenv.config();
 
@@ -126,6 +127,7 @@ app.use('/api/hubspot', hubspotRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/media-types', mediaTypeRoutes);
 app.use('/api/utility', utilityRoutes);
+app.use('/api/tag-categories', tagCategoryRoutes);
 
 // Root route
 app.get('/', (req, res) => {

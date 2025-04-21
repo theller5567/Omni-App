@@ -4,6 +4,7 @@ import userReducer from './slices/userSlice';
 import tagReducer from './slices/tagSlice';
 import mediaTypeReducer from './slices/mediaTypeSlice';
 import mediaReducer from './slices/mediaSlice';
+import tagCategoryReducer from './slices/tagCategorySlice';
 
 const store = configureStore({
   reducer: {
@@ -11,7 +12,8 @@ const store = configureStore({
     user: userReducer,
     tags: tagReducer,
     mediaTypes: mediaTypeReducer,
-    media: mediaReducer
+    media: mediaReducer,
+    tagCategories: tagCategoryReducer
   },
 });
 

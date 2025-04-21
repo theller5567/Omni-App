@@ -2,6 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "../store/store";
 import { fetchTags, addTag, updateTag, deleteTag } from "../store/slices/tagSlice";
+import TagCategoryManager from "../components/TagCategoryManager/TagCategoryManager";
+import { toast } from "react-toastify";
+import { resetTagCategories } from "../store/slices/tagCategorySlice";
+
 import { 
   Box, 
   Button, 
@@ -14,16 +18,16 @@ import {
   DialogActions,
   Paper,
   InputAdornment,
-  Grid,
   Divider,
   Tooltip,
   useMediaQuery,
   Theme,
-  Container
+  Container,
+  Alert
 } from "@mui/material";
-import { FaEdit, FaTrash, FaPlus, FaSearch, FaTimes, FaTag } from "react-icons/fa";
+import { FaEdit, FaTrash, FaPlus, FaSearch, FaTimes, FaTag, FaRedo } from "react-icons/fa";
 import { motion } from "framer-motion";
-import { normalizeTag, hasUppercase, validateTag } from "../utils/tagUtils";
+import { normalizeTag, normalizeTagForComparison, validateTag, areTagsEquivalent } from "../utils/tagUtils";
 import "./accountTags.scss";
 
 const AccountTags: React.FC = () => {
@@ -35,6 +39,7 @@ const AccountTags: React.FC = () => {
   const { tags, status } = useSelector((state: RootState) => state.tags);
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   const [tagError, setTagError] = useState<string | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
     if (status === 'idle' && tags.length === 0) {
@@ -45,15 +50,43 @@ const AccountTags: React.FC = () => {
   useEffect(() => {
     if (newTagName) {
       const validation = validateTag(newTagName);
-      setTagError(validation.valid ? null : validation.message || null);
+      
+      // Check for duplicate tags (case-insensitive)
+      if (validation.valid && tags.some(tag => 
+        areTagsEquivalent(tag.name, newTagName)
+      )) {
+        setTagError(`Tag "${newTagName}" already exists`);
+      } else {
+        setTagError(validation.valid ? null : validation.message || null);
+      }
     } else {
       setTagError(null);
     }
-  }, [newTagName]);
+  }, [newTagName, tags]);
+
+  const handleResetData = async () => {
+    try {
+      setIsResetting(true);
+      await dispatch(resetTagCategories());
+      toast.success('Tag categories state reset successfully');
+      window.location.reload(); // Force a full page reload to clear everything
+    } catch (err) {
+      console.error('Failed to reset data:', err);
+      toast.error('Failed to reset tag categories');
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const handleCreateTag = (e: React.FormEvent) => {
     e.preventDefault();
     if (newTagName.trim() && validateTag(newTagName).valid) {
+      // Check for duplicates one more time before submitting
+      if (tags.some(tag => areTagsEquivalent(tag.name, newTagName))) {
+        setTagError(`Tag "${newTagName}" already exists`);
+        return;
+      }
+      
       dispatch(addTag(normalizeTag(newTagName)));
       setNewTagName("");
     }
@@ -68,14 +101,37 @@ const AccountTags: React.FC = () => {
 
   const handleDeleteTag = () => {
     if (tagToDelete) {
-      dispatch(deleteTag(tagToDelete));
-      setTagToDelete(null);
+      dispatch(deleteTag(tagToDelete))
+        .unwrap()
+        .then(() => {
+          toast.success('Tag deleted successfully');
+          setTagToDelete(null);
+        })
+        .catch((error) => {
+          console.error('Failed to delete tag:', error);
+          toast.error(`Failed to delete tag: ${error || 'Unknown error'}`);
+          setTagToDelete(null);
+        });
     }
   };
 
   const handleUpdateTag = () => {
     if (editingTag && editingTag.name.trim()) {
       const validation = validateTag(editingTag.name);
+      
+      // Check for duplicates, but exclude current tag from the check
+      const hasDuplicate = tags.some(tag => 
+        tag._id !== editingTag.id && 
+        areTagsEquivalent(tag.name, editingTag.name)
+      );
+      
+      if (hasDuplicate) {
+        // We could set an error state here, but for simplicity just show a toast
+        // and prevent the update
+        toast.error(`Tag "${editingTag.name}" already exists`);
+        return;
+      }
+      
       if (validation.valid) {
         dispatch(updateTag({
           id: editingTag.id,
@@ -87,7 +143,7 @@ const AccountTags: React.FC = () => {
   };
 
   const filteredTags = tags.filter((tag) =>
-    tag.name.toLowerCase().includes(searchTerm.toLowerCase())
+    normalizeTagForComparison(tag.name).includes(normalizeTagForComparison(searchTerm))
   );
 
   const containerVariants = {
@@ -110,10 +166,30 @@ const AccountTags: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Typography variant="h1" sx={{ mb: 3 }}>Tag Management</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h1">Tag Management</Typography>
+            <Button
+              variant="outlined"
+              color="warning"
+              startIcon={<FaRedo />}
+              onClick={handleResetData}
+              disabled={isResetting}
+            >
+              {isResetting ? 'Resetting...' : 'Reset All Tag Data'}
+            </Button>
+          </Box>
+          
+          {/* Add a hint for users about clearing data */}
+          <Alert severity="info" sx={{ mb: 4 }}>
+            If you're experiencing issues with tag categories not displaying correctly or getting errors about categories already existing, try the "Reset All Tag Data" button to clear the cache and reload the page.
+          </Alert>
           
           <Paper elevation={3} sx={{ p: 4, borderRadius: '12px', bgcolor: 'background.paper', mb: 3 }}>
             {/* Create New Tag Section */}
+            <TagCategoryManager />  
+
+            <Divider sx={{ my: 4 }} />
+
             <Box sx={{ mb: 6 }}>
               <Typography variant="h6" sx={{ mb: 4 }}>Create New Tag</Typography>
               <Box component="form" onSubmit={handleCreateTag} sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'flex-start', gap: 2 }}>
@@ -134,12 +210,7 @@ const AccountTags: React.FC = () => {
                     ),
                   }}
                   error={!!tagError}
-                  helperText={
-                    tagError || 
-                    (newTagName && hasUppercase(newTagName) 
-                      ? "Tags will be saved in lowercase for consistency" 
-                      : " ")
-                  }
+                  helperText={tagError || " "}
                 />
                 <Button
                   type="submit"
@@ -203,9 +274,19 @@ const AccountTags: React.FC = () => {
                 </Box>
               ) : (
                 <Box sx={{ mt: 2 }}>
-                  <Grid container spacing={2}>
+                  <Box sx={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: {
+                      xs: '1fr',
+                      sm: 'repeat(2, 1fr)',
+                      md: 'repeat(3, 1fr)',
+                      lg: 'repeat(4, 1fr)',
+                      xl: 'repeat(6, 1fr)'
+                    },
+                    gap: 2
+                  }}>
                     {filteredTags.map((tag) => (
-                      <Grid item xs={12} sm={6} md={4} lg={3} xl={2} key={tag._id}>
+                      <Box key={tag._id}>
                         <motion.div
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -257,9 +338,9 @@ const AccountTags: React.FC = () => {
                             </Box>
                           </Paper>
                         </motion.div>
-                      </Grid>
+                      </Box>
                     ))}
-                  </Grid>
+                  </Box>
                 </Box>
               )}
               
@@ -281,9 +362,7 @@ const AccountTags: React.FC = () => {
           sx: { borderRadius: '12px', maxWidth: '500px', width: '100%' }
         }}
       >
-        <DialogTitle>
-          <Typography variant="h6">Edit Tag</Typography>
-        </DialogTitle>
+        <DialogTitle>Edit Tag</DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <TextField
             autoFocus
@@ -329,9 +408,7 @@ const AccountTags: React.FC = () => {
           sx: { borderRadius: '12px', maxWidth: '500px', width: '100%' }
         }}
       >
-        <DialogTitle>
-          <Typography variant="h6">Confirm Delete</Typography>
-        </DialogTitle>
+        <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <Typography variant="body1">
             Are you sure you want to delete this tag? This action cannot be undone.

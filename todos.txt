@@ -1,0 +1,5 @@
+1. When deleting mediaFIles and then navigation to the mediaTYpe page the mediaTYpe page is not updated with the new list of mediaFIles. The mediaTYpe page is still showing the old list of media.
+
+2. Create Tag categories/groups
+
+    2A. Implement tag categories in all forms that require multiselect options or tags.

@@ -3,7 +3,6 @@ import {
   Box, 
   Button, 
   Typography, 
-  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -507,16 +506,22 @@ const AccountMediaTypes: React.FC = () => {
           </div>
         </Box>
 
-        <Grid container spacing={2}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: 2 }}>
           {mediaTypes.map((mediaType, index) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
+            <Box 
+              key={index} 
+              sx={{ 
+                borderRadius: 1,
+                padding: 2,
+                height: '100%'
+              }}
+            >
               <MediaTypeCard 
                 mediaType={mediaType}
                 onDelete={handleDeleteClick}
                 onEdit={handleEditClick}
                 onView={() => console.log('View', mediaType._id)}
               />
-              {/* Only show sync tags button if there are files that need updating */}
               {mediaType.defaultTags && 
                mediaType.defaultTags.length > 0 && 
                mediaTypesWithFilesNeedingTags[mediaType._id] > 0 && (
@@ -531,9 +536,9 @@ const AccountMediaTypes: React.FC = () => {
                   Apply Default Tags ({mediaTypesWithFilesNeedingTags[mediaType._id]} files)
                 </Button>
               )}
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </Box>
       </Box>
 
       {/* Deletion Confirmation Dialog */}

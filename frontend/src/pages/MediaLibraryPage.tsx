@@ -115,12 +115,12 @@ const MediaContainer: React.FC = () => {
 
   return (
     <div id="media-container">
-      <MediaLibrary
-        mediaFilesData={filteredMediaFiles}
-        setSearchQuery={setSearchQuery}
-        onAddMedia={handleOpen}
-        onDeleteMedia={handleDeleteMedia}
-        selectedMediaType={selectedMediaType}
+        <MediaLibrary
+          mediaFilesData={filteredMediaFiles}
+          setSearchQuery={setSearchQuery}
+          onAddMedia={handleOpen}
+          onDeleteMedia={handleDeleteMedia}
+          selectedMediaType={selectedMediaType}
         handleMediaTypeChange={handleMediaTypeChange}
       />
       <MediaUploader
