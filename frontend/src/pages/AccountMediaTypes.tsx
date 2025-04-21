@@ -35,7 +35,8 @@ import {
   deleteMediaType,
   setDeletionTarget,
   setMigrationTarget,
-  resetOperation
+  resetOperation,
+  forceRefresh
 } from '../store/slices/mediaTypeSlice';
 import { FaEdit, FaTrash, FaPlus, FaArrowRight, FaSync } from 'react-icons/fa';
 import MediaTypeCard from '../components/MediaTypeUploader/components/MediaTypeCard';
@@ -66,75 +67,95 @@ const AccountMediaTypes: React.FC = () => {
   } = useSelector((state: RootState) => state.mediaTypes);
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
 
+  // Move the function outside useEffect to component scope
+  const checkMediaTypesWithDefaultTags = async () => {
+    if (mediaTypes.length === 0 || checkingMediaTypes) return;
+    
+    setCheckingMediaTypes(true);
+    
+    try {
+      // Use the new consolidated endpoint instead of making individual requests
+      interface TagsSummaryResponse {
+        totalMediaTypes: number;
+        totalFilesNeedingTags: number;
+        mediaTypes: Array<{
+          id: string;
+          name: string;
+          count: number;
+          totalFiles: number;
+          hasDefaultTags: boolean;
+          defaultTags?: string[];
+          filesWithIssues: any[];
+        }>;
+        performanceMetrics?: {
+          mediaTypesProcessed: number;
+          executionTimeMs: number;
+          mediaTypesWithErrors: number;
+        };
+      }
+      
+      // Add timestamp to URL to force fresh response
+      const timestamp = new Date().getTime();
+      const response = await axios.get<TagsSummaryResponse>(
+        `${env.BASE_URL}/api/media-types/files-needing-tags-summary?_t=${timestamp}`,
+        {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
+      );
+      
+      // Process the response and create a record of mediaTypeId -> count
+      const results: Record<string, number> = {};
+      
+      if (response.data && response.data.mediaTypes) {
+        response.data.mediaTypes.forEach((item) => {
+          if (item.count > 0) {
+            console.log(`Found ${item.count} files needing tags for ${item.name}`);
+            results[item.id] = item.count;
+          }
+        });
+      }
+      
+      console.log('Files needing tags by media type:', results);
+      console.log('Summary response metrics:', response.data.performanceMetrics || 'No metrics available');
+      setMediaTypesWithFilesNeedingTags(results);
+    } catch (error) {
+      console.error('Error checking files needing tags summary:', error);
+      toast.error('Error checking files needing tags');
+    }
+    
+    setCheckingMediaTypes(false);
+  };
+
   useEffect(() => {
     const fetchMediaTypes = async () => {
-      // Always refresh media types when the component mounts
-      // This ensures we have up-to-date usage counts
-      dispatch(initializeMediaTypes());
+      try {
+        // First force a refresh to ensure we don't use cached data
+        console.log('Forcing media types refresh before initializing');
+        dispatch(forceRefresh());
+        
+        // Then initialize media types
+        console.log('Initializing media types');
+        await dispatch(initializeMediaTypes());
+        console.log('Media types initialization complete, loaded:', mediaTypes.length);
+        
+        // Trigger the check for files needing tags after a short delay
+        setTimeout(() => {
+          checkMediaTypesWithDefaultTags();
+        }, 1000); // Wait 1 second before checking tags
+      } catch (error) {
+        console.error('Error fetching media types:', error);
+        toast.error('Error loading media types. Please try again.');
+      }
     };
+    
     fetchMediaTypes();
   }, []); // Empty dependency array means this runs once on mount
 
   useEffect(() => {
-    const checkMediaTypesWithDefaultTags = async () => {
-      if (mediaTypes.length === 0 || checkingMediaTypes) return;
-      
-      setCheckingMediaTypes(true);
-      
-      try {
-        // Use the new consolidated endpoint instead of making individual requests
-        interface TagsSummaryResponse {
-          totalMediaTypes: number;
-          totalFilesNeedingTags: number;
-          mediaTypes: Array<{
-            id: string;
-            name: string;
-            count: number;
-            totalFiles: number;
-            hasDefaultTags: boolean;
-            defaultTags?: string[];
-            filesWithIssues: any[];
-          }>;
-          performanceMetrics?: {
-            mediaTypesProcessed: number;
-            executionTimeMs: number;
-            mediaTypesWithErrors: number;
-          };
-        }
-        
-        const response = await axios.get<TagsSummaryResponse>(
-          `${env.BASE_URL}/api/media-types/files-needing-tags-summary`,
-          {
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-              'Expires': '0'
-            }
-          }
-        );
-        
-        // Process the response and create a record of mediaTypeId -> count
-        const results: Record<string, number> = {};
-        
-        if (response.data && response.data.mediaTypes) {
-          response.data.mediaTypes.forEach((item) => {
-            if (item.count > 0) {
-              console.log(`Found ${item.count} files needing tags for ${item.name}`);
-              results[item.id] = item.count;
-            }
-          });
-        }
-        
-        console.log('Files needing tags by media type:', results);
-        console.log('Summary response:', response.data);
-        setMediaTypesWithFilesNeedingTags(results);
-      } catch (error) {
-        console.error('Error checking files needing tags summary:', error);
-      }
-      
-      setCheckingMediaTypes(false);
-    };
-    
     // Only run this check when the component mounts and when mediaTypes actually changes
     // in a meaningful way (like after a create/update/delete operation)
     const timeoutId = setTimeout(() => {
@@ -294,7 +315,16 @@ const AccountMediaTypes: React.FC = () => {
     
     // Find affected media files count
     try {
-      const response = await axios.get<{count: number}>(`${env.BASE_URL}/api/media-types/${mediaTypeId}/files-needing-tags`);
+      // Add timestamp to URL to force fresh response
+      const timestamp = new Date().getTime();
+      const response = await axios.get<{count: number}>(`${env.BASE_URL}/api/media-types/${mediaTypeId}/files-needing-tags?_t=${timestamp}`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      console.log(`Checking files for media type ${mediaTypeId}, response:`, response.data);
       const affectedFiles = response.data.count || 0;
       setAffectedFilesCount(affectedFiles);
       setSyncTagsDialogOpen(true);
@@ -328,15 +358,20 @@ const AccountMediaTypes: React.FC = () => {
         return;
       }
 
+      // Add timestamp to prevent caching
+      const timestamp = new Date().getTime();
+      
       // Call backend API to update all media files with this media type
       const applyResponse = await axios.post<{
         count: number,
         totalFiles: number,
         tagsApplied: string[]
-      }>(`${env.BASE_URL}/api/media-types/${syncingMediaTypeId}/apply-default-tags`);
+      }>(`${env.BASE_URL}/api/media-types/${syncingMediaTypeId}/apply-default-tags?_t=${timestamp}`);
       console.log('Applied default tags response:', applyResponse.data);
       
       // Directly check the files-needing-tags endpoint again to verify the changes
+      // Add timestamp to prevent caching
+      const verifyTimestamp = new Date().getTime();
       const verifyResponse = await axios.get<{
         count: number,
         filesWithIssues?: Array<{
@@ -345,9 +380,9 @@ const AccountMediaTypes: React.FC = () => {
           existingTags: string[],
           missingTags: string[]
         }>
-      }>(`${env.BASE_URL}/api/media-types/${syncingMediaTypeId}/files-needing-tags`, {
+      }>(`${env.BASE_URL}/api/media-types/${syncingMediaTypeId}/files-needing-tags?_t=${verifyTimestamp}`, {
         headers: {
-          'Cache-Control': 'no-cache',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0'
         }
@@ -375,9 +410,14 @@ const AccountMediaTypes: React.FC = () => {
       });
       
       // Refresh all media types to ensure the state is up to date
+      // Add a try-catch to prevent errors during refresh from breaking the UI flow
       setTimeout(() => {
-        dispatch(initializeMediaTypes());
-      }, 500);
+        try {
+          dispatch(initializeMediaTypes());
+        } catch (refreshError) {
+          console.error('Error refreshing media types:', refreshError);
+        }
+      }, 1000); // Increased delay to allow backend processing to complete
       
       setTimeout(() => {
         setSyncTagsDialogOpen(false);
@@ -396,6 +436,20 @@ const AccountMediaTypes: React.FC = () => {
     setSyncingMediaTypeId(null);
     setSyncingStatus('idle');
   };
+
+  // Check if status is loading - use a type assertion to fix TypeScript error
+  const isLoading = status === 'loading' as any;
+  
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ ml: 2 }}>
+          Loading media types...
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <motion.div

@@ -48,10 +48,10 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   // Use a wildcard to allow all headers - this is the most permissive option
-  allowedHeaders: '*',
-  exposedHeaders: ['Content-Length', 'Content-Type', 'X-Auth-Token'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'Pragma', 'Expires', 'X-Auth-Token', '*'],
+  exposedHeaders: ['Content-Length', 'Content-Type', 'X-Auth-Token', 'Cache-Control', 'Pragma', 'Expires'],
   preflightContinue: false,
   optionsSuccessStatus: 204,
   maxAge: 86400 // 24 hours
@@ -74,11 +74,11 @@ app.use((req, res, next) => {
 app.use('/api/media-types/:id/files-needing-tags', (req, res, next) => {
   // CORS headers
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma, Expires, X-Auth-Token');
   
   // Explicitly set Access-Control-Expose-Headers to allow the client to read response headers
-  res.header('Access-Control-Expose-Headers', 'Cache-Control, Pragma, Expires, Content-Length, Content-Type');
+  res.header('Access-Control-Expose-Headers', 'Cache-Control, Pragma, Expires, Content-Length, Content-Type, X-Auth-Token');
   
   // Add cache busting headers to prevent browser caching
   res.header('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -87,9 +87,7 @@ app.use('/api/media-types/:id/files-needing-tags', (req, res, next) => {
   
   if (req.method === 'OPTIONS') {
     // Set permissive headers on OPTIONS request
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma, Expires');
-    return res.status(200).end();
+    return res.status(204).end();
   }
   
   next();
@@ -99,11 +97,11 @@ app.use('/api/media-types/:id/files-needing-tags', (req, res, next) => {
 app.use('/api/media-types/files-needing-tags-summary', (req, res, next) => {
   // CORS headers
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.header('Access-Control-Allow-Headers', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma, Expires, X-Auth-Token');
   
   // Explicitly set Access-Control-Expose-Headers to allow the client to read response headers
-  res.header('Access-Control-Expose-Headers', 'Cache-Control, Pragma, Expires, Content-Length, Content-Type');
+  res.header('Access-Control-Expose-Headers', 'Cache-Control, Pragma, Expires, Content-Length, Content-Type, X-Auth-Token');
   
   // Add cache busting headers to prevent browser caching
   res.header('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -112,9 +110,7 @@ app.use('/api/media-types/files-needing-tags-summary', (req, res, next) => {
   
   if (req.method === 'OPTIONS') {
     // Set permissive headers on OPTIONS request
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma, Expires');
-    return res.status(200).end();
+    return res.status(204).end();
   }
   
   next();
@@ -126,7 +122,6 @@ app.use('/api/user', userRoutes);
 app.use('/api/users', userRoutes);
 app.use('/media', mediaRoutes);
 app.use('/media/upload', mediaRoutes);
-app.use('/media-types', mediaRoutes);
 app.use('/api/hubspot', hubspotRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/media-types', mediaTypeRoutes);

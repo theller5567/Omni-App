@@ -67,21 +67,24 @@ const App: React.FC = () => {
             return;
           }
           
-          // Split media types and media fetches to ensure they run sequentially
-          // This prevents race conditions between loading states
-          console.log('Starting media types initialization...');
-          try {
-            await dispatch(initializeMediaTypes()).unwrap();
-            console.log('Media types initialization complete, starting media initialization...');
-          } catch (mediaTypesError) {
-            console.error('Media types initialization failed:', mediaTypesError);
-          }
+          // PERFORMANCE IMPROVEMENT: Load media types and media concurrently
+          // This will significantly reduce startup time by running network requests in parallel
+          console.log('Starting parallel initialization of media types and media...');
           
           try {
-            await dispatch(initializeMedia()).unwrap();
-            console.log('Media initialization complete');
-          } catch (mediaError) {
-            console.error('Media initialization failed:', mediaError);
+            // Launch both requests in parallel using Promise.all
+            const [mediaTypesResult, mediaResult] = await Promise.all([
+              dispatch(initializeMediaTypes()).unwrap(),
+              dispatch(initializeMedia()).unwrap()
+            ]);
+            
+            console.log('Parallel data initialization complete:');
+            console.log(`- Media types: ${mediaTypesResult.length} items loaded`);
+            console.log(`- Media: ${mediaResult.length} items loaded`);
+          } catch (dataError) {
+            console.error('Error during parallel data initialization:', dataError);
+            // Even if there's an error loading data, we consider the app initialized
+            // This prevents a broken state where the app never finishes loading
           }
           
           console.log('App initialization complete');

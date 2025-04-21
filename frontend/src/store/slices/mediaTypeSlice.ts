@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import env from '../../config/env';
+import { RootState } from '../store';
 
 interface Field {
   name: string;
@@ -61,8 +62,12 @@ interface MigrationResult {
 export const initializeMediaTypes = createAsyncThunk(
   'mediaTypes/initialize',
   async (_, { getState }) => {
-    // Get the current state
-    const state = getState() as { mediaTypes: MediaTypeState };
+    const state = getState() as RootState;
+    
+    console.log('initializeMediaTypes - Starting with state:', {
+      status: state.mediaTypes.status,
+      count: state.mediaTypes.mediaTypes.length
+    });
     
     // Only skip if we have successfully loaded data AND we have actual media type items
     if (state.mediaTypes.status === 'succeeded' && state.mediaTypes.mediaTypes.length > 0) {
@@ -70,25 +75,38 @@ export const initializeMediaTypes = createAsyncThunk(
       return state.mediaTypes.mediaTypes;
     }
     
-    // If we're currently loading AND there's no data, we should force a reload
-    if (state.mediaTypes.status === 'loading' && state.mediaTypes.mediaTypes.length === 0) {
-      console.log('Media types fetch is in progress, but no data exists yet - continuing with fetch');
-    } else if (state.mediaTypes.status === 'loading') {
-      console.log('Skipping media types fetch - request already in progress with data');
+    // REMOVE OR MODIFY THIS CONDITION to allow empty data to be fetched
+    // even if another request is in progress
+    /*
+    if (state.mediaTypes.status === 'loading') {
+      console.log('Skipping media types fetch - request already in progress');
+      return state.mediaTypes.mediaTypes;
+    }
+    */
+    
+    // Instead, allow fetch if we don't have data yet
+    if (state.mediaTypes.status === 'loading' && state.mediaTypes.mediaTypes.length > 0) {
+      console.log('Skipping media types fetch - request already in progress with existing data');
       return state.mediaTypes.mediaTypes;
     }
     
     try {
       console.log('Fetching media types from backend');
       const response = await axios.get<MediaType[]>(`${env.BASE_URL}/api/media-types`);
-      console.log('Media types received:', response.data);
       
-      // Return media types as is, we don't need to fetch usage counts individually
-      // as they should already be included in the response
-      return response.data.map(mediaType => ({
+      // Log the response for debugging
+      console.log(`Media types API returned ${response.data.length} items:`, 
+        response.data.map(type => ({ id: type._id, name: type.name }))
+      );
+      
+      // Return the mapped data
+      const processedData = response.data.map(mediaType => ({
         ...mediaType,
         usageCount: mediaType.usageCount || 0
       }));
+      
+      console.log('Processed media types data:', processedData.length, 'items');
+      return processedData;
     } catch (error: any) {
       console.error('Error fetching media types:', error);
       throw error;
@@ -200,15 +218,24 @@ const mediaTypeSlice = createSlice({
       state.migrationSource = null;
       state.migrationTarget = null;
       state.affectedMediaCount = 0;
+    },
+    setMediaTypes: (state, action: PayloadAction<MediaType[]>) => {
+      state.mediaTypes = action.payload;
+      state.status = 'succeeded';
+    },
+    forceRefresh: (state) => {
+      state.status = 'idle';
     }
   },
   extraReducers: (builder) => {
     builder
       .addCase(initializeMediaTypes.pending, (state) => {
+        console.log('Media types fetch - PENDING');
         state.status = 'loading';
         state.error = null;
       })
       .addCase(initializeMediaTypes.fulfilled, (state, action) => {
+        console.log('Media types fetch - FULFILLED with', action.payload.length, 'items');
         state.status = 'succeeded';
         state.mediaTypes = action.payload.map(mediaType => ({
           ...mediaType,
@@ -218,10 +245,12 @@ const mediaTypeSlice = createSlice({
           isDeleting: mediaType.isDeleting || false
         }));
         state.error = null;
+        console.log('Media types state updated to', state.mediaTypes.length, 'items');
       })
       .addCase(initializeMediaTypes.rejected, (state, action) => {
+        console.log('Media types fetch - REJECTED', action.error);
         state.status = 'failed';
-        state.error = action.payload as string;
+        state.error = action.error.message || 'Unknown error';
       })
       .addCase(deprecateMediaType.fulfilled, (state, action) => {
         const index = state.mediaTypes.findIndex(type => type._id === action.payload._id);
@@ -281,7 +310,9 @@ export const {
   setDeletionTarget, 
   setMigrationSource, 
   setMigrationTarget,
-  resetOperation 
+  resetOperation,
+  setMediaTypes,
+  forceRefresh 
 } = mediaTypeSlice.actions;
 
 export default mediaTypeSlice.reducer;

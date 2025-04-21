@@ -28,13 +28,29 @@ export const addMediaType = async (req, res) => {
 
 // Get all media types
 export const getMediaTypes = async (req, res) => {
-    console.log('Getting media types', req.body);
+  console.log('🔍 API REQUEST: Getting all media types');
+  console.log('📄 Request details:', {
+    method: req.method,
+    url: req.originalUrl,
+    headers: {
+      'content-type': req.headers['content-type'],
+      'user-agent': req.headers['user-agent'],
+      'origin': req.headers['origin']
+    }
+  });
+  
   try {
     const mediaTypes = await MediaType.find().lean();
-    console.log('Found media types:', mediaTypes);
+    console.log(`✅ Found ${mediaTypes.length} media types`);
+    
+    // Add CORS headers to ensure proper response
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    
     res.status(200).json(mediaTypes);
   } catch (error) {
-    console.error('Error fetching media types:', error);
+    console.error('❌ Error fetching media types:', error);
     res.status(500).json({ message: 'Error fetching media types', error });
   }
 };
