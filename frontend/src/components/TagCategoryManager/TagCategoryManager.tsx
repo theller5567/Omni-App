@@ -89,37 +89,6 @@ const TagCategoryManager: React.FC = () => {
     }
   }, [dispatch]);
   
-  // Reset state and refresh data
-  const forceClearAndRefresh = useCallback(async () => {
-    if (operationInProgressRef.current) return;
-    
-    try {
-      operationInProgressRef.current = true;
-      
-      // Reset all state in a single update
-      setDialogState(prev => ({
-        ...prev,
-        open: false,
-        deleteDialogOpen: false,
-        deleteTarget: null,
-        hardDelete: false,
-        editingCategory: null
-      }));
-      
-      setFormData(initialFormData);
-      
-      await dispatch(fetchTagCategories()).unwrap();
-    } catch (error: any) {
-      console.error('Error refreshing tag categories:', error);
-      if (isMountedRef.current) {
-        toast.error(`Failed to refresh: ${error.message || 'Unknown error'}`);
-      }
-    } finally {
-      if (isMountedRef.current) {
-        operationInProgressRef.current = false;
-      }
-    }
-  }, [dispatch]);
   
   // Fetch categories on mount
   useEffect(() => {
@@ -355,9 +324,6 @@ const TagCategoryManager: React.FC = () => {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Box>
           <Typography variant="h5">Tag Categories</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {tagCategories.length} {tagCategories.length === 1 ? 'category' : 'categories'} available
-          </Typography>
         </Box>
         <Button
           variant="contained"

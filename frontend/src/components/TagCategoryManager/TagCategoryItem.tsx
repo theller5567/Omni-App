@@ -47,7 +47,7 @@ export const TagCategoryItem: React.FC<TagCategoryItemProps> = ({
       >
         <ListItemText
           primary={
-            <Typography variant="subtitle1" fontWeight="medium">
+            <Typography variant="subtitle1" color="var(--primary-color)" fontWeight="medium">
               {category.name}
             </Typography>
           }
