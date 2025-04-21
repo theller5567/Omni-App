@@ -22,7 +22,6 @@ interface TagCategoryItemProps {
 export const TagCategoryItem: React.FC<TagCategoryItemProps> = ({
   category,
   index,
-  totalCount,
   onEdit,
   onDelete
 }) => {

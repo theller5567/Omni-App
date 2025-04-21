@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "../store/store";
 import { fetchTags, addTag, updateTag, deleteTag } from "../store/slices/tagSlice";
@@ -18,17 +18,27 @@ import {
   DialogActions,
   Paper,
   InputAdornment,
-  Divider,
-  Tooltip,
   useMediaQuery,
   Theme,
   Container,
-  Alert
+  Alert,
+  Tabs,
+  Tab,
+  Chip,
+  Pagination,
+  InputBase,
+  Card,
+  CardContent,
+  Stack,
+  CircularProgress,
+  alpha
 } from "@mui/material";
 import { FaEdit, FaTrash, FaPlus, FaSearch, FaTimes, FaTag, FaRedo } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { normalizeTag, normalizeTagForComparison, validateTag, areTagsEquivalent } from "../utils/tagUtils";
 import "./accountTags.scss";
+
+const TAGS_PER_PAGE = 30;
 
 const AccountTags: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -37,9 +47,15 @@ const AccountTags: React.FC = () => {
   const [editingTag, setEditingTag] = useState<{ id: string; name: string } | null>(null);
   const [tagToDelete, setTagToDelete] = useState<string | null>(null);
   const { tags, status } = useSelector((state: RootState) => state.tags);
+  const { tagCategories } = useSelector((state: RootState) => state.tagCategories);
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   const [tagError, setTagError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
+  const [page, setPage] = useState(1);
+
+  // Memoized value for total tag count
+  const totalTagCount = useMemo(() => tags.length, [tags]);
 
   useEffect(() => {
     if (status === 'idle' && tags.length === 0) {
@@ -126,8 +142,6 @@ const AccountTags: React.FC = () => {
       );
       
       if (hasDuplicate) {
-        // We could set an error state here, but for simplicity just show a toast
-        // and prevent the update
         toast.error(`Tag "${editingTag.name}" already exists`);
         return;
       }
@@ -142,14 +156,31 @@ const AccountTags: React.FC = () => {
     }
   };
 
-  const filteredTags = tags.filter((tag) =>
-    normalizeTagForComparison(tag.name).includes(normalizeTagForComparison(searchTerm))
-  );
+  const filteredTags = useMemo(() => {
+    return tags.filter((tag) =>
+      normalizeTagForComparison(tag.name).includes(normalizeTagForComparison(searchTerm))
+    );
+  }, [tags, searchTerm]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredTags.length / TAGS_PER_PAGE);
+  const paginatedTags = useMemo(() => {
+    const startIndex = (page - 1) * TAGS_PER_PAGE;
+    return filteredTags.slice(startIndex, startIndex + TAGS_PER_PAGE);
+  }, [filteredTags, page]);
+
+  const handleChangePage = (_event: React.ChangeEvent<unknown>, value: number) => {
+    setPage(value);
+  };
 
   const containerVariants = {
-    hidden: { opacity: 0, x: isMobile ? -100 : -350 },
-    visible: { opacity: 1, x: 0, transition: { duration: isMobile ? 0.3 : 0.5 } },
-    exit: { opacity: 0, x: isMobile ? -100 : -350, transition: { duration: isMobile ? 0.3 : 0.5 } },
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+    exit: { opacity: 0, y: 20, transition: { duration: 0.3 } },
+  };
+
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
   };
 
   return (
@@ -160,142 +191,171 @@ const AccountTags: React.FC = () => {
       animate="visible"
       exit="exit"
     >
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h1">Tag Management</Typography>
-            <Button
-              variant="outlined"
-              color="warning"
-              startIcon={<FaRedo />}
-              onClick={handleResetData}
-              disabled={isResetting}
-            >
-              {isResetting ? 'Resetting...' : 'Reset All Tag Data'}
-            </Button>
+      <Container maxWidth="xl" sx={{ py: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box>
+            <Typography variant="h1" fontSize={{ xs: '2rem', md: '2.5rem' }}>Tag Management</Typography>
           </Box>
-          
-          {/* Add a hint for users about clearing data */}
-          <Alert severity="info" sx={{ mb: 4 }}>
-            If you're experiencing issues with tag categories not displaying correctly or getting errors about categories already existing, try the "Reset All Tag Data" button to clear the cache and reload the page.
-          </Alert>
-          
-          <Paper elevation={3} sx={{ p: 4, borderRadius: '12px', bgcolor: 'background.paper', mb: 3 }}>
+          <Button
+            variant="outlined"
+            color="warning"
+            startIcon={<FaRedo />}
+            onClick={handleResetData}
+            disabled={isResetting}
+            size="small"
+            sx={{ height: '36px' }}
+          >
+            {isResetting ? 'Resetting...' : 'Reset All Tag Data'}
+          </Button>
+        </Box>
+        
+        <Alert severity="info" sx={{ mb: 3 }}>
+          If you're experiencing issues with tag categories not displaying correctly or getting errors about categories already existing, try the "Reset All Tag Data" button.
+        </Alert>
+        
+        <Paper elevation={3} sx={{ borderRadius: '12px', bgcolor: 'background.paper', overflow: 'hidden' }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={handleTabChange} 
+            sx={{ 
+              borderBottom: 1, 
+              borderColor: 'divider',
+              bgcolor: theme => alpha(theme.palette.primary.main, 0.05)
+            }}
+            variant="fullWidth"
+          >
+            <Tab label={`Tag Categories (${tagCategories.length})`} />
+            <Tab label={`Create & Manage Tags (${totalTagCount})`} />
+          </Tabs>
+
+          {/* Tag Categories Tab */}
+          <Box sx={{ display: activeTab === 0 ? 'block' : 'none', p: { xs: 2, md: 3 } }}>
+            <TagCategoryManager />
+          </Box>
+
+          {/* Create & Manage Tags Tab */}
+          <Box sx={{ display: activeTab === 1 ? 'block' : 'none', p: { xs: 2, md: 3 } }}>
             {/* Create New Tag Section */}
-            <TagCategoryManager />  
-
-            <Divider sx={{ my: 4 }} />
-
-            <Box sx={{ mb: 6 }}>
-              <Typography variant="h6" sx={{ mb: 4 }}>Create New Tag</Typography>
-              <Box component="form" onSubmit={handleCreateTag} sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'flex-start', gap: 2 }}>
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  label="New Tag Name"
-                  value={newTagName}
-                  sx={{ maxWidth: '400px' }}
-                  onChange={(e) => setNewTagName(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Enter tag name"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <FaTag size={16} />
-                      </InputAdornment>
-                    ),
-                  }}
-                  error={!!tagError}
-                  helperText={tagError || " "}
-                />
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  disabled={!newTagName.trim() || (newTagName ? !validateTag(newTagName).valid : false) || status === 'loading'}
-                  sx={{ 
-                    px: 3, 
-                    height: '56px', 
-                    alignSelf: { xs: 'stretch', md: 'flex-start' },
-                    minWidth: { xs: '100%', md: '180px' }
-                  }}
-                  startIcon={<FaPlus />}
-                >
-                  Add New Tag
-                </Button>
-              </Box>
-            </Box>
-            
-            <Divider sx={{ my: 4 }} />
+            <Card variant="outlined" sx={{ mb: 4 }}>
+              <CardContent>
+                <Typography variant="h6" sx={{ mb: 2 }}>Create New Tag</Typography>
+                <Box component="form" onSubmit={handleCreateTag} sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'flex-start', gap: 2 }}>
+                  <TextField
+                    fullWidth
+                    variant="outlined"
+                    label="New Tag Name"
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Enter tag name"
+                    size="small"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <FaTag size={16} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    error={!!tagError}
+                    helperText={tagError || " "}
+                  />
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    disabled={!newTagName.trim() || (newTagName ? !validateTag(newTagName).valid : false) || status === 'loading'}
+                    sx={{ 
+                      height: '40px', 
+                      whiteSpace: 'nowrap',
+                      minWidth: { xs: '100%', sm: '130px' }
+                    }}
+                    startIcon={<FaPlus />}
+                  >
+                    Add Tag
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
             
             {/* Manage Existing Tags Section */}
-            <Box sx={{ mt: 4 }}>
-              <Typography variant="h6" sx={{ mb: 4 }}>
-                Manage Existing Tags
-              </Typography>
-              
-              <TextField
-                fullWidth
-                variant="outlined"
-                label="Search Tags"
-                sx={{ maxWidth: '400px', mb: 6 }}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <FaSearch size={16} />
-                    </InputAdornment>
-                  ),
-                  endAdornment: searchTerm && (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => setSearchTerm('')} edge="end" size="small">
-                        <FaTimes />
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                placeholder="Filter tags by name"
-              />
-              
-              <Divider sx={{ mb: 3 }} />
-              
-              {filteredTags.length === 0 ? (
-                <Box sx={{ mt: 2, textAlign: 'center', p: 4 }}>
-                  <Typography variant="body1" color="text.secondary">
-                    {tags.length === 0 
-                      ? "No tags found. Create your first tag to get started!" 
-                      : "No tags match your search criteria."}
-                  </Typography>
+            <Card variant="outlined">
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <Typography variant="h6">Manage Existing Tags</Typography>
+                  <Chip 
+                    label={`${filteredTags.length} tags`} 
+                    color="primary" 
+                    variant="outlined" 
+                    size="small" 
+                  />
                 </Box>
-              ) : (
-                <Box sx={{ mt: 2 }}>
-                  <Box sx={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: {
-                      xs: '1fr',
-                      sm: 'repeat(2, 1fr)',
-                      md: 'repeat(3, 1fr)',
-                      lg: 'repeat(4, 1fr)',
-                      xl: 'repeat(6, 1fr)'
-                    },
-                    gap: 2
-                  }}>
-                    {filteredTags.map((tag) => (
-                      <Box key={tag._id}>
+                
+                <Paper
+                  component="form"
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    width: '100%', 
+                    mb: 3,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    boxShadow: 'none',
+                    p: '2px 4px',
+                  }}
+                >
+                  <InputAdornment position="start" sx={{ pl: 1 }}>
+                    <FaSearch size={16} color="action" />
+                  </InputAdornment>
+                  <InputBase
+                    sx={{ ml: 1, flex: 1 }}
+                    placeholder="Search tags"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    inputProps={{ 'aria-label': 'search tags' }}
+                  />
+                  {searchTerm && (
+                    <IconButton onClick={() => setSearchTerm('')} size="small" sx={{ color: 'text.secondary' }}>
+                      <FaTimes size={14} />
+                    </IconButton>
+                  )}
+                </Paper>
+                
+                {status === 'loading' ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <CircularProgress size={40} />
+                  </Box>
+                ) : filteredTags.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', p: 4 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      {tags.length === 0 
+                        ? "No tags found. Create your first tag to get started!" 
+                        : "No tags match your search criteria."}
+                    </Typography>
+                  </Box>
+                ) : (
+                  <>
+                    <Box sx={{ 
+                      display: 'grid',
+                      gridTemplateColumns: {
+                        xs: '1fr',
+                        sm: 'repeat(2, 1fr)',
+                        md: 'repeat(3, 1fr)',
+                        lg: 'repeat(4, 1fr)',
+                        xl: 'repeat(6, 1fr)'
+                      },
+                      gap: 1.5
+                    }}>
+                      {paginatedTags.map((tag) => (
                         <motion.div
-                          initial={{ opacity: 0, y: 10 }}
+                          key={tag._id}
+                          initial={{ opacity: 0, y: 5 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3 }}
+                          transition={{ duration: 0.2 }}
                         >
                           <Paper
-                            elevation={1}
+                            elevation={0}
                             sx={{
-                              p: 2,
+                              p: 1,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
@@ -303,55 +363,74 @@ const AccountTags: React.FC = () => {
                               border: '1px solid',
                               borderColor: 'divider',
                               transition: 'all 0.2s ease',
+                              height: '36px',
                               '&:hover': {
-                                boxShadow: 2,
-                                borderColor: 'primary.main',
+                                bgcolor: alpha('#000', 0.03),
+                                borderColor: 'primary.light',
                               }
                             }}
                           >
-                            <Typography variant="body1" sx={{ 
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              width: '60%'
-                            }}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                flex: 1,
+                                fontSize: '0.875rem',
+                                pl: 0.5
+                              }}
+                            >
                               {tag.name}
                             </Typography>
-                            <Box>
-                              <Tooltip title="Edit Tag">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => setEditingTag({ id: tag._id, name: tag.name })}
-                                  sx={{ color: 'primary.main', mr: 1 }}
-                                >
-                                  <FaEdit />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Delete Tag">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => setTagToDelete(tag._id)}
-                                  sx={{ color: 'error.main' }}
-                                >
-                                  <FaTrash />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
+                            <Stack direction="row" spacing={0.5}>
+                              <IconButton
+                                size="small"
+                                onClick={() => setEditingTag({ id: tag._id, name: tag.name })}
+                                sx={{ 
+                                  color: 'primary.main', 
+                                  p: 0.5,
+                                  '&:hover': { bgcolor: alpha('#1976d2', 0.1) }
+                                }}
+                              >
+                                <FaEdit size={14} />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => setTagToDelete(tag._id)}
+                                sx={{ 
+                                  color: 'error.main', 
+                                  p: 0.5,
+                                  '&:hover': { bgcolor: alpha('#d32f2f', 0.1) }
+                                }}
+                              >
+                                <FaTrash size={14} />
+                              </IconButton>
+                            </Stack>
                           </Paper>
                         </motion.div>
+                      ))}
+                    </Box>
+                    
+                    {totalPages > 1 && (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                        <Pagination 
+                          count={totalPages} 
+                          page={page} 
+                          onChange={handleChangePage} 
+                          color="primary" 
+                          showFirstButton 
+                          showLastButton
+                          siblingCount={isMobile ? 0 : 1}
+                        />
                       </Box>
-                    ))}
-                  </Box>
-                </Box>
-              )}
-              
-              {status === 'loading' && (
-                <Box sx={{ textAlign: 'center', py: 2 }}>
-                  <Typography>Loading tags...</Typography>
-                </Box>
-              )}
-            </Box>
-          </Paper>
-        </motion.div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </Box>
+        </Paper>
       </Container>
       
       {/* Edit Dialog */}

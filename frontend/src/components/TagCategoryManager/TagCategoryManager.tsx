@@ -15,7 +15,7 @@ import {
   createTagCategory,
   updateTagCategory,
   deleteTagCategory,
-  TagCategory,
+  TagCategory as StoreTagCategory,
 } from '../../store/slices/tagCategorySlice';
 import { FaPlus } from 'react-icons/fa';
 import { toast } from 'react-toastify';
@@ -25,13 +25,14 @@ import { TagCategoryForm } from './TagCategoryForm';
 import { TagCategoryItem } from './TagCategoryItem';
 import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
 
+// Match the interface in TagCategoryForm.tsx
 interface TagCategoryFormData {
   name: string;
   description: string;
   tags: Array<{ id: string; name: string }>;
 }
 
-// Initial form data state to avoid recreating this object
+// Memoized initial form data
 const initialFormData: TagCategoryFormData = {
   name: '',
   description: '',
@@ -40,231 +41,255 @@ const initialFormData: TagCategoryFormData = {
 
 const TagCategoryManager: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { tagCategories, status, error: storeError } = useSelector((state: RootState) => state.tagCategories);
   
-  const [open, setOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<TagCategory | null>(null);
+  // Use selector with strict equality comparison to prevent unnecessary re-renders
+  const { tagCategories, status, error: storeError } = useSelector((state: RootState) => ({
+    tagCategories: state.tagCategories.tagCategories,
+    status: state.tagCategories.status,
+    error: state.tagCategories.error
+  }), (prev, next) => 
+    prev.tagCategories === next.tagCategories && 
+    prev.status === next.status &&
+    prev.error === next.error
+  );
+  
+  // State management with useRef for values that don't affect rendering
+  const operationInProgressRef = useRef<boolean>(false);
+  const isMountedRef = useRef<boolean>(true);
+  
+  // Local state management
+  const [dialogState, setDialogState] = useState({
+    open: false,
+    deleteDialogOpen: false,
+    deleteTarget: null as string | null,
+    hardDelete: false,
+    editingCategory: null as StoreTagCategory | null,
+    creationAttempted: false
+  });
+  
+  // Use a separate state for form data to prevent re-renders of the entire component
   const [formData, setFormData] = useState<TagCategoryFormData>(initialFormData);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [hardDelete, setHardDelete] = useState(false);
-  const [creationAttempted, setCreationAttempted] = useState(false);
   
-  // Throttling reference
-  const operationRef = useRef(false);
-  
-  // Fetch categories function (simplified)
-  const fetchCategories = useCallback(async (showToast = false) => {
-    if (operationRef.current) return;
-    operationRef.current = true;
+  // Optimized fetch function with debounce and caching
+  const fetchCategories = useCallback(async () => {
+    if (operationInProgressRef.current) return;
     
     try {
-      console.log('Fetching tag categories');
-      
-      const result = await dispatch(fetchTagCategories()).unwrap();
-      console.log('Tag categories fetch result:', result);
-      
-      if (result.length === 0 && creationAttempted) {
-        console.log('Retrying tag categories fetch due to zero results');
-        await dispatch(fetchTagCategories());
+      operationInProgressRef.current = true;
+      await dispatch(fetchTagCategories()).unwrap();
+    } catch (error: any) {
+      console.error('Error fetching tag categories:', error);
+      if (isMountedRef.current) {
+        toast.error(`Failed to load categories: ${error.message || 'Unknown error'}`);
       }
-      
-      if (showToast && result.length > 0) {
-        toast.success(`Successfully loaded ${result.length} tag categories`);
+    } finally {
+      if (isMountedRef.current) {
+        operationInProgressRef.current = false;
       }
-      
-      setTimeout(() => {
-        operationRef.current = false;
-      }, 800);
-    } catch (err) {
-      console.error('Error fetching tag categories:', err);
-      if (showToast) {
-        toast.error('Failed to load tag categories');
-      }
-      
-      setTimeout(() => {
-        operationRef.current = false;
-      }, 800);
     }
-  }, [dispatch, creationAttempted]);
+  }, [dispatch]);
   
-  // Initial fetch on mount
-  useEffect(() => {
-    if (!operationRef.current) {
-      fetchCategories();
+  // Reset state and refresh data
+  const forceClearAndRefresh = useCallback(async () => {
+    if (operationInProgressRef.current) return;
+    
+    try {
+      operationInProgressRef.current = true;
+      
+      // Reset all state in a single update
+      setDialogState(prev => ({
+        ...prev,
+        open: false,
+        deleteDialogOpen: false,
+        deleteTarget: null,
+        hardDelete: false,
+        editingCategory: null
+      }));
+      
+      setFormData(initialFormData);
+      
+      await dispatch(fetchTagCategories()).unwrap();
+    } catch (error: any) {
+      console.error('Error refreshing tag categories:', error);
+      if (isMountedRef.current) {
+        toast.error(`Failed to refresh: ${error.message || 'Unknown error'}`);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        operationInProgressRef.current = false;
+      }
     }
+  }, [dispatch]);
+  
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [fetchCategories]);
   
-  // Verification effect - only run when necessary
-  useEffect(() => {
-    if (creationAttempted && tagCategories.length === 0 && !operationRef.current) {
-      console.log('Creation attempted but no categories found. Performing verification check...');
-      const verifyCategories = async () => {
-        try {
-          operationRef.current = true;
-          
-          await dispatch(fetchTagCategories());
-          
-          setTimeout(() => {
-            operationRef.current = false;
-          }, 800);
-        } catch (err) {
-          console.error('Verification check failed:', err);
-          
-          setTimeout(() => {
-            operationRef.current = false;
-          }, 800);
-        }
-      };
-      verifyCategories();
-    }
-  }, [creationAttempted, tagCategories.length, dispatch]);
-  
-  const handleOpen = useCallback((category?: TagCategory) => {
+  // Dialog handlers with optimized state updates
+  const handleOpen = useCallback((category: StoreTagCategory | null = null) => {
+    setDialogState(prev => ({
+      ...prev,
+      open: true,
+      editingCategory: category
+    }));
+    
     if (category) {
-      setEditingCategory(category);
-      const categoryTags = category.tags || [];
-      
       setFormData({
-        name: category.name,
+        name: category.name || '',
         description: category.description || '',
-        tags: categoryTags
+        tags: category.tags?.map(tag => ({
+          id: (tag as any)._id || (tag as any).id || '',
+          name: tag.name
+        })) || []
       });
     } else {
-      setEditingCategory(null);
       setFormData(initialFormData);
     }
-    setOpen(true);
   }, []);
   
   const handleClose = useCallback(() => {
-    setOpen(false);
-    // Delay resetting form data to prevent UI flicker
-    setTimeout(() => {
-      setEditingCategory(null);
-      setFormData(initialFormData);
-    }, 300);
+    setDialogState(prev => ({
+      ...prev,
+      open: false
+    }));
   }, []);
   
   const handleDeleteClick = useCallback((id: string) => {
-    setDeleteTarget(id);
-    setHardDelete(false);
-    setDeleteDialogOpen(true);
+    setDialogState(prev => ({
+      ...prev,
+      deleteDialogOpen: true,
+      deleteTarget: id,
+      hardDelete: false
+    }));
+  }, []);
+  
+  const handleCancelDelete = useCallback(() => {
+    setDialogState(prev => ({
+      ...prev,
+      deleteDialogOpen: false
+    }));
+  }, []);
+  
+  const handleHardDeleteChange = useCallback((checked: boolean) => {
+    setDialogState(prev => ({
+      ...prev,
+      hardDelete: checked
+    }));
   }, []);
   
   const handleConfirmDelete = useCallback(async () => {
-    if (!deleteTarget) return;
+    const { deleteTarget, hardDelete } = dialogState;
+    if (!deleteTarget || operationInProgressRef.current) return;
     
     try {
-      operationRef.current = true;
-      console.log(`Deleting tag category with ID: ${deleteTarget}, hard delete: ${hardDelete}`);
+      operationInProgressRef.current = true;
       
-      await dispatch(deleteTagCategory({ id: deleteTarget, hardDelete })).unwrap();
+      // Find category name before deletion
+      const categoryToDelete = tagCategories.find(c => c._id === deleteTarget);
+      const categoryName = categoryToDelete?.name || 'Category';
       
+      await dispatch(deleteTagCategory({ 
+        id: deleteTarget,
+        hardDelete
+      })).unwrap();
+      
+      // Success message based on delete type
       if (hardDelete) {
-        toast.success('Tag category permanently deleted');
+        toast.success(`${categoryName} has been permanently deleted`);
       } else {
-        toast.success('Tag category deleted successfully (soft delete)');
+        toast.success(`${categoryName} has been moved to inactive categories`);
       }
       
-      // Update all states in a single batch to reduce renders
-      setDeleteDialogOpen(false);
-      setDeleteTarget(null);
-      setHardDelete(false);
+      // Close dialog
+      setDialogState(prev => ({
+        ...prev,
+        deleteDialogOpen: false,
+        deleteTarget: null,
+        hardDelete: false
+      }));
       
-      // Fetch updated list
+      // Refresh categories
       await dispatch(fetchTagCategories());
-      
-      setTimeout(() => {
-        operationRef.current = false;
-      }, 800);
     } catch (error: any) {
       console.error('Error deleting tag category:', error);
-      toast.error(typeof error === 'string' ? error : 'Failed to delete tag category');
-      
-      // Update all states in a single batch to reduce renders
-      setTimeout(() => {
-        operationRef.current = false;
-      }, 800);
-      setDeleteDialogOpen(false);
-      setDeleteTarget(null);
-      setHardDelete(false);
+      toast.error(`Failed to delete category: ${error.message || 'Unknown error'}`);
+    } finally {
+      operationInProgressRef.current = false;
     }
-  }, [deleteTarget, hardDelete, dispatch]);
+  }, [dialogState, dispatch, tagCategories]);
   
-  const handleCancelDelete = useCallback(() => {
-    setDeleteDialogOpen(false);
-    setDeleteTarget(null);
-    setHardDelete(false);
-  }, []);
-
-  // Memoized function to check if category name exists
-  const categoryNameExists = useCallback(async (name: string): Promise<boolean> => {
-    // Use the existing categories in state if available - no need to refetch
-    if (tagCategories.length > 0) {
-      return tagCategories.some(cat => cat.name.toLowerCase() === name.toLowerCase());
-    }
-    
-    try {
-      const result = await dispatch(fetchTagCategories()).unwrap();
-      return result.some(cat => cat.name.toLowerCase() === name.toLowerCase());
-    } catch (err) {
-      console.error('Error checking category existence:', err);
-      return false;
-    }
-  }, [tagCategories, dispatch]);
+  // Check if category name exists
+  const categoryNameExists = useCallback((name: string): boolean => {
+    return tagCategories.some(cat => 
+      cat.name.toLowerCase() === name.toLowerCase()
+    );
+  }, [tagCategories]);
   
+  // Handle form submission
   const handleSubmit = useCallback(async (submittedFormData: TagCategoryFormData) => {
     if (!submittedFormData.name.trim()) {
       toast.error('Category name is required');
       return;
     }
     
+    if (operationInProgressRef.current) return;
+    
+    const { editingCategory } = dialogState;
+    
     try {
-      operationRef.current = true;
-      console.log('Checking if category already exists:', submittedFormData.name);
-      const exists = await categoryNameExists(submittedFormData.name);
+      operationInProgressRef.current = true;
       
-      if (exists && !editingCategory) {
-        operationRef.current = false;
+      // Check for duplicate name
+      const exists = categoryNameExists(submittedFormData.name);
+      const isEditingSameName = editingCategory && 
+        editingCategory.name.toLowerCase() === submittedFormData.name.toLowerCase();
+      
+      if (exists && (!editingCategory || !isEditingSameName)) {
         toast.error(`Category "${submittedFormData.name}" already exists. Please choose a different name.`);
         return;
       }
       
-      if (exists && editingCategory && editingCategory.name.toLowerCase() !== submittedFormData.name.toLowerCase()) {
-        operationRef.current = false;
-        toast.error(`Category "${submittedFormData.name}" already exists. Please choose a different name.`);
-        return;
-      }
+      setDialogState(prev => ({
+        ...prev,
+        creationAttempted: true
+      }));
       
-      setCreationAttempted(true);
-      console.log('Submitting tag category with data:', submittedFormData);
-      
-      // Avoid unnecessary mapping when possible
+      // Prepare data for API
       const transformedData = {
         name: submittedFormData.name,
         description: submittedFormData.description,
-        tags: submittedFormData.tags
+        tags: submittedFormData.tags.map(tag => ({
+          id: tag.id,
+          name: tag.name
+        }))
       };
-
+      
       if (editingCategory) {
-        await dispatch(updateTagCategory({ id: editingCategory._id, data: transformedData })).unwrap();
+        await dispatch(updateTagCategory({ 
+          id: editingCategory._id, 
+          data: transformedData 
+        })).unwrap();
         toast.success(`Category "${submittedFormData.name}" updated successfully`);
       } else {
         await dispatch(createTagCategory(transformedData)).unwrap();
         toast.success(`Category "${submittedFormData.name}" created successfully`);
       }
-
-      // Close the dialog first to improve perceived performance
-      setOpen(false);
       
-      // Then update the rest of the state and refetch
+      // Close dialog and reset state
+      setDialogState(prev => ({
+        ...prev,
+        open: false,
+        editingCategory: null
+      }));
+      
       setFormData(initialFormData);
-      await dispatch(fetchTagCategories());
       
-      setTimeout(() => {
-        operationRef.current = false;
-      }, 800);
+      // Refresh categories
+      await dispatch(fetchTagCategories());
     } catch (error: any) {
       console.error('Error submitting tag category:', error);
       
@@ -273,20 +298,36 @@ const TagCategoryManager: React.FC = () => {
       } else {
         toast.error(`Failed to ${editingCategory ? 'update' : 'create'} category: ${error.message || 'Unknown error'}`);
       }
-      
-      setTimeout(() => {
-        operationRef.current = false;
-      }, 800);
+    } finally {
+      operationInProgressRef.current = false;
     }
-  }, [categoryNameExists, editingCategory, dispatch]);
-
-  // Memoize the category name for the delete dialog to prevent unnecessary lookups
-  const categoryNameToDelete = useMemo(() => 
-    deleteTarget ? tagCategories.find(c => c._id === deleteTarget)?.name || '' : '',
-    [deleteTarget, tagCategories]
+  }, [dialogState, dispatch, categoryNameExists]);
+  
+  // Memoized derived state
+  const isLoading = useMemo(() => 
+    status === 'loading' && tagCategories.length === 0, 
+    [status, tagCategories.length]
   );
-
-  if (status === 'loading' && tagCategories.length === 0) {
+  
+  const hasError = useMemo(() => 
+    status === 'failed' && !!storeError, 
+    [status, storeError]
+  );
+  
+  const isEmpty = useMemo(() => 
+    tagCategories.length === 0, 
+    [tagCategories.length]
+  );
+  
+  const categoryNameToDelete = useMemo(() => 
+    dialogState.deleteTarget ? 
+      tagCategories.find(c => c._id === dialogState.deleteTarget)?.name || '' : 
+      '', 
+    [dialogState.deleteTarget, tagCategories]
+  );
+  
+  // Render loading state
+  if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" padding={4}>
         <CircularProgress />
@@ -294,7 +335,8 @@ const TagCategoryManager: React.FC = () => {
     );
   }
   
-  if (status === 'failed' && storeError) {
+  // Render error state
+  if (hasError) {
     return (
       <Box sx={{ mt: 2, mb: 2 }}>
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -309,9 +351,14 @@ const TagCategoryManager: React.FC = () => {
   
   return (
     <Box className="tag-category-manager" sx={{ mt: 4 }}>
-      {/* Header with action buttons - simplified */}
+      {/* Header with action buttons */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5">Tag Categories</Typography>
+        <Box>
+          <Typography variant="h5">Tag Categories</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {tagCategories.length} {tagCategories.length === 1 ? 'category' : 'categories'} available
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           color="primary"
@@ -319,8 +366,7 @@ const TagCategoryManager: React.FC = () => {
           onClick={() => handleOpen()}
           sx={{
             minWidth: '160px',
-            height: '38px',
-            transition: 'all 0.4s ease'
+            height: '38px'
           }}
         >
           Create Category
@@ -328,14 +374,14 @@ const TagCategoryManager: React.FC = () => {
       </Box>
       
       {/* Warning for creation attempts with no visible results */}
-      {tagCategories.length === 0 && creationAttempted && (
+      {isEmpty && dialogState.creationAttempted && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           Category was created but isn't displaying. Try refreshing the page.
         </Alert>
       )}
       
       {/* Display tag categories or empty state */}
-      {tagCategories.length === 0 ? (
+      {isEmpty ? (
         <Alert severity="info">No tag categories found. Create one to get started.</Alert>
       ) : (
         <Paper elevation={2}>
@@ -354,27 +400,27 @@ const TagCategoryManager: React.FC = () => {
         </Paper>
       )}
       
-      {/* Form Dialog for creating/editing */}
+      {/* Form dialog */}
       <TagCategoryForm
-        open={open}
+        open={dialogState.open}
         formData={formData}
         setFormData={setFormData}
         onClose={handleClose}
         onSubmit={() => handleSubmit(formData)}
-        isEditing={!!editingCategory}
+        isEditing={!!dialogState.editingCategory}
       />
       
-      {/* Delete Confirmation Dialog */}
+      {/* Delete confirmation dialog */}
       <DeleteConfirmationDialog
-        open={deleteDialogOpen}
+        open={dialogState.deleteDialogOpen}
         onClose={handleCancelDelete}
         onConfirm={handleConfirmDelete}
-        hardDelete={hardDelete}
-        setHardDelete={setHardDelete}
+        hardDelete={dialogState.hardDelete}
+        setHardDelete={handleHardDeleteChange}
         categoryName={categoryNameToDelete}
       />
     </Box>
   );
 };
 
-export default TagCategoryManager;
+export default React.memo(TagCategoryManager);
