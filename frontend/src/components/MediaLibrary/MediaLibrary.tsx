@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Box, Typography, Grid, Toolbar, IconButton, Tooltip, useMediaQuery, Theme } from '@mui/material';
 import { motion } from 'framer-motion';
 import './mediaLibrary.scss';
@@ -10,8 +10,8 @@ import { toast } from 'react-toastify';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { GridRowSelectionModel } from '@mui/x-data-grid';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store/store';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../../store/store';
 import axios from 'axios';
 import env from '../../config/env';
 import { 
@@ -20,6 +20,7 @@ import {
   MediaCard, 
   ConfirmationModal 
 } from './components';
+import { fetchTagCategories } from '../../store/slices/tagCategorySlice';
 
 
 interface MediaLibraryProps {
@@ -47,7 +48,50 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
   // Get user role from Redux store
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
   const [downloading, setDownloading] = useState<boolean>(false);
+  const dispatch = useDispatch<AppDispatch>();
+  const [toastSettings] = useState({
+    disableTagNotifications: true,
+    initialLoadComplete: false
+  });
   
+  // Handle initial data loading silently
+  useEffect(() => {
+    const loadTagData = async () => {
+      try {
+        // Fetch tag categories silently (without showing error toasts)
+        await dispatch(fetchTagCategories()).unwrap();
+      } catch (error) {
+        // Don't show toast for initial tag category fetch errors
+        console.warn('Error fetching tag categories during MediaLibrary load:', error);
+      } finally {
+        // Mark initial load as complete after 2 seconds
+        setTimeout(() => {
+          toastSettings.initialLoadComplete = true;
+        }, 2000);
+      }
+    };
+    
+    loadTagData();
+  }, [dispatch]);
+  
+  // Custom toast function that avoids showing tag-related errors during initial page load
+  const safeToast = (type: 'success' | 'error' | 'info', message: string, options = {}) => {
+    // Skip tag-related notifications if disabled and not from user action
+    if (toastSettings.disableTagNotifications && 
+        !toastSettings.initialLoadComplete && 
+        (message.includes('tag') || message.includes('Tag') || message.includes('category') || message.includes('Category'))) {
+      console.log('Suppressing tag-related toast:', message);
+      return;
+    }
+    
+    // Otherwise show the toast
+    toast[type](message, {
+      position: isMobile ? "bottom-center" : "top-right",
+      autoClose: 3000,
+      ...options
+    });
+  };
+
   // Process rows only when mediaFilesData or filter changes
   const rows = useMemo(() => {
     const newRows = mediaFilesData
@@ -112,19 +156,19 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
       const results = await Promise.all(promises);
 
       if (results.every(result => result)) {
-        toast.success('Selected media deleted successfully');
+        safeToast('success', 'Selected media deleted successfully');
         setSelected([]); // Clear selection after deletion
       } else {
-        toast.error('Failed to delete some media');
+        safeToast('error', 'Failed to delete some media');
       }
     } else if (selectedFileId) {
       // Handle single deletion
       const success = await onDeleteMedia(selectedFileId);
       if (success) {
-        toast.success('Media deleted successfully');
+        safeToast('success', 'Media deleted successfully');
         setSelectedFileId(null); // Clear the selected file ID
       } else {
-        toast.error('Failed to delete media');
+        safeToast('error', 'Failed to delete media');
       }
     }
     setIsModalOpen(false);
@@ -140,8 +184,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
 
   const handleDownloadSelected = async () => {
     if (selected.length === 0) {
-      toast.info('No files selected for download', {
-        position: isMobile ? "bottom-center" : "top-right",
+      safeToast('info', 'No files selected for download', {
         autoClose: 2000
       });
       return;
@@ -157,8 +200,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
       }).filter(id => id !== '');
       
       if (fileIds.length > 0) {
-        toast.info(`Preparing ${fileIds.length} files for download...`, {
-          position: isMobile ? "bottom-center" : "top-right",
+        safeToast('info', `Preparing ${fileIds.length} files for download...`, {
           autoClose: 2000
         });
         
@@ -186,8 +228,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
           window.URL.revokeObjectURL(url);
           document.body.removeChild(link);
           
-          toast.success(`Downloaded ${selected.length} files`, {
-            position: isMobile ? "bottom-center" : "top-right",
+          safeToast('success', `Downloaded ${selected.length} files`, {
             autoClose: 3000
           });
         } catch (downloadError: unknown) {
@@ -198,24 +239,20 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
             const error = downloadError as { code?: string, response?: { status?: number } };
             
             if (error.code === 'ECONNABORTED') {
-              toast.error('Download timed out. Please try downloading fewer files at once.', {
-                position: isMobile ? "bottom-center" : "top-right",
+              safeToast('error', 'Download timed out. Please try downloading fewer files at once.', {
                 autoClose: 4000
               });
             } else if (error.response && error.response.status === 413) {
-              toast.error('Batch too large. Please select fewer files and try again.', {
-                position: isMobile ? "bottom-center" : "top-right",
+              safeToast('error', 'Batch too large. Please select fewer files and try again.', {
                 autoClose: 4000
               });
             } else {
-              toast.error('Failed to download files. Please try again.', {
-                position: isMobile ? "bottom-center" : "top-right",
+              safeToast('error', 'Failed to download files. Please try again.', {
                 autoClose: 4000
               });
             }
           } else {
-            toast.error('Failed to download files. Please try again.', {
-              position: isMobile ? "bottom-center" : "top-right",
+            safeToast('error', 'Failed to download files. Please try again.', {
               autoClose: 4000
             });
           }
@@ -223,8 +260,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
       }
     } catch (error) {
       console.error('Download preparation error:', error);
-      toast.error('Failed to prepare files for download. Please try again.', {
-        position: isMobile ? "bottom-center" : "top-right",
+      safeToast('error', 'Failed to prepare files for download. Please try again.', {
         autoClose: 4000
       });
     } finally {

@@ -2,6 +2,8 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import env from '../../config/env';
 import { RootState } from '../store';
+import { toast } from 'react-toastify';
+import { PayloadAction } from '@reduxjs/toolkit';
 
 export interface TagCategory {
   _id: string;
@@ -21,13 +23,27 @@ interface TagCategoryState {
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: string | null;
   lastFetchTime: number | null;
+  pendingOperations: string[]; // Changed from Set<string> to string[] array
+  lastOperation: {
+    type: 'none' | 'fetch' | 'create' | 'update' | 'delete';
+    id: string | null;
+    status: 'idle' | 'pending' | 'success' | 'error';
+    timestamp: number;
+  };
 }
 
 const initialState: TagCategoryState = {
   tagCategories: [],
   status: 'idle',
   error: null,
-  lastFetchTime: null
+  lastFetchTime: null,
+  pendingOperations: [], // Changed from Set to array
+  lastOperation: {
+    type: 'none',
+    id: null,
+    status: 'idle',
+    timestamp: 0
+  }
 };
 
 // Add error handling for all async thunks
@@ -84,9 +100,19 @@ const getRequestConfig = (additionalParams: Record<string, string> = {}) => {
   };
 };
 
+const generateOperationId = (type: string, id?: string) => {
+  return `${type}-${id || 'all'}-${Date.now()}`;
+};
+
 export const fetchTagCategories = createAsyncThunk<TagCategory[], { includeInactive?: boolean } | undefined>(
   'tagCategories/fetchAll',
-  async (options, { rejectWithValue }) => {
+  async (options, { rejectWithValue, dispatch }) => {
+    const operationId = generateOperationId('fetch');
+    dispatch(tagCategorySlice.actions.operationStarted({
+      type: 'fetch',
+      id: operationId
+    }));
+    
     try {
       console.log('Fetching all tag categories', options ? `with options: ${JSON.stringify(options)}` : '');
       
@@ -108,8 +134,20 @@ export const fetchTagCategories = createAsyncThunk<TagCategory[], { includeInact
           isActive: response.data[0].isActive
         });
       }
+      
+      dispatch(tagCategorySlice.actions.operationCompleted({
+        type: 'fetch',
+        id: operationId,
+        status: 'success'
+      }));
+      
       return response.data;
     } catch (error: any) {
+      dispatch(tagCategorySlice.actions.operationCompleted({
+        type: 'fetch',
+        id: operationId,
+        status: 'error'
+      }));
       return rejectWithValue(handleAsyncError(error));
     }
   }
@@ -132,6 +170,20 @@ export const forceRefreshAllCategories = createAsyncThunk<TagCategory[]>(
   }
 );
 
+// Helper function for immediate toast display
+const showToastDirectly = (type: 'success' | 'error', message: string) => {
+  toast[type](message, {
+    position: 'top-right',
+    autoClose: 3000,
+    delay: 0,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+    progress: undefined,
+  });
+};
+
 export const createTagCategory = createAsyncThunk(
   'tagCategories/create',
   async (data: { 
@@ -139,6 +191,12 @@ export const createTagCategory = createAsyncThunk(
     description?: string, 
     tags: Array<{ id: string, name: string }> 
   }, { dispatch, rejectWithValue }) => {
+    const operationId = generateOperationId('create', data.name);
+    dispatch(tagCategorySlice.actions.operationStarted({
+      type: 'create',
+      id: operationId
+    }));
+    
     try {
       // First, clear cache and get the latest data to check for duplicates
       console.log('Refreshing tag categories before creating new one');
@@ -164,14 +222,35 @@ export const createTagCategory = createAsyncThunk(
       const response = await axios.post<TagCategory>(`${env.BASE_URL}/api/tag-categories`, payload, config);
       
       console.log('Tag category created:', response.data);
+      
+      dispatch(tagCategorySlice.actions.operationCompleted({
+        type: 'create',
+        id: operationId,
+        status: 'success'
+      }));
+      
+      // Show immediate success toast
+      showToastDirectly('success', `Category "${data.name}" created successfully`);
+      
       return response.data;
     } catch (error: any) {
+      dispatch(tagCategorySlice.actions.operationCompleted({
+        type: 'create',
+        id: operationId,
+        status: 'error'
+      }));
+      
       console.error('Error creating tag category:', error.response?.status, error.response?.data);
       // Handle duplicate name error specifically
       if (error.response?.status === 400 && error.response?.data?.message?.includes('already exists')) {
-        return rejectWithValue(`Category "${data.name}" already exists. Please use a different name.`);
+        const errorMessage = `Category "${data.name}" already exists. Please use a different name.`;
+        showToastDirectly('error', errorMessage);
+        return rejectWithValue(errorMessage);
       }
-      return rejectWithValue(handleAsyncError(error));
+      
+      const errorMessage = handleAsyncError(error);
+      showToastDirectly('error', errorMessage);
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -185,7 +264,13 @@ export const updateTagCategory = createAsyncThunk(
       description?: string, 
       tags: Array<{ id: string, name: string }> 
     } 
-  }, { rejectWithValue }) => {
+  }, { dispatch, rejectWithValue }) => {
+    const operationId = generateOperationId('update', id);
+    dispatch(tagCategorySlice.actions.operationStarted({
+      type: 'update',
+      id: operationId
+    }));
+    
     try {
       console.log('Updating tag category:', id, data);
       
@@ -195,19 +280,41 @@ export const updateTagCategory = createAsyncThunk(
       const response = await axios.put<TagCategory>(`${env.BASE_URL}/api/tag-categories/${id}`, data, config);
       
       console.log('Tag category updated:', response.data);
+      
+      dispatch(tagCategorySlice.actions.operationCompleted({
+        type: 'update',
+        id: operationId,
+        status: 'success'
+      }));
+      
+      // Show immediate success toast
+      showToastDirectly('success', `Category "${data.name || 'Unknown'}" updated successfully`);
+      
       return response.data;
     } catch (error: any) {
+      dispatch(tagCategorySlice.actions.operationCompleted({
+        type: 'update',
+        id: operationId,
+        status: 'error'
+      }));
+      
       console.error('Error updating tag category:', error.response?.status, error.response?.data);
       
       // Handle common errors
       if (error.response?.status === 404) {
-        return rejectWithValue('Tag category not found. It may have been deleted.');
+        const errorMessage = 'Tag category not found. It may have been deleted.';
+        showToastDirectly('error', errorMessage);
+        return rejectWithValue(errorMessage);
       }
       if (error.response?.status === 400 && error.response?.data?.message?.includes('already exists')) {
-        return rejectWithValue(`Category name already exists. Please use a different name.`);
+        const errorMessage = `Category name already exists. Please use a different name.`;
+        showToastDirectly('error', errorMessage);
+        return rejectWithValue(errorMessage);
       }
       
-      return rejectWithValue(handleAsyncError(error));
+      const errorMessage = handleAsyncError(error);
+      showToastDirectly('error', errorMessage);
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -220,8 +327,19 @@ interface DeleteTagCategoryParams {
 
 export const deleteTagCategory = createAsyncThunk(
   'tagCategories/deleteTagCategory',
-  async (params: DeleteTagCategoryParams, { rejectWithValue }) => {
+  async (params: DeleteTagCategoryParams, { dispatch, getState, rejectWithValue }) => {
     const { id, hardDelete } = params;
+    const operationId = generateOperationId('delete', id);
+    dispatch(tagCategorySlice.actions.operationStarted({
+      type: 'delete',
+      id: operationId
+    }));
+    
+    // Get category name for better notification
+    const state = getState() as RootState;
+    const categoryToDelete = state.tagCategories.tagCategories.find(cat => cat._id === id);
+    const categoryName = categoryToDelete?.name || 'Category';
+    
     try {
       console.log(`Deleting tag category ${id}${hardDelete ? ' (hard delete)' : ''}`);
       
@@ -239,8 +357,28 @@ export const deleteTagCategory = createAsyncThunk(
       await axios.delete(`${env.BASE_URL}/api/tag-categories/${id}`, config);
       
       console.log('Tag category deleted successfully:', id);
+      
+      dispatch(tagCategorySlice.actions.operationCompleted({
+        type: 'delete',
+        id: operationId,
+        status: 'success'
+      }));
+      
+      // Show immediate success toast
+      if (hardDelete) {
+        showToastDirectly('success', `${categoryName} has been permanently deleted`);
+      } else {
+        showToastDirectly('success', `${categoryName} has been moved to inactive categories`);
+      }
+      
       return id;
     } catch (error: any) {
+      dispatch(tagCategorySlice.actions.operationCompleted({
+        type: 'delete',
+        id: operationId,
+        status: 'error'
+      }));
+      
       console.error('Error deleting tag category:', error);
       
       // Special case for 404 errors, which might mean the tag category was already deleted
@@ -249,7 +387,9 @@ export const deleteTagCategory = createAsyncThunk(
         return id; // Return ID to remove from state
       }
       
-      return rejectWithValue(handleAsyncError(error));
+      const errorMessage = handleAsyncError(error);
+      showToastDirectly('error', errorMessage);
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -269,9 +409,43 @@ const tagCategorySlice = createSlice({
       state.status = 'idle';
       state.error = null;
       state.lastFetchTime = null;
+      state.pendingOperations = []; // Changed from Set to array
+      state.lastOperation = {
+        type: 'none',
+        id: null,
+        status: 'idle',
+        timestamp: 0
+      };
       
       // Log the state reset
       console.log('Tag category state has been completely reset');
+    },
+    operationStarted: (state, action: PayloadAction<{ type: 'fetch' | 'create' | 'update' | 'delete', id: string }>) => {
+      console.log(`Operation started: ${action.payload.type} (${action.payload.id})`);
+      if (!state.pendingOperations.includes(action.payload.id)) {
+        state.pendingOperations.push(action.payload.id); // Use array push instead of Set.add
+      }
+      state.lastOperation = {
+        type: action.payload.type,
+        id: action.payload.id,
+        status: 'pending',
+        timestamp: Date.now()
+      };
+    },
+    operationCompleted: (state, action: PayloadAction<{ 
+      type: 'fetch' | 'create' | 'update' | 'delete', 
+      id: string,
+      status: 'success' | 'error'
+    }>) => {
+      console.log(`Operation completed: ${action.payload.type} (${action.payload.id}) - ${action.payload.status}`);
+      // Filter out the completed operation ID instead of using Set.delete
+      state.pendingOperations = state.pendingOperations.filter(id => id !== action.payload.id);
+      state.lastOperation = {
+        type: action.payload.type,
+        id: action.payload.id,
+        status: action.payload.status,
+        timestamp: Date.now()
+      };
     }
   },
   extraReducers: (builder) => {
@@ -317,5 +491,5 @@ const tagCategorySlice = createSlice({
   }
 });
 
-export const { clearTagCategoryErrors, resetTagCategories } = tagCategorySlice.actions;
+export const { clearTagCategoryErrors, resetTagCategories, operationStarted, operationCompleted } = tagCategorySlice.actions;
 export default tagCategorySlice.reducer;

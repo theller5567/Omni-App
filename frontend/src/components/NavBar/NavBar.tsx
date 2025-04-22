@@ -3,18 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { clearUser } from '../../store/slices/userSlice';
 
-const NavBar: React.FC = () => {
+// Create a standalone hook for logout functionality
+export const useLogout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  return () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('refreshToken');
     dispatch(clearUser());
     navigate('/');
   };
+};
 
-  return null; // Component currently not used in the app
+const NavBar: React.FC = () => {
+  // Component currently not used in the app
+  return null;
 };
 
 export default NavBar; 

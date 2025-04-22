@@ -5,6 +5,9 @@ import { fetchTags, addTag, updateTag, deleteTag } from "../store/slices/tagSlic
 import TagCategoryManager from "../components/TagCategoryManager/TagCategoryManager";
 import { toast } from "react-toastify";
 import { resetTagCategories } from "../store/slices/tagCategorySlice";
+import { fetchTagCategories } from "../store/slices/tagCategorySlice";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import { 
   Box, 
@@ -53,9 +56,30 @@ const AccountTags: React.FC = () => {
   const [isResetting, setIsResetting] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [page, setPage] = useState(1);
+  const [forceRefresh, setForceRefresh] = useState(false);
 
   // Memoized value for total tag count
   const totalTagCount = useMemo(() => tags.length, [tags]);
+
+  // Force a refresh of data on mount
+  useEffect(() => {
+    // Force refresh tags and tag categories when the component mounts
+    const fetchData = async () => {
+      try {
+        setForceRefresh(true);
+        // Force fetch tags
+        await dispatch(fetchTags()).unwrap();
+        // And then tag categories
+        await dispatch(fetchTagCategories()).unwrap();
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setForceRefresh(false);
+      }
+    };
+    
+    fetchData();
+  }, [dispatch]);
 
   useEffect(() => {
     if (status === 'idle' && tags.length === 0) {
@@ -201,14 +225,20 @@ const AccountTags: React.FC = () => {
             color="warning"
             startIcon={<FaRedo />}
             onClick={handleResetData}
-            disabled={isResetting}
+            disabled={isResetting || forceRefresh}
             size="small"
             sx={{ height: '36px' }}
           >
-            {isResetting ? 'Resetting...' : 'Reset All Tag Data'}
+            {isResetting || forceRefresh ? 'Refreshing data...' : 'Reset All Tag Data'}
           </Button>
         </Box>
         
+        {forceRefresh && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            Loading tag data...
+          </Alert>
+        )}
+
         <Alert severity="info" sx={{ mb: 3 }}>
           If you're experiencing issues with tag categories not displaying correctly or getting errors about categories already existing, try the "Reset All Tag Data" button.
         </Alert>
@@ -432,6 +462,19 @@ const AccountTags: React.FC = () => {
           </Box>
         </Paper>
       </Container>
+      
+      {/* Add ToastContainer here to ensure toasts are displayed */}
+      <ToastContainer 
+        position={isMobile ? "bottom-center" : "top-right"}
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
       
       {/* Edit Dialog */}
       <Dialog 

@@ -1,5 +1,15 @@
 1. When deleting mediaFIles and then navigation to the mediaTYpe page the mediaTYpe page is not updated with the new list of mediaFIles. The mediaTYpe page is still showing the old list of media.
 
 2. Create Tag categories/groups
-
     2A. Implement tag categories in all forms that require multiselect options or tags.
+
+3. Run React Scan on application, checking for optimization and data bottlenecks
+    3A. Make sure data is only fetched when needed and components only rendered when needed.
+    3B. Reduce request calls and make more efficient
+
+4. Make sure all pages are authorized by the correct User role permission - Who can do what?
+    
+5. Create a log for each user actions.
+
+6. Add a review system where only a admin or superAdmin can approve new mediaFiles and Types.
+    6A. Add a notification system using users email when they need to review a file or type.

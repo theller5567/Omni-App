@@ -1,10 +1,14 @@
 import { configureStore } from "@reduxjs/toolkit";
+import { enableMapSet } from "immer";
 import authReducer from "./slices/authSlice";
 import userReducer from './slices/userSlice';
 import tagReducer from './slices/tagSlice';
 import mediaTypeReducer from './slices/mediaTypeSlice';
 import mediaReducer from './slices/mediaSlice';
 import tagCategoryReducer from './slices/tagCategorySlice';
+
+// Enable the MapSet plugin for Immer to handle Set and Map in the Redux state
+enableMapSet();
 
 const store = configureStore({
   reducer: {

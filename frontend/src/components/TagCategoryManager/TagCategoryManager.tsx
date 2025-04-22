@@ -32,6 +32,21 @@ interface TagCategoryFormData {
   tags: Array<{ id: string; name: string }>;
 }
 
+// Function to ensure toasts show immediately
+const showToastImmediately = (type: 'success' | 'error', message: string) => {
+  // Force toast to appear with high priority
+  toast[type](message, {
+    position: 'top-right',
+    autoClose: 3000,
+    delay: 0,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+    progress: undefined,
+  });
+};
+
 // Memoized initial form data
 const initialFormData: TagCategoryFormData = {
   name: '',
@@ -56,6 +71,7 @@ const TagCategoryManager: React.FC = () => {
   // State management with useRef for values that don't affect rendering
   const operationInProgressRef = useRef<boolean>(false);
   const isMountedRef = useRef<boolean>(true);
+  const toastShownRef = useRef<string[]>([]); // Changed from Set to array
   
   // Local state management
   const [dialogState, setDialogState] = useState({
@@ -70,6 +86,22 @@ const TagCategoryManager: React.FC = () => {
   // Use a separate state for form data to prevent re-renders of the entire component
   const [formData, setFormData] = useState<TagCategoryFormData>(initialFormData);
   
+  // Function to show toast only if not already shown for this operation
+  const showToastOnce = useCallback((id: string, type: 'success' | 'error', message: string) => {
+    if (!toastShownRef.current.includes(id)) { // Changed from Set.has to array includes
+      // Use the immediate toast function
+      showToastImmediately(type, message);
+      
+      // Mark this toast as shown
+      toastShownRef.current.push(id); // Changed from Set.add to array push
+      
+      // Clean up old toast IDs periodically (every 100 operations)
+      if (toastShownRef.current.length > 100) {
+        toastShownRef.current = [id];
+      }
+    }
+  }, []);
+  
   // Optimized fetch function with debounce and caching
   const fetchCategories = useCallback(async () => {
     if (operationInProgressRef.current) return;
@@ -80,14 +112,15 @@ const TagCategoryManager: React.FC = () => {
     } catch (error: any) {
       console.error('Error fetching tag categories:', error);
       if (isMountedRef.current) {
-        toast.error(`Failed to load categories: ${error.message || 'Unknown error'}`);
+        const errorId = `fetch-error-${Date.now()}`;
+        showToastOnce(errorId, 'error', `Failed to load categories: ${error.message || 'Unknown error'}`);
       }
     } finally {
       if (isMountedRef.current) {
         operationInProgressRef.current = false;
       }
     }
-  }, [dispatch]);
+  }, [dispatch, showToastOnce]);
   
   
   // Fetch categories on mount
@@ -166,11 +199,14 @@ const TagCategoryManager: React.FC = () => {
         hardDelete
       })).unwrap();
       
+      // Generate unique ID for this toast
+      const toastId = `delete-${deleteTarget}-${Date.now()}`;
+      
       // Success message based on delete type
       if (hardDelete) {
-        toast.success(`${categoryName} has been permanently deleted`);
+        showToastOnce(toastId, 'success', `${categoryName} has been permanently deleted`);
       } else {
-        toast.success(`${categoryName} has been moved to inactive categories`);
+        showToastOnce(toastId, 'success', `${categoryName} has been moved to inactive categories`);
       }
       
       // Close dialog
@@ -185,11 +221,12 @@ const TagCategoryManager: React.FC = () => {
       await dispatch(fetchTagCategories());
     } catch (error: any) {
       console.error('Error deleting tag category:', error);
-      toast.error(`Failed to delete category: ${error.message || 'Unknown error'}`);
+      const errorId = `delete-error-${dialogState.deleteTarget}-${Date.now()}`;
+      showToastOnce(errorId, 'error', `Failed to delete category: ${error.message || 'Unknown error'}`);
     } finally {
       operationInProgressRef.current = false;
     }
-  }, [dialogState, dispatch, tagCategories]);
+  }, [dialogState, dispatch, tagCategories, showToastOnce]);
   
   // Check if category name exists
   const categoryNameExists = useCallback((name: string): boolean => {
@@ -201,7 +238,8 @@ const TagCategoryManager: React.FC = () => {
   // Handle form submission
   const handleSubmit = useCallback(async (submittedFormData: TagCategoryFormData) => {
     if (!submittedFormData.name.trim()) {
-      toast.error('Category name is required');
+      const errorId = `empty-name-error-${Date.now()}`;
+      showToastOnce(errorId, 'error', 'Category name is required');
       return;
     }
     
@@ -218,7 +256,8 @@ const TagCategoryManager: React.FC = () => {
         editingCategory.name.toLowerCase() === submittedFormData.name.toLowerCase();
       
       if (exists && (!editingCategory || !isEditingSameName)) {
-        toast.error(`Category "${submittedFormData.name}" already exists. Please choose a different name.`);
+        const errorId = `duplicate-name-${submittedFormData.name}-${Date.now()}`;
+        showToastOnce(errorId, 'error', `Category "${submittedFormData.name}" already exists. Please choose a different name.`);
         return;
       }
       
@@ -237,15 +276,18 @@ const TagCategoryManager: React.FC = () => {
         }))
       };
       
+      let result;
       if (editingCategory) {
-        await dispatch(updateTagCategory({ 
+        result = await dispatch(updateTagCategory({ 
           id: editingCategory._id, 
           data: transformedData 
         })).unwrap();
-        toast.success(`Category "${submittedFormData.name}" updated successfully`);
+        const successId = `update-${editingCategory._id}-${Date.now()}`;
+        showToastOnce(successId, 'success', `Category "${submittedFormData.name}" updated successfully`);
       } else {
-        await dispatch(createTagCategory(transformedData)).unwrap();
-        toast.success(`Category "${submittedFormData.name}" created successfully`);
+        result = await dispatch(createTagCategory(transformedData)).unwrap();
+        const successId = `create-${result._id}-${Date.now()}`;
+        showToastOnce(successId, 'success', `Category "${submittedFormData.name}" created successfully`);
       }
       
       // Close dialog and reset state
@@ -265,21 +307,23 @@ const TagCategoryManager: React.FC = () => {
       // Handle authentication error
       if (error.includes && error.includes('Invalid token') || 
           (error.response && error.response.status === 401)) {
-        toast.error('Your session has expired. Please sign in again.');
+        const authErrorId = `auth-error-${Date.now()}`;
+        showToastOnce(authErrorId, 'error', 'Your session has expired. Please sign in again.');
         // Redirect to login page
         window.location.href = '/login';
         return;
       }
       
+      const errorId = `submit-error-${Date.now()}`;
       if (error.message?.includes('already exists')) {
-        toast.error(`Category "${submittedFormData.name}" already exists. Please choose a different name.`);
+        showToastOnce(errorId, 'error', `Category "${submittedFormData.name}" already exists. Please choose a different name.`);
       } else {
-        toast.error(`Failed to ${editingCategory ? 'update' : 'create'} category: ${error.message || 'Unknown error'}`);
+        showToastOnce(errorId, 'error', `Failed to ${editingCategory ? 'update' : 'create'} category: ${error.message || 'Unknown error'}`);
       }
     } finally {
       operationInProgressRef.current = false;
     }
-  }, [dialogState, dispatch, categoryNameExists]);
+  }, [dialogState, dispatch, categoryNameExists, showToastOnce]);
   
   // Memoized derived state
   const isLoading = useMemo(() => 
