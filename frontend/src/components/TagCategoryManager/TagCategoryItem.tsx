@@ -66,7 +66,7 @@ export const TagCategoryItem: React.FC<TagCategoryItemProps> = ({
                         key={tag.id}
                         label={tag.name}
                         size="small"
-                        icon={<FaTag />}
+                        icon={<FaTag size={12} />}
                       />
                     ))}
                   </Box>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -9,11 +9,23 @@ import {
   Button,
   Box,
   Chip,
-  Alert
+  Alert,
+  Paper,
+  InputAdornment,
+  Divider,
+  IconButton
 } from '@mui/material';
-import { FaTag } from 'react-icons/fa';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store/store';
+import { FaTag, FaSearch, FaPlus, FaTimes, FaArrowRight } from 'react-icons/fa';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../../store/store';
+import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DraggableProvided } from '@hello-pangea/dnd';
+import { addTag } from '../../store/slices/tagSlice';
+
+// Define the Tags interface to match the one in tagSlice.ts
+interface Tags {
+  _id: string;
+  name: string;
+}
 
 interface TagCategoryFormData {
   name: string;
@@ -38,14 +50,41 @@ export const TagCategoryForm: React.FC<TagCategoryFormProps> = ({
   onSubmit,
   isEditing
 }) => {
+  const dispatch = useDispatch<AppDispatch>();
   const { tags } = useSelector((state: RootState) => state.tags);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [newTagName, setNewTagName] = useState('');
+  const [showCreateTag, setShowCreateTag] = useState(false);
   
+  // Filter tags based on search term
+  const filteredTags = tags.filter(tag => 
+    tag.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  // Check if search term doesn't match any existing tags
+  useEffect(() => {
+    const tagExists = tags.some(tag => 
+      tag.name.toLowerCase() === searchTerm.toLowerCase()
+    );
+    
+    if (searchTerm && !tagExists && filteredTags.length === 0) {
+      setShowCreateTag(true);
+      setNewTagName(searchTerm);
+    } else {
+      setShowCreateTag(false);
+    }
+  }, [searchTerm, tags]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleTagToggle = (tagId: string) => {
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleTagToggle = (tagId: string, tagName: string) => {
     setFormData(prev => {
       // Check if the tag is already in the tags array
       const tagIndex = prev.tags.findIndex(tag => tag.id === tagId);
@@ -57,14 +96,56 @@ export const TagCategoryForm: React.FC<TagCategoryFormProps> = ({
           tags: prev.tags.filter(tag => tag.id !== tagId)
         };
       } else {
-        // Add tag - find name from the tags array
-        const tag = tags.find(t => t._id === tagId);
+        // Add tag
         return { 
           ...prev, 
-          tags: [...prev.tags, { id: tagId, name: tag ? tag.name : 'Unknown' }]
+          tags: [...prev.tags, { id: tagId, name: tagName }]
         };
       }
     });
+  };
+  
+  const handleCreateNewTag = async () => {
+    if (newTagName.trim()) {
+      try {
+        const resultAction = await dispatch(addTag(newTagName.trim()));
+        // Properly handle the action payload
+        const newTag = resultAction.payload as Tags;
+        
+        // Add the newly created tag to the selected tags
+        if (newTag && newTag._id) {
+          handleTagToggle(newTag._id, newTag.name);
+        }
+        
+        // Reset states
+        setNewTagName('');
+        setSearchTerm('');
+        setShowCreateTag(false);
+      } catch (error) {
+        console.error('Failed to create new tag:', error);
+      }
+    }
+  };
+  
+  const handleOnDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    
+    if (result.source.droppableId === 'availableTags' && 
+        result.destination.droppableId === 'selectedTags') {
+      // User dragged from available to selected
+      const tagId = result.draggableId;
+      const tag = tags.find(t => t._id === tagId);
+      if (tag && !formData.tags.some(t => t.id === tagId)) {
+        handleTagToggle(tagId, tag.name);
+      }
+    } else if (result.source.droppableId === 'selectedTags' && 
+               result.destination.droppableId === 'availableTags') {
+      // User dragged from selected to available (remove)
+      const tagId = result.draggableId;
+      if (formData.tags.some(t => t.id === tagId)) {
+        handleTagToggle(tagId, '');
+      }
+    }
   };
   
   return (
@@ -109,49 +190,192 @@ export const TagCategoryForm: React.FC<TagCategoryFormProps> = ({
             No tags available. Create tags first before adding them to categories.
           </Alert>
         ) : (
-          <Box 
-            sx={{ 
-              display: 'flex', 
-              flexWrap: 'wrap', 
-              gap: 1, 
-              maxHeight: '200px', 
-              overflowY: 'auto',
-              p: 2,
-              border: '1px solid #e0e0e0',
-              borderRadius: 1
-            }}
-          >
-            {tags.map(tag => (
-              <Chip
-                key={tag._id}
-                label={tag.name}
-                icon={<FaTag />}
-                onClick={() => handleTagToggle(tag._id)}
-                color={formData.tags.some(t => t.id === tag._id) ? "primary" : "default"}
-                variant={formData.tags.some(t => t.id === tag._id) ? "filled" : "outlined"}
-                sx={{ m: 0.5 }}
-              />
-            ))}
-          </Box>
-        )}
-        
-        {formData.tags.length > 0 && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Selected Tags: {formData.tags.length}
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-              {formData.tags.map(tag => (
-                <Chip
-                  key={tag.id}
-                  label={tag.name}
-                  onDelete={() => handleTagToggle(tag.id)}
-                  color="primary"
+          <DragDropContext onDragEnd={handleOnDragEnd}>
+            <Box sx={{ display: 'flex', gap: 2, height: '300px' }}>
+              {/* Left Column - Available Tags */}
+              <Paper 
+                elevation={0} 
+                variant="outlined" 
+                sx={{ 
+                  width: '50%', 
+                  p: 1,
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  Available Tags
+                </Typography>
+                
+                <TextField
                   size="small"
+                  placeholder="Search tags..."
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  variant="outlined"
+                  fullWidth
+                  sx={{ mb: 1 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <FaSearch />
+                      </InputAdornment>
+                    ),
+                    endAdornment: searchTerm ? (
+                      <InputAdornment position="end">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => setSearchTerm('')}
+                          edge="end"
+                        >
+                          <FaTimes />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null
+                  }}
                 />
-              ))}
+                
+                {showCreateTag && (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    mb: 1, 
+                    p: 1,
+                    bgcolor: 'action.hover',
+                    borderRadius: 1
+                  }}>
+                    <Typography variant="body2" sx={{ flex: 1 }}>
+                      Create new tag: <strong>{newTagName}</strong>
+                    </Typography>
+                    <Button 
+                      size="small" 
+                      variant="contained" 
+                      color="primary" 
+                      startIcon={<FaPlus />}
+                      onClick={handleCreateNewTag}
+                    >
+                      Create
+                    </Button>
+                  </Box>
+                )}
+                
+                <Droppable droppableId="availableTags">
+                  {(provided: DroppableProvided) => (
+                    <Box
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      sx={{ 
+                        flex: 1,
+                        overflowY: 'auto',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignContent: 'flex-start',
+                        gap: 0.5,
+                        p: 1
+                      }}
+                    >
+                      {filteredTags
+                        .filter(tag => !formData.tags.some(t => t.id === tag._id))
+                        .map((tag, index) => (
+                          <Draggable key={tag._id} draggableId={tag._id} index={index}>
+                            {(provided: DraggableProvided) => (
+                              <Chip
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                label={tag.name}
+                                icon={<FaTag />}
+                                onClick={() => handleTagToggle(tag._id, tag.name)}
+                                variant="outlined"
+                                sx={{ m: 0.5 }}
+                              />
+                            )}
+                          </Draggable>
+                        ))}
+                      {provided.placeholder}
+                      {filteredTags.length === 0 && !showCreateTag && (
+                        <Typography variant="body2" color="text.secondary" sx={{ p: 1, width: '100%', textAlign: 'center' }}>
+                          No matching tags found
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                </Droppable>
+              </Paper>
+              
+              {/* Center - Drag Indicator */}
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <FaArrowRight />
+                <Typography variant="caption" sx={{ mt: 1, textAlign: 'center', width: '60px' }}>
+                  Drag and drop
+                </Typography>
+              </Box>
+              
+              {/* Right Column - Selected Tags */}
+              <Paper 
+                elevation={0} 
+                variant="outlined" 
+                sx={{ 
+                  width: '50%', 
+                  p: 1,
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  Selected Tags ({formData.tags.length})
+                </Typography>
+                
+                <Droppable droppableId="selectedTags">
+                  {(provided: DroppableProvided) => (
+                    <Box
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      sx={{ 
+                        flex: 1,
+                        overflowY: 'auto',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignContent: 'flex-start',
+                        gap: 0.5,
+                        p: 1,
+                        backgroundColor: formData.tags.length ? 'inherit' : 'action.hover'
+                      }}
+                    >
+                      {formData.tags.length > 0 ? (
+                        formData.tags.map((tag, index) => (
+                          <Draggable key={tag.id} draggableId={tag.id} index={index}>
+                            {(provided: DraggableProvided) => (
+                              <Chip
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                label={tag.name}
+                                onDelete={() => handleTagToggle(tag.id, tag.name)}
+                                color="primary"
+                                size="medium"
+                                sx={{ m: 0.5 }}
+                              />
+                            )}
+                          </Draggable>
+                        ))
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ p: 1, width: '100%', textAlign: 'center' }}>
+                          Drag tags here or click on tags to select
+                        </Typography>
+                      )}
+                      {provided.placeholder}
+                    </Box>
+                  )}
+                </Droppable>
+              </Paper>
             </Box>
-          </Box>
+          </DragDropContext>
         )}
       </DialogContent>
       <DialogActions>
