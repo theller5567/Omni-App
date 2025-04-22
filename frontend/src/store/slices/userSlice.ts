@@ -66,19 +66,28 @@ export const initializeUser = createAsyncThunk(
     // Get the current state
     const state = getState() as { user: UserState };
     
+    // Get token from localStorage
+    const token = localStorage.getItem('authToken');
+    
+    console.log('Initialize user - token exists:', !!token);
+    
     // Skip the request if user is already fully loaded with a valid ID
     // We don't skip if there was an error or if the user is still loading
-    if (state.user.currentUser._id && !state.user.currentUser.isLoading && state.user.currentUser.error === null) {
+    if (state.user.currentUser._id && 
+        !state.user.currentUser.isLoading && 
+        state.user.currentUser.error === null &&
+        state.user.currentUser.token === token) { // Ensure token matches
       console.log('Skipping user profile fetch - already loaded with valid ID:', state.user.currentUser._id);
       return { currentUser: state.user.currentUser };
     }
     
     try {
-      const token = localStorage.getItem('authToken');
       if (!token) {
         throw new Error('No token found');
       }
 
+      console.log('Fetching user profile with token:', token.substring(0, 10) + '...');
+      
       // Fetch user profile
       const profileResponse = await axios.get<User>(`${env.BASE_URL}/api/user/profile`, {
         headers: { Authorization: `Bearer ${token}` },

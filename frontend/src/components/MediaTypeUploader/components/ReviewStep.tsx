@@ -1,8 +1,18 @@
 import React, { useEffect } from 'react';
 import { Box, Typography, Chip, List, ListItem, ListItemText } from '@mui/material';
-import { FaExclamationCircle, FaTag } from 'react-icons/fa';
-import { MediaTypeConfig } from '../../../types/mediaTypes';
+import { FaExclamationCircle, FaTag, FaTags } from 'react-icons/fa';
+import { MediaTypeConfig, SelectField } from '../../../types/mediaTypes';
 import { isSelectField, predefinedColors } from '../../../utils/mediaTypeUploaderUtils';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../../store/store';
+
+// Helper function to check if a field has tag category support
+const hasTagCategory = (field: any): field is SelectField & { useTagCategory: boolean; tagCategoryId: string } => {
+  return isSelectField(field) && 
+         field.useTagCategory === true && 
+         typeof field.tagCategoryId === 'string' && 
+         field.tagCategoryId !== '';
+};
 
 interface ReviewStepProps {
   mediaTypeConfig: MediaTypeConfig;
@@ -11,11 +21,23 @@ interface ReviewStepProps {
 }
 
 const ReviewStep: React.FC<ReviewStepProps> = ({ mediaTypeConfig, inputOptions, isSuperAdmin = false }) => {
+  // Get tag categories to display information
+  const tagCategories = useSelector((state: RootState) => state.tagCategories.tagCategories);
+  
   // Add debugging to check the value of catColor
   useEffect(() => {
     console.log('ReviewStep - mediaTypeConfig:', mediaTypeConfig);
     console.log('ReviewStep - catColor value:', mediaTypeConfig.catColor);
   }, [mediaTypeConfig]);
+  
+  // Helper function to get category name
+  const getCategoryName = (categoryId: string): string => {
+    const category = tagCategories.find(cat => cat._id === categoryId);
+    return category ? category.name : 'Unknown Category';
+  };
+
+  // Get fields with tag categories
+  const fieldsWithTagCategories = mediaTypeConfig.fields.filter(hasTagCategory);
   
   return (
     <div className="step-container step2">
@@ -53,6 +75,32 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ mediaTypeConfig, inputOptions, 
             <span> {mediaTypeConfig.fields.filter(f => f.required).length} field{mediaTypeConfig.fields.filter(f => f.required).length !== 1 ? 's are' : ' is'} required.</span>
           )}
         </Typography>
+        
+        {/* Tag Categories Used Section */}
+        {fieldsWithTagCategories.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FaTags /> Tag Categories Used:
+            </Typography>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+              The following tag categories are used for field options:
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+              {Array.from(new Set(
+                fieldsWithTagCategories.map(field => field.tagCategoryId)
+              )).map((categoryId) => (
+                <Chip 
+                  key={categoryId}
+                  label={getCategoryName(categoryId)}
+                  color="secondary"
+                  variant="outlined"
+                  size="small"
+                  sx={{ m: 0.5 }}
+                />
+              ))}
+            </Box>
+          </Box>
+        )}
         
         {/* Default Tags Section */}
         {mediaTypeConfig.defaultTags && mediaTypeConfig.defaultTags.length > 0 && (
@@ -134,11 +182,21 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ mediaTypeConfig, inputOptions, 
                     <Typography component="span" variant="body2">
                       Type: {field.type}
                     </Typography>
-                    {isSelectField(field) && field.options.length > 0 && (
+                    {isSelectField(field) && (
                       <Box mt={1}>
-                        <Typography component="span" variant="body2">
-                          Options: {field.options.join(', ')}
-                        </Typography>
+                        {hasTagCategory(field) ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <FaTags size={12} />
+                            <Typography component="span" variant="body2">
+                              Using Tag Category: {getCategoryName(field.tagCategoryId)}
+                              {field.options.length > 0 && ` (${field.options.length} options)`}
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Typography component="span" variant="body2">
+                            Options: {field.options.join(', ')}
+                          </Typography>
+                        )}
                       </Box>
                     )}
                   </>

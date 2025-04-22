@@ -1,13 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   TextField, 
   Select, 
   MenuItem, 
   FormControlLabel, 
   Checkbox, 
-  IconButton, 
+  IconButton,
+  FormControl,
+  InputLabel,
+  Switch,
+  Typography,
+  Box,
+  Chip,
+  Divider,
+  Alert,
+  SelectChangeEvent
 } from '@mui/material';
-import { FaPlus, FaCheck, FaTimes, FaStar } from 'react-icons/fa';
+import { FaPlus, FaCheck, FaTimes, FaStar, FaTags, FaEdit } from 'react-icons/fa';
 import { 
   MediaTypeField, 
   FieldType, 
@@ -18,6 +27,8 @@ import {
   createField, 
   updateFieldOptions 
 } from '../../../utils/mediaTypeUploaderUtils';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../../store/store';
 
 interface FieldEditorProps {
   field: MediaTypeField;
@@ -47,13 +58,26 @@ const FieldEditor: React.FC<FieldEditorProps> = ({
   onRemove
 }) => {
   const [optionInput, setOptionInput] = useState('');
+  const tagCategories = useSelector((state: RootState) => state.tagCategories.tagCategories);
+
+  // Effect to update options when tag category changes
+  useEffect(() => {
+    if (isSelectField(field) && field.useTagCategory && field.tagCategoryId) {
+      const selectedCategory = tagCategories.find(cat => cat._id === field.tagCategoryId);
+      if (selectedCategory && selectedCategory.tags) {
+        // Update field options with tags from the selected category
+        const tagOptions = selectedCategory.tags.map(tag => tag.name);
+        onFieldUpdate(updateFieldOptions(field as SelectField, tagOptions, true, field.tagCategoryId));
+      }
+    }
+  }, [isSelectField(field) && field.tagCategoryId]);
 
   // For handling select field options
   const handleAddOption = () => {
     if (!optionInput.trim() || !isSelectField(field)) return;
     
     const newOptions = [...field.options, optionInput.trim()];
-    onFieldUpdate(updateFieldOptions(field as SelectField, newOptions));
+    onFieldUpdate(updateFieldOptions(field as SelectField, newOptions, field.useTagCategory, field.tagCategoryId));
     setOptionInput('');
   };
 
@@ -61,7 +85,34 @@ const FieldEditor: React.FC<FieldEditorProps> = ({
     if (!isSelectField(field)) return;
     
     const newOptions = field.options.filter((_, i) => i !== optIndex);
-    onFieldUpdate(updateFieldOptions(field as SelectField, newOptions));
+    onFieldUpdate(updateFieldOptions(field as SelectField, newOptions, field.useTagCategory, field.tagCategoryId));
+  };
+
+  const handleUseTagCategoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isSelectField(field)) return;
+    
+    const useTagCategory = event.target.checked;
+    if (useTagCategory) {
+      onFieldUpdate(updateFieldOptions(field as SelectField, [], useTagCategory, ''));
+    } else {
+      // Clear the tag category reference and options when disabling
+      onFieldUpdate(updateFieldOptions(field as SelectField, [], useTagCategory, ''));
+    }
+  };
+
+  const handleTagCategoryChange = (event: SelectChangeEvent<string>) => {
+    if (!isSelectField(field)) return;
+    
+    const tagCategoryId = event.target.value;
+    const selectedCategory = tagCategories.find(cat => cat._id === tagCategoryId);
+    
+    if (selectedCategory && selectedCategory.tags) {
+      // Update field options with tags from the selected category
+      const tagOptions = selectedCategory.tags.map(tag => tag.name);
+      onFieldUpdate(updateFieldOptions(field as SelectField, tagOptions, true, tagCategoryId));
+    } else {
+      onFieldUpdate(updateFieldOptions(field as SelectField, [], true, tagCategoryId));
+    }
   };
 
   // Render edit mode
@@ -120,6 +171,7 @@ const FieldEditor: React.FC<FieldEditorProps> = ({
             <IconButton 
               onClick={onCancel}
               color="error"
+              size="small"
               className="remove-button"
               title="Cancel editing"
             >
@@ -127,7 +179,8 @@ const FieldEditor: React.FC<FieldEditorProps> = ({
             </IconButton>
             <IconButton 
               onClick={() => onSave(field, index)}
-              color="primary" 
+              color="primary"
+              size="small"
               className="add-button"
               title="Save changes"
             >
@@ -142,37 +195,100 @@ const FieldEditor: React.FC<FieldEditorProps> = ({
               <span className="title">Define Options</span>
             </div>
             
-            <div className="add-option-container">
-              <TextField
-                label="Option Value"
-                value={optionInput}
-                onChange={(e) => setOptionInput(e.target.value)}
-                fullWidth
-                className="input-field text-input"
+            {/* Tag Category Selector */}
+            <Box sx={{ mb: 2, mt: 1 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={field.useTagCategory || false}
+                    onChange={handleUseTagCategoryChange}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
+                    <FaTags style={{ marginRight: '8px' }} />
+                    Use Predefined List
+                  </Typography>
+                }
               />
-              <IconButton 
-                onClick={handleAddOption} 
-                color="primary" 
-                disabled={!optionInput.trim()}
-              >
-                <FaPlus />
-              </IconButton>
-            </div>
+              
+              {field.useTagCategory && (
+                <Box sx={{ mt: 1 }}>
+                  {tagCategories.length > 0 ? (
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Select Predefined Lists</InputLabel>
+                      <Select
+                        value={field.tagCategoryId || ''}
+                        onChange={handleTagCategoryChange}
+                        label="Select Tag Category"
+                      >
+                        {tagCategories.map(category => (
+                          <MenuItem key={category._id} value={category._id}>
+                            {category.name} ({category.tags?.length || 0} tags)
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <Alert severity="info" sx={{ mt: 1 }}>
+                      No predefined lists available. Please create predefined lists first.
+                    </Alert>
+                  )}
+                  
+                  {field.tagCategoryId && field.options.length > 0 && (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="body2" fontWeight="medium">
+                        Options from Predefined List:
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                        {field.options.map((option, i) => (
+                          <Chip key={i} label={option} size="small" />
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </Box>
             
-            {field.options.length > 0 && (
-              <div className="option-chips">
-                {field.options.map((option, optIndex) => (
-                  <div key={optIndex} className="option-chip">
-                    {option}
-                    <span 
-                      className="remove-icon" 
-                      onClick={() => handleRemoveOption(optIndex)}
-                    >
-                      <FaTimes size={10} />
-                    </span>
+            <Divider sx={{ my: 2 }} />
+            
+            {!field.useTagCategory && (
+              <>
+                <div className="add-option-container">
+                  <TextField
+                    label="Option Value"
+                    value={optionInput}
+                    onChange={(e) => setOptionInput(e.target.value)}
+                    fullWidth
+                    className="input-field text-input"
+                  />
+                  <IconButton 
+                    onClick={handleAddOption} 
+                    color="primary" 
+                    disabled={!optionInput.trim()}
+                  >
+                    <FaPlus />
+                  </IconButton>
+                </div>
+                
+                {field.options.length > 0 && (
+                  <div className="option-chips">
+                    {field.options.map((option, optIndex) => (
+                      <div key={optIndex} className="option-chip">
+                        {option}
+                        <span 
+                          className="remove-icon" 
+                          onClick={() => handleRemoveOption(optIndex)}
+                        >
+                          <FaTimes size={10} />
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -195,11 +311,20 @@ const FieldEditor: React.FC<FieldEditorProps> = ({
             <FaStar size={8} /> Required
           </span>
         )}
+        {isSelectField(field) && field.useTagCategory && field.tagCategoryId && (
+          <span className="field-tag-category">
+            <FaTags size={8} /> Using Predefined List
+          </span>
+        )}
       </div>
       <div className="select-field-options">
         {isSelectField(field) && (
           <span className="field-options">
-            Options: {field.options.join(', ')}
+            {field.useTagCategory && field.tagCategoryId ? (
+              <>From Predefined List: {tagCategories.find(cat => cat._id === field.tagCategoryId)?.name || 'Unknown'}</>
+            ) : (
+              <>Options: {field.options.join(', ')}</>
+            )}
           </span>
         )}
       </div>
@@ -213,7 +338,7 @@ const FieldEditor: React.FC<FieldEditorProps> = ({
           }}
           title="Edit field"
         >
-          <FaTimes />
+          <FaEdit />
         </div>
         <div 
           className="remove-button"

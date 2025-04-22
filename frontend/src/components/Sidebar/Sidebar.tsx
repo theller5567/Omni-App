@@ -3,8 +3,8 @@ import { Sidebar, Menu, MenuItem } from "react-pro-sidebar";
 import { Box, Avatar } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import "./sidebar.scss";
-import { NavLink, useLocation } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../store/store";
 import logoLight from "../../assets/Omni-new-logo-revvity-grey.png";
 import logoDark from "../../assets/Omni-new-logo-revvity-white.png";
@@ -22,6 +22,7 @@ import {
   FaPalette
 } from "react-icons/fa";
 import { useState, useEffect, ReactNode } from "react";
+import { clearUser } from "../../store/slices/userSlice";
 
 // Define CSS variables for the components
 const setCssVariables = (theme: any) => {
@@ -98,9 +99,11 @@ const AnimatedSubMenu: React.FC<AnimatedSubMenuProps> = ({
 const CustomSidebar: React.FC = () => {
   const userData = useSelector((state: RootState) => state.user);
   const location = useLocation();
+  const navigate = useNavigate();
   const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
   const theme = useTheme();
   const isAdmin = userData.currentUser.role === "admin" || userData.currentUser.role === "superAdmin";
+  const dispatch = useDispatch();
 
   // Apply CSS variables when theme changes
   useEffect(() => {
@@ -110,7 +113,9 @@ const CustomSidebar: React.FC = () => {
   const handleSignOut = () => {
     console.log("User signed out");
     localStorage.removeItem("authToken");
-    window.location.href = "/";
+    localStorage.removeItem("refreshToken");
+    dispatch(clearUser());
+    navigate("/");
   };
 
   // Detect active submenu based on current route

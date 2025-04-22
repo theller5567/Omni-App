@@ -64,12 +64,14 @@ interface RequestParams {
 }
 
 // Helper function to add timestamp and cache-busting headers
-const getRequestConfig = (token: string, additionalParams: Record<string, string> = {}) => {
+const getRequestConfig = (additionalParams: Record<string, string> = {}) => {
   const timestamp = new Date().getTime();
   const params: RequestParams = {
     _t: timestamp.toString(),
     ...additionalParams
   };
+  
+  const token = localStorage.getItem('authToken');
   
   return {
     headers: {
@@ -84,11 +86,8 @@ const getRequestConfig = (token: string, additionalParams: Record<string, string
 
 export const fetchTagCategories = createAsyncThunk<TagCategory[], { includeInactive?: boolean } | undefined>(
   'tagCategories/fetchAll',
-  async (options, { getState, rejectWithValue }) => {
+  async (options, { rejectWithValue }) => {
     try {
-      const state = getState() as RootState;
-      const token = state.user.currentUser.token;
-      
       console.log('Fetching all tag categories', options ? `with options: ${JSON.stringify(options)}` : '');
       
       // Add optional query params
@@ -98,7 +97,7 @@ export const fetchTagCategories = createAsyncThunk<TagCategory[], { includeInact
         console.log('Including inactive categories in fetch request');
       }
       
-      const config = getRequestConfig(token, additionalParams);
+      const config = getRequestConfig(additionalParams);
       const response = await axios.get<TagCategory[]>(`${env.BASE_URL}/api/tag-categories`, config);
       
       console.log('Tag categories fetched:', response.data.length);
@@ -139,11 +138,8 @@ export const createTagCategory = createAsyncThunk(
     name: string, 
     description?: string, 
     tags: Array<{ id: string, name: string }> 
-  }, { getState, dispatch, rejectWithValue }) => {
+  }, { dispatch, rejectWithValue }) => {
     try {
-      const state = getState() as RootState;
-      const token = state.user.currentUser.token;
-      
       // First, clear cache and get the latest data to check for duplicates
       console.log('Refreshing tag categories before creating new one');
       try {
@@ -153,21 +149,10 @@ export const createTagCategory = createAsyncThunk(
         // Continue anyway - the backend will still check for duplicates
       }
       
-      // Check for duplicates in the fresh data
-      const updatedState = getState() as RootState;
-      const existingCategory = updatedState.tagCategories.tagCategories.find(
-        cat => cat.name.toLowerCase() === data.name.toLowerCase()
-      );
-      
-      if (existingCategory) {
-        console.log(`Tag category "${data.name}" already exists in state, returning existing category`);
-        return existingCategory;
-      }
-      
-      // Proceed with creation if no duplicate found
+      // Proceed with creation
       console.log('Creating tag category:', data);
       
-      const config = getRequestConfig(token);
+      const config = getRequestConfig();
       
       // Only send tags array, no tagIds
       const payload = {
@@ -200,14 +185,11 @@ export const updateTagCategory = createAsyncThunk(
       description?: string, 
       tags: Array<{ id: string, name: string }> 
     } 
-  }, { getState, rejectWithValue }) => {
+  }, { rejectWithValue }) => {
     try {
-      const state = getState() as RootState;
-      const token = state.user.currentUser.token;
-      
       console.log('Updating tag category:', id, data);
       
-      const config = getRequestConfig(token);
+      const config = getRequestConfig();
       
       // Only use the data as provided, no tagIds derivation
       const response = await axios.put<TagCategory>(`${env.BASE_URL}/api/tag-categories/${id}`, data, config);
@@ -238,16 +220,13 @@ interface DeleteTagCategoryParams {
 
 export const deleteTagCategory = createAsyncThunk(
   'tagCategories/deleteTagCategory',
-  async (params: DeleteTagCategoryParams, { getState, rejectWithValue }) => {
+  async (params: DeleteTagCategoryParams, { rejectWithValue }) => {
     const { id, hardDelete } = params;
     try {
       console.log(`Deleting tag category ${id}${hardDelete ? ' (hard delete)' : ''}`);
       
-      const state = getState() as RootState;
-      const token = state.user.currentUser.token;
-      
       // Get base request config
-      const config = getRequestConfig(token);
+      const config = getRequestConfig();
       
       // Add query parameter for hard delete if requested
       if (hardDelete) {

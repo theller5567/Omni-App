@@ -262,6 +262,15 @@ const TagCategoryManager: React.FC = () => {
     } catch (error: any) {
       console.error('Error submitting tag category:', error);
       
+      // Handle authentication error
+      if (error.includes && error.includes('Invalid token') || 
+          (error.response && error.response.status === 401)) {
+        toast.error('Your session has expired. Please sign in again.');
+        // Redirect to login page
+        window.location.href = '/login';
+        return;
+      }
+      
       if (error.message?.includes('already exists')) {
         toast.error(`Category "${submittedFormData.name}" already exists. Please choose a different name.`);
       } else {

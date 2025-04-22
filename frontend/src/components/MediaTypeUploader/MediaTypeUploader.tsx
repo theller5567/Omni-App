@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { addMediaType, initializeMediaTypes } from '../../store/slices/mediaTypeSlice';
+import { fetchTagCategories } from '../../store/slices/tagCategorySlice';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { FaArrowRight, FaArrowLeft, FaSave } from 'react-icons/fa';
@@ -123,6 +124,9 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
   const isSuperAdmin = userRole === 'superAdmin';
   
+  // Get tag categories status for loading
+  const { status: tagCategoriesStatus } = useSelector((state: RootState) => state.tagCategories);
+  
   // State for media type configuration
   const [mediaTypeConfig, setMediaTypeConfig] = useState<MediaTypeConfig>(initialMediaTypeConfig);
   const [newTag, setNewTag] = useState(''); // For handling tag input
@@ -169,6 +173,13 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       setIsEditMode(false);
     }
   }, [open, editMediaTypeId, mediaTypes]);
+
+  // Effect to load tag categories when component opens
+  useEffect(() => {
+    if (open && tagCategoriesStatus === 'idle') {
+      dispatch(fetchTagCategories());
+    }
+  }, [open, dispatch, tagCategoriesStatus]);
 
   const steps = ['Name Media Type', 'Add Fields', 'Review & Submit'];
 

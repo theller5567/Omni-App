@@ -48,6 +48,7 @@ export const createField = (
       name,
       options: [],
       required,
+      useTagCategory: false
     };
   }
   return {
@@ -58,10 +59,17 @@ export const createField = (
 };
 
 // Update options in a select field
-export const updateFieldOptions = (field: SelectField, options: string[]): SelectField => {
+export const updateFieldOptions = (
+  field: SelectField, 
+  options: string[], 
+  useTagCategory: boolean = field.useTagCategory || false,
+  tagCategoryId: string = field.tagCategoryId || ''
+): SelectField => {
   return {
     ...field,
     options,
+    useTagCategory,
+    tagCategoryId
   };
 };
 

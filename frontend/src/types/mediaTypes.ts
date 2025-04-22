@@ -25,6 +25,8 @@ export interface SelectField {
   required: boolean;
   label?: string;
   options: string[];
+  useTagCategory?: boolean;
+  tagCategoryId?: string;
 }
 
 export type MediaTypeField = BaseField | SelectField;

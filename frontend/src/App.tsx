@@ -24,12 +24,34 @@ import AccountMediaTypes from './pages/AccountMediaTypes';
 import AccountAdminDashboard from './pages/AccountAdminDashboard';
 import { AppDispatch } from './store/store';
 import StyleGuidePage from './pages/StyleGuidePage';
+import axios from 'axios';
 
 // Create a context for theme toggling
 export const ThemeContext = React.createContext({
   isDarkMode: true,
   toggleTheme: (_newTheme: 'light' | 'dark') => {}
 });
+
+// Create an axios interceptor to handle auth errors globally
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Check if the error is a 401 Unauthorized
+    if (error.response && error.response.status === 401) {
+      console.log('Authorization error detected, clearing session');
+      // Clear all auth data
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+      
+      // Only redirect if we're not already on the login page
+      if (!window.location.pathname.includes('/login')) {
+        console.log('Redirecting to login page');
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 const App: React.FC = () => {
   // Check localStorage for saved theme preference
@@ -168,6 +190,7 @@ const App: React.FC = () => {
                 <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
                 <Route path="/password-setup" element={<PasswordSetupPage />} />
                 <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} />} />
+                <Route path="/login" element={<AuthPage />} />
                 <Route path="/" element={<AuthPage />} />
               </Routes>
             </div>
