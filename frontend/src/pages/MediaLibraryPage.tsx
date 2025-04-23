@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MediaUploader from '../components/MediaUploader/MediaUploader';
 import MediaLibrary from '../components/MediaLibrary/MediaLibrary';
 import axios from 'axios';
@@ -16,6 +16,10 @@ const MediaContainer: React.FC = () => {
   const mediaState = useSelector((state: RootState) => state.media);
   const dispatch = useDispatch<AppDispatch>();
   const [needsRefresh, setNeedsRefresh] = useState(false);
+  
+  // Add refs to track upload completion
+  const processingUploadRef = useRef(false);
+  const uploadCallTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Single initialization effect
   useEffect(() => {
@@ -24,14 +28,41 @@ const MediaContainer: React.FC = () => {
     }
   }, [dispatch, mediaState.status, mediaState.allMedia.length]);
 
-  // Add effect to handle refresh after upload
+  // Add effect to handle refresh after upload - with debounce
   useEffect(() => {
-    if (needsRefresh) {
+    if (needsRefresh && !processingUploadRef.current) {
       console.log('MediaLibraryPage - Refreshing data after upload');
-      dispatch(initializeMedia());
-      setNeedsRefresh(false);
+      
+      // Set processing flag to avoid multiple calls
+      processingUploadRef.current = true;
+      
+      // Clear any existing timeout
+      if (uploadCallTimeoutRef.current) {
+        clearTimeout(uploadCallTimeoutRef.current);
+      }
+      
+      // Debounce the refresh to ensure it only happens once
+      uploadCallTimeoutRef.current = setTimeout(() => {
+        dispatch(initializeMedia());
+        setNeedsRefresh(false);
+        
+        // Reset the processing flag after a delay
+        setTimeout(() => {
+          processingUploadRef.current = false;
+        }, 500);
+      }, 300);
     }
   }, [needsRefresh, dispatch]);
+
+  // Handle component cleanup
+  useEffect(() => {
+    return () => {
+      // Clear any pending timeouts on unmount
+      if (uploadCallTimeoutRef.current) {
+        clearTimeout(uploadCallTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Track meaningful state changes
   const prevStateRef = React.useRef({
@@ -68,10 +99,19 @@ const MediaContainer: React.FC = () => {
   };
 
   const handleUploadComplete = (newFile: any | null) => {
-    if (newFile) {
+    if (newFile && !processingUploadRef.current) {
       console.log('Upload complete, new file:', newFile);
+      
+      // Set processing flag to prevent multiple refreshes
+      processingUploadRef.current = true;
+      
       // Set flag to refresh data after upload
       setNeedsRefresh(true);
+      
+      // Automatically reset the processing flag after a timeout
+      setTimeout(() => {
+        processingUploadRef.current = false;
+      }, 1000);
     }
     // Do not automatically close the modal - let the user choose when to close it
   };

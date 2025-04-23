@@ -135,8 +135,13 @@ export const updateFieldRequired = (field: MediaTypeField, required: boolean): M
   return { ...field, required };
 };
 
-export const updateFieldOptions = (field: SelectField, options: string[]): SelectField => {
-  return { ...field, options };
+export const updateFieldOptions = (field: SelectField, options: string[], useTagCategory?: boolean, tagCategoryId?: string): SelectField => {
+  return { 
+    ...field, 
+    options,
+    ...(useTagCategory !== undefined && { useTagCategory }),
+    ...(tagCategoryId !== undefined && { tagCategoryId })
+  };
 };
 
 // Transform functions

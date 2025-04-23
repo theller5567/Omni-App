@@ -32,6 +32,7 @@
   --color-text-disabled: #757575;
   --color-text-on-primary: #ffffff;
   --color-text-on-secondary: #000000;
+  --color-text-invert: #f5f5f5;
   
   // Border Colors
   --color-border: #e0e0e0;
@@ -165,11 +166,13 @@
   --color-surface-elevated: #2d2d2d;
   --color-surface-light: #363535;
   --color-surface-gradient: linear-gradient(to bottom right, var(--color-surface-light), var(--color-surface-variant));
+  --color-surface-alpha-light: rgba(50, 50, 50, 0.9);
   
   // Text Colors
   --color-text-primary: #ffffff;
   --color-text-secondary: #b0b0b0;
   --color-text-disabled: #757575;
+  --color-text-invert: #222222;
   
   // Border Colors
   --color-border: #444444;

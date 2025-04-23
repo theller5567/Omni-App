@@ -54,10 +54,21 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     initialLoadComplete: false
   });
   
-  // Handle initial data loading silently
+  // Handle initial data loading silently - with debounce
+  const tagsFetchedRef = useRef(false);
+  
   useEffect(() => {
     const loadTagData = async () => {
       try {
+        // Avoid fetching if already fetched during this component lifecycle
+        if (tagsFetchedRef.current) {
+          console.log('Tag categories already fetched, skipping');
+          return;
+        }
+        
+        // Mark as fetched to prevent duplicate requests
+        tagsFetchedRef.current = true;
+        
         // Fetch tag categories silently (without showing error toasts)
         await dispatch(fetchTagCategories()).unwrap();
       } catch (error) {
@@ -71,8 +82,20 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
       }
     };
     
-    loadTagData();
+    // Delay tag fetching slightly to prioritize media loading
+    const timer = setTimeout(() => {
+      loadTagData();
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, [dispatch]);
+  
+  // Clean up references on unmount
+  useEffect(() => {
+    return () => {
+      tagsFetchedRef.current = false;
+    };
+  }, []);
   
   // Custom toast function that avoids showing tag-related errors during initial page load
   const safeToast = (type: 'success' | 'error' | 'info', message: string, options = {}) => {

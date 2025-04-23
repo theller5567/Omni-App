@@ -1,0 +1,162 @@
+/* Main container */
+.fields-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Tabs container */
+.tabs-container {
+  border-radius: 10px;
+  position: sticky;
+  top: 0;
+  background-color: var(--color-surface);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+/* Tab label container */
+.tab-label {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+/* Tab indicator container */
+.tab-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  
+}
+
+.tab-indicator > svg {
+  font-size: 0.5rem;
+}
+
+.validation-indicator > svg {
+  font-size: 0.7rem;
+}
+
+/* Icon styles */
+.complete-icon {
+  color: #4caf50;
+  font-size: 14px;
+}
+
+.incomplete-icon {
+  color: #f44336;
+  font-size: 8px;
+}
+
+.neutral-icon {
+  color: #bdbdbd;
+  font-size: 8px;
+}
+
+/* Tab panel styles */
+.tab-panel {
+  flex-grow: 1;
+  overflow: hidden;
+  transition: height 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-panel-active {
+  height: auto;
+  visibility: visible;
+}
+
+.tab-panel-inactive {
+  height: 0;
+  visibility: hidden;
+}
+
+.tab-panel-content {
+  padding-top: 16px;
+  overflow: auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-panel-content > div {
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+/* Tab panels container */
+.tab-panels-container {
+  flex-grow: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tab content paper */
+.tab-content-paper {
+  padding: 24px;
+  height: 100%;
+  overflow: auto;
+  flex-grow: 1;
+}
+
+/* Empty tab content */
+.empty-tab-content-paper {
+  padding: 24px;
+  text-align: center;
+  overflow: auto;
+}
+
+.empty-message {
+  margin-bottom: 16px;
+}
+
+/* File info box */
+.file-info-box {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+/* Fields grid layout */
+.fields-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 20px;
+  overflow: auto;
+  height: 100%;
+  padding-right: 8px;
+}
+
+.field-full-width {
+  grid-column: span 12;
+}
+
+.field-half-width {
+  grid-column: span 12;
+}
+
+/* Responsive grid for field items */
+@media (min-width: 600px) {
+  .field-half-width {
+    grid-column: span 6;
+  }
+}
+
+/* StandardFields container */
+.standard-fields-container {
+  overflow: auto;
+  height: 100%;
+  width: 100%;
+  padding-right: 8px;
+} 

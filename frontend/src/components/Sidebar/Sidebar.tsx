@@ -115,7 +115,7 @@ const CustomSidebar: React.FC = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("refreshToken");
     dispatch(clearUser());
-    navigate("/");
+    navigate("/login");
   };
 
   // Detect active submenu based on current route

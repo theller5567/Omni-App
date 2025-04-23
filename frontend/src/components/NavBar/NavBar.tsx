@@ -12,7 +12,7 @@ export const useLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('refreshToken');
     dispatch(clearUser());
-    navigate('/');
+    navigate('/login');
   };
 };
 
