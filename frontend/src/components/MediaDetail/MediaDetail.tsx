@@ -15,8 +15,8 @@ import { MediaFile, MediaType } from "../../types/media";
 import { motion } from 'framer-motion';
 import { formatFileSize } from "../../utils/formatFileSize";
 import "./mediaDetail.scss";
-import { useSelector } from "react-redux";
-import { RootState } from "../../store/store";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../store/store";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useUsername } from '../../hooks/useUsername';
@@ -33,6 +33,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import MediaInformation from './MediaInformation';
 import { EditMediaDialog } from './EditMediaDialog';
+import { updateMedia } from '../../store/slices/mediaSlice';
 
 
 // Add a helper function to safely get metadata fields from either root or metadata object
@@ -85,6 +86,7 @@ const MediaDetail: React.FC = () => {
   const { username: uploaderUsername, loading: uploaderLoading } = useUsername(mediaFile?.uploadedBy);
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
+  const dispatch = useDispatch<AppDispatch>();
   
   // Function to get base schema fields
   const getBaseSchemaFields = (): Record<string, any> => {
@@ -230,6 +232,7 @@ const MediaDetail: React.FC = () => {
         setMediaFile(updatedMediaFile);
         setIsEditing(false);
         toast.success('Media file updated successfully');
+        dispatch(updateMedia(updatedMediaFile));
       } else {
         throw new Error('Failed to update media file');
       }
@@ -472,7 +475,7 @@ const MediaDetail: React.FC = () => {
               Tags: {mediaFile.metadata?.tags && mediaFile.metadata.tags.length > 0 ? (
                 <>
                   {/* Sort tags to display default tags first */}
-                  {(mediaFile.metadata.tags).sort((a, b) => {
+                  {mediaFile.metadata.tags.slice().sort((a, b) => {
                     const aIsDefault = mediaTypeForEdit.defaultTags?.includes(a) || false;
                     const bIsDefault = mediaTypeForEdit.defaultTags?.includes(b) || false;
                     if (aIsDefault === bIsDefault) return 0;

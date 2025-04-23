@@ -30,9 +30,20 @@ interface MediaLibraryProps {
   onDeleteMedia: (id: string) => Promise<boolean>;
   selectedMediaType: string;
   handleMediaTypeChange: (type: string) => void;
+  children?: React.ReactNode;
 }
 
-const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQuery, onAddMedia, onDeleteMedia }) => {
+const MediaLibrary: React.FC<MediaLibraryProps> & {
+  Toolbar: typeof HeaderComponent;
+  DataTable: typeof VirtualizedDataTable;
+  Card: typeof MediaCard;
+  ConfirmModal: typeof ConfirmationModal;
+} = ({ mediaFilesData, setSearchQuery, onAddMedia, onDeleteMedia, children }) => {
+  // If children are provided (compound usage), render them directly
+  if (children) {
+    return <div className="media-library-container">{children}</div>;
+  }
+
   const [viewMode, setViewMode] = useState<'list' | 'card'>(() => {
     // Get saved view mode from localStorage or default to 'card'
     return localStorage.getItem('mediaLibraryViewMode') as 'list' | 'card' || 'card';
@@ -418,6 +429,12 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({ mediaFilesData, setSearchQu
     </motion.div>
   );
 };
+
+// Attach compound sub-components
+MediaLibrary.Toolbar = HeaderComponent;
+MediaLibrary.DataTable = VirtualizedDataTable;
+MediaLibrary.Card = MediaCard;
+MediaLibrary.ConfirmModal = ConfirmationModal;
 
 export default MediaLibrary;
 

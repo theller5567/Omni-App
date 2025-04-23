@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import MediaUploader from '../components/MediaUploader/MediaUploader';
 import MediaLibrary from '../components/MediaLibrary/MediaLibrary';
 import axios from 'axios';
 import '../components/MediaLibrary/MediaContainer.scss';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../store/store';
-import { deleteMedia, initializeMedia } from '../store/slices/mediaSlice';
+import { deleteMedia, initializeMedia, addMedia } from '../store/slices/mediaSlice';
 import { CircularProgress, Box, Typography } from '@mui/material';
 import env from '../config/env';
 
@@ -19,7 +19,7 @@ const MediaContainer: React.FC = () => {
   
   // Add refs to track upload completion
   const processingUploadRef = useRef(false);
-  const uploadCallTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const uploadCallTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Single initialization effect
   useEffect(() => {
@@ -90,22 +90,23 @@ const MediaContainer: React.FC = () => {
     prevStateRef.current = currentState;
   }, [mediaState.status, mediaState.allMedia.length]);
 
-  const handleOpen = () => {
+  const handleOpen = useCallback(() => {
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsModalOpen(false);
-  };
+  }, []);
 
-  const handleUploadComplete = (newFile: any | null) => {
+  const handleUploadComplete = useCallback((newFile: any | null) => {
     if (newFile && !processingUploadRef.current) {
       console.log('Upload complete, new file:', newFile);
       
       // Set processing flag to prevent multiple refreshes
       processingUploadRef.current = true;
       
-      // Set flag to refresh data after upload
+      // Add the new file into Redux store so the data-table updates
+      dispatch(addMedia(newFile));
       setNeedsRefresh(true);
       
       // Automatically reset the processing flag after a timeout
@@ -114,9 +115,9 @@ const MediaContainer: React.FC = () => {
       }, 1000);
     }
     // Do not automatically close the modal - let the user choose when to close it
-  };
+  }, [dispatch]);
 
-  const handleDeleteMedia = async (id: string): Promise<boolean> => {
+  const handleDeleteMedia = useCallback(async (id: string): Promise<boolean> => {
     try {
       console.log('Deleting media with ID:', id);
       await axios.delete(`${env.BASE_URL}/media/delete/${id}`);
@@ -126,16 +127,16 @@ const MediaContainer: React.FC = () => {
       console.error('Error deleting media file:', error);
       return false;
     }
-  };
+  }, [dispatch]);
 
-  const handleMediaTypeChange = (type: string) => {
+  const handleMediaTypeChange = useCallback((type: string) => {
     setSelectedMediaType(type);
-  };
+  }, []);
 
   // Filter media files based on search query
-  const filteredMediaFiles = mediaState.allMedia.filter(file => {
-    return file.metadata && file.metadata.fileName && file.metadata.fileName.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const filteredMediaFiles = useMemo(() => mediaState.allMedia.filter(file => {
+    return file.metadata?.fileName?.toLowerCase().includes(searchQuery.toLowerCase());
+  }), [mediaState.allMedia, searchQuery]);
 
   if (mediaState.status === 'loading') {
     return (
@@ -161,8 +162,8 @@ const MediaContainer: React.FC = () => {
           onAddMedia={handleOpen}
           onDeleteMedia={handleDeleteMedia}
           selectedMediaType={selectedMediaType}
-        handleMediaTypeChange={handleMediaTypeChange}
-      />
+          handleMediaTypeChange={handleMediaTypeChange}
+        />
       <MediaUploader
         open={isModalOpen}
         onClose={handleClose}
