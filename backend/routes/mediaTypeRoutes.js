@@ -16,11 +16,52 @@ import {
   getFilesNeedingTagsSummary,
   fixSpecificMediaFile
 } from '../controllers/mediaTypeController.js';
+import Media from '../models/Media.js';
+import MediaType from '../models/MediaType.js';
 
 const router = express.Router();
 
 // Get all media types
 router.get('/', getMediaTypes);
+
+// Add a new endpoint to get all media types with usage counts in a single request
+router.get('/with-usage-counts', async (req, res) => {
+  try {
+    console.log('Fetching all media types with usage counts in a single request');
+    
+    // Get all media types
+    const mediaTypes = await MediaType.find();
+    
+    // Create a map to store counts for each media type
+    const countMap = {};
+    
+    // For each media type, query the count in parallel (more efficient)
+    const countPromises = mediaTypes.map(async (mediaType) => {
+      try {
+        const count = await Media.countDocuments({ mediaType: { $in: [mediaType._id, mediaType.name] } });
+        countMap[mediaType._id] = count;
+      } catch (err) {
+        console.error(`Error getting count for media type ${mediaType.name}:`, err);
+        countMap[mediaType._id] = 0;
+      }
+    });
+    
+    // Wait for all count operations to complete
+    await Promise.all(countPromises);
+    
+    // Map media types with their counts
+    const result = mediaTypes.map(mediaType => ({
+      ...mediaType.toObject(),
+      usageCount: countMap[mediaType._id] || 0
+    }));
+    
+    console.log(`Returning ${result.length} media types with usage counts`);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching media types with usage counts:', error);
+    res.status(500).json({ error: 'Failed to fetch media types with usage counts' });
+  }
+});
 
 // Summary endpoint for files needing tags (must come before :id routes)
 router.get('/files-needing-tags-summary', getFilesNeedingTagsSummary);

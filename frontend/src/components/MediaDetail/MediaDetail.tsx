@@ -23,7 +23,6 @@ import { useUsername } from '../../hooks/useUsername';
 import env from '../../config/env';
 import { 
   FaFileAudio, 
-  FaFilePdf, 
   FaFileWord, 
   FaFileExcel, 
   FaFile, 
@@ -74,7 +73,125 @@ interface MediaTypeConfig {
 // Remove unused interface
 // interface ExtendedMediaFile extends BaseMediaFile { ... }
 
-const MediaDetail: React.FC = () => {
+// Compound subcomponent: Preview section
+interface MediaDetailPreviewProps {
+  mediaFile: any;
+}
+export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({ mediaFile }) => {
+  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  // Get uploadedBy from either direct property or metadata
+  const userId = getMetadataField(mediaFile, 'uploadedBy', '');
+  const { username: uploaderUsername, loading: uploaderLoading } = useUsername(userId);
+  return (
+    <Box className="media-preview">
+      <Box className="media-preview-header">
+        <Typography variant="body2">
+          <span>Media Type:</span>{' '}
+          <span style={{ color: mediaTypes.find(type => type.name === mediaFile.mediaType)?.catColor || '#999' }}>
+            {mediaFile.mediaType}
+          </span>
+        </Typography>
+        <Box className="size-container">
+          <Typography variant="body2">
+            Size:<span> {formatFileSize(mediaFile.fileSize || 0)}</span>
+          </Typography>
+        </Box>
+        <Box className="updated-date">
+          <Typography variant="body2">
+            Uploaded on:<span> {new Date(mediaFile.modifiedDate).toLocaleDateString()}</span>
+          </Typography>
+        </Box>
+        <Box className="uploaded-by">
+          <Typography variant="body2">
+            Uploaded by:<span> {uploaderLoading 
+              ? 'Loading...' 
+              : (uploaderUsername || userId || 'Unknown')}</span>
+          </Typography>
+        </Box>
+      </Box>
+      <Box className="media-preview-media">
+        {/* Copy your existing media rendering logic here (images/videos/etc.) */}
+      </Box>
+    </Box>
+  );
+};
+
+interface MediaDetailTagsProps {
+  tags?: string[];
+  defaultTags?: string[];
+}
+export const MediaDetailTags: React.FC<MediaDetailTagsProps> = ({ tags, defaultTags }) => (
+  <Box className="tags-container">
+    Tags: {tags && tags.length > 0 ? (
+      <>
+        {tags.slice()
+          .sort((a, b) => {
+            const aIsDefault = defaultTags?.includes(a) || false;
+            const bIsDefault = defaultTags?.includes(b) || false;
+            if (aIsDefault === bIsDefault) return 0;
+            return aIsDefault ? -1 : 1;
+          })
+          .map((tag, index) => (
+            <Chip
+              key={index}
+              size="small"
+              label={tag}
+              className={defaultTags?.includes(tag) ? "default-tag" : "custom-tag"}
+            />
+          ))}
+      </>
+    ) : (
+      <Typography variant="body2" sx={{ opacity: 0.6, fontStyle: 'italic' }}>
+        No tags
+      </Typography>
+    )}
+  </Box>
+);
+
+interface MediaDetailActionsProps {
+  onDownload: () => void;
+  onEdit?: () => void;
+  isEditingEnabled: boolean;
+  isMobile: boolean;
+}
+export const MediaDetailActions: React.FC<MediaDetailActionsProps> = ({
+  onDownload,
+  onEdit,
+  isEditingEnabled,
+  isMobile,
+}) => (
+  <Box className="media-actions">
+    <Box className="action-buttons">
+      <Button
+        variant="contained"
+        color="primary"
+        startIcon={<FaDownload />}
+        onClick={onDownload}
+        size={isMobile ? "small" : "medium"}
+      >
+        Download
+      </Button>
+      {isEditingEnabled && onEdit && (
+        <Button
+          variant="outlined"
+          color="primary"
+          startIcon={<EditIcon />}
+          onClick={onEdit}
+          size={isMobile ? "small" : "medium"}
+        >
+          Edit
+        </Button>
+      )}
+    </Box>
+  </Box>
+);
+
+const MediaDetail: React.FC & {
+  Information: typeof MediaInformation;
+  Preview: typeof MediaDetailPreview;
+  Tags: typeof MediaDetailTags;
+  Actions: typeof MediaDetailActions;
+} = () => {
   // All state hooks first
   const { slug } = useParams();
   const [mediaFile, setMediaFile] = useState<BaseMediaFile | null>(null);
@@ -83,7 +200,9 @@ const MediaDetail: React.FC = () => {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
   const navigate = useNavigate();
-  const { username: uploaderUsername, loading: uploaderLoading } = useUsername(mediaFile?.uploadedBy);
+  // Get uploadedBy from either direct property or metadata
+  const userId = mediaFile ? getMetadataField(mediaFile, 'uploadedBy', '') : '';
+  const { username: uploaderUsername, loading: uploaderLoading } = useUsername(userId);
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   const dispatch = useDispatch<AppDispatch>();
@@ -144,7 +263,6 @@ const MediaDetail: React.FC = () => {
         const response = await axios.get<BaseMediaFile>(
           `${env.BASE_URL}/media/slug/${slug}`
         );
-        console.log('Fetched media file:', response.data);
         setMediaFile(response.data);
       } catch (error) {
         console.error("Error fetching media file:", error);
@@ -171,7 +289,6 @@ const MediaDetail: React.FC = () => {
     if (!mediaFile) return;
 
     try {
-      console.log('Received form data:', data);
 
       // Transform form data to API format
       const apiData = {
@@ -185,7 +302,6 @@ const MediaDetail: React.FC = () => {
           ...data.customFields
         }
       };
-      console.log('Transformed for API:', apiData);
 
       // Check if any data actually changed
       const hasChanged = 
@@ -197,7 +313,6 @@ const MediaDetail: React.FC = () => {
         JSON.stringify(apiData.metadata.tags) !== JSON.stringify(mediaFile.metadata?.tags);
 
       if (!hasChanged) {
-        console.log('No changes detected. Skipping save operation.');
         setIsEditing(false);
         return;
       }
@@ -228,7 +343,6 @@ const MediaDetail: React.FC = () => {
           }
         };
 
-        console.log('Updating local state:', data);
         setMediaFile(updatedMediaFile);
         setIsEditing(false);
         toast.success('Media file updated successfully');
@@ -286,16 +400,6 @@ const MediaDetail: React.FC = () => {
     url: mediaFile.location
   };
 
-  console.log('MediaDetail - Preparing edit form with data:', {
-    originalFile: mediaFile,
-    originalMetadata: mediaFile.metadata,
-    mappedData: mediaFileForEdit,
-    originalTags: mediaFile.metadata?.tags,
-    hasMetadata: !!mediaFile.metadata,
-    metadataKeys: mediaFile.metadata ? Object.keys(mediaFile.metadata) : [],
-    customFields: mediaFileForEdit.customFields
-  });
-
   // Convert MediaTypeConfig to MediaType for the EditMediaDialog
   const mediaTypeForEdit: MediaType = mediaTypeConfig ? {
     id: mediaTypeConfig._id,
@@ -326,13 +430,10 @@ const MediaDetail: React.FC = () => {
   };
 
   return (
-    <motion.div
-      className="media-detail-container"
-      {...motionProps}
-    >
-      <Button 
-        className="back-button" 
-        onClick={() => navigate('/media-library')} 
+    <motion.div className="media-detail-container" {...motionProps}>
+      <Button
+        className="back-button"
+        onClick={() => navigate("/media-library")}
         variant="outlined"
         size={isMobile ? "small" : "medium"}
       >
@@ -341,105 +442,238 @@ const MediaDetail: React.FC = () => {
       <Box className="media-detail">
         <Box className="media-preview">
           <Box className="media-preview-header">
-            <Typography variant="body2"><span>Media Type:</span> <span style={{ color: mediaTypes.find(type => type.name === mediaFile.mediaType)?.catColor || '#999' }}> {mediaFile.mediaType}</span></Typography>
-            
+            <Typography variant="body2">
+              <span>Media Type:</span>{" "}
+              <span
+                style={{
+                  color:
+                    mediaTypes.find((type) => type.name === mediaFile.mediaType)
+                      ?.catColor || "#999",
+                }}
+              >
+                {" "}
+                {mediaFile.mediaType}
+              </span>
+            </Typography>
+
             <Box className="size-container">
-              <Typography variant="body2">Size:<span> {formatFileSize(mediaFile.fileSize || 0)}</span></Typography>
+              <Typography variant="body2">
+                Size:<span> {formatFileSize(mediaFile.fileSize || 0)}</span>
+              </Typography>
             </Box>
             <Box className="updated-date">
-              <Typography variant="body2">Uploaded on:<span> {new Date(mediaFile.modifiedDate).toLocaleDateString()}</span></Typography>
+              <Typography variant="body2">
+                Uploaded on:
+                <span>
+                  {" "}
+                  {new Date(mediaFile.modifiedDate).toLocaleDateString()}
+                </span>
+              </Typography>
             </Box>
             <Box className="uploaded-by">
-              <Typography variant="body2">Uploaded by:<span> {uploaderLoading ? 'Loading...' : uploaderUsername}</span></Typography>
+              <Typography variant="body2">
+                Uploaded by:{" "}
+                {uploaderLoading
+                  ? "Loading…"
+                  : uploaderUsername}
+              </Typography>
             </Box>
           </Box>
           <Box className="media-preview-media">
-            {mediaFile.fileExtension && ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(mediaFile.fileExtension.toLowerCase()) ? (
+            {mediaFile.fileExtension &&
+            ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(
+              mediaFile.fileExtension.toLowerCase()
+            ) ? (
               // Image preview
-              <img src={mediaFile.location} alt={mediaFile.metadata?.altText || ''} />
-            ) : mediaFile.fileExtension && ['mp4', 'webm', 'ogg', 'mov'].includes(mediaFile.fileExtension.toLowerCase()) ? (
+              <img
+                src={mediaFile.location}
+                alt={mediaFile.metadata?.altText || ""}
+              />
+            ) : mediaFile.fileExtension &&
+              ["mp4", "webm", "ogg", "mov"].includes(
+                mediaFile.fileExtension.toLowerCase()
+              ) ? (
               // Video preview
-              <Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#000' }}>
-                <video 
-                  controls 
+              <Box
+                sx={{
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  background: "#000",
+                }}
+              >
+                <video
+                  controls
                   autoPlay={false}
-                  style={{ width: '100%', maxHeight: isMobile ? '300px' : '600px' }} 
-                  poster={mediaFile.metadata?.v_thumbnail} 
+                  style={{
+                    width: "100%",
+                    maxHeight: isMobile ? "300px" : "600px",
+                  }}
+                  poster={mediaFile.metadata?.v_thumbnail}
                 >
-                  <source src={mediaFile.location} type={`video/${mediaFile.fileExtension === 'mov' ? 'quicktime' : mediaFile.fileExtension.toLowerCase()}`} />
+                  <source
+                    src={mediaFile.location}
+                    type={`video/${
+                      mediaFile.fileExtension === "mov"
+                        ? "quicktime"
+                        : mediaFile.fileExtension.toLowerCase()
+                    }`}
+                  />
                   Your browser does not support the video tag.
                 </video>
               </Box>
-            ) : (mediaTypeConfig?.baseType === 'BaseVideo' || mediaFile.__t === 'BaseVideo') ? (
+            ) : mediaTypeConfig?.baseType === "BaseVideo" ||
+              mediaFile.__t === "BaseVideo" ? (
               // Fallback for videos when file extension is not recognized
-              <Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#000' }}>
-                <video 
-                  controls 
+              <Box
+                sx={{
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  background: "#000",
+                }}
+              >
+                <video
+                  controls
                   autoPlay={false}
-                  style={{ width: '100%', maxHeight: isMobile ? '300px' : '600px' }} 
-                  poster={mediaFile.metadata?.v_thumbnail} 
+                  style={{
+                    width: "100%",
+                    maxHeight: isMobile ? "300px" : "600px",
+                  }}
+                  poster={mediaFile.metadata?.v_thumbnail}
                 >
                   <source src={mediaFile.location} />
                   Your browser does not support the video tag.
                 </video>
               </Box>
-            ) : mediaFile.fileExtension && ['mp3', 'wav', 'ogg', 'aac', 'flac'].includes(mediaFile.fileExtension.toLowerCase()) ? (
+            ) : mediaFile.fileExtension &&
+              ["mp3", "wav", "ogg", "aac", "flac"].includes(
+                mediaFile.fileExtension.toLowerCase()
+              ) ? (
               // Audio preview
-              <Box sx={{ width: '100%', p: isMobile ? 2 : 3, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-                <Box sx={{ mb: isMobile ? 1 : 2, fontSize: isMobile ? '2rem' : '3rem', color: 'primary.main' }}>
+              <Box
+                sx={{
+                  width: "100%",
+                  p: isMobile ? 2 : 3,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  flexDirection: "column",
+                }}
+              >
+                <Box
+                  sx={{
+                    mb: isMobile ? 1 : 2,
+                    fontSize: isMobile ? "2rem" : "3rem",
+                    color: "primary.main",
+                  }}
+                >
                   <FaFileAudio />
                 </Box>
-                <audio controls style={{ width: '100%' }}>
-                  <source src={mediaFile.location} type={`audio/${mediaFile.fileExtension.toLowerCase()}`} />
+                <audio controls style={{ width: "100%" }}>
+                  <source
+                    src={mediaFile.location}
+                    type={`audio/${mediaFile.fileExtension.toLowerCase()}`}
+                  />
                   Your browser does not support the audio tag.
                 </audio>
               </Box>
-            ) : mediaFile.fileExtension === 'pdf' ? (
+            ) : mediaFile.fileExtension === "pdf" ? (
               // PDF preview
-              <Box sx={{ width: '100%', p: isMobile ? 2 : 3, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-                <Box sx={{ mb: isMobile ? 1 : 2, fontSize: isMobile ? '2rem' : '3rem', color: 'error.main' }}>
-                  <FaFilePdf />
-                </Box>
-                <iframe 
+              <Box
+                sx={{
+                  width: "100%",
+                  p: isMobile ? 2 : 3,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  flexDirection: "column",
+                }}
+              >
+                <iframe
                   src={`${mediaFile.location}#toolbar=0&navpanes=0`}
-                  title={mediaFile.title || 'PDF Document'}
-                  style={{ width: '100%', height: isMobile ? '300px' : '600px', border: 'none' }}
+                  title={mediaFile.title || "PDF Document"}
+                  style={{
+                    width: "100%",
+                    height: isMobile ? "300px" : "600px",
+                    border: "none",
+                  }}
                 />
               </Box>
-            ) : mediaFile.fileExtension && ['doc', 'docx'].includes(mediaFile.fileExtension.toLowerCase()) ? (
+            ) : mediaFile.fileExtension &&
+              ["doc", "docx"].includes(
+                mediaFile.fileExtension.toLowerCase()
+              ) ? (
               // Word document (no preview, just icon)
-              <Box sx={{ width: '100%', p: isMobile ? 2 : 3, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-                <Box sx={{ mb: isMobile ? 1 : 2, fontSize: isMobile ? '2rem' : '3rem', color: 'primary.main' }}>
+              <Box
+                sx={{
+                  width: "100%",
+                  p: isMobile ? 2 : 3,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  flexDirection: "column",
+                }}
+              >
+                <Box
+                  sx={{
+                    mb: isMobile ? 1 : 2,
+                    fontSize: isMobile ? "2rem" : "3rem",
+                    color: "primary.main",
+                  }}
+                >
                   <FaFileWord />
                 </Box>
                 <Typography variant={isMobile ? "body2" : "body1"}>
                   This is a Word document. Please download to view.
                 </Typography>
-                <Button 
-                  variant="contained" 
-                  color="primary" 
+                <Button
+                  variant="contained"
+                  color="primary"
                   startIcon={<FaDownload />}
-                  onClick={() => window.open(mediaFile.location, '_blank')}
+                  onClick={() => window.open(mediaFile.location, "_blank")}
                   sx={{ mt: isMobile ? 1 : 2 }}
                   size={isMobile ? "small" : "medium"}
                 >
                   Download Document
                 </Button>
               </Box>
-            ) : mediaFile.fileExtension && ['xls', 'xlsx'].includes(mediaFile.fileExtension.toLowerCase()) ? (
+            ) : mediaFile.fileExtension &&
+              ["xls", "xlsx"].includes(
+                mediaFile.fileExtension.toLowerCase()
+              ) ? (
               // Excel document (no preview, just icon)
-              <Box sx={{ width: '100%', p: isMobile ? 2 : 3, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-                <Box sx={{ mb: isMobile ? 1 : 2, fontSize: isMobile ? '2rem' : '3rem', color: 'success.main' }}>
+              <Box
+                sx={{
+                  width: "100%",
+                  p: isMobile ? 2 : 3,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  flexDirection: "column",
+                }}
+              >
+                <Box
+                  sx={{
+                    mb: isMobile ? 1 : 2,
+                    fontSize: isMobile ? "2rem" : "3rem",
+                    color: "success.main",
+                  }}
+                >
                   <FaFileExcel />
                 </Box>
                 <Typography variant={isMobile ? "body2" : "body1"}>
                   This is an Excel spreadsheet. Please download to view.
                 </Typography>
-                <Button 
-                  variant="contained" 
-                  color="primary" 
+                <Button
+                  variant="contained"
+                  color="primary"
                   startIcon={<FaDownload />}
-                  onClick={() => window.open(mediaFile.location, '_blank')}
+                  onClick={() => window.open(mediaFile.location, "_blank")}
                   sx={{ mt: isMobile ? 1 : 2 }}
                   size={isMobile ? "small" : "medium"}
                 >
@@ -448,20 +682,35 @@ const MediaDetail: React.FC = () => {
               </Box>
             ) : (
               // Generic file (no preview, just icon)
-              <Box sx={{ width: '100%', p: isMobile ? 2 : 3, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-                <Box sx={{ mb: isMobile ? 1 : 2, fontSize: isMobile ? '2rem' : '3rem', color: 'text.secondary' }}>
+              <Box
+                sx={{
+                  width: "100%",
+                  p: isMobile ? 2 : 3,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  flexDirection: "column",
+                }}
+              >
+                <Box
+                  sx={{
+                    mb: isMobile ? 1 : 2,
+                    fontSize: isMobile ? "2rem" : "3rem",
+                    color: "text.secondary",
+                  }}
+                >
                   <FaFile />
                 </Box>
                 <Typography variant={isMobile ? "body2" : "body1"}>
-                  {mediaFile.fileExtension 
-                    ? `This is a ${mediaFile.fileExtension.toUpperCase()} file. Please download to view.` 
-                    : 'File preview not available.'}
+                  {mediaFile.fileExtension
+                    ? `This is a ${mediaFile.fileExtension.toUpperCase()} file. Please download to view.`
+                    : "File preview not available."}
                 </Typography>
-                <Button 
-                  variant="contained" 
-                  color="primary" 
+                <Button
+                  variant="contained"
+                  color="primary"
                   startIcon={<FaDownload />}
-                  onClick={() => window.open(mediaFile.location, '_blank')}
+                  onClick={() => window.open(mediaFile.location, "_blank")}
                   sx={{ mt: isMobile ? 1 : 2 }}
                   size={isMobile ? "small" : "medium"}
                 >
@@ -471,66 +720,28 @@ const MediaDetail: React.FC = () => {
             )}
           </Box>
           <Box className="media-preview-footer">
-            <Box className="tags-container">
-              Tags: {mediaFile.metadata?.tags && mediaFile.metadata.tags.length > 0 ? (
-                <>
-                  {/* Sort tags to display default tags first */}
-                  {mediaFile.metadata.tags.slice().sort((a, b) => {
-                    const aIsDefault = mediaTypeForEdit.defaultTags?.includes(a) || false;
-                    const bIsDefault = mediaTypeForEdit.defaultTags?.includes(b) || false;
-                    if (aIsDefault === bIsDefault) return 0;
-                    return aIsDefault ? -1 : 1;
-                  }).map((tag, index) => {
-                    const isDefaultTag = mediaTypeForEdit.defaultTags?.includes(tag);
-                    return (
-                      <Chip 
-                        key={index} 
-                        size="small" 
-                        label={tag}
-                        className={isDefaultTag ? "default-tag" : "custom-tag"}
-                      />
-                    );
-                  })}
-                </>
-              ) : (
-                <Typography variant="body2" sx={{ opacity: 0.6, fontStyle: 'italic' }}>No tags</Typography>
-              )}
-            </Box>
-            <Box className="media-actions">
-              <Box className="action-buttons">
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<FaDownload />}
-                  onClick={() => window.open(mediaFile.location, '_blank')}
-                  size={isMobile ? "small" : "medium"}
-                >
-                  Download
-                </Button>
-                
-                {(userRole === 'admin' || userRole === 'superAdmin') && (
-                  <Button 
-                    variant="outlined" 
-                    color="primary" 
-                    startIcon={<EditIcon />}
-                    onClick={() => setIsEditing(true)}
-                    size={isMobile ? "small" : "medium"}
-                  >
-                    Edit
-                  </Button>
-                )}
-              </Box>
-            </Box>
+            <MediaDetail.Tags
+              tags={mediaFile.metadata?.tags}
+              defaultTags={mediaTypeForEdit.defaultTags}
+            />
+            <MediaDetail.Actions
+              onDownload={() => window.open(mediaFile.location, "_blank")}
+              onEdit={() => setIsEditing(true)}
+              isEditingEnabled={
+                userRole === "admin" || userRole === "superAdmin"
+              }
+              isMobile={isMobile}
+            />
           </Box>
         </Box>
 
         {mediaFile && (
           <div className="media-information-container">
-            <MediaInformation 
-              mediaFile={mediaFile} 
-              mediaTypeConfig={mediaTypeConfig} 
-              baseFields={baseFields} 
-              getMetadataField={getMetadataField} 
+            <MediaInformation
+              mediaFile={mediaFile}
+              mediaTypeConfig={mediaTypeConfig}
+              baseFields={baseFields}
+              getMetadataField={getMetadataField}
             />
           </div>
         )}
@@ -545,10 +756,16 @@ const MediaDetail: React.FC = () => {
           />
         )}
       </Box>
-      
+
       <ToastContainer position="top-center" />
     </motion.div>
   );
 };
+
+// Attach compound component subcomponent
+MediaDetail.Information = MediaInformation;
+MediaDetail.Preview = MediaDetailPreview;
+MediaDetail.Tags = MediaDetailTags;
+MediaDetail.Actions = MediaDetailActions;
 
 export default MediaDetail;

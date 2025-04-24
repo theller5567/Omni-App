@@ -7,7 +7,6 @@ import {
   DialogActions,
   TextField,
   Button,
-  Grid,
   Chip,
   IconButton,
   FormControl,
@@ -23,7 +22,8 @@ import {
   AccordionDetails,
   useMediaQuery,
   Theme,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -70,6 +70,8 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
 
   const [newTag, setNewTag] = useState('');
+  // Track save in progress
+  const [isSaving, setIsSaving] = useState(false);
   const { control, handleSubmit, watch, setValue } = useForm<FormValues>({
     defaultValues: {
       title: mediaFile.title || '',
@@ -171,8 +173,9 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   // Replace tagWarningOpen with a state to track unsaved tag warning
   const [unsavedTag, setUnsavedTag] = useState<string | null>(null);
 
-  // Before submission, ensure all default tags are included
   const onSubmit = async (data: FormValues) => {
+    if (!mediaFile) return;
+
     console.log('EditMediaDialog - Form submission data:', {
       formData: data,
       originalMediaFile: mediaFile
@@ -180,13 +183,14 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
 
     // Check if there's an unpressed tag in the input
     if (newTag.trim()) {
-      // Set the unsaved tag to show the inline notification
       setUnsavedTag(newTag.trim());
       return; // Stop submission flow until user decides
     }
-    
-    // If no unsaved tag, proceed with normal submission
-    handleFormSubmission(data);
+
+    // Proceed with normal async save, showing spinner
+    setIsSaving(true);
+    await handleFormSubmission(data);
+    setIsSaving(false);
   };
 
   // Add these handlers for the inline alert buttons
@@ -442,11 +446,15 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
             </Alert>
           )}
 
-          {/* Basic Information Section */}
+          {/* Basic Information Section (CSS grid) */}
           <Box className="form-section" sx={{ marginTop: isMobile ? 2 : 4, padding: 2, marginBottom: 0 }}>
             <Typography variant={isMobile ? "subtitle1" : "h6"} gutterBottom>Basic Information</Typography>
-            <Grid container spacing={isMobile ? 2 : 4}>
-              <Grid item xs={12} sm={6}>
+            <Box sx={{
+              display: 'grid',
+              gap: isMobile ? 2 : 4,
+              gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr'
+            }}>
+              <Box>
                 <Controller
                   name="title"
                   control={control}
@@ -459,8 +467,8 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                     />
                   )}
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
+              </Box>
+              <Box>
                 <Controller
                   name="fileName"
                   control={control}
@@ -473,8 +481,8 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                     />
                   )}
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
+              </Box>
+              <Box>
                 <Controller
                   name="altText"
                   control={control}
@@ -487,8 +495,8 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                     />
                   )}
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
+              </Box>
+              <Box>
                 <Controller
                   name="visibility"
                   control={control}
@@ -502,8 +510,8 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                     </FormControl>
                   )}
                 />
-              </Grid>
-              <Grid item xs={12}>
+              </Box>
+              <Box sx={{ gridColumn: '1 / -1' }}>
                 <Controller
                   name="description"
                   control={control}
@@ -518,26 +526,26 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                     />
                   )}
                 />
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </Box>
 
           {/* Custom Fields Section */}
           {mediaType.fields.length > 0 && (
             <Box className="form-section" sx={{ marginTop: isMobile ? 2 : 4, padding: 2 }}>
               <Typography variant={isMobile ? "subtitle1" : "h6"} gutterBottom>{mediaType.name} Fields</Typography>
-              <Grid container spacing={isMobile ? 2 : 4}>
+              <Box sx={{ display: 'grid', gap: isMobile ? 2 : 4, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
                 {mediaType.fields.map((field) => (
-                  <Grid item xs={12} sm={6} key={field.name}>
+                  <Box key={field.name}>
                     <Controller
                       name={`customFields.${field.name}`}
                       control={control}
                       defaultValue={mediaFile.customFields?.[field.name] || ''}
                       render={({ field: { value, onChange } }) => renderCustomField(field, value, onChange)}
                     />
-                  </Grid>
+                  </Box>
                 ))}
-              </Grid>
+              </Box>
             </Box>
           )}
 
@@ -546,8 +554,8 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
             <Typography variant="caption" color="text.secondary" sx={{ mb: isMobile ? 1 : 2, display: 'block', fontSize: isMobile ? '0.7rem' : '0.75rem' }}>
               Default tags from the media type cannot be removed here. They can only be modified by superAdmins in the Media Types settings.
             </Typography>
-            <Grid container spacing={isMobile ? 2 : 4}>
-              <Grid item xs={12}>
+            <Box sx={{ display: 'grid', gap: isMobile ? 2 : 4 }}>
+              <Box>
                 <TextField
                   label="Add Tags"
                   value={newTag}
@@ -578,8 +586,8 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                     );
                   })}
                 </Box>
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </Box>
 
           {/* Video Thumbnail Section */}
@@ -663,8 +671,9 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
           variant="contained"
           color="primary"
           size={isMobile ? "small" : "medium"}
+          disabled={isSaving}
         >
-          Save Changes
+          {isSaving ? <CircularProgress size={20} /> : 'Save Changes'}
         </Button>
       </DialogActions>
     </Dialog>

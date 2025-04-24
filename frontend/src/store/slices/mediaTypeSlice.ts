@@ -69,30 +69,26 @@ export const initializeMediaTypes = createAsyncThunk(
       count: state.mediaTypes.mediaTypes.length
     });
     
-    // Only skip if we have successfully loaded data AND we have actual media type items
-    if (state.mediaTypes.status === 'succeeded' && state.mediaTypes.mediaTypes.length > 0) {
-      console.log('Skipping media types fetch - already loaded successfully with', state.mediaTypes.mediaTypes.length, 'items');
-      return state.mediaTypes.mediaTypes;
-    }
-    
-    // REMOVE OR MODIFY THIS CONDITION to allow empty data to be fetched
-    // even if another request is in progress
-    /*
+    // Only skip if we're already loading data AND we already have data
     if (state.mediaTypes.status === 'loading') {
-      console.log('Skipping media types fetch - request already in progress');
-      return state.mediaTypes.mediaTypes;
-    }
-    */
-    
-    // Instead, allow fetch if we don't have data yet
-    if (state.mediaTypes.status === 'loading' && state.mediaTypes.mediaTypes.length > 0) {
-      console.log('Skipping media types fetch - request already in progress with existing data');
-      return state.mediaTypes.mediaTypes;
+      if (state.mediaTypes.mediaTypes.length > 0) {
+        console.log('Skipping media types fetch - request already in progress with data');
+        return state.mediaTypes.mediaTypes;
+      }
+      console.log('Continuing media types fetch - no data yet even though request in progress');
     }
     
     try {
       console.log('Fetching media types from backend');
-      const response = await axios.get<MediaType[]>(`${env.BASE_URL}/api/media-types`);
+      // Add timestamp to prevent caching issues
+      const timestamp = new Date().getTime();
+      const response = await axios.get<MediaType[]>(`${env.BASE_URL}/api/media-types?_t=${timestamp}`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       
       // Log the response for debugging
       console.log(`Media types API returned ${response.data.length} items:`, 
@@ -142,9 +138,23 @@ export const checkMediaTypeUsage = createAsyncThunk(
   'mediaTypes/checkUsage',
   async (id: string, { rejectWithValue }) => {
     try {
-      const response = await axios.get<CountResponse>(`${env.BASE_URL}/api/media-types/${id}/usage`);
+      // Add timestamp to URL to force fresh response
+      const timestamp = new Date().getTime();
+      const response = await axios.get<CountResponse>(
+        `${env.BASE_URL}/api/media-types/${id}/usage?_t=${timestamp}`,
+        {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
+      );
+      
+      console.log(`Media type ${id} usage count:`, response.data.count);
       return { id, count: response.data.count };
     } catch (error: any) {
+      console.error(`Error checking usage for media type ${id}:`, error);
       return rejectWithValue(error.response?.data?.message || 'Failed to check media type usage');
     }
   }
@@ -191,6 +201,48 @@ export const updateMediaType = createAsyncThunk<MediaType, {id: string, updates:
     } catch (error: any) {
       console.error('Error in updateMediaType thunk:', error);
       return rejectWithValue(error.response?.data?.message || 'Failed to update media type');
+    }
+  }
+);
+
+// Add the new thunk to fetch media types with usage counts
+export const fetchMediaTypesWithUsageCounts = createAsyncThunk(
+  'mediaTypes/fetchWithUsageCounts',
+  async (_, { dispatch }) => {
+    console.log('fetchMediaTypesWithUsageCounts - Starting optimized fetch');
+    
+    try {
+      // Use the new dedicated endpoint that returns all data in a single request
+      const timestamp = new Date().getTime();
+      const response = await axios.get<MediaType[]>(
+        `${env.BASE_URL}/api/media-types/with-usage-counts?_t=${timestamp}`,
+        {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
+      );
+      
+      console.log(`Received ${response.data.length} media types with usage counts in a single request`);
+      
+      // Process the response data
+      const processedData = response.data.map(mediaType => ({
+        ...mediaType,
+        usageCount: mediaType.usageCount || 0,
+        status: mediaType.status || 'active',
+        replacedBy: mediaType.replacedBy || null,
+        isDeleting: mediaType.isDeleting || false
+      }));
+      
+      return processedData;
+    } catch (error) {
+      console.error('Error in fetchMediaTypesWithUsageCounts:', error);
+      
+      // Fallback to the old method if the new endpoint fails
+      console.log('Falling back to separate fetch method');
+      return dispatch(initializeMediaTypes()).unwrap();
     }
   }
 );
@@ -252,6 +304,23 @@ const mediaTypeSlice = createSlice({
         state.status = 'failed';
         state.error = action.error.message || 'Unknown error';
       })
+      .addCase(fetchMediaTypesWithUsageCounts.pending, (state) => {
+        console.log('Optimized media types fetch - PENDING');
+        state.status = 'loading';
+        state.error = null;
+      })
+      .addCase(fetchMediaTypesWithUsageCounts.fulfilled, (state, action) => {
+        console.log('Optimized media types fetch - FULFILLED with', action.payload.length, 'items');
+        state.status = 'succeeded';
+        state.mediaTypes = action.payload;
+        state.error = null;
+        console.log('Media types state updated to', state.mediaTypes.length, 'items with counts');
+      })
+      .addCase(fetchMediaTypesWithUsageCounts.rejected, (state, action) => {
+        console.log('Optimized media types fetch - REJECTED', action.error);
+        state.status = 'failed';
+        state.error = action.error.message || 'Unknown error';
+      })
       .addCase(deprecateMediaType.fulfilled, (state, action) => {
         const index = state.mediaTypes.findIndex(type => type._id === action.payload._id);
         if (index !== -1) {
@@ -266,6 +335,8 @@ const mediaTypeSlice = createSlice({
       })
       .addCase(deleteMediaType.fulfilled, (state, action: PayloadAction<string>) => {
         state.mediaTypes = state.mediaTypes.filter(type => type._id !== action.payload);
+        // Set status to idle to force a refresh on next initialization
+        state.status = 'idle';
       })
       .addCase(checkMediaTypeUsage.fulfilled, (state, action) => {
         const { id, count } = action.payload;
@@ -295,12 +366,16 @@ const mediaTypeSlice = createSlice({
             state.mediaTypes[targetIndex] = action.payload.target;
           }
         }
+        // Set status to idle to force a refresh on next initialization
+        state.status = 'idle';
       })
       .addCase(updateMediaType.fulfilled, (state, action: PayloadAction<MediaType>) => {
         const index = state.mediaTypes.findIndex(type => type._id === action.payload._id);
         if (index !== -1) {
           state.mediaTypes[index] = action.payload;
         }
+        // Set status to idle to force a refresh on next initialization
+        state.status = 'idle';
       });
   },
 });
