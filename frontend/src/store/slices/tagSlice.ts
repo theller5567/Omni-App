@@ -69,13 +69,20 @@ export const fetchTags = createAsyncThunk<Tags[], void>(
   async (_, { dispatch, getState }) => {
     const state = getState() as { tags: TagsState };
     
-    // Skip fetching if data is already loaded and recent (within 5 minutes)
+    // Skip if a fetch operation is already in progress
+    const hasPendingFetch = state.tags.pendingOperations.some(id => id.startsWith('fetch-'));
+    if (hasPendingFetch) {
+      console.log('Skipping tag fetch - already in progress');
+      return state.tags.tags;
+    }
+    
+    // Skip fetching if data is already loaded and recent
     const now = Date.now();
     if (state.tags.status === 'succeeded' && 
         state.tags.tags.length > 0 && 
         state.tags.lastFetchTime && 
-        now - state.tags.lastFetchTime < 5 * 60 * 1000) {
-      console.log('Skipping tag fetch - already loaded recently');
+        now - state.tags.lastFetchTime < 3000) {
+      console.log('Skipping tag fetch - already loaded recently (less than 3 seconds ago)');
       return state.tags.tags;
     }
     

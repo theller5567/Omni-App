@@ -103,8 +103,24 @@ const TagCategoryManager: React.FC = () => {
   }, []);
   
   // Optimized fetch function with debounce and caching
-  const fetchCategories = useCallback(async () => {
+  const fetchCategories = useCallback(async (force = false) => {
     if (operationInProgressRef.current) return;
+    
+    // Skip if categories already exist and we're not forcing a refresh
+    if (!force && tagCategories.length > 0) {
+      return;
+    }
+    
+    // Get the current lastFetchTime from the Redux store
+    const state = (dispatch as any).getState?.();
+    const lastFetchTime = state?.tagCategories?.lastFetchTime || 0;
+    const now = Date.now();
+    
+    // Skip if data was fetched recently (within last 3 seconds) and we're not forcing
+    if (!force && lastFetchTime && now - lastFetchTime < 3000) {
+      console.log('TagCategoryManager: Skipping fetch - data was fetched recently');
+      return;
+    }
     
     try {
       operationInProgressRef.current = true;
@@ -120,7 +136,7 @@ const TagCategoryManager: React.FC = () => {
         operationInProgressRef.current = false;
       }
     }
-  }, [dispatch, showToastOnce]);
+  }, [dispatch, showToastOnce, tagCategories.length]);
   
   
   // Fetch categories on mount

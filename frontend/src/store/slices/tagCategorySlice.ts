@@ -106,7 +106,26 @@ const generateOperationId = (type: string, id?: string) => {
 
 export const fetchTagCategories = createAsyncThunk<TagCategory[], { includeInactive?: boolean } | undefined>(
   'tagCategories/fetchAll',
-  async (options, { rejectWithValue, dispatch }) => {
+  async (options, { rejectWithValue, dispatch, getState }) => {
+    // Get current state to check for in-progress operations and last fetch time
+    const state = getState() as { tagCategories: TagCategoryState };
+    const now = Date.now();
+    
+    // Skip if a fetch operation is already in progress
+    const hasPendingFetch = state.tagCategories.pendingOperations.some(id => id.startsWith('fetch-'));
+    if (hasPendingFetch) {
+      console.log('Skipping fetch tag categories - already in progress');
+      return state.tagCategories.tagCategories;
+    }
+    
+    // Skip if data was fetched recently (within last 3 seconds)
+    if (state.tagCategories.lastFetchTime && 
+        now - state.tagCategories.lastFetchTime < 3000 && 
+        state.tagCategories.tagCategories.length > 0) {
+      console.log('Skipping fetch tag categories - fetched recently');
+      return state.tagCategories.tagCategories;
+    }
+    
     const operationId = generateOperationId('fetch');
     dispatch(tagCategorySlice.actions.operationStarted({
       type: 'fetch',

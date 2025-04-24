@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "../store/store";
 import { fetchTags, addTag, updateTag, deleteTag } from "../store/slices/tagSlice";
@@ -34,7 +34,8 @@ import {
   CardContent,
   Stack,
   CircularProgress,
-  alpha
+  alpha,
+  LinearProgress
 } from "@mui/material";
 import { FaEdit, FaTrash, FaPlus, FaSearch, FaTimes, FaTag, FaRedo } from "react-icons/fa";
 import { motion } from "framer-motion";
@@ -49,44 +50,67 @@ const AccountTags: React.FC = () => {
   const [newTagName, setNewTagName] = useState("");
   const [editingTag, setEditingTag] = useState<{ id: string; name: string } | null>(null);
   const [tagToDelete, setTagToDelete] = useState<string | null>(null);
-  const { tags, status } = useSelector((state: RootState) => state.tags);
-  const { tagCategories } = useSelector((state: RootState) => state.tagCategories);
+  const { tags, status: tagStatus } = useSelector((state: RootState) => state.tags);
+  const { tagCategories, status: categoryStatus } = useSelector((state: RootState) => state.tagCategories);
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   const [tagError, setTagError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [page, setPage] = useState(1);
-  const [forceRefresh, setForceRefresh] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastFetchTime, setLastFetchTime] = useState(0);
+
+  // Combine loading states from tag and category slices
+  const isLoading = useMemo(() => 
+    tagStatus === 'loading' || 
+    categoryStatus === 'loading' || 
+    isResetting || 
+    isRefreshing, 
+  [tagStatus, categoryStatus, isResetting, isRefreshing]);
 
   // Memoized value for total tag count
   const totalTagCount = useMemo(() => tags.length, [tags]);
 
-  // Force a refresh of data on mount
-  useEffect(() => {
-    // Force refresh tags and tag categories when the component mounts
-    const fetchData = async () => {
-      try {
-        setForceRefresh(true);
-        // Force fetch tags
-        await dispatch(fetchTags()).unwrap();
-        // And then tag categories
-        await dispatch(fetchTagCategories()).unwrap();
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setForceRefresh(false);
-      }
-    };
+  // Fetch data function with sequential fetching to avoid parallel requests
+  const fetchData = useCallback(async (force = false) => {
+    if (isLoading && !force) return;
     
-    fetchData();
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (status === 'idle' && tags.length === 0) {
-      dispatch(fetchTags());
+    const currentTime = Date.now();
+    // Don't fetch again if we fetched recently (within 3 seconds)
+    if (!force && 
+        lastFetchTime && 
+        currentTime - lastFetchTime < 3000) {
+      console.log('Skipping data fetch - fetched recently');
+      return;
     }
-  }, [dispatch, status, tags.length]);
+    
+    try {
+      setIsRefreshing(true);
+      setLastFetchTime(currentTime);
+      
+      // Fetch tags first, then categories - sequential to avoid parallel requests
+      await dispatch(fetchTags()).unwrap();
+      await dispatch(fetchTagCategories()).unwrap();
+    } catch (error) {
+      console.error('Error fetching tag data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [dispatch, isLoading, lastFetchTime]);
 
+  // Initial data fetch only if empty - using a single useEffect
+  useEffect(() => {
+    // Only fetch if we don't have data yet
+    const needsTagsFetch = tags.length === 0 && tagStatus !== 'loading';
+    const needsCategoriesFetch = tagCategories.length === 0 && categoryStatus !== 'loading';
+    
+    if (needsTagsFetch || needsCategoriesFetch) {
+      console.log('Initial data fetch for AccountTags');
+      fetchData();
+    }
+  }, [fetchData, tags.length, tagCategories.length, tagStatus, categoryStatus]);
+
+  // Tag validation logic
   useEffect(() => {
     if (newTagName) {
       const validation = validateTag(newTagName);
@@ -104,107 +128,153 @@ const AccountTags: React.FC = () => {
     }
   }, [newTagName, tags]);
 
+  // Reset tag data function
   const handleResetData = async () => {
+    if (isResetting) return;
+    
     try {
       setIsResetting(true);
-      await dispatch(resetTagCategories());
-      toast.success('Tag categories state reset successfully');
-      window.location.reload(); // Force a full page reload to clear everything
+      
+      // Dispatch reset without unwrap since it's not a thunk
+      dispatch(resetTagCategories());
+      
+      // Refresh data silently after reset
+      await fetchData(true);
+      
+      toast.success('Tag data reset successfully');
     } catch (err) {
       console.error('Failed to reset data:', err);
-      toast.error('Failed to reset tag categories');
+      toast.error('Failed to reset tag data');
     } finally {
       setIsResetting(false);
     }
   };
 
-  const handleCreateTag = (e: React.FormEvent) => {
+  // Create tag handler - using memoized validation
+  const handleCreateTag = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    if (newTagName.trim() && validateTag(newTagName).valid) {
-      // Check for duplicates one more time before submitting
-      if (tags.some(tag => areTagsEquivalent(tag.name, newTagName))) {
-        setTagError(`Tag "${newTagName}" already exists`);
-        return;
-      }
-      
-      dispatch(addTag(normalizeTag(newTagName)));
-      setNewTagName("");
+    if (!newTagName.trim() || tagError) return;
+    
+    // Final validation check
+    const validation = validateTag(newTagName);
+    if (!validation.valid) {
+      setTagError(validation.message || 'Invalid tag');
+      return;
     }
-  };
+    
+    // Check for duplicates
+    if (tags.some(tag => areTagsEquivalent(tag.name, newTagName))) {
+      setTagError(`Tag "${newTagName}" already exists`);
+      return;
+    }
+    
+    dispatch(addTag(normalizeTag(newTagName)))
+      .unwrap()
+      .then(() => {
+        setNewTagName("");
+        toast.success('Tag created successfully');
+      })
+      .catch(error => {
+        toast.error(`Failed to create tag: ${error || 'Unknown error'}`);
+      });
+  }, [dispatch, newTagName, tagError, tags]);
 
-  const handleKeyPress = (event: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((event: React.KeyboardEvent) => {
     if (event.key === 'Enter') {
       event.preventDefault();
       handleCreateTag(event);
     }
-  };
+  }, [handleCreateTag]);
 
-  const handleDeleteTag = () => {
-    if (tagToDelete) {
-      dispatch(deleteTag(tagToDelete))
-        .unwrap()
-        .then(() => {
-          toast.success('Tag deleted successfully');
-          setTagToDelete(null);
-        })
-        .catch((error) => {
-          console.error('Failed to delete tag:', error);
-          toast.error(`Failed to delete tag: ${error || 'Unknown error'}`);
-          setTagToDelete(null);
-        });
+  const handleDeleteTag = useCallback(() => {
+    if (!tagToDelete) return;
+    
+    dispatch(deleteTag(tagToDelete))
+      .unwrap()
+      .then(() => {
+        toast.success('Tag deleted successfully');
+        setTagToDelete(null);
+      })
+      .catch((error) => {
+        console.error('Failed to delete tag:', error);
+        toast.error(`Failed to delete tag: ${error || 'Unknown error'}`);
+        setTagToDelete(null);
+      });
+  }, [dispatch, tagToDelete]);
+
+  const handleUpdateTag = useCallback(() => {
+    if (!editingTag || !editingTag.name.trim()) return;
+    
+    const validation = validateTag(editingTag.name);
+    if (!validation.valid) {
+      toast.error(validation.message || 'Invalid tag name');
+      return;
     }
-  };
-
-  const handleUpdateTag = () => {
-    if (editingTag && editingTag.name.trim()) {
-      const validation = validateTag(editingTag.name);
-      
-      // Check for duplicates, but exclude current tag from the check
-      const hasDuplicate = tags.some(tag => 
-        tag._id !== editingTag.id && 
-        areTagsEquivalent(tag.name, editingTag.name)
-      );
-      
-      if (hasDuplicate) {
-        toast.error(`Tag "${editingTag.name}" already exists`);
-        return;
-      }
-      
-      if (validation.valid) {
-        dispatch(updateTag({
-          id: editingTag.id,
-          name: normalizeTag(editingTag.name)
-        }));
+    
+    // Skip update if name hasn't changed
+    const originalTag = tags.find(t => t._id === editingTag.id);
+    if (originalTag && originalTag.name === editingTag.name) {
+      setEditingTag(null);
+      return;
+    }
+    
+    // Check for duplicates, but exclude current tag from the check
+    const hasDuplicate = tags.some(tag => 
+      tag._id !== editingTag.id && 
+      areTagsEquivalent(tag.name, editingTag.name)
+    );
+    
+    if (hasDuplicate) {
+      toast.error(`Tag "${editingTag.name}" already exists`);
+      return;
+    }
+    
+    dispatch(updateTag({
+      id: editingTag.id,
+      name: normalizeTag(editingTag.name)
+    }))
+      .unwrap()
+      .then(() => {
+        toast.success('Tag updated successfully');
         setEditingTag(null);
-      }
-    }
-  };
+      })
+      .catch(error => {
+        toast.error(`Failed to update tag: ${error || 'Unknown error'}`);
+      });
+  }, [dispatch, editingTag, tags]);
 
+  // Memoized filtered tags to prevent recalculation on each render
   const filteredTags = useMemo(() => {
     return tags.filter((tag) =>
       normalizeTagForComparison(tag.name).includes(normalizeTagForComparison(searchTerm))
     );
   }, [tags, searchTerm]);
 
-  // Pagination
+  // Pagination logic
   const totalPages = Math.ceil(filteredTags.length / TAGS_PER_PAGE);
   const paginatedTags = useMemo(() => {
     const startIndex = (page - 1) * TAGS_PER_PAGE;
     return filteredTags.slice(startIndex, startIndex + TAGS_PER_PAGE);
   }, [filteredTags, page]);
 
-  const handleChangePage = (_event: React.ChangeEvent<unknown>, value: number) => {
+  const handleChangePage = useCallback((_event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
-  };
+  }, []);
+
+  const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  }, []);
+
+  // Clear search handler
+  const handleClearSearch = useCallback(() => {
+    setSearchTerm('');
+    setPage(1); // Reset to first page when search changes
+  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
     exit: { opacity: 0, y: 20, transition: { duration: 0.3 } },
-  };
-
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
   };
 
   return (
@@ -223,26 +293,22 @@ const AccountTags: React.FC = () => {
           <Button
             variant="outlined"
             color="warning"
-            startIcon={<FaRedo />}
+            startIcon={isResetting ? <CircularProgress size={16} color="inherit" /> : <FaRedo />}
             onClick={handleResetData}
-            disabled={isResetting || forceRefresh}
+            disabled={isLoading}
             size="small"
             sx={{ height: '36px' }}
           >
-            {isResetting || forceRefresh ? 'Refreshing data...' : 'Reset All Tag Data'}
+            {isResetting ? 'Resetting...' : 'Reset Tag Data'}
           </Button>
         </Box>
         
-        {forceRefresh && (
-          <Alert severity="info" sx={{ mb: 3 }}>
-            Loading tag data...
-          </Alert>
+        {isLoading && (
+          <Box sx={{ width: '100%', mb: 3 }}>
+            <LinearProgress />
+          </Box>
         )}
 
-        <Alert severity="info" sx={{ mb: 3 }}>
-          If you're experiencing issues with tag categories not displaying correctly or getting errors about categories already existing, try the "Reset All Tag Data" button.
-        </Alert>
-        
         <Paper elevation={3} sx={{ borderRadius: '12px', bgcolor: 'background.paper', overflow: 'hidden' }}>
           <Tabs 
             value={activeTab} 
@@ -293,7 +359,7 @@ const AccountTags: React.FC = () => {
                     type="submit"
                     variant="contained"
                     color="primary"
-                    disabled={!newTagName.trim() || (newTagName ? !validateTag(newTagName).valid : false) || status === 'loading'}
+                    disabled={!newTagName.trim() || !!tagError || isLoading}
                     sx={{ 
                       height: '40px', 
                       whiteSpace: 'nowrap',
@@ -312,12 +378,22 @@ const AccountTags: React.FC = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                   <Typography variant="h6">Manage Existing Tags</Typography>
-                  <Chip 
-                    label={`${filteredTags.length} tags`} 
-                    color="primary" 
-                    variant="outlined" 
-                    size="small" 
-                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip 
+                      label={`${filteredTags.length} tags`} 
+                      color="primary" 
+                      variant="outlined" 
+                      size="small" 
+                    />
+                    <IconButton 
+                      onClick={() => fetchData(true)}
+                      size="small"
+                      disabled={isLoading}
+                      title="Refresh tags"
+                    >
+                      <FaRedo size={14} />
+                    </IconButton>
+                  </Box>
                 </Box>
                 
                 <Paper
@@ -340,17 +416,20 @@ const AccountTags: React.FC = () => {
                     sx={{ ml: 1, flex: 1 }}
                     placeholder="Search tags"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      if (page !== 1) setPage(1);  // Reset to first page on search
+                    }}
                     inputProps={{ 'aria-label': 'search tags' }}
                   />
                   {searchTerm && (
-                    <IconButton onClick={() => setSearchTerm('')} size="small" sx={{ color: 'text.secondary' }}>
+                    <IconButton onClick={handleClearSearch} size="small" sx={{ color: 'text.secondary' }}>
                       <FaTimes size={14} />
                     </IconButton>
                   )}
                 </Paper>
                 
-                {status === 'loading' ? (
+                {isLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
                     <CircularProgress size={40} />
                   </Box>
@@ -474,6 +553,7 @@ const AccountTags: React.FC = () => {
         pauseOnFocusLoss
         draggable
         pauseOnHover
+        limit={3}  /* Limit the number of toasts shown at once */
       />
       
       {/* Edit Dialog */}
@@ -515,7 +595,11 @@ const AccountTags: React.FC = () => {
             onClick={handleUpdateTag} 
             color="primary" 
             variant="contained"
-            disabled={!editingTag?.name.trim() || editingTag?.name.trim() === tags.find(t => t._id === editingTag.id)?.name}
+            disabled={
+              !editingTag?.name.trim() || 
+              isLoading ||
+              (editingTag && tags.find(t => t._id === editingTag.id)?.name === editingTag.name)
+            }
           >
             Update
           </Button>
@@ -543,7 +627,12 @@ const AccountTags: React.FC = () => {
           <Button onClick={() => setTagToDelete(null)} color="inherit" variant="outlined">
             Cancel
           </Button>
-          <Button onClick={handleDeleteTag} color="error" variant="contained">
+          <Button 
+            onClick={handleDeleteTag} 
+            color="error" 
+            variant="contained"
+            disabled={isLoading}
+          >
             Delete Tag
           </Button>
         </DialogActions>

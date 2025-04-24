@@ -12,7 +12,6 @@ import {
   Avatar, 
   CircularProgress, 
   Paper, 
-  Grid, 
   Divider,
   useMediaQuery,
   useTheme,
@@ -245,8 +244,12 @@ const Account: React.FC = () => {
           )}
 
           <form onSubmit={formik.handleSubmit}>
-            <Grid container spacing={isMobile ? 2 : 3}>
-              <Grid item xs={12} sm={6}>
+            <Box sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', 
+              gap: isMobile ? 2 : 3
+            }}>
+              <Box>
                 <TextField
                   fullWidth
                   id="firstName"
@@ -264,9 +267,9 @@ const Account: React.FC = () => {
                   variant="outlined"
                   sx={{ mb: 2 }}
                 />
-              </Grid>
+              </Box>
               
-              <Grid item xs={12} sm={6}>
+              <Box>
                 <TextField
                   fullWidth
                   id="lastName"
@@ -282,11 +285,18 @@ const Account: React.FC = () => {
                   variant="outlined"
                   sx={{ mb: 2 }}
                 />
-              </Grid>
-              <Grid container spacing={isMobile ? 2 : 3}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
+              </Box>
+            </Box>
+
+            <Box sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', 
+              gap: isMobile ? 2 : 3,
+              mb: 2
+            }}>
+              <Box>
+                <TextField
+                  fullWidth
                   id="email"
                   name="email"
                   label="Email"
@@ -298,11 +308,11 @@ const Account: React.FC = () => {
                     startAdornment: <EditIcon color="action" sx={{ mr: 1 }} />
                   }}
                   variant="outlined"
-                    sx={{ mb: 2 }}
-                  />
-                </Grid>
-              
-              <Grid item xs={12} sm={6}>
+                  sx={{ mb: 2 }}
+                />
+              </Box>
+            
+              <Box>
                 <TextField
                   fullWidth
                   id="username"
@@ -318,29 +328,26 @@ const Account: React.FC = () => {
                   variant="outlined"
                   sx={{ mb: 2 }}
                 />
-              </Grid>
-              </Grid>
+              </Box>
+            </Box>
 
-              
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  id="password"
-                  name="password"
-                  label="New Password (optional)"
-                  type="password"
-                  value={formik.values.password}
-                  onChange={formik.handleChange}
-                  error={formik.touched.password && Boolean(formik.errors.password)}
-                  helperText={formik.touched.password ? formik.errors.password : "Leave blank to keep current password"}
-                  InputProps={{
-                    startAdornment: <LockIcon color="action" sx={{ mr: 1 }} />
-                  }}
-                  variant="outlined"
-                  sx={{ mb: 2 }}
-                />
-              </Grid>
-            </Grid>
+            <Box sx={{ mb: 2 }}>
+              <TextField
+                fullWidth
+                id="password"
+                name="password"
+                label="New Password (optional)"
+                type="password"
+                value={formik.values.password}
+                onChange={formik.handleChange}
+                error={formik.touched.password && Boolean(formik.errors.password)}
+                helperText={formik.touched.password ? formik.errors.password : "Leave blank to keep current password"}
+                InputProps={{
+                  startAdornment: <LockIcon color="action" sx={{ mr: 1 }} />
+                }}
+                variant="outlined"
+              />
+            </Box>
 
             <Box sx={{ 
               display: 'flex', 
