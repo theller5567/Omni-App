@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Box, Typography, Chip, List, ListItem, ListItemText } from '@mui/material';
 import { FaExclamationCircle, FaTag, FaTags } from 'react-icons/fa';
 import { MediaTypeConfig, SelectField } from '../../../types/mediaTypes';
@@ -24,11 +24,6 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ mediaTypeConfig, inputOptions, 
   // Get tag categories to display information
   const tagCategories = useSelector((state: RootState) => state.tagCategories.tagCategories);
   
-  // Add debugging to check the value of catColor
-  useEffect(() => {
-    console.log('ReviewStep - mediaTypeConfig:', mediaTypeConfig);
-    console.log('ReviewStep - catColor value:', mediaTypeConfig.catColor);
-  }, [mediaTypeConfig]);
   
   // Helper function to get category name
   const getCategoryName = (categoryId: string): string => {

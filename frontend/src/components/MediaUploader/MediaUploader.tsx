@@ -634,12 +634,32 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
         <Typography variant="h6" sx={{ mb: 3 }}>
           {isProcessing ? "Processing Upload" : "Upload Progress"}
         </Typography>
-        <Box sx={{ width: "100%", maxWidth: "400px", mb: 3 }}>
+        <Box sx={{ width: "100%", maxWidth: "400px", mb: 3, position: "relative" }}>
           <LinearProgress
             variant={isProcessing ? "indeterminate" : "determinate"}
             value={uploadProgress}
             sx={{ height: 10, borderRadius: 5 }}
           />
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            align="center"
+            sx={{ 
+              mt: 2,
+              fontWeight: "bold", 
+              position: "absolute", 
+              top: -5, 
+              left: "50%", 
+              transform: "translateX(-50%)",
+              backgroundColor: "rgba(255,255,255,0.7)",
+              px: 1,
+              borderRadius: 1,
+              fontSize: "0.75rem",
+              display: isProcessing ? "none" : "block"
+            }}
+          >
+            {uploadProgress}%
+          </Typography>
           <Typography
             variant="body2"
             color="textSecondary"
@@ -720,7 +740,6 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
       
       // Add default tags from media type if provided
       if (mediaType.defaultTags && mediaType.defaultTags.length > 0) {
-        console.log('Adding default tags from media type:', mediaType.defaultTags);
         // Ensure preparedMetadata.tags is an array before spreading
         const currentTags = Array.isArray(preparedMetadata.tags) ? preparedMetadata.tags : [];
         // Filter out duplicates
@@ -749,8 +768,6 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
         }
       });
       
-      console.log('Upload complete:', uploadedFile);
-      
       // Store the uploaded file data in our ref
       uploaderStateRef.current.uploadedFileData = uploadedFile;
       
@@ -777,8 +794,6 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   };
 
   const handleClose = () => {
-    console.log('handleClose called - explicit close requested');
-    
     // Mark as closing to prevent callbacks from firing
     uploaderStateRef.current.isClosing = true;
     
@@ -834,7 +849,6 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
       return;
     }
     
-    console.log('Resetting for new upload');
     setUploadProgress(0);
     setFilePreview(null);
     setFile(null);
@@ -859,19 +873,15 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     setSlug(null);
     
     // Now it's safe to reset the step
-    console.log('Resetting to step 1 for a new upload');
     setStep(1);
   };
 
   const handleNext = () => {
     const nextStep = step + 1;
-    console.log(`Moving from step ${step} to step ${nextStep}`);
-    
     // Apply default tags when moving from step 2 to step 3
     if (step === 2 && nextStep === 3) {
       const selectedType = mediaTypes.find(type => type._id === selectedMediaType);
       if (selectedType && Array.isArray(selectedType.defaultTags) && selectedType.defaultTags.length > 0) {
-        console.log('Applying default tags:', selectedType.defaultTags);
         // Update metadata with default tags, preserving any existing tags
         setMetadata(prev => ({
           ...prev,
@@ -882,7 +892,6 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     
     if (nextStep === 4) {
       // Show processing state immediately when moving to upload step
-      console.log('Initiating upload process in step 4');
       setIsProcessing(true);
       setUploadProgress(0);
       
@@ -892,7 +901,6 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
       // Then trigger upload
       setTimeout(() => {
         if (file) {
-          console.log('Starting upload with file:', file.name);
           handleUpload(file);
         } else {
           console.error('No file available for upload');
@@ -920,8 +928,6 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
       return;
     }
     
-    console.log('Navigating to media with slug:', slug);
-    // First close the dialog
     handleClose();
     // Then navigate to the media detail page
     setTimeout(() => {
@@ -1066,9 +1072,12 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
           {hasVideos && <FaVideo size={12} style={{ color: '#f57c00' }} />}
           {hasAudio && <FaFileAudio size={12} style={{ color: '#7e57c2' }} />}
           {hasDocuments && <FaFileWord size={12} style={{ color: '#2196f3' }} />}
-    </Box>
+        </Box>
       );
     };
+
+    // Filter out archived media types
+    const activeMediaTypes = mediaTypes.filter(type => type.status !== 'archived');
 
     return (
       <Box sx={{ mb: 3 }}>
@@ -1081,7 +1090,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
             onChange={handleChange}
             label="Media Type"
           >
-            {mediaTypes.map((type) => (
+            {activeMediaTypes.map((type) => (
               <MenuItem 
                 key={type._id} 
                 value={type._id}
@@ -1094,6 +1103,19 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
               >
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   {type.name}
+                  {type.status === 'deprecated' && (
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        ml: 1, 
+                        color: 'warning.main', 
+                        fontSize: '0.7rem',
+                        fontStyle: 'italic'
+                      }}
+                    >
+                      (deprecated)
+                    </Typography>
+                  )}
                   {type.acceptedFileTypes && type.acceptedFileTypes.length > 0 && (
                     <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary', fontSize: '0.7rem' }}>
                       ({type.acceptedFileTypes.length} file types)

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Box, FormControl, InputLabel, Select, MenuItem, Typography, Badge } from '@mui/material';
 import { predefinedColors } from '../../../utils/mediaTypeUploaderUtils';
 import { toast } from 'react-toastify';
@@ -11,23 +11,14 @@ interface ColorPickerProps {
 
 const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange, usedColors = [] }) => {
   
-  // Log the used colors for debugging
-  useEffect(() => {
-    console.log('ColorPicker - Used colors:', usedColors);
-    console.log('ColorPicker - Current value:', value);
-  }, [usedColors, value]);
-  
   // Handler for color selection that prevents selecting already used colors
   const handleColorChange = (newValue: string) => {
     // Check if the color is already in use (and it's not the current value)
     const isUsed = usedColors.includes(newValue) && newValue !== value;
     
     if (isUsed) {
-      console.log('Attempting to select already used color:', newValue);
       const colorName = predefinedColors.find(c => c.hex === newValue)?.name || newValue;
       // Don't allow selection and show a warning
-      console.warn(`Color ${colorName} is already in use by another media type`);
-      
       // Show toast notification to the user
       toast.warning(`${colorName} is already in use by another media type. Please choose a different color.`);
       
@@ -35,7 +26,6 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange, usedColors =
     }
     
     // If we get here, the color is not in use, so we can select it
-    console.log('Selected color:', newValue);
     onChange(newValue);
   };
   

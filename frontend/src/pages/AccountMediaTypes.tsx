@@ -362,7 +362,7 @@ const AccountMediaTypes = () => {
       await dispatch(fetchMediaTypesWithUsageCounts()).unwrap();
       
       toast.success('All media type counts updated');
-    } catch (error) {
+      } catch (error) {
       console.error('Error refreshing counts:', error);
       toast.error('Error updating counts');
     }
@@ -481,10 +481,10 @@ const AccountMediaTypes = () => {
   // Main render
   return (
     <MediaTypesContext.Provider value={contextValue}>
-      <motion.div
-        id="account-media-types"
+    <motion.div
+      id="account-media-types"
         initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
+      animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -50 }}
         transition={{ duration: 0.3 }}
       >
@@ -492,12 +492,12 @@ const AccountMediaTypes = () => {
           <Header />
 
           {/* Media Type Uploader Dialog */}
-          <MediaTypeUploader 
-            open={open} 
-            onClose={handleClose} 
-            editMediaTypeId={editMediaTypeId} 
-          />
-          
+        <MediaTypeUploader 
+          open={open} 
+          onClose={handleClose} 
+          editMediaTypeId={editMediaTypeId} 
+        />
+        
           {/* Main content */}
           <ActionBar />
           <MediaTypeGrid />
@@ -505,14 +505,14 @@ const AccountMediaTypes = () => {
 
         {/* Delete/Archive Confirmation Dialog */}
         <DeleteDialog
-          open={confirmDialogOpen}
-          onClose={handleCancelDelete}
+        open={confirmDialogOpen}
+        onClose={handleCancelDelete}
           onConfirm={handleConfirmDelete}
           selectedId={selectedMediaTypeId}
         />
         
         <ToastContainer position="top-right" />
-      </motion.div>
+    </motion.div>
     </MediaTypesContext.Provider>
   );
 };

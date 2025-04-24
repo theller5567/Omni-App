@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -12,14 +12,17 @@ import {
   IconButton,
   Typography,
   Box,
-  Chip
+  Chip,
+  CircularProgress,
+  Tooltip,
+  Backdrop
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { addMediaType, initializeMediaTypes } from '../../store/slices/mediaTypeSlice';
 import { fetchTagCategories } from '../../store/slices/tagCategorySlice';
 import { toast } from 'react-toastify';
 import axios from 'axios';
-import { FaArrowRight, FaArrowLeft, FaSave } from 'react-icons/fa';
+import { FaArrowRight, FaArrowLeft, FaSave, FaQuestionCircle } from 'react-icons/fa';
 import CloseIcon from '@mui/icons-material/Close';
 import { 
   MediaTypeConfig, 
@@ -45,6 +48,7 @@ import {
   normalizeTag
 } from '../../utils/mediaTypeUploaderUtils';
 import { FaImage, FaVideo, FaFileAudio, FaFileWord } from 'react-icons/fa';
+import debounce from 'lodash/debounce';
 
 // Define available field types
 const inputOptions: FieldType[] = ['Text', 'TextArea', 'Number', 'Date', 'Boolean', 'Select', 'MultiSelect'];
@@ -101,6 +105,37 @@ interface MediaTypeUploaderProps {
   editMediaTypeId?: string | null; // Add optional prop for editing
 }
 
+// Define interface for ConfirmationDialog props
+interface ConfirmationDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title?: string;
+  message?: string;
+}
+
+// Confirmation dialog component
+const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({ 
+  open, 
+  onClose, 
+  onConfirm, 
+  title = 'Confirm Action', 
+  message = 'Are you sure you want to proceed?' 
+}) => (
+  <Dialog open={open} onClose={onClose}>
+    <DialogTitle>{title}</DialogTitle>
+    <DialogContent>
+      <Typography>{message}</Typography>
+    </DialogContent>
+    <DialogActions>
+      <Button onClick={onClose} color="primary">Cancel</Button>
+      <Button onClick={() => { onConfirm(); onClose(); }} color="error" variant="contained">
+        Confirm
+      </Button>
+    </DialogActions>
+  </Dialog>
+);
+
 const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, editMediaTypeId }) => {
   // Hooks must be called unconditionally at the top level
   const dispatch = useDispatch<AppDispatch>();
@@ -125,10 +160,26 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
   const [activeStep, setActiveStep] = useState(STEP_NAME);
   const [isEditing, setIsEditing] = useState(false);
   const [activeField, setActiveField] = useState<number | null>(null);
+  
+  // Loading states
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Track unsaved changes
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  // Confirmation dialog state
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  const [confirmDialogConfig, setConfirmDialogConfig] = useState({
+    title: 'Confirm Action',
+    message: 'Are you sure you want to proceed?'
+  });
 
   // Effect to initialize media type for editing
   useEffect(() => {
     if (open && editMediaTypeId) {
+      setIsLoading(true);
       const mediaTypeToEdit = mediaTypes.find(type => type._id === editMediaTypeId);
       if (mediaTypeToEdit) {
         // Convert field types to ensure compatibility
@@ -152,10 +203,16 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
         });
         setIsEditMode(true);
       }
+      setIsLoading(false);
     } else if (open && !editMediaTypeId) {
       // Reset for creating a new media type
       setMediaTypeConfig(initialMediaTypeConfig);
       setIsEditMode(false);
+    }
+    
+    // Reset unsaved changes when dialog opens
+    if (open) {
+      setHasUnsavedChanges(false);
     }
   }, [open, editMediaTypeId, mediaTypes]);
 
@@ -165,6 +222,56 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       dispatch(fetchTagCategories());
     }
   }, [open, dispatch, tagCategoriesStatus]);
+  
+  // Add keyboard navigation support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!open) return;
+      
+      // ESC key - confirm before closing if changes made
+      if (e.key === 'Escape' && hasUnsavedChanges) {
+        e.preventDefault();
+        confirmClose();
+        return;
+      }
+      
+      // Enter on final step submits form
+      if (e.key === 'Enter' && !e.shiftKey && activeStep === STEP_REVIEW && !isSaving) {
+        e.preventDefault();
+        handleSaveMediaType();
+        return;
+      }
+      
+      // Tab + Alt navigation between steps
+      if (e.key === 'ArrowRight' && e.altKey) {
+        e.preventDefault();
+        if (activeStep < STEP_REVIEW) handleNext();
+        return;
+      }
+      
+      if (e.key === 'ArrowLeft' && e.altKey) {
+        e.preventDefault();
+        if (activeStep > STEP_NAME) handleBack();
+        return;
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, activeStep, hasUnsavedChanges, isSaving]);
+  
+  // Track changes
+  useEffect(() => {
+    if (open && 
+      (mediaTypeConfig.name !== initialMediaTypeConfig.name ||
+       mediaTypeConfig.fields.length > 0 ||
+       mediaTypeConfig.acceptedFileTypes.length > 0 ||
+       (mediaTypeConfig.defaultTags?.length || 0) > 0 ||
+       mediaTypeConfig.catColor !== initialMediaTypeConfig.catColor)
+    ) {
+      setHasUnsavedChanges(true);
+    }
+  }, [open, mediaTypeConfig]);
 
   const steps = ['Name Media Type', 'Add Fields', 'Review & Submit'];
 
@@ -195,6 +302,20 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
   };
 
   const handleBack = () => setActiveStep((prev) => prev - 1);
+  
+  // Confirmation for closing dialog with unsaved changes
+  const confirmClose = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setConfirmDialogConfig({
+        title: 'Discard Changes?',
+        message: 'You have unsaved changes. Are you sure you want to close?'
+      });
+      setConfirmAction(() => handleClose);
+      setShowConfirmDialog(true);
+    } else {
+      handleClose();
+    }
+  }, [hasUnsavedChanges]);
 
   const handleAddField = (field: MediaTypeField, index: number | null) => {
     if (field.name.trim()) {
@@ -234,16 +355,19 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
   };
 
   const handleSaveMediaType = async () => {
+    if (isSaving) return; // Prevent multiple submissions
+    
     try {
       if (!mediaTypeConfig.name || !mediaTypeConfig.acceptedFileTypes?.length) {
         toast.error('Please fill in all required fields');
         return;
       }
 
+      setIsSaving(true);
+
       // Make sure we have a color - use default if not specified
       const catColor = mediaTypeConfig.catColor || '#2196f3';
       const colorName = predefinedColors.find(c => c.hex === catColor)?.name || 'Default Blue';
-      
       
       // Create API data from the media type config
       const apiData = {
@@ -251,47 +375,80 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
         catColor // Make sure catColor is explicitly included
       };
       
-
       if (isEditMode && mediaTypeConfig._id) {
-        // Update existing media type
-        
-        // const response = await axios.put<ApiMediaTypeResponse>(
-        //   `${env.BASE_URL}/api/media-types/${mediaTypeConfig._id}`,
-        //   apiData
-        // );
-
-        
-        // Refresh all media types to ensure store is updated
-        dispatch(initializeMediaTypes());
-        
-        toast.success(`Media Type '${mediaTypeConfig.name}' updated successfully`);
+        try {
+          await axios.put<ApiMediaTypeResponse>(
+            `${env.BASE_URL}/api/media-types/${mediaTypeConfig._id}`,
+            apiData
+          );
+          
+          // Refresh all media types to ensure store is updated
+          dispatch(initializeMediaTypes());
+          toast.success(`Media Type '${mediaTypeConfig.name}' updated successfully`);
+        } catch (error: any) {
+          // Handle specific error cases
+          if (error.response) {
+            const statusCode = error.response.status;
+            const errorData = error.response.data;
+            
+            if (statusCode === 400) {
+              toast.error(`Validation error: ${errorData.message || 'Please check your inputs'}`);
+            } else if (statusCode === 404) {
+              toast.error(`Media type not found. It may have been deleted.`);
+            } else {
+              toast.error(`Error (${statusCode}): ${errorData.message || 'Failed to update media type'}`);
+            }
+          } else {
+            toast.error(`Network error: ${error.message || 'Failed to connect to server'}`);
+          }
+          throw error;
+        }
       } else {
-        // Create new media type
-        const response = await axios.post<ApiMediaTypeResponse>(
-          `${env.BASE_URL}/api/media-types`,
-          apiData
-        );
-  
-        console.log('Media type created successfully with ID:', response.data._id);
-  
-        // Add the media type to the store with type assertion
-        const storeData = {
-          ...response.data,
-          usageCount: 0,
-          replacedBy: null,
-          isDeleting: false,
-          status: response.data.status || 'active',
-          catColor: catColor // Explicitly include catColor
-        } as any; // Using type assertion to avoid complex typing issues
-  
-        dispatch(addMediaType(storeData));
-        toast.success(`Media Type '${mediaTypeConfig.name}' added successfully with color: ${colorName}`);
+        try {
+          // Create new media type
+          const response = await axios.post<ApiMediaTypeResponse>(
+            `${env.BASE_URL}/api/media-types`,
+            apiData
+          );
+      
+          // Add the media type to the store with type assertion
+          const storeData = {
+            ...response.data,
+            usageCount: 0,
+            replacedBy: null,
+            isDeleting: false,
+            status: response.data.status || 'active',
+            catColor: catColor // Explicitly include catColor
+          } as any; // Using type assertion to avoid complex typing issues
+      
+          dispatch(addMediaType(storeData));
+          toast.success(`Media Type '${mediaTypeConfig.name}' added successfully with color: ${colorName}`);
+        } catch (error: any) {
+          // Enhanced error handling with specific messages
+          if (error.response) {
+            const statusCode = error.response.status;
+            const errorData = error.response.data;
+            
+            if (statusCode === 400) {
+              toast.error(`Validation error: ${errorData.message || 'Please check your inputs'}`);
+            } else if (statusCode === 409) {
+              toast.error(`A media type with this name already exists.`);
+            } else {
+              toast.error(`Error (${statusCode}): ${errorData.message || 'Failed to create media type'}`);
+            }
+          } else {
+            toast.error(`Network error: ${error.message || 'Failed to connect to server'}`);
+          }
+          throw error;
+        }
       }
       
-      handleClose();
+      setHasUnsavedChanges(false);
+      onClose();
     } catch (error) {
       console.error('Failed to save media type', error);
-      toast.error(`Failed to ${isEditMode ? 'update' : 'save'} media type`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -307,6 +464,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
     setActiveStep(STEP_NAME);
     setActiveField(null);
     setIsEditMode(false);
+    setHasUnsavedChanges(false);
     onClose();
   };
 
@@ -344,20 +502,53 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       event.preventDefault(); // Prevent form submission
     }
   };
+  
+  // Create debounced version of name field change handler
+  const debouncedNameChange = useCallback(
+    debounce((value: string) => {
+      setMediaTypeConfig(prev => ({ ...prev, name: value }));
+    }, 300),
+    []
+  );
+
+  // Update dialog title to reflect create/edit mode
+  const dialogTitle = isEditMode ? 'Edit Media Type' : 'Create New Media Type';
 
   const renderFirstStep = () => (
     <div className="step-container">
-      <Typography variant="h6">Select Media Type Name</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Typography variant="h6">Select Media Type Name</Typography>
+        <Tooltip title="Choose a descriptive name that identifies the purpose of this media type">
+          <IconButton size="small" sx={{ ml: 1 }}>
+            <FaQuestionCircle size={14} />
+          </IconButton>
+        </Tooltip>
+      </Box>
+      
       <TextField
         label="Media Type Name"
-        value={mediaTypeConfig.name}
-        onChange={(e) => setMediaTypeConfig(prev => ({ ...prev, name: e.target.value }))}
+        defaultValue={mediaTypeConfig.name}
+        onChange={(e) => {
+          // Use local state immediately for responsive UI
+          debouncedNameChange(e.target.value);
+        }}
         fullWidth
         className="input-field text-input"
+        autoFocus
+        helperText="Name should be unique and descriptive"
+        error={mediaTypeConfig.name.trim() === '' && hasUnsavedChanges}
       />
       
       <Box sx={{ mt: 3, mb: 2 }}>
-        <Typography variant="h6">Default Tags</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Typography variant="h6">Default Tags</Typography>
+          <Tooltip title="These tags will automatically be applied to all media uploaded with this type">
+            <IconButton size="small" sx={{ ml: 1 }}>
+              <FaQuestionCircle size={14} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+        
         <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
           These tags will be automatically applied to all media files created with this type
           {!isSuperAdmin && (
@@ -384,6 +575,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
               variant="outlined"
               onClick={() => addNewTag(newTag)}
               sx={{ mt: 0.5 }}
+              disabled={!newTag.trim()}
             >
               Add
             </Button>
@@ -407,7 +599,15 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       </Box>
       
       <Box>
-        <Typography variant="h6">Select Color for Media Type</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Typography variant="h6">Select Color for Media Type</Typography>
+          <Tooltip title="This color will help users identify this media type visually in the interface">
+            <IconButton size="small" sx={{ ml: 1 }}>
+              <FaQuestionCircle size={14} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+        
         <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
           This color will help identify this media type throughout the app
         </Typography>
@@ -420,170 +620,243 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
         />
       </Box>
       
-      <FileTypeSelector 
-        fileTypeCategories={fileTypeCategories}
-        acceptedFileTypes={mediaTypeConfig.acceptedFileTypes}
-        onChange={(newTypes) => setMediaTypeConfig(prev => ({ ...prev, acceptedFileTypes: newTypes }))}
-      />
+      <Box sx={{ mt: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Typography variant="h6">Select Accepted File Types</Typography>
+          <Tooltip title="Choose which file types this media type will accept for upload">
+            <IconButton size="small" sx={{ ml: 1 }}>
+              <FaQuestionCircle size={14} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+        
+        <FileTypeSelector 
+          fileTypeCategories={fileTypeCategories}
+          acceptedFileTypes={mediaTypeConfig.acceptedFileTypes}
+          onChange={(newTypes) => setMediaTypeConfig(prev => ({ ...prev, acceptedFileTypes: newTypes }))}
+        />
+        
+        {mediaTypeConfig.acceptedFileTypes.length === 0 && hasUnsavedChanges && (
+          <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+            *At least one file type must be selected
+          </Typography>
+        )}
+      </Box>
     </div>
   );
 
-
-  // Update dialog title to reflect create/edit mode
-  const dialogTitle = isEditMode ? 'Edit Media Type' : 'Create New Media Type';
-
   return (
-    <Dialog id='dialog-container' open={open} onClose={handleClose}>
-      <DialogTitle sx={{ m: 0, p: 2 }}>
-        {dialogTitle}
-        <IconButton
-          aria-label="close"
-          onClick={handleClose}
-          sx={{
-            position: 'absolute',
-            right: 8,
-            top: 8,
-            color: 'grey.500'
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-      {open && (
-        <>
-          <DialogContent className='dialog-inner' style={{width: '100%', height: '600px'}}>
-            <Stepper activeStep={activeStep} alternativeLabel sx={{marginBottom: '3rem'}}>
-              {steps.map((label) => (
-                <Step key={label}>
-                  <StepLabel>{label}</StepLabel>
-                </Step>
-              ))}
-            </Stepper>
-            <div className='new-media-type-form-container'>
-              {activeStep === STEP_NAME && renderFirstStep()}
-              {activeStep === STEP_FIELDS && (
-                <div className="step-container step1">
-                  <div className='field-creation-container'>
-                    <Typography className="section-title">Create Media Type Fields</Typography>
-                    
-                    {mediaTypeConfig.fields.length > 0 && (
-                      <div className="field-list">
-                        <div className="field-list-title">
-                          <span>Existing Fields</span>
-                          <span className="count-badge">{mediaTypeConfig.fields.length}</span>
+    <>
+      <Dialog 
+        id='dialog-container' 
+        open={open} 
+        onClose={confirmClose}
+        aria-labelledby="media-type-dialog-title"
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle id="media-type-dialog-title" sx={{ m: 0, p: 2 }}>
+          {dialogTitle}
+          <IconButton
+            aria-label="close"
+            onClick={confirmClose}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: 'grey.500'
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        
+        {isLoading ? (
+          <DialogContent sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+            <CircularProgress />
+          </DialogContent>
+        ) : open && (
+          <>
+            <DialogContent className='dialog-inner' style={{width: '100%', height: '600px'}}>
+              <Stepper activeStep={activeStep} alternativeLabel sx={{marginBottom: '3rem'}}>
+                {steps.map((label, index) => (
+                  <Step key={label}>
+                    <StepLabel
+                      StepIconProps={{
+                        sx: { cursor: 'pointer' }
+                      }}
+                      onClick={() => {
+                        // Allow clicking on completed steps to navigate back
+                        if (index < activeStep) {
+                          setActiveStep(index);
+                        }
+                      }}
+                    >
+                      {label}
+                    </StepLabel>
+                  </Step>
+                ))}
+              </Stepper>
+              <div className='new-media-type-form-container'>
+                {activeStep === STEP_NAME && renderFirstStep()}
+                {activeStep === STEP_FIELDS && (
+                  <div className="step-container step1">
+                    <div className='field-creation-container'>
+                      <Typography className="section-title">Create Media Type Fields</Typography>
+                      
+                      {mediaTypeConfig.fields.length > 0 && (
+                        <div className="field-list">
+                          <div className="field-list-title">
+                            <span>Existing Fields</span>
+                            <span className="count-badge">{mediaTypeConfig.fields.length}</span>
+                          </div>
+                          
+                          {mediaTypeConfig.fields.map((field, index) => (
+                            <FieldEditor 
+                              key={index}
+                              field={field}
+                              index={index}
+                              isEditing={editingFieldIndex === index}
+                              activeField={activeField}
+                              inputOptions={inputOptions}
+                              onSave={handleAddField}
+                              onCancel={resetFieldForm}
+                              onFieldUpdate={handleFieldUpdate}
+                              onFieldSelect={(index) => setActiveField(index)}
+                              onEdit={handleEditField}
+                              onRemove={handleRemoveField}
+                            />
+                          ))}
                         </div>
-                        
-                        {mediaTypeConfig.fields.map((field, index) => (
+                      )}
+                      
+                      {editingFieldIndex === null && (
+                        <div className={`new-input-field-container ${currentField.type === 'Select' || currentField.type === 'MultiSelect' ? 'select-input' : ''} ${isEditing ? 'active' : ''}`}>
                           <FieldEditor 
-                            key={index}
-                            field={field}
-                            index={index}
-                            isEditing={editingFieldIndex === index}
-                            activeField={activeField}
+                            field={currentField}
+                            index={null}
+                            isEditing={true}
+                            activeField={null}
                             inputOptions={inputOptions}
                             onSave={handleAddField}
                             onCancel={resetFieldForm}
                             onFieldUpdate={handleFieldUpdate}
-                            onFieldSelect={(index) => setActiveField(index)}
-                            onEdit={handleEditField}
-                            onRemove={handleRemoveField}
+                            onFieldSelect={() => {}}
+                            onEdit={() => {}}
+                            onRemove={() => {}}
                           />
-                        ))}
-                      </div>
-                    )}
-                    
-                    {editingFieldIndex === null && (
-                      <div className={`new-input-field-container ${currentField.type === 'Select' || currentField.type === 'MultiSelect' ? 'select-input' : ''} ${isEditing ? 'active' : ''}`}>
-                        <FieldEditor 
-                          field={currentField}
-                          index={null}
-                          isEditing={true}
-                          activeField={null}
-                          inputOptions={inputOptions}
-                          onSave={handleAddField}
-                          onCancel={resetFieldForm}
-                          onFieldUpdate={handleFieldUpdate}
-                          onFieldSelect={() => {}}
-                          onEdit={() => {}}
-                          onRemove={() => {}}
-                        />
-                      </div>
-                    )}
-                  </div>
-                
-                  <div className='field-preview-container'>
-                    <div className="preview-header">
-                      <h6>Field Preview</h6>
-                      <span className="field-count">{mediaTypeConfig.fields.length} fields</span>
+                        </div>
+                      )}
                     </div>
-                    
-                    <FieldPreview 
-                      fields={mediaTypeConfig.fields}
-                      onFieldSelect={(index) => setActiveField(index)}
-                    />
+                  
+                    <div className='field-preview-container'>
+                      <div className="preview-header">
+                        <h6>Field Preview</h6>
+                        <span className="field-count">{mediaTypeConfig.fields.length} fields</span>
+                      </div>
+                      
+                      <FieldPreview 
+                        fields={mediaTypeConfig.fields}
+                        onFieldSelect={(index) => setActiveField(index)}
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
-              {activeStep === STEP_REVIEW && (
-                <ReviewStep 
-                  mediaTypeConfig={mediaTypeConfig}
-                  inputOptions={inputOptions}
-                  isSuperAdmin={isSuperAdmin}
-                />
-              )}
-            </div>
-          </DialogContent>
-          <DialogActions sx={{ 
-            justifyContent: 'space-between', 
-            px: 4, 
-            py: 2,
-            position: 'relative',
-            borderTop: '1px solid rgba(0, 0, 0, 0.12)'
-          }}>
-            <Button 
-              onClick={handleBack} 
-              disabled={activeStep === STEP_NAME}
-              startIcon={<FaArrowLeft />}
-              variant="outlined"
-              size="large"
-            >
-              Back
-            </Button>
-            
-            <Button 
-              onClick={handleClose} 
-              variant="text" 
-              sx={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}
-            >
-              Cancel
-            </Button>
-            
-            {activeStep === STEP_REVIEW ? (
+                )}
+                {activeStep === STEP_REVIEW && (
+                  <ReviewStep 
+                    mediaTypeConfig={mediaTypeConfig}
+                    inputOptions={inputOptions}
+                    isSuperAdmin={isSuperAdmin}
+                  />
+                )}
+              </div>
+            </DialogContent>
+            <DialogActions sx={{ 
+              justifyContent: 'space-between', 
+              px: 4, 
+              py: 2,
+              position: 'relative',
+              borderTop: '1px solid rgba(0, 0, 0, 0.12)'
+            }}>
               <Button 
-                onClick={handleSaveMediaType} 
-                color="primary" 
-                variant="contained" 
-                startIcon={<FaSave />}
+                onClick={handleBack} 
+                disabled={activeStep === STEP_NAME || isSaving}
+                startIcon={<FaArrowLeft />}
+                variant="outlined"
                 size="large"
               >
-                {isEditMode ? 'Update' : 'Create'}
+                Back
               </Button>
-            ) : (
+              
               <Button 
-                onClick={handleNext} 
-                color="primary"
-                variant="contained"
-                endIcon={<FaArrowRight />}
-                disabled={activeStep === STEP_NAME && (mediaTypeConfig.name.trim() === '' || mediaTypeConfig.acceptedFileTypes.length === 0)}
-                size="large"
+                onClick={confirmClose}
+                variant="text" 
+                sx={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}
+                disabled={isSaving}
               >
-                Next
+                Cancel
               </Button>
-            )}
-          </DialogActions>
-        </>
-      )}
-    </Dialog>
+              
+              {activeStep === STEP_REVIEW ? (
+                <Button 
+                  onClick={handleSaveMediaType} 
+                  color="primary" 
+                  variant="contained" 
+                  startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <FaSave />}
+                  size="large"
+                  disabled={isSaving}
+                >
+                  {isEditMode ? 'Update' : 'Create'}
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleNext} 
+                  color="primary"
+                  variant="contained"
+                  endIcon={<FaArrowRight />}
+                  disabled={
+                    (activeStep === STEP_NAME && (mediaTypeConfig.name.trim() === '' || mediaTypeConfig.acceptedFileTypes.length === 0)) || 
+                    isSaving
+                  }
+                  size="large"
+                >
+                  Next
+                </Button>
+              )}
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+      
+      {/* Backdrop for saving state */}
+      <Backdrop
+        sx={{ 
+          color: '#fff', 
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          position: 'absolute'
+        }}
+        open={isSaving}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <CircularProgress color="inherit" />
+          <Typography variant="h6">
+            {isEditMode ? 'Updating' : 'Creating'} Media Type...
+          </Typography>
+        </Box>
+      </Backdrop>
+      
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        open={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={() => {
+          confirmAction();
+          setShowConfirmDialog(false);
+        }}
+        title={confirmDialogConfig.title}
+        message={confirmDialogConfig.message}
+      />
+    </>
   );
 };
 

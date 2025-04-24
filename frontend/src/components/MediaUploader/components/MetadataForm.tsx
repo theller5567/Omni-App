@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Typography } from "@mui/material";
+import { Typography } from "@mui/material";
 import FormFieldsTab from "./FormFieldsTab";
 import { MediaType } from "../../../store/slices/mediaTypeSlice";
 import { TagCategory } from "../../../store/slices/tagCategorySlice";
@@ -61,11 +61,6 @@ const MetadataForm: React.FC<MetadataFormProps> = ({
   const baseType = matchingType.baseType || 'Media';
   const includeBaseFields = matchingType.includeBaseFields !== false;
   
-  console.log('MetadataForm - Media type:', matchingType.name);
-  console.log('MetadataForm - Base type:', baseType);
-  console.log('MetadataForm - Include base fields:', includeBaseFields);
-  console.log('MetadataForm - File:', file ? `${file.name} (${file.type})` : 'No file');
-  
   // Get base fields if a file is selected and we should include base fields
   let baseFields = {};
   if (file && baseType !== 'Media' && includeBaseFields) {
@@ -78,19 +73,12 @@ const MetadataForm: React.FC<MetadataFormProps> = ({
       case 'BaseDocument': mimeTypePrefix = 'application/pdf'; break;
     }
     
-    console.log('MetadataForm - MIME type prefix:', mimeTypePrefix);
-    
     // Get base fields if the file type matches the base type
     const fileCategory = file.type.split('/')[0];
     const baseCategory = mimeTypePrefix.split('/')[0];
     
-    console.log('MetadataForm - File category:', fileCategory);
-    console.log('MetadataForm - Base category:', baseCategory);
-    console.log('MetadataForm - Categories match:', fileCategory === baseCategory);
-    
     if (fileCategory === baseCategory) {
       baseFields = getBaseFieldsForMimeType(file.type);
-      console.log('MetadataForm - Base fields generated:', Object.keys(baseFields).length);
     } else {
       console.log('MetadataForm - No base fields for this file type');
     }
@@ -102,8 +90,6 @@ const MetadataForm: React.FC<MetadataFormProps> = ({
     });
   }
   
-  console.log('MetadataForm - Final baseFields:', Object.keys(baseFields).length, 'fields');
-
   // Check if various field types are incomplete
   const incompleteStandardFields = hasIncompleteStandardFields(metadata);
   const incompleteCustomFields = hasIncompleteCustomFields(metadata, matchingType);
