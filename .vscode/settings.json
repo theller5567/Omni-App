@@ -3,7 +3,7 @@
         "omnilogo"
     ],
     "files.exclude": {
-        "\"**/*.d.ts\": true": true
+        "**/*.d.ts": true
     },
     "git.ignoreLimitWarning": true
 }

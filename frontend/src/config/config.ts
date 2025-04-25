@@ -69,3 +69,40 @@ export const fieldConfigurations = {
   sizeRequirements: { type: 'text', class: 'text-field', fullWidth: false },
   // Add more field configurations as needed
 };
+
+// Application config
+export const API_BASE_URL = 'http://localhost:5002';
+
+// Database settings
+export const DB_CONFIG = {
+  maxPageSize: 100,
+  defaultPageSize: 25
+};
+
+// Storage limits
+export const STORAGE_LIMITS = {
+  maxFileSize: 100 * 1024 * 1024, // 100MB
+  totalStorageLimit: 5 * 1024 * 1024 * 1024 // 5GB
+};
+
+// Activity log settings
+export const ACTIVITY_CONFIG = {
+  defaultFetchLimit: 20,
+  actionsToTrack: [
+    'UPLOAD',
+    'DELETE',
+    'EDIT',
+    'CREATE',
+    'VIEW',
+    'LOGIN',
+    'LOGOUT'
+  ]
+};
+
+// Export default config
+export default {
+  API_BASE_URL,
+  DB_CONFIG,
+  STORAGE_LIMITS,
+  ACTIVITY_CONFIG
+};

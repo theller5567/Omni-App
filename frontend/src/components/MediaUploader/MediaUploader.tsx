@@ -1369,6 +1369,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
             position: "absolute",
             right: 8,
             top: 8,
+            zIndex: 5,
             color: (theme) => theme.palette.grey[500],
           }}
         >

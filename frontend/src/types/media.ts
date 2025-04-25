@@ -1,5 +1,6 @@
 export interface MediaFile {
   id?: string;
+  _id?: string; // MongoDB document ID
   title: string;
   fileName: string;
   visibility: 'public' | 'private';
@@ -12,6 +13,7 @@ export interface MediaFile {
   uploadDate?: string;
   lastModified?: string;
   url?: string;
+  slug?: string; // URL slug
 }
 
 export interface MediaTypeField {

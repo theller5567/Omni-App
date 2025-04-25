@@ -83,4 +83,7 @@ export const TagCategoryItem: React.FC<TagCategoryItemProps> = ({
       </ListItem>
     </React.Fragment>
   );
-}; 
+};
+
+// Add default export for lazy loading
+export default TagCategoryItem; 

@@ -1,11 +1,16 @@
 {
   "dependencies": {
+    "@mui/x-charts": "^8.1.0",
+    "@nivo/bar": "^0.89.1",
+    "@nivo/core": "^0.89.1",
+    "@nivo/pie": "^0.89.1",
     "aws-sdk": "^2.1692.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.13.2",
+    "recharts": "^2.15.3",
     "serverless-http": "^3.2.0",
     "typescript": "^5.8.3"
   },

@@ -1,13 +1,22 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import MediaUploader from '../components/MediaUploader/MediaUploader';
-import MediaLibrary from '../components/MediaLibrary/MediaLibrary';
-import axios from 'axios';
-import '../components/MediaLibrary/MediaContainer.scss';
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../store/store';
 import { deleteMedia, initializeMedia, addMedia } from '../store/slices/mediaSlice';
 import { CircularProgress, Box, Typography } from '@mui/material';
+import '../components/MediaLibrary/MediaContainer.scss';
+import axios from 'axios';
 import env from '../config/env';
+
+// Lazy load components
+const MediaUploader = lazy(() => import('../components/MediaUploader/MediaUploader'));
+const MediaLibrary = lazy(() => import('../components/MediaLibrary/MediaLibrary'));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <Box display="flex" justifyContent="center" alignItems="center" height="500px">
+    <CircularProgress />
+  </Box>
+);
 
 const MediaContainer: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -156,6 +165,7 @@ const MediaContainer: React.FC = () => {
 
   return (
     <div id="media-container">
+      <Suspense fallback={<LoadingFallback />}>
         <MediaLibrary
           mediaFilesData={filteredMediaFiles}
           setSearchQuery={setSearchQuery}
@@ -164,11 +174,17 @@ const MediaContainer: React.FC = () => {
           selectedMediaType={selectedMediaType}
           handleMediaTypeChange={handleMediaTypeChange}
         />
-      <MediaUploader
-        open={isModalOpen}
-        onClose={handleClose}
-        onUploadComplete={handleUploadComplete}
-      />
+      </Suspense>
+      
+      {isModalOpen && (
+        <Suspense fallback={<LoadingFallback />}>
+          <MediaUploader
+            open={isModalOpen}
+            onClose={handleClose}
+            onUploadComplete={handleUploadComplete}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

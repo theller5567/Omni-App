@@ -59,10 +59,6 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   mediaType,
   onSave
 }) => {
-  console.log('EditMediaDialog - Initial props:', {
-    mediaFile,
-    mediaType
-  });
 
   // Get user role from Redux
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
@@ -89,11 +85,6 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
     }
   });
 
-  // Log the form values whenever they change
-  const formValues = watch();
-  useEffect(() => {
-    console.log('EditMediaDialog - Current form values:', formValues);
-  }, [formValues]);
 
   // Initialize form with default values and ensure default tags are included
   useEffect(() => {
@@ -116,7 +107,6 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
         
         // Update the form
         setValue('tags', updatedTags);
-        console.log('Added missing default tags:', updatedTags);
       }
     }
   }, [mediaType, setValue, watch]);
@@ -175,12 +165,6 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
 
   const onSubmit = async (data: FormValues) => {
     if (!mediaFile) return;
-
-    console.log('EditMediaDialog - Form submission data:', {
-      formData: data,
-      originalMediaFile: mediaFile
-    });
-
     // Check if there's an unpressed tag in the input
     if (newTag.trim()) {
       setUnsavedTag(newTag.trim());
@@ -250,7 +234,6 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
       // Update the tags if they were changed
       if (tagsChanged) {
         data.tags = finalTags;
-        console.log('Ensuring default tags are included in submission:', finalTags);
       }
     }
 
@@ -268,17 +251,30 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
     if (hasChanged) {
       // Format the data before sending
       const formattedData = {
-        ...data,
+        id: mediaFile.id,
+        _id: mediaFile._id || mediaFile.id, // Include MongoDB ID
+        slug: (mediaFile as any).slug, // Use type assertion
+        title: data.title,
+        fileName: data.fileName,
+        altText: data.altText,
+        description: data.description,
+        visibility: data.visibility,
+        tags: data.tags,
         customFields: {
           ...data.customFields,
-          'Webinar Title': data.customFields?.['Webinar Title'] || '',
-          'Webinar Summary': data.customFields?.['Webinar Summary'] || '',
-          'Webinar CTA': data.customFields?.['Webinar CTA'] || ''
+          thumbnailUrl: data.customFields?.thumbnailUrl
         }
       };
 
-      console.log('EditMediaDialog - Formatted submission data:', formattedData);
-      await onSave(formattedData);
+      try {
+        setIsSaving(true);
+        await onSave(formattedData);
+        setIsSaving(false);
+      } catch (error) {
+        setIsSaving(false);
+        console.error('Error saving media:', error);
+        // You might want to show an error message here
+      }
     } else {
       console.log('No changes detected. Skipping save operation.');
     }
@@ -679,3 +675,6 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
     </Dialog>
   );
 };
+
+// Export as both named and default export for lazy loading support
+export default EditMediaDialog;

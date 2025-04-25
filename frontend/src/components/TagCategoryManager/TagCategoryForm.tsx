@@ -391,4 +391,7 @@ export const TagCategoryForm: React.FC<TagCategoryFormProps> = ({
       </DialogActions>
     </Dialog>
   );
-}; 
+};
+
+// Add default export for lazy loading
+export default TagCategoryForm; 

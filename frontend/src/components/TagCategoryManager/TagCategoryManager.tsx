@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
 import {
   Box,
   Typography,
@@ -20,10 +20,10 @@ import {
 import { FaPlus } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
-// Import subcomponents
-import { TagCategoryForm } from './TagCategoryForm';
-import { TagCategoryItem } from './TagCategoryItem';
-import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
+// Lazy load subcomponents
+const TagCategoryForm = lazy(() => import('./TagCategoryForm'));
+const TagCategoryItem = lazy(() => import('./TagCategoryItem'));
+const DeleteConfirmationDialog = lazy(() => import('./DeleteConfirmationDialog'));
 
 // Match the interface in TagCategoryForm.tsx
 interface TagCategoryFormData {
@@ -53,6 +53,13 @@ const initialFormData: TagCategoryFormData = {
   description: '',
   tags: []
 };
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <Box display="flex" justifyContent="center" alignItems="center" p={2}>
+    <CircularProgress size={24} />
+  </Box>
+);
 
 const TagCategoryManager: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -422,38 +429,46 @@ const TagCategoryManager: React.FC = () => {
         <Paper elevation={2}>
           <List>
             {tagCategories.map((category, index) => (
-              <TagCategoryItem 
-                key={category._id}
-                category={category}
-                index={index}
-                totalCount={tagCategories.length}
-                onEdit={() => handleOpen(category)}
-                onDelete={() => handleDeleteClick(category._id)}
-              />
+              <Suspense key={category._id} fallback={<LoadingFallback />}>
+                <TagCategoryItem 
+                  category={category}
+                  index={index}
+                  totalCount={tagCategories.length}
+                  onEdit={() => handleOpen(category)}
+                  onDelete={() => handleDeleteClick(category._id)}
+                />
+              </Suspense>
             ))}
           </List>
         </Paper>
       )}
       
-      {/* Form dialog */}
-      <TagCategoryForm
-        open={dialogState.open}
-        formData={formData}
-        setFormData={setFormData}
-        onClose={handleClose}
-        onSubmit={() => handleSubmit(formData)}
-        isEditing={!!dialogState.editingCategory}
-      />
+      {/* Conditionally render dialogs only when needed */}
+      {dialogState.open && (
+        <Suspense fallback={<LoadingFallback />}>
+          <TagCategoryForm
+            open={dialogState.open}
+            formData={formData}
+            setFormData={setFormData}
+            onClose={handleClose}
+            onSubmit={() => handleSubmit(formData)}
+            isEditing={!!dialogState.editingCategory}
+          />
+        </Suspense>
+      )}
       
-      {/* Delete confirmation dialog */}
-      <DeleteConfirmationDialog
-        open={dialogState.deleteDialogOpen}
-        onClose={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
-        hardDelete={dialogState.hardDelete}
-        setHardDelete={handleHardDeleteChange}
-        categoryName={categoryNameToDelete}
-      />
+      {dialogState.deleteDialogOpen && (
+        <Suspense fallback={<LoadingFallback />}>
+          <DeleteConfirmationDialog
+            open={dialogState.deleteDialogOpen}
+            onClose={handleCancelDelete}
+            onConfirm={handleConfirmDelete}
+            hardDelete={dialogState.hardDelete}
+            setHardDelete={handleHardDeleteChange}
+            categoryName={categoryNameToDelete}
+          />
+        </Suspense>
+      )}
     </Box>
   );
 };

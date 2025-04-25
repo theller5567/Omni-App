@@ -12,6 +12,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { formatFileSize } from '../../utils/formatFileSize';
 import { shouldHideField } from '../../config/mediaInfoConfig';
 import './MediaInformation.scss';
+import { MediaDetailTags } from './MediaDetail';
+import { useUsername } from '../../hooks/useUsername';
 
 interface MediaTypeField {
   name: string;
@@ -58,6 +60,9 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
     );
   };
 
+  const userId = getMetadataField(mediaFile, 'uploadedBy', '');
+  const { username: uploaderUsername, loading: uploaderLoading } = useUsername(userId);
+
   // Group basic file information
   const basicFileInfo = filterFields([
     { label: 'Title', value: mediaFile.title || 'Untitled' },
@@ -65,7 +70,17 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
     { label: 'File Size', value: mediaFile.fileSize ? formatFileSize(mediaFile.fileSize) : 'Unknown' },
     { label: 'File Type', value: mediaFile.fileExtension ? `.${mediaFile.fileExtension}` : 'Unknown' },
     { label: 'Media Type', value: mediaFile.mediaType || 'Unknown' },
-    { label: 'Visibility', value: getMetadataField(mediaFile, 'visibility', 'Public') }
+    { label: 'Visibility', value: getMetadataField(mediaFile, 'visibility', 'Public') },
+    { label: 'Uploaded By', value: uploaderLoading ? 'Loading...' : (uploaderUsername || userId || 'Unknown') },
+    { label: 'Uploaded On', value: getMetadataField(mediaFile, 'modifiedDate', 'Unknown') 
+      ? new Date(getMetadataField(mediaFile, 'modifiedDate')).toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      : 'Unknown' }
   ]);
 
   // Standard metadata
@@ -110,17 +125,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
 
   return (
     <div className="media-information">
-      <Typography 
-        variant={isMobile ? "h5" : "h4"} 
-        gutterBottom 
-        style={{ 
-          color: 'var(--accent-color)',
-          fontSize: isMobile ? '1.25rem' : '2rem',
-          marginBottom: isMobile ? '0.5rem' : '1rem'
-        }}
-      >
-        {getMetadataField(mediaFile, 'fileName') || mediaFile.title || 'Untitled Media'}
-      </Typography>
+      
 
       {basicFileInfo.length > 0 && (
         <Accordion defaultExpanded>
@@ -139,6 +144,24 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
                   <Typography variant="body2">{info.value}</Typography>
                 </Box>
               ))}
+            </Box>
+          </AccordionDetails>
+        </Accordion>
+      )}
+
+      {mediaFile.metadata?.tags && mediaFile.metadata?.tags.length > 0 && (
+        <Accordion>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon fontSize={isMobile ? "small" : "medium"} />}
+          >
+            <Typography variant={isMobile ? "body1" : "subtitle1"}>Tags</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box>
+            <MediaDetailTags 
+            tags={getMetadataField(mediaFile, 'tags', [])} 
+            isMobile={isMobile}
+            />
             </Box>
           </AccordionDetails>
         </Accordion>
@@ -217,4 +240,6 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
   );
 };
 
+// Export as both named and default export to support both usage patterns
+export { MediaInformation };
 export default MediaInformation; 

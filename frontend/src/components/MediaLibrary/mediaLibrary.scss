@@ -159,3 +159,66 @@ label {
     
   }
 }
+
+.MuiDataGrid-cell {
+  &[data-field="tags"] {
+    overflow: visible;
+    white-space: nowrap;
+    
+    .MuiChip-root {
+      margin: 2px;
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      
+      .MuiChip-label {
+        padding-left: 6px;
+        padding-right: 6px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+    
+    .no-tags {
+      color: var(--text-secondary);
+      font-style: italic;
+      font-size: 0.85rem;
+    }
+  }
+}
+
+.MuiDataGrid-root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: auto;
+  
+  // Support different density settings
+  &.MuiDataGrid-densityStandard .MuiDataGrid-cell {
+    padding: 14px 16px;
+  }
+  
+  &.MuiDataGrid-densityComfortable .MuiDataGrid-cell {
+    padding: 10px 16px;
+  }
+  
+  &.MuiDataGrid-densityCompact .MuiDataGrid-cell {
+    padding: 6px 8px;
+  }
+  
+  // Improve toolbar appearance
+  .MuiDataGrid-toolbarContainer {
+    padding: 8px;
+    gap: 8px;
+    flex-wrap: wrap;
+    
+    .MuiButtonBase-root {
+      padding: 6px 8px;
+    }
+    
+    .MuiFormControl-root {
+      margin: 0;
+      min-width: 120px;
+    }
+  }
+}

@@ -17,32 +17,64 @@ const initialState: MediaState = {
 
 export const initializeMedia = createAsyncThunk(
   'media/initialize',
-  async (_, { getState }) => {
-    // Get the current state
-    const state = getState() as { media: MediaState };
-    
-    // Only skip if we have successfully loaded data AND we have actual media items
-    if (state.media.status === 'succeeded' && state.media.allMedia.length > 0) {
-      console.log('Skipping media fetch - already loaded successfully with', state.media.allMedia.length, 'items');
-      return state.media.allMedia;
-    }
-    
-    // If we're currently loading AND there's no data, we should force a reload
-    if (state.media.status === 'loading' && state.media.allMedia.length === 0) {
-      console.log('Media fetch is in progress, but no data exists yet - continuing with fetch');
-    } else if (state.media.status === 'loading') {
-      console.log('Skipping media fetch - request already in progress with data');
-      return state.media.allMedia;
-    }
-    
+  async (_, { rejectWithValue }) => {
     try {
-      console.log('Fetching media from backend');
       const response = await axios.get<BaseMediaFile[]>(`${env.BASE_URL}/media/all`);
-      console.log('Media received:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching media:', error);
-      throw error;
+      const message = error.response?.data?.message || 'Failed to fetch media';
+      console.error('Error fetching media:', message);
+      return rejectWithValue(message);
+    }
+  }
+);
+
+export const updateMedia = createAsyncThunk(
+  'media/updateMedia',
+  async (mediaData: Partial<BaseMediaFile>, { rejectWithValue }) => {
+    try {
+      console.log('Updating media with data:', mediaData);
+      const mediaId = mediaData._id || '';
+      const mediaSlug = mediaData.slug || '';
+      
+      if (!mediaId && !mediaSlug) {
+        return rejectWithValue('Missing media ID or slug');
+      }
+      
+      // Prepare the update payload
+      const updatePayload = {
+        title: mediaData.title,
+        metadata: mediaData.metadata
+      };
+      
+      let response;
+      
+      // Try the ID endpoint first
+      try {
+        console.log('Trying to update media using ID endpoint');
+        response = await axios.put<BaseMediaFile>(
+          `${env.BASE_URL}/media/update-by-id/${mediaId}`,
+          updatePayload
+        );
+      } catch (error: any) {
+        // If ID endpoint fails with 404, try the slug endpoint
+        if (error.response && error.response.status === 404 && mediaSlug) {
+          console.log('ID endpoint failed, trying slug endpoint');
+          response = await axios.put<BaseMediaFile>(
+            `${env.BASE_URL}/media/update/${mediaSlug}`,
+            updatePayload
+          );
+        } else {
+          // Re-throw the error if it's not a 404 or we don't have a slug
+          throw error;
+        }
+      }
+      
+      console.log('Media update response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error updating media:', error);
+      return rejectWithValue(error.response?.data?.message || 'Failed to update media');
     }
   }
 );
@@ -60,8 +92,8 @@ const mediaSlice = createSlice({
       };
       state.allMedia.unshift(formattedMedia); // Add to beginning of array for better visibility
     },
-    updateMedia: (state, action: PayloadAction<BaseMediaFile>) => {
-      console.log('Updating media:', action.payload);
+    updateMediaLocal: (state, action: PayloadAction<BaseMediaFile>) => {
+      console.log('Updating media locally:', action.payload);
       const index = state.allMedia.findIndex(media => media._id === action.payload._id);
       if (index !== -1) {
         state.allMedia[index] = action.payload;
@@ -90,9 +122,23 @@ const mediaSlice = createSlice({
         console.error('Media initialization failed:', action.payload);
         state.status = 'failed';
         state.error = action.payload as string;
+      })
+      .addCase(updateMedia.pending, (state) => {
+        console.log('Media update pending...');
+      })
+      .addCase(updateMedia.fulfilled, (state, action) => {
+        console.log('Media update succeeded:', action.payload);
+        const index = state.allMedia.findIndex(media => media._id === action.payload._id);
+        if (index !== -1) {
+          state.allMedia[index] = action.payload;
+        }
+      })
+      .addCase(updateMedia.rejected, (state, action) => {
+        console.error('Media update failed:', action.payload);
+        state.error = action.payload as string;
       });
   },
 });
 
-export const { addMedia, updateMedia, deleteMedia } = mediaSlice.actions;
+export const { addMedia, updateMediaLocal, deleteMedia } = mediaSlice.actions;
 export default mediaSlice.reducer; 

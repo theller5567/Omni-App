@@ -265,5 +265,50 @@ router.post('/batch-download', async (req, res) => {
   }
 });
 
+// Add a route to update media by ID
+router.put('/update-by-id/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('Received update request for id:', id);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
+    // Find the media file
+    const mediaFile = await Media.findById(id);
+    
+    if (!mediaFile) {
+      console.log('Media not found for id:', id);
+      return res.status(404).json({ error: 'Media not found' });
+    }
+    
+    // Extract update data
+    const { title, metadata } = req.body;
+    
+    // Update fields
+    if (title) mediaFile.title = title;
+    
+    // Update metadata fields
+    if (metadata) {
+      // Ensure metadata exists
+      if (!mediaFile.metadata) mediaFile.metadata = {};
+      
+      // Update each metadata field
+      for (const [key, value] of Object.entries(metadata)) {
+        if (value !== undefined) {
+          mediaFile.metadata[key] = value;
+        }
+      }
+    }
+    
+    // Save the updated media file
+    await mediaFile.save();
+    console.log('Media file updated successfully');
+    
+    res.status(200).json(mediaFile);
+  } catch (error) {
+    console.error('Error updating media file by ID:', error);
+    res.status(500).json({ error: 'Failed to update media file' });
+  }
+});
+
 export default router;
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   Box, 
@@ -30,10 +30,20 @@ import {
 } from 'react-icons/fa';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
-import MediaInformation from './MediaInformation';
-import { EditMediaDialog } from './EditMediaDialog';
 import { updateMedia } from '../../store/slices/mediaSlice';
 
+// Lazy load subcomponents
+const MediaInformation = lazy(() => import('./MediaInformation'));
+const EditMediaDialog = lazy(() => import('./EditMediaDialog').then(module => ({ 
+  default: module.default || module.EditMediaDialog 
+})));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <Box display="flex" justifyContent="center" alignItems="center" p={2}>
+    <CircularProgress size={24} />
+  </Box>
+);
 
 // Add a helper function to safely get metadata fields from either root or metadata object
 const getMetadataField = (mediaFile: any, fieldName: string, defaultValue: any = undefined) => {
@@ -53,149 +63,231 @@ const getMetadataField = (mediaFile: any, fieldName: string, defaultValue: any =
   return defaultValue;
 };
 
+// Extract subcomponents for better organization and code splitting
 
-// Add this interface near the other interfaces
-interface MediaTypeField {
-  name: string;
-  type: string;
-  required?: boolean;
-  options?: string[];
-  [key: string]: any;
+interface MediaDetailTagsProps {
+  tags?: string[];
+  isMobile?: boolean;
 }
 
-interface MediaTypeConfig {
-  fields: MediaTypeField[];
-  name: string;
-  baseType?: string;
-  [key: string]: any;
-}
-
-// Remove unused interface
-// interface ExtendedMediaFile extends BaseMediaFile { ... }
-
-// Compound subcomponent: Preview section
-interface MediaDetailPreviewProps {
-  mediaFile: any;
-}
-export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({ mediaFile }) => {
-  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
-  // Get uploadedBy from either direct property or metadata
-  const userId = getMetadataField(mediaFile, 'uploadedBy', '');
-  const { username: uploaderUsername, loading: uploaderLoading } = useUsername(userId);
+export const MediaDetailTags: React.FC<MediaDetailTagsProps> = ({ tags, isMobile }) => {
+  if (!tags || tags.length === 0) return null;
+  
   return (
-    <Box className="media-preview">
-      <Box className="media-preview-header">
-        <Typography variant="body2">
-          <span>Media Type:</span>{' '}
-          <span style={{ color: mediaTypes.find(type => type.name === mediaFile.mediaType)?.catColor || '#999' }}>
-            {mediaFile.mediaType}
-          </span>
-        </Typography>
-        <Box className="size-container">
-          <Typography variant="body2">
-            Size:<span> {formatFileSize(mediaFile.fileSize || 0)}</span>
-          </Typography>
-        </Box>
-        <Box className="updated-date">
-          <Typography variant="body2">
-            Uploaded on:<span> {new Date(mediaFile.modifiedDate).toLocaleDateString()}</span>
-          </Typography>
-        </Box>
-        <Box className="uploaded-by">
-          <Typography variant="body2">
-            Uploaded by:<span> {uploaderLoading 
-              ? 'Loading...' 
-              : (uploaderUsername || userId || 'Unknown')}</span>
-          </Typography>
-        </Box>
-      </Box>
-      <Box className="media-preview-media">
-        {/* Copy your existing media rendering logic here (images/videos/etc.) */}
-      </Box>
+    <Box className="media-tags">
+      {tags?.map((tag, index) => (
+        <Chip 
+          key={index} 
+          label={tag} 
+          size={isMobile ? "small" : "medium"} 
+          sx={{ backgroundColor: 'var(--accent-color)', color: 'var(--color-text-invert)', margin: '0.25rem', fontSize: isMobile ? '0.75rem' : '0.875rem' }}
+        />
+      ))}
     </Box>
   );
 };
 
-interface MediaDetailTagsProps {
-  tags?: string[];
-  defaultTags?: string[];
-}
-export const MediaDetailTags: React.FC<MediaDetailTagsProps> = ({ tags, defaultTags }) => (
-  <Box className="tags-container">
-    Tags: {tags && tags.length > 0 ? (
-      <>
-        {tags.slice()
-          .sort((a, b) => {
-            const aIsDefault = defaultTags?.includes(a) || false;
-            const bIsDefault = defaultTags?.includes(b) || false;
-            if (aIsDefault === bIsDefault) return 0;
-            return aIsDefault ? -1 : 1;
-          })
-          .map((tag, index) => (
-            <Chip
-              key={index}
-              size="small"
-              label={tag}
-              className={defaultTags?.includes(tag) ? "default-tag" : "custom-tag"}
-            />
-          ))}
-      </>
-    ) : (
-      <Typography variant="body2" sx={{ opacity: 0.6, fontStyle: 'italic' }}>
-        No tags
-      </Typography>
-    )}
-  </Box>
-);
-
-interface MediaDetailActionsProps {
-  onDownload: () => void;
+interface MediaDetailPreviewProps {
+  mediaFile: BaseMediaFile;
   onEdit?: () => void;
+  onDownload: () => void;
   isEditingEnabled: boolean;
-  isMobile: boolean;
 }
-export const MediaDetailActions: React.FC<MediaDetailActionsProps> = ({
-  onDownload,
-  onEdit,
-  isEditingEnabled,
-  isMobile,
-}) => (
-  <Box className="media-actions">
-    <Box className="action-buttons">
-      <Button
-        variant="contained"
-        color="primary"
-        startIcon={<FaDownload />}
-        onClick={onDownload}
-        size={isMobile ? "small" : "medium"}
-      >
-        Download
-      </Button>
-      {isEditingEnabled && onEdit && (
-        <Button
-          variant="outlined"
-          color="primary"
-          startIcon={<EditIcon />}
-          onClick={onEdit}
-          size={isMobile ? "small" : "medium"}
-        >
-          Edit
-        </Button>
-      )}
-    </Box>
-  </Box>
-);
 
-const MediaDetail: React.FC & {
-  Information: typeof MediaInformation;
-  Preview: typeof MediaDetailPreview;
-  Tags: typeof MediaDetailTags;
-  Actions: typeof MediaDetailActions;
-} = () => {
+export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({ 
+  mediaFile, 
+  onEdit, 
+  onDownload, 
+  isEditingEnabled 
+}) => {
+  // Get uploadedBy from either direct property or metadata
+
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
+
+  return (
+    <Box className="media-preview">
+      <Box className="media-preview-header">
+      <Typography 
+        variant={isMobile ? "h5" : "h4"} 
+        gutterBottom 
+        style={{ 
+          color: 'var(--accent-color)',
+          fontSize: isMobile ? '1.25rem' : '2rem',
+          marginBottom: '0',
+        }}
+      >
+        {getMetadataField(mediaFile, 'fileName') || mediaFile.title || 'Untitled Media'}
+      </Typography>
+        {/* Add Action Buttons to Header */}
+        <Box sx={{ 
+          marginLeft: 'auto', 
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<FaDownload />}
+            onClick={onDownload}
+            size={isMobile ? "small" : "medium"}
+            sx={{ 
+              padding: isMobile ? '4px 8px' : '6px 12px',
+              minWidth: isMobile ? 'auto' : '64px'
+            }}
+          >
+            {isMobile ? '' : 'Download'}
+          </Button>
+          
+          {isEditingEnabled && onEdit && (
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<EditIcon />}
+              onClick={onEdit}
+              size={isMobile ? "small" : "medium"}
+              sx={{ 
+                padding: isMobile ? '4px 8px' : '6px 12px',
+                minWidth: isMobile ? 'auto' : '64px'
+              }}
+            >
+              {isMobile ? '' : 'Edit'}
+            </Button>
+          )}
+        </Box>
+      </Box>
+      <Box className="media-preview-media">
+        {mediaFile.fileExtension &&
+        ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(
+          mediaFile.fileExtension.toLowerCase()
+        ) ? (
+          // Image preview
+          <img
+            src={mediaFile.location}
+            alt={mediaFile.metadata?.altText || ""}
+          />
+        ) : mediaFile.fileExtension &&
+          ["mp4", "webm", "ogg", "mov"].includes(
+            mediaFile.fileExtension.toLowerCase()
+          ) ? (
+          // Video preview
+          <Box
+            sx={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              background: "#000",
+            }}
+          >
+            <video
+              controls
+              autoPlay={false}
+              style={{
+                width: "100%",
+                maxHeight: isMobile ? "300px" : "600px",
+              }}
+              poster={mediaFile.metadata?.v_thumbnail}
+            >
+              <source
+                src={mediaFile.location}
+                type={`video/${
+                  mediaFile.fileExtension === "mov"
+                    ? "quicktime"
+                    : mediaFile.fileExtension.toLowerCase()
+                }`}
+              />
+              Your browser does not support the video tag.
+            </video>
+          </Box>
+        ) : mediaFile.fileExtension &&
+          ["mp3", "wav", "ogg", "m4a"].includes(
+            mediaFile.fileExtension.toLowerCase()
+          ) ? (
+          // Audio preview
+          <Box
+            sx={{
+              p: 4,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <FaFileAudio size={isMobile ? 48 : 64} />
+            <audio
+              controls
+              src={mediaFile.location}
+              style={{ width: "100%" }}
+            >
+              Your browser does not support the audio element.
+            </audio>
+          </Box>
+        ) : mediaFile.fileExtension &&
+          ["doc", "docx"].includes(mediaFile.fileExtension.toLowerCase()) ? (
+          // Word document
+          <Box
+            sx={{
+              p: 4,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <FaFileWord size={isMobile ? 48 : 64} />
+            <Typography variant={isMobile ? "body2" : "body1"}>
+              Microsoft Word Document Preview Not Available
+            </Typography>
+          </Box>
+        ) : mediaFile.fileExtension &&
+          ["xls", "xlsx"].includes(mediaFile.fileExtension.toLowerCase()) ? (
+          // Excel document
+          <Box
+            sx={{
+              p: 4,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <FaFileExcel size={isMobile ? 48 : 64} />
+            <Typography variant={isMobile ? "body2" : "body1"}>
+              Microsoft Excel Document Preview Not Available
+            </Typography>
+          </Box>
+        ) : (
+          // Generic file
+          <Box
+            sx={{
+              p: 4,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <FaFile size={isMobile ? 48 : 64} />
+            <Typography variant={isMobile ? "body2" : "body1"}>
+              {mediaFile.fileExtension
+                ? `${mediaFile.fileExtension.toUpperCase()} File Preview Not Available`
+                : "File Preview Not Available"}
+            </Typography>
+          </Box>
+        )}
+      </Box>
+      
+    </Box>
+  );
+};
+
+const MediaDetail: React.FC = () => {
   // All state hooks first
   const { slug } = useParams();
   const [mediaFile, setMediaFile] = useState<BaseMediaFile | null>(null);
-  const [mediaTypeConfig, setMediaTypeConfig] = useState<MediaTypeConfig | null>(null);
+  const [mediaTypeConfig, setMediaTypeConfig] = useState<MediaType | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
@@ -206,159 +298,191 @@ const MediaDetail: React.FC & {
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   const dispatch = useDispatch<AppDispatch>();
-  
-  // Function to get base schema fields
-  const getBaseSchemaFields = (): Record<string, any> => {
-    if (!mediaFile || !mediaFile.__t) return {};
-
-    // Handle different base types with their fields
-    switch (mediaFile.__t) {
-      case 'BaseImage':
-        return {
-          imageWidth: { type: 'Number', required: true },
-          imageHeight: { type: 'Number', required: true },
-          resolution: { type: 'Number' },
-          colorSpace: { type: 'Text' },
-          orientation: { type: 'Text' },
-          hasAlpha: { type: 'Boolean' }
-        };
-      case 'BaseVideo':
-        return {
-          duration: { type: 'Number' },
-          frameRate: { type: 'Number' },
-          width: { type: 'Number' },
-          height: { type: 'Number' },
-          codec: { type: 'Text' },
-          aspectRatio: { type: 'Text' },
-          hasAudio: { type: 'Boolean' },
-          audioCodec: { type: 'Text' }
-        };
-      case 'BaseAudio':
-        return {
-          duration: { type: 'Number' },
-          sampleRate: { type: 'Number' },
-          bitRate: { type: 'Number' },
-          channels: { type: 'Number' },
-          codec: { type: 'Text' }
-        };
-      case 'BaseDocument':
-        return {
-          pageCount: { type: 'Number' },
-          author: { type: 'Text' },
-          creationDate: { type: 'Date' }
-        };
-      default:
-        return {};
-    }
-  };
-
-  // Get base fields based on the file type
-  const baseFields = getBaseSchemaFields();
-
-
 
   useEffect(() => {
-    const fetchMediaFile = async () => {
+    const fetchFile = async () => {
+      if (!slug) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const response = await axios.get<BaseMediaFile>(
-          `${env.BASE_URL}/media/slug/${slug}`
-        );
+        setLoading(true);
+        const response = await axios.get<BaseMediaFile>(`${env.BASE_URL}/media/slug/${slug}`);
+        console.log("Media file:", response.data);
         setMediaFile(response.data);
+
+        // Find the corresponding media type
+        if (response.data.mediaType) {
+          const mediaType = mediaTypes.find(
+            (type) => type.name === response.data.mediaType
+          );
+          
+          if (mediaType) {
+            console.log("Media type found:", mediaType);
+            // Create a properly typed MediaType object from our store type
+            setMediaTypeConfig({
+              id: mediaType._id || '',
+              name: mediaType.name,
+              // Explicitly set optional properties
+              description: '',
+              fields: mediaType.fields || [],
+              acceptedFileTypes: mediaType.acceptedFileTypes || [],
+              defaultTags: mediaType.defaultTags || []
+            });
+          } else {
+            console.warn(
+              `Media type "${response.data.mediaType}" not found in available types.`
+            );
+          }
+        }
       } catch (error) {
-        console.error("Error fetching media file:", error);
-        toast.error("Failed to load media file");
+        console.error("Error fetching file details:", error);
+        toast.error("Failed to load file details. Please try again.");
       } finally {
         setLoading(false);
       }
     };
 
-    if (slug) {
-      fetchMediaFile();
-    }
-  }, [slug]);
+    fetchFile();
+  }, [slug, mediaTypes]);
 
-  // Update mediaTypeConfig when mediaFile changes
-  useEffect(() => {
-    if (mediaFile && mediaTypes.length > 0) {
-      const config = mediaTypes.find(type => type.name === mediaFile.mediaType);
-      setMediaTypeConfig(config || null);
-    }
-  }, [mediaFile, mediaTypes]);
-
-  const handleSave = async (data: Partial<MediaFile>) => {
+  const handleDownload = async () => {
     if (!mediaFile) return;
 
     try {
-
-      // Transform form data to API format
-      const apiData = {
-        title: data.title || '',
-        metadata: {
-          fileName: data.fileName || '',
-          altText: data.altText || '',
-          description: data.description || '',
-          visibility: data.visibility || 'public',
-          tags: data.tags || [],
-          ...data.customFields
-        }
-      };
-
-      // Check if any data actually changed
-      const hasChanged = 
-        apiData.title !== mediaFile.title ||
-        apiData.metadata.fileName !== mediaFile.metadata?.fileName ||
-        apiData.metadata.altText !== mediaFile.metadata?.altText ||
-        apiData.metadata.description !== mediaFile.metadata?.description ||
-        apiData.metadata.visibility !== mediaFile.metadata?.visibility ||
-        JSON.stringify(apiData.metadata.tags) !== JSON.stringify(mediaFile.metadata?.tags);
-
-      if (!hasChanged) {
-        setIsEditing(false);
-        return;
-      }
-
-      const response = await axios.put<BaseMediaFile>(
-        `${env.BASE_URL}/media/update/${mediaFile.slug}`,
-        apiData,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
-        }
-      );
-
-      if (response.status === 200 && response.data) {
-        // Update the local state with the new data
-        const updatedMediaFile = {
-          ...mediaFile,
-          title: data.title || '',
-          metadata: {
-            fileName: data.fileName || '',
-            altText: data.altText || '',
-            description: data.description || '',
-            visibility: data.visibility || 'public',
-            tags: data.tags || [],
-            ...data.customFields
-          }
-        };
-
-        setMediaFile(updatedMediaFile);
-        setIsEditing(false);
-        toast.success('Media file updated successfully');
-        dispatch(updateMedia(updatedMediaFile));
+      // For direct downloads of files with known URLs
+      if (mediaFile.location) {
+        // Create a temporary anchor element
+        const link = document.createElement('a');
+        link.href = mediaFile.location;
+        
+        // Set the download attribute with the file name
+        const fileName = mediaFile.metadata?.fileName || mediaFile.title || `file.${mediaFile.fileExtension}`;
+        link.setAttribute('download', fileName);
+        
+        // Append to the document, click it, and remove it
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       } else {
-        throw new Error('Failed to update media file');
+        // Use the API for downloads that require server-side processing
+        const response = await axios.get(`${env.BASE_URL}/media/download/${mediaFile.id || mediaFile._id}`, {
+          responseType: 'blob'
+        });
+        
+        // Create a blob URL for the downloaded file
+        const blob = new Blob([response.data as BlobPart]);
+        const url = window.URL.createObjectURL(blob);
+        
+        // Set up and trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', mediaFile.metadata?.fileName || mediaFile.title || 'download');
+        document.body.appendChild(link);
+        link.click();
+        
+        // Clean up
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(link);
       }
-    } catch (error: any) {
-      console.error('Update failed:', error);
-      toast.error(`Update failed: ${error.message || 'Unknown error'}`);
+      
+      toast.success('Download started');
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast.error('Failed to download file. Please try again.');
     }
   };
 
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleSave = async (updatedMediaFile: Partial<MediaFile>) => {
+    if (!mediaFile) return;
+    
+    try {
+      // Get required identifiers from the media file
+      const mediaId = mediaFile._id || mediaFile.id || '';
+      const mediaSlug = mediaFile.slug || '';
+      
+      // Extract only the properties we need to update
+      const updatePayload = {
+        _id: mediaId,
+        id: mediaId, // Include both ID formats
+        slug: mediaSlug, // Include the slug for the API endpoint
+        title: updatedMediaFile.title,
+        metadata: {
+          fileName: updatedMediaFile.fileName,
+          altText: updatedMediaFile.altText,
+          description: updatedMediaFile.description,
+          visibility: updatedMediaFile.visibility,
+          tags: updatedMediaFile.tags,
+        }
+      };
+      
+      console.log('Sending update with payload:', updatePayload);
+      
+      // Call the Redux action to update the media file
+      const resultAction = await dispatch(updateMedia(updatePayload));
+      
+      if (updateMedia.fulfilled.match(resultAction)) {
+        // Update was successful, update local state with the returned data
+        const updatedData = resultAction.payload;
+        setMediaFile(prevState => {
+          if (!prevState) return null;
+          
+          return {
+            ...prevState,
+            ...updatedData
+          };
+        });
+        
+        toast.success('Media updated successfully');
+      } else if (updateMedia.rejected.match(resultAction)) {
+        // Handle specific error if available
+        const errorMsg = resultAction.payload ? String(resultAction.payload) : 'Update failed';
+        throw new Error(errorMsg);
+      }
+    } catch (error) {
+      console.error('Error updating media:', error);
+      toast.error('Failed to update media: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  // Define base fields for the details component
+  const baseFields = [
+    { name: 'File Name', value: getMetadataField(mediaFile, 'fileName', mediaFile?.title) },
+    { name: 'Media Type', value: mediaFile?.mediaType },
+    { name: 'File Size', value: formatFileSize(mediaFile?.fileSize || 0) },
+    { name: 'File Extension', value: mediaFile?.fileExtension?.toUpperCase() },
+    { name: 'Upload Date', value: mediaFile?.modifiedDate ? new Date(mediaFile.modifiedDate).toLocaleDateString() : 'Unknown' },
+    { name: 'Uploaded By', value: uploaderLoading ? 'Loading...' : (uploaderUsername || userId || 'Unknown') },
+    { name: 'Description', value: getMetadataField(mediaFile, 'description', '') },
+    { name: 'Alt Text', value: getMetadataField(mediaFile, 'altText', '') },
+    { name: 'Visibility', value: getMetadataField(mediaFile, 'visibility', 'private')?.toUpperCase() },
+  ];
+
+  // Prepare the media file for the edit dialog
+  const mediaFileForEdit = mediaFile ? {
+    id: mediaFile._id || mediaFile.id || '',
+    title: mediaFile.title || '',
+    fileName: getMetadataField(mediaFile, 'fileName', mediaFile.title),
+    altText: getMetadataField(mediaFile, 'altText', ''),
+    description: getMetadataField(mediaFile, 'description', ''),
+    visibility: getMetadataField(mediaFile, 'visibility', 'private'),
+    tags: getMetadataField(mediaFile, 'tags', []),
+    customFields: {} as Record<string, any>,
+    fileType: mediaFile.fileExtension || '',
+    url: mediaFile.location || ''
+  } : null;
+
+  // Find the media type based on the mediaFile
+  const mediaTypeForEdit = mediaTypeConfig;
+
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
         <CircularProgress />
       </Box>
     );
@@ -366,60 +490,14 @@ const MediaDetail: React.FC & {
 
   if (!mediaFile) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <Typography color="error">Error loading media file.</Typography>
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+        <Typography>Media not found</Typography>
       </Box>
     );
   }
 
-  // Convert BaseMediaFile to MediaFile type for the EditMediaDialog
-  const mediaFileForEdit: MediaFile = {
-    id: mediaFile._id,
-    title: mediaFile.title || '',
-    fileName: mediaFile.metadata?.fileName || '',
-    visibility: mediaFile.metadata?.visibility as 'public' | 'private',
-    altText: mediaFile.metadata?.altText || '',
-    description: mediaFile.metadata?.description || '',
-    tags: Array.isArray(mediaFile.metadata?.tags) ? [...mediaFile.metadata.tags] : [],
-    customFields: {
-      // Map webinar fields first
-      'Webinar Title': mediaFile.metadata?.['Webinar Title'] || '',
-      'Webinar Summary': mediaFile.metadata?.['Webinar Summary'] || '',
-      'Webinar CTA': mediaFile.metadata?.['Webinar CTA'] || '',
-      // Then spread the rest of metadata, excluding standard fields
-      ...Object.entries(mediaFile.metadata || {}).reduce((acc, [key, value]) => {
-        if (!['fileName', 'altText', 'description', 'visibility', 'tags'].includes(key)) {
-          acc[key] = value;
-        }
-        return acc;
-      }, {} as Record<string, any>)
-    },
-    fileType: mediaFile.fileExtension,
-    fileSize: mediaFile.fileSize,
-    uploadDate: mediaFile.modifiedDate,
-    url: mediaFile.location
-  };
-
-  // Convert MediaTypeConfig to MediaType for the EditMediaDialog
-  const mediaTypeForEdit: MediaType = mediaTypeConfig ? {
-    id: mediaTypeConfig._id,
-    name: mediaTypeConfig.name,
-    description: mediaTypeConfig.description || '',
-    fields: mediaTypeConfig.fields.map(field => ({
-      name: field.name,
-      label: field.name,
-      type: field.type.toLowerCase(),
-      required: field.required || false,
-      options: field.options || []
-    })),
-    acceptedFileTypes: mediaTypeConfig.acceptedFileTypes || [],
-    defaultTags: mediaTypeConfig.defaultTags || []
-  } : {
-    id: '',
-    name: '',
-    fields: [],
-    acceptedFileTypes: []
-  };
+  // Is the current user allowed to edit this media?
+  const isEditingEnabled = userRole === 'superAdmin' || userRole === 'admin';
 
   // Motion animation adjusted for mobile
   const motionProps = {
@@ -440,332 +518,46 @@ const MediaDetail: React.FC & {
         <ArrowBackIcon fontSize={isMobile ? "small" : "medium"} />
       </Button>
       <Box className="media-detail">
-        <Box className="media-preview">
-          <Box className="media-preview-header">
-            <Typography variant="body2">
-              <span>Media Type:</span>{" "}
-              <span
-                style={{
-                  color:
-                    mediaTypes.find((type) => type.name === mediaFile.mediaType)
-                      ?.catColor || "#999",
-                }}
-              >
-                {" "}
-                {mediaFile.mediaType}
-              </span>
-            </Typography>
+        <MediaDetailPreview 
+          mediaFile={mediaFile} 
+          onEdit={handleEdit}
+          onDownload={handleDownload}
+          isEditingEnabled={isEditingEnabled}
+        />
 
-            <Box className="size-container">
-              <Typography variant="body2">
-                Size:<span> {formatFileSize(mediaFile.fileSize || 0)}</span>
-              </Typography>
-            </Box>
-            <Box className="updated-date">
-              <Typography variant="body2">
-                Uploaded on:
-                <span>
-                  {" "}
-                  {new Date(mediaFile.modifiedDate).toLocaleDateString()}
-                </span>
-              </Typography>
-            </Box>
-            <Box className="uploaded-by">
-              <Typography variant="body2">
-                Uploaded by:{" "}
-                {uploaderLoading
-                  ? "Loading…"
-                  : uploaderUsername}
-              </Typography>
-            </Box>
-          </Box>
-          <Box className="media-preview-media">
-            {mediaFile.fileExtension &&
-            ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(
-              mediaFile.fileExtension.toLowerCase()
-            ) ? (
-              // Image preview
-              <img
-                src={mediaFile.location}
-                alt={mediaFile.metadata?.altText || ""}
-              />
-            ) : mediaFile.fileExtension &&
-              ["mp4", "webm", "ogg", "mov"].includes(
-                mediaFile.fileExtension.toLowerCase()
-              ) ? (
-              // Video preview
-              <Box
-                sx={{
-                  width: "100%",
-                  height: "100%",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  background: "#000",
-                }}
-              >
-                <video
-                  controls
-                  autoPlay={false}
-                  style={{
-                    width: "100%",
-                    maxHeight: isMobile ? "300px" : "600px",
-                  }}
-                  poster={mediaFile.metadata?.v_thumbnail}
-                >
-                  <source
-                    src={mediaFile.location}
-                    type={`video/${
-                      mediaFile.fileExtension === "mov"
-                        ? "quicktime"
-                        : mediaFile.fileExtension.toLowerCase()
-                    }`}
-                  />
-                  Your browser does not support the video tag.
-                </video>
-              </Box>
-            ) : mediaTypeConfig?.baseType === "BaseVideo" ||
-              mediaFile.__t === "BaseVideo" ? (
-              // Fallback for videos when file extension is not recognized
-              <Box
-                sx={{
-                  width: "100%",
-                  height: "100%",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  background: "#000",
-                }}
-              >
-                <video
-                  controls
-                  autoPlay={false}
-                  style={{
-                    width: "100%",
-                    maxHeight: isMobile ? "300px" : "600px",
-                  }}
-                  poster={mediaFile.metadata?.v_thumbnail}
-                >
-                  <source src={mediaFile.location} />
-                  Your browser does not support the video tag.
-                </video>
-              </Box>
-            ) : mediaFile.fileExtension &&
-              ["mp3", "wav", "ogg", "aac", "flac"].includes(
-                mediaFile.fileExtension.toLowerCase()
-              ) ? (
-              // Audio preview
-              <Box
-                sx={{
-                  width: "100%",
-                  p: isMobile ? 2 : 3,
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  flexDirection: "column",
-                }}
-              >
-                <Box
-                  sx={{
-                    mb: isMobile ? 1 : 2,
-                    fontSize: isMobile ? "2rem" : "3rem",
-                    color: "primary.main",
-                  }}
-                >
-                  <FaFileAudio />
-                </Box>
-                <audio controls style={{ width: "100%" }}>
-                  <source
-                    src={mediaFile.location}
-                    type={`audio/${mediaFile.fileExtension.toLowerCase()}`}
-                  />
-                  Your browser does not support the audio tag.
-                </audio>
-              </Box>
-            ) : mediaFile.fileExtension === "pdf" ? (
-              // PDF preview
-              <Box
-                sx={{
-                  width: "100%",
-                  p: isMobile ? 2 : 3,
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  flexDirection: "column",
-                }}
-              >
-                <iframe
-                  src={`${mediaFile.location}#toolbar=0&navpanes=0`}
-                  title={mediaFile.title || "PDF Document"}
-                  style={{
-                    width: "100%",
-                    height: isMobile ? "300px" : "600px",
-                    border: "none",
-                  }}
+        <Box className="media-detail-info">
+         
+
+          {mediaFile && (
+            <div className="media-information-container">
+              <Suspense fallback={<LoadingFallback />}>
+                <MediaInformation
+                  mediaFile={mediaFile}
+                  mediaTypeConfig={mediaTypeConfig}
+                  baseFields={baseFields}
+                  getMetadataField={getMetadataField}
                 />
-              </Box>
-            ) : mediaFile.fileExtension &&
-              ["doc", "docx"].includes(
-                mediaFile.fileExtension.toLowerCase()
-              ) ? (
-              // Word document (no preview, just icon)
-              <Box
-                sx={{
-                  width: "100%",
-                  p: isMobile ? 2 : 3,
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  flexDirection: "column",
-                }}
-              >
-                <Box
-                  sx={{
-                    mb: isMobile ? 1 : 2,
-                    fontSize: isMobile ? "2rem" : "3rem",
-                    color: "primary.main",
-                  }}
-                >
-                  <FaFileWord />
-                </Box>
-                <Typography variant={isMobile ? "body2" : "body1"}>
-                  This is a Word document. Please download to view.
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<FaDownload />}
-                  onClick={() => window.open(mediaFile.location, "_blank")}
-                  sx={{ mt: isMobile ? 1 : 2 }}
-                  size={isMobile ? "small" : "medium"}
-                >
-                  Download Document
-                </Button>
-              </Box>
-            ) : mediaFile.fileExtension &&
-              ["xls", "xlsx"].includes(
-                mediaFile.fileExtension.toLowerCase()
-              ) ? (
-              // Excel document (no preview, just icon)
-              <Box
-                sx={{
-                  width: "100%",
-                  p: isMobile ? 2 : 3,
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  flexDirection: "column",
-                }}
-              >
-                <Box
-                  sx={{
-                    mb: isMobile ? 1 : 2,
-                    fontSize: isMobile ? "2rem" : "3rem",
-                    color: "success.main",
-                  }}
-                >
-                  <FaFileExcel />
-                </Box>
-                <Typography variant={isMobile ? "body2" : "body1"}>
-                  This is an Excel spreadsheet. Please download to view.
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<FaDownload />}
-                  onClick={() => window.open(mediaFile.location, "_blank")}
-                  sx={{ mt: isMobile ? 1 : 2 }}
-                  size={isMobile ? "small" : "medium"}
-                >
-                  Download Spreadsheet
-                </Button>
-              </Box>
-            ) : (
-              // Generic file (no preview, just icon)
-              <Box
-                sx={{
-                  width: "100%",
-                  p: isMobile ? 2 : 3,
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  flexDirection: "column",
-                }}
-              >
-                <Box
-                  sx={{
-                    mb: isMobile ? 1 : 2,
-                    fontSize: isMobile ? "2rem" : "3rem",
-                    color: "text.secondary",
-                  }}
-                >
-                  <FaFile />
-                </Box>
-                <Typography variant={isMobile ? "body2" : "body1"}>
-                  {mediaFile.fileExtension
-                    ? `This is a ${mediaFile.fileExtension.toUpperCase()} file. Please download to view.`
-                    : "File preview not available."}
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<FaDownload />}
-                  onClick={() => window.open(mediaFile.location, "_blank")}
-                  sx={{ mt: isMobile ? 1 : 2 }}
-                  size={isMobile ? "small" : "medium"}
-                >
-                  Download File
-                </Button>
-              </Box>
-            )}
-          </Box>
-          <Box className="media-preview-footer">
-            <MediaDetail.Tags
-              tags={mediaFile.metadata?.tags}
-              defaultTags={mediaTypeForEdit.defaultTags}
-            />
-            <MediaDetail.Actions
-              onDownload={() => window.open(mediaFile.location, "_blank")}
-              onEdit={() => setIsEditing(true)}
-              isEditingEnabled={
-                userRole === "admin" || userRole === "superAdmin"
-              }
-              isMobile={isMobile}
-            />
-          </Box>
+              </Suspense>
+            </div>
+          )}
+
+          {mediaTypeConfig && isEditing && mediaFileForEdit && mediaTypeForEdit && (
+            <Suspense fallback={<LoadingFallback />}>
+              <EditMediaDialog
+                open={isEditing}
+                onClose={() => setIsEditing(false)}
+                mediaFile={mediaFileForEdit}
+                mediaType={mediaTypeForEdit}
+                onSave={handleSave}
+              />
+            </Suspense>
+          )}
         </Box>
-
-        {mediaFile && (
-          <div className="media-information-container">
-            <MediaInformation
-              mediaFile={mediaFile}
-              mediaTypeConfig={mediaTypeConfig}
-              baseFields={baseFields}
-              getMetadataField={getMetadataField}
-            />
-          </div>
-        )}
-
-        {mediaTypeConfig && (
-          <EditMediaDialog
-            open={isEditing}
-            onClose={() => setIsEditing(false)}
-            mediaFile={mediaFileForEdit}
-            mediaType={mediaTypeForEdit}
-            onSave={handleSave}
-          />
-        )}
       </Box>
 
       <ToastContainer position="top-center" />
     </motion.div>
   );
 };
-
-// Attach compound component subcomponent
-MediaDetail.Information = MediaInformation;
-MediaDetail.Preview = MediaDetailPreview;
-MediaDetail.Tags = MediaDetailTags;
-MediaDetail.Actions = MediaDetailActions;
 
 export default MediaDetail;

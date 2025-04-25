@@ -1,5 +1,5 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Box, Typography, Grid, Toolbar, IconButton, Tooltip, useMediaQuery, Theme } from '@mui/material';
+import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
+import { Box, Typography, Grid, Toolbar, IconButton, Tooltip, useMediaQuery, Theme, CircularProgress } from '@mui/material';
 import { motion } from 'framer-motion';
 import './mediaLibrary.scss';
 import { useNavigate } from 'react-router-dom';
@@ -14,14 +14,20 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../../store/store';
 import axios from 'axios';
 import env from '../../config/env';
-import { 
-  VirtualizedDataTable,
-  HeaderComponent, 
-  MediaCard, 
-  ConfirmationModal 
-} from './components';
 import { fetchTagCategories } from '../../store/slices/tagCategorySlice';
 
+// Lazy load subcomponents
+const HeaderComponent = lazy(() => import('./components/HeaderComponent'));
+const DataTable = lazy(() => import('./components/DataTable'));
+const MediaCard = lazy(() => import('./components/MediaCard'));
+const ConfirmationModal = lazy(() => import('./components/ConfirmationModal'));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <Box display="flex" justifyContent="center" alignItems="center" p={2}>
+    <CircularProgress size={24} />
+  </Box>
+);
 
 interface MediaLibraryProps {
   mediaFilesData: BaseMediaFile[];
@@ -33,12 +39,15 @@ interface MediaLibraryProps {
   children?: React.ReactNode;
 }
 
-const MediaLibrary: React.FC<MediaLibraryProps> & {
-  Toolbar: typeof HeaderComponent;
-  DataTable: typeof VirtualizedDataTable;
-  Card: typeof MediaCard;
-  ConfirmModal: typeof ConfirmationModal;
-} = ({ mediaFilesData, setSearchQuery, onAddMedia, onDeleteMedia, children }) => {
+const MediaLibrary: React.FC<MediaLibraryProps> = ({ 
+  mediaFilesData, 
+  setSearchQuery, 
+  onAddMedia, 
+  onDeleteMedia, 
+  selectedMediaType,
+  handleMediaTypeChange,
+  children 
+}) => {
   // If children are provided (compound usage), render them directly
   if (children) {
     return <div className="media-library-container">{children}</div>;
@@ -48,7 +57,6 @@ const MediaLibrary: React.FC<MediaLibraryProps> & {
     // Get saved view mode from localStorage or default to 'card'
     return localStorage.getItem('mediaLibraryViewMode') as 'list' | 'card' || 'card';
   });
-  const [selectedMediaType, setSelectedMediaType] = useState<string>('All');
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selected, setSelected] = useState<GridRowSelectionModel>([]);
@@ -69,36 +77,10 @@ const MediaLibrary: React.FC<MediaLibraryProps> & {
   const tagsFetchedRef = useRef(false);
   
   useEffect(() => {
-    const loadTagData = async () => {
-      try {
-        // Avoid fetching if already fetched during this component lifecycle
-        if (tagsFetchedRef.current) {
-          console.log('Tag categories already fetched, skipping');
-          return;
-        }
-        
-        // Mark as fetched to prevent duplicate requests
-        tagsFetchedRef.current = true;
-        
-        // Fetch tag categories silently (without showing error toasts)
-        await dispatch(fetchTagCategories()).unwrap();
-      } catch (error) {
-        // Don't show toast for initial tag category fetch errors
-        console.warn('Error fetching tag categories during MediaLibrary load:', error);
-      } finally {
-        // Mark initial load as complete after 2 seconds
-        setTimeout(() => {
-          toastSettings.initialLoadComplete = true;
-        }, 2000);
-      }
-    };
-    
-    // Delay tag fetching slightly to prioritize media loading
-    const timer = setTimeout(() => {
-      loadTagData();
-    }, 500);
-    
-    return () => clearTimeout(timer);
+    if (!tagsFetchedRef.current) {
+      tagsFetchedRef.current = true;
+      dispatch(fetchTagCategories());
+    }
   }, [dispatch]);
   
   // Clean up references on unmount
@@ -172,10 +154,6 @@ const MediaLibrary: React.FC<MediaLibraryProps> & {
 
   const handleFileClick = (file: BaseMediaFile) => {
     navigate(`/media/slug/${file.slug}`);
-  };
-
-  const handleMediaTypeChange = (type: string) => {
-    setSelectedMediaType(type);
   };
 
   const handleDeleteClick = (id: string) => {
@@ -368,15 +346,17 @@ const MediaLibrary: React.FC<MediaLibraryProps> & {
         <Typography variant="h1" align="left" sx={{ paddingBottom: isMobile ? '1rem' : '2rem' }}>
           OMNI Media Library
         </Typography>
-        <HeaderComponent
-          view={viewMode}
-          toggleView={toggleView}
-          mediaFilesData={mediaFilesData}
-          setSearchQuery={setSearchQuery}
-          selectedMediaType={selectedMediaType}
-          handleMediaTypeChange={handleMediaTypeChange}
-          onAddMedia={onAddMedia}
-        />
+        <Suspense fallback={<LoadingFallback />}>
+          <HeaderComponent
+            view={viewMode}
+            toggleView={toggleView}
+            mediaFilesData={mediaFilesData}
+            setSearchQuery={setSearchQuery}
+            selectedMediaType={selectedMediaType}
+            handleMediaTypeChange={handleMediaTypeChange}
+            onAddMedia={onAddMedia}
+          />
+        </Suspense>
         <Box sx={{ 
           width: '100%', 
           height: 'calc(100% - 4rem)', 
@@ -388,53 +368,52 @@ const MediaLibrary: React.FC<MediaLibraryProps> & {
           )}
           
           {viewMode === 'list' ? (
-            <Box sx={{ width: '100%', height: '100%', overflow: 'auto' }}>
-              <VirtualizedDataTable 
+            <Suspense fallback={<LoadingFallback />}>
+              <DataTable
                 rows={rows}
                 onSelectionChange={setSelected}
               />
-            </Box>
+            </Suspense>
           ) : (
-            <Box sx={{ width: '100%', height: '100%', overflow: 'auto', p: 2 }}>
-              <Grid 
-                container 
-                spacing={2}
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 220px))',
-                  gap: '16px',
-                  justifyContent: 'center'
-                }}
-              >
-                {rows.map((file) => (
-                  <Box key={file.id} sx={{ width: '100%', maxWidth: '220px' }}>
-                    <MediaCard 
-                      file={file} 
-                      handleFileClick={() => handleFileClick(file)} 
-                      onDeleteClick={userRole === 'superAdmin' ? () => handleDeleteClick(file.id) : undefined}
-                    />
+            <Box className="media-card-grid" sx={{ p: 2, overflow: 'auto' }}>
+              <Box sx={{ 
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                gap: 2
+              }}>
+                {rows.map((row) => (
+                  <Box key={row.id}>
+                    <Suspense fallback={<LoadingFallback />}>
+                      <MediaCard
+                        file={row}
+                        handleFileClick={() => handleFileClick(row)}
+                        onDeleteClick={userRole === 'superAdmin' ? () => handleDeleteClick(row.id) : undefined}
+                      />
+                    </Suspense>
                   </Box>
                 ))}
-              </Grid>
+              </Box>
             </Box>
           )}
         </Box>
       </Box>
       <ToastContainer position={isMobile ? "bottom-center" : "top-right"} />
-      <ConfirmationModal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onConfirm={handleConfirmDelete}
-      />
+      {isModalOpen && (
+        <Suspense fallback={<LoadingFallback />}>
+          <ConfirmationModal
+            open={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onConfirm={handleConfirmDelete}
+            title="Delete Media"
+            message={`Are you sure you want to delete ${isToolbarDelete ? 'the selected items' : 'this media file'}? This action cannot be undone.`}
+          />
+        </Suspense>
+      )}
     </motion.div>
   );
 };
 
-// Attach compound sub-components
-MediaLibrary.Toolbar = HeaderComponent;
-MediaLibrary.DataTable = VirtualizedDataTable;
-MediaLibrary.Card = MediaCard;
-MediaLibrary.ConfirmModal = ConfirmationModal;
-
+// Modified component exports to support both direct and lazy loading
+export { HeaderComponent, DataTable, MediaCard, ConfirmationModal };
 export default MediaLibrary;
 

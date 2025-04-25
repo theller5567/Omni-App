@@ -1,30 +1,40 @@
 // App.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar/Sidebar';
-import MediaDetail from './components/MediaDetail/MediaDetail';
-import Account from './pages/Account';
-import Home from './components/Home';
-import AuthPage from './pages/AuthPage';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { lightTheme, darkTheme } from './theme';
 import './App.scss';
 import { useDispatch, useSelector } from 'react-redux';
 import ProtectedRoute from './components/ProtectedRoute';
-import PasswordSetupPage from './pages/PasswordSetup';
 import { setUser, initializeUser } from './store/slices/userSlice';
 import { initializeMedia } from './store/slices/mediaSlice';
 import { initializeMediaTypes } from './store/slices/mediaTypeSlice';
 import { RootState } from './store/store';
-import MediaLibraryPage from './pages/MediaLibraryPage';
-import AccountUsers from './pages/AccountUsers';
-import AccountTags from './pages/AccountTags';
-import AccountMediaTypes from './pages/AccountMediaTypes';
-import AccountAdminDashboard from './pages/AccountAdminDashboard';
 import { AppDispatch } from './store/store';
-import StyleGuidePage from './pages/StyleGuidePage';
 import axios from 'axios';
+import { Box, CircularProgress } from '@mui/material';
+
+// Lazy load components
+const MediaDetail = lazy(() => import('./components/MediaDetail/MediaDetail'));
+const Account = lazy(() => import('./pages/Account'));
+const Home = lazy(() => import('./components/Home'));
+const AuthPage = lazy(() => import('./pages/AuthPage'));
+const PasswordSetupPage = lazy(() => import('./pages/PasswordSetup'));
+const MediaLibraryPage = lazy(() => import('./pages/MediaLibraryPage'));
+const AccountUsers = lazy(() => import('./pages/AccountUsers'));
+const AccountTags = lazy(() => import('./pages/AccountTags'));
+const AccountMediaTypes = lazy(() => import('./pages/AccountMediaTypes'));
+const AccountAdminDashboard = lazy(() => import('./pages/AccountAdminDashboard'));
+const StyleGuidePage = lazy(() => import('./pages/StyleGuidePage'));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+    <CircularProgress />
+  </Box>
+);
 
 // Create a context for theme toggling
 export const ThemeContext = React.createContext({
@@ -176,23 +186,25 @@ const App: React.FC = () => {
                 overflow: 'auto',
               }}
             >
-              <Routes>
-                <Route path="/media/slug/:slug" element={<ProtectedRoute element={<MediaDetail />} />} />
-                <Route path="/media-library" element={<ProtectedRoute element={<MediaLibraryPage />} />} />
-                <Route path="/account" element={<ProtectedRoute element={<Account />} />} />
-                <Route path="/admin-users" element={<ProtectedRoute element={<AccountUsers />} />} />
-                <Route path="/admin-tags" element={<ProtectedRoute element={<AccountTags />} />} />
-                <Route path="/admin-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} />} />
-                {userRole === 'superAdmin' && (
-                  <Route path="/manage-media-types" element={<AccountMediaTypes />} />
-                )}
-                <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} />} />
-                <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
-                <Route path="/password-setup" element={<PasswordSetupPage />} />
-                <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} />} />
-                <Route path="/login" element={<AuthPage />} />
-                <Route path="/" element={<AuthPage />} />
-              </Routes>
+              <Suspense fallback={<LoadingFallback />}>
+                <Routes>
+                  <Route path="/media/slug/:slug" element={<ProtectedRoute element={<MediaDetail />} />} />
+                  <Route path="/media-library" element={<ProtectedRoute element={<MediaLibraryPage />} />} />
+                  <Route path="/account" element={<ProtectedRoute element={<Account />} />} />
+                  <Route path="/admin-users" element={<ProtectedRoute element={<AccountUsers />} />} />
+                  <Route path="/admin-tags" element={<ProtectedRoute element={<AccountTags />} />} />
+                  <Route path="/admin-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} />} />
+                  {userRole === 'superAdmin' && (
+                    <Route path="/manage-media-types" element={<AccountMediaTypes />} />
+                  )}
+                  <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} />} />
+                  <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
+                  <Route path="/password-setup" element={<PasswordSetupPage />} />
+                  <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} />} />
+                  <Route path="/login" element={<AuthPage />} />
+                  <Route path="/" element={<AuthPage />} />
+                </Routes>
+              </Suspense>
             </div>
           </div>
         </Router>

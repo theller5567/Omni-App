@@ -1,7 +1,7 @@
 import React from 'react';
 import { DataGrid, GridColDef, GridToolbar, GridRowSelectionModel, GridRowParams } from '@mui/x-data-grid';
 import { Link, useNavigate } from 'react-router-dom';
-import { Box } from '@mui/material';
+import { Box, Chip, Tooltip, Typography } from '@mui/material';
 import { formatFileSize } from '../../../utils/formatFileSize';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../store/store';
@@ -172,16 +172,85 @@ const DataTable: React.FC<DataTableProps> = ({
       }
     },
     { field: 'tags', headerName: 'Tags', flex: 0.5, renderCell: (params) => {
-      const tags = params.row.metadata.tags;
-      if (Array.isArray(tags)) {
-        return tags.map((tag, index) => (
-          <span key={index} className="tag">
-            {tag}{index < params.row.metadata.tags.length - 1 ? ', ' : ''}
-          </span>
-        ));
-      } else {
-        return <span>No tags available</span>;
+      const tags = params.row.metadata?.tags || [];
+      
+      // Check if we have tags to display
+      if (!tags || !Array.isArray(tags) || tags.length === 0) {
+        return <span className="no-tags">No tags</span>;
       }
+      
+      // Limit displayed tags to 3
+      const MAX_DISPLAYED_TAGS = 3;
+      const displayedTags = tags.slice(0, MAX_DISPLAYED_TAGS);
+      const remainingCount = tags.length - MAX_DISPLAYED_TAGS;
+      
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          flexWrap: 'nowrap', 
+          gap: '4px', 
+          overflow: 'hidden',
+          maxWidth: '100%'
+        }}>
+          {displayedTags.map((tag: string, index: number) => (
+            <Tooltip key={index} title={tag} arrow placement="top">
+              <Chip
+                label={tag}
+                size="small"
+                sx={{ 
+                  backgroundColor: 'var(--accent-color)',
+                  color: 'var(--color-text-invert)',
+                  height: '20px',
+                  fontSize: '0.7rem',
+                  maxWidth: '80px',
+                  textOverflow: 'ellipsis'
+                }}
+              />
+            </Tooltip>
+          ))}
+          
+          {remainingCount > 0 && (
+            <Tooltip 
+              title={
+                <Box>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold', mb: 1, display: 'block' }}>
+                    {remainingCount} more tag{remainingCount > 1 ? 's' : ''}:
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '200px' }}>
+                    {tags.slice(MAX_DISPLAYED_TAGS).map((tag: string, i: number) => (
+                      <Chip
+                        key={i}
+                        label={tag}
+                        size="small"
+                        sx={{ 
+                          backgroundColor: 'var(--accent-color)',
+                          color: 'var(--color-text-invert)',
+                          height: '20px',
+                          fontSize: '0.7rem'
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              }
+              arrow
+              placement="top"
+            >
+              <Chip
+                label={`+${remainingCount}`}
+                size="small"
+                sx={{ 
+                  height: '20px',
+                  fontSize: '0.7rem',
+                  backgroundColor: 'var(--bg-secondary)',
+                  color: 'var(--text-secondary)',
+                  fontWeight: 'bold'
+                }}
+              />
+            </Tooltip>
+          )}
+        </Box>
+      );
     }},
   ];
 
@@ -191,18 +260,24 @@ const DataTable: React.FC<DataTableProps> = ({
         slots={{
           toolbar: GridToolbar,
         }}
+        slotProps={{
+          toolbar: {
+            showQuickFilter: true,
+            quickFilterProps: { debounceMs: 500 },
+          },
+        }}
         rows={rows}
         columns={columns}
         getRowId={(row) => row.id}
-        pageSizeOptions={[5, 10, 20]}
         initialState={{
           pagination: {
-            paginationModel: { pageSize: 10 },
+            paginationModel: { pageSize: 25 },
           },
           sorting: {
             sortModel: [{ field: 'modifiedDate', sort: 'desc' }],
           },
         }}
+        pageSizeOptions={[10, 25, 50, 100]}
         checkboxSelection
         onRowClick={handleRowClick}
         onRowSelectionModelChange={onSelectionChange}

@@ -40,7 +40,6 @@ $border-radius: 0.5rem;
   padding: $spacing-md;
   padding-left: calc($spacing-md + $sidebar-width);
   @include flex-container(column);
-  
   @include mobile {
     padding: $spacing-sm;
     padding-left: calc($spacing-sm + $sidebar-width);
@@ -102,31 +101,47 @@ $border-radius: 0.5rem;
     .media-preview-header {
       display: flex;
       flex-wrap: wrap;
-      justify-content: space-between;
       align-items: center;
-      padding: 12px 16px;
-      background-color: rgba(0, 0, 0, 0.1);
-      
-      @media (max-width: 600px) {
-        flex-direction: column;
-        align-items: flex-start;
+      justify-content: flex-start;
+      gap: 16px;
+      margin-bottom: 0;
+      background-color: var(--bg-lighter, var(--color-surface));
+      border-radius: 4px 4px 0 0;
+      padding: 0.5rem;
+      min-height: 40px;
+
+      @media screen and (max-width: 768px) {
         gap: 8px;
-        padding: 10px;
+        padding: 8px;
       }
-      
-      .MuiTypography-body2 {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
+
+      span {
+        font-weight: 500;
+      }
+
+      // Responsive styles for buttons in header
+      .MuiButton-root {
+        white-space: nowrap;
+        min-height: 32px;
         
-        @include mobile {
+        @media screen and (max-width: 768px) {
+          padding: 4px 8px;
           font-size: 0.75rem;
-          margin-bottom: 2px;
+          
+          .MuiSvgIcon-root, 
+          svg {
+            font-size: 1rem;
+          }
         }
         
-        span {
-          font-weight: 500;
-          color: var(--text-primary);
-          margin-left: 4px;
+        // Handle very small screens
+        @media screen and (max-width: 480px) {
+          min-width: 32px;
+          padding: 4px;
+          
+          .MuiButton-startIcon {
+            margin-right: 0;
+          }
         }
       }
     }
@@ -150,6 +165,10 @@ $border-radius: 0.5rem;
         flex-wrap: wrap;
         gap: 0.5rem;
         align-items: left;
+        .MuiChip-root {
+          background-color: var(--bg-primary);
+          color: var(--text-primary);
+        }
         
         @include mobile {
           width: 100%;
@@ -207,6 +226,7 @@ $border-radius: 0.5rem;
       align-items: center;
       background-color: #000;
       overflow: hidden;
+      padding: 1rem;
       
       @include mobile {
         min-height: 250px;
@@ -250,23 +270,57 @@ $border-radius: 0.5rem;
         }
       }
     }
-    
+
+    .media-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
     
   }
   
-  .media-information-container {
+  .media-detail-info {
     flex: 1;
     min-width: 300px;
     max-width: 450px;
-    overflow-y: auto;
     
     @media (max-width: 1024px) {
       max-width: 100%;
-      overflow-y: visible;
     }
     
     @include mobile {
       min-width: unset;
+    }
+    
+    .media-title {
+      font-weight: 500;
+      color: var(--text-primary, #333);
+      margin-top: 0;
+      
+      @include mobile {
+        font-size: 1.25rem;
+      }
+    }
+    
+    .media-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      
+      @include mobile {
+        gap: 0.25rem;
+        margin-bottom: 1rem;
+      }
+    }
+  }
+  
+  .media-information-container {
+    overflow-y: auto;
+    
+    @media (max-width: 1024px) {
+      overflow-y: visible;
     }
   }
   

@@ -1,0 +1,239 @@
+// Dashboard shared styles
+.dashboard-container {
+  width: calc(100% - 250px);
+  margin-left: 250px;
+  padding: 1rem;
+  background-color: var(--bg-primary, #1e1e1e);
+  color: var(--text-primary, #ffffff);
+  min-height: calc(100vh - 64px);
+  
+  .dashboard-title {
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  
+  .dashboard-card {
+    background-color: var(--bg-secondary, #2d2d2d);
+    border-radius: 8px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    height: 100%;
+    
+    &.has-scroll {
+      overflow-y: auto;
+      max-height: 600px;
+    }
+  }
+  
+  .dashboard-overview {
+    margin-bottom: 2rem;
+    
+    &-title {
+      margin-bottom: 1rem;
+      font-weight: 500;
+    }
+    
+    &-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      
+      @media (max-width: 1200px) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      @media (max-width: 600px) {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .stat-card {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      
+      .stat-title {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.75rem;
+      }
+      
+      .stat-value {
+        font-size: 2.25rem;
+        font-weight: 600;
+        margin: 0;
+        line-height: 1.2;
+      }
+      
+      .stat-subtitle {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-top: 0.75rem;
+      }
+    }
+  }
+  
+  .dashboard-tabs {
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+    
+    .MuiTabs-indicator {
+      background-color: var(--accent-color, #3f8cff);
+    }
+    
+    .MuiTab-root {
+      color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+      text-transform: none;
+      
+      &.Mui-selected {
+        color: var(--text-primary, #ffffff);
+        font-weight: 500;
+      }
+    }
+  }
+  
+  .dashboard-tab-content {
+    padding: 0.5rem 0;
+    min-height: 450px;
+  }
+  
+  // Layout grids for dashboard components
+  .grid-container {
+    display: grid;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+    min-height: 400px;
+  }
+  
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+    min-height: 450px;
+    
+    @media (max-width: 900px) {
+      grid-template-columns: repeat(1, 1fr);
+      min-height: 400px;
+      
+      // Make all children span full width on mobile
+      & > * {
+        grid-column: 1 / -1 !important;
+      }
+    }
+  }
+  
+  .media-types-chart {
+    height: 450px;
+    min-height: 450px;
+    
+    @media (max-width: 900px) {
+      height: 400px;
+      min-height: 400px;
+    }
+    
+    @media (max-width: 600px) {
+      height: 350px;
+      min-height: 350px;
+    }
+  }
+  
+  .storage-chart {
+    height: 450px;
+    min-height: 450px;
+    
+    @media (max-width: 900px) {
+      height: 400px;
+      min-height: 400px;
+    }
+    
+    @media (max-width: 600px) {
+      height: 350px;
+      min-height: 350px;
+    }
+  }
+  
+  .activity-chart {
+    height: 450px;
+    min-height: 450px;
+    
+    @media (max-width: 900px) {
+      height: 400px;
+      min-height: 400px;
+    }
+    
+    @media (max-width: 600px) {
+      height: 350px;
+      min-height: 350px;
+    }
+  }
+  
+  // Tables
+  .data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+    
+    .table-header {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      
+      & > div {
+        padding-bottom: 0.75rem;
+      }
+    }
+    
+    .table-row {
+      & > div {
+        padding: 0.625rem 0;
+        border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+      }
+      
+      &:last-child > div {
+        border-bottom: none;
+      }
+    }
+    
+    .table-cell {
+      &.center {
+        text-align: center;
+      }
+      
+      &.right {
+        text-align: right;
+      }
+    }
+  }
+  
+  // Color indicator
+  .color-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  
+  // Card content styling
+  .MuiCard-root {
+    background-color: var(--bg-secondary, #2d2d2d);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+  
+  .MuiTableCell-root {
+    border-bottom-color: var(--border-color, rgba(255, 255, 255, 0.08));
+    color: var(--text-primary, #ffffff);
+  }
+  
+  .MuiTableHead-root .MuiTableCell-root {
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    font-weight: 600;
+  }
+} 

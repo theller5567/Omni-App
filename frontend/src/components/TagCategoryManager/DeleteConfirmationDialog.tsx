@@ -72,4 +72,7 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
       </DialogActions>
     </Dialog>
   );
-}; 
+};
+
+// Add default export for lazy loading
+export default DeleteConfirmationDialog; 

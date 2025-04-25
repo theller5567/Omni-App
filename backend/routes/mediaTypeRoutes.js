@@ -27,8 +27,6 @@ router.get('/', getMediaTypes);
 // Add a new endpoint to get all media types with usage counts in a single request
 router.get('/with-usage-counts', async (req, res) => {
   try {
-    console.log('Fetching all media types with usage counts in a single request');
-    
     // Get all media types
     const mediaTypes = await MediaType.find();
     
@@ -55,7 +53,6 @@ router.get('/with-usage-counts', async (req, res) => {
       usageCount: countMap[mediaType._id] || 0
     }));
     
-    console.log(`Returning ${result.length} media types with usage counts`);
     return res.status(200).json(result);
   } catch (error) {
     console.error('Error fetching media types with usage counts:', error);
@@ -80,11 +77,7 @@ router.post('/test-update-tags/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { defaultTags } = req.body;
-    
-    console.log('🔍 Debug - Test update tags endpoint');
-    console.log('ID:', id);
-    console.log('Tags to set:', defaultTags);
-    
+
     const MediaType = await import('../models/MediaType.js').then(m => m.default);
     const mediaType = await MediaType.findById(id);
     
@@ -96,14 +89,13 @@ router.post('/test-update-tags/:id', async (req, res) => {
     mediaType.defaultTags = defaultTags;
     const updatedType = await mediaType.save();
     
-    console.log('✅ Updated media type with tags:', updatedType.defaultTags);
     
     res.status(200).json({
       message: 'Tags updated',
       mediaType: updatedType
     });
   } catch (error) {
-    console.error('❌ Error in test update:', error);
+    console.error('Error in test update:', error);
     res.status(500).json({ message: 'Error updating tags', error: error.toString() });
   }
 });
