@@ -27,6 +27,7 @@ import {
   FaFileExcel, 
   FaFile, 
   FaDownload,
+  FaFilePdf
 } from 'react-icons/fa';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
@@ -228,6 +229,197 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
             >
               Your browser does not support the audio element.
             </audio>
+          </Box>
+        ) : mediaFile.fileExtension &&
+          ["pdf"].includes(mediaFile.fileExtension.toLowerCase()) ? (
+          // PDF preview
+          <Box
+            sx={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              p: 2,
+              position: "relative", // Add for debugging overlay
+            }}
+          >
+            {/* Add a debug button in development mode */}
+            {/* {process.env.NODE_ENV !== 'production' && (
+              <Box 
+                sx={{ 
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  zIndex: 10,
+                  p: 1,
+                }}
+              >
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    console.log('PDF Debug Info:');
+                    console.log('- PDF URL:', mediaFile.location);
+                    console.log('- File Extension:', mediaFile.fileExtension);
+                    console.log('- Content Type:', mediaFile.metadata?.contentType);
+                    
+                    // Log iframe status
+                    const iframe = document.querySelector('iframe[title="PDF Preview"]');
+                    console.log('- iframe element:', iframe);
+                    
+                    // Log object status
+                    const objectElem = document.querySelector('.pdf-object-fallback object');
+                    console.log('- object element:', objectElem);
+                    
+                    // Try different display methods
+                    const showIframe = () => {
+                      const iframe = document.querySelector('iframe[title="PDF Preview"]') as HTMLElement;
+                      const objectFallback = document.querySelector('.pdf-object-fallback') as HTMLElement;
+                      const iconFallback = document.querySelector('.pdf-icon-fallback') as HTMLElement;
+                      
+                      if (iframe && iframe.style) iframe.style.display = 'block';
+                      if (objectFallback && objectFallback.style) objectFallback.style.display = 'none';
+                      if (iconFallback && iconFallback.style) iconFallback.style.display = 'none';
+                    };
+                    
+                    const showObject = () => {
+                      const iframe = document.querySelector('iframe[title="PDF Preview"]') as HTMLElement;
+                      const objectFallback = document.querySelector('.pdf-object-fallback') as HTMLElement;
+                      const iconFallback = document.querySelector('.pdf-icon-fallback') as HTMLElement;
+                      
+                      if (iframe && iframe.style) iframe.style.display = 'none';
+                      if (objectFallback && objectFallback.style) objectFallback.style.display = 'block';
+                      if (iconFallback && iconFallback.style) iconFallback.style.display = 'none';
+                    };
+                    
+                    const showIconFallback = () => {
+                      const iframe = document.querySelector('iframe[title="PDF Preview"]') as HTMLElement;
+                      const objectFallback = document.querySelector('.pdf-object-fallback') as HTMLElement;
+                      const iconFallback = document.querySelector('.pdf-icon-fallback') as HTMLElement;
+                      
+                      if (iframe && iframe.style) iframe.style.display = 'none';
+                      if (objectFallback && objectFallback.style) objectFallback.style.display = 'none';
+                      if (iconFallback && iconFallback.style) iconFallback.style.display = 'flex';
+                    };
+                    
+                    // Show a dialog with buttons for each method
+                    const dialogContent = document.createElement('div');
+                    dialogContent.innerHTML = `
+                      <div style="padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+                        <button id="btn-iframe">Try iframe</button>
+                        <button id="btn-object">Try object tag</button>
+                        <button id="btn-icon">Show icon fallback</button>
+                        <button id="btn-close">Close</button>
+                      </div>
+                    `;
+                    const dialog = document.createElement('dialog');
+                    dialog.appendChild(dialogContent);
+                    document.body.appendChild(dialog);
+                    
+                    // Add event listeners
+                    dialog.querySelector('#btn-iframe')?.addEventListener('click', showIframe);
+                    dialog.querySelector('#btn-object')?.addEventListener('click', showObject);
+                    dialog.querySelector('#btn-icon')?.addEventListener('click', showIconFallback);
+                    dialog.querySelector('#btn-close')?.addEventListener('click', () => dialog.close());
+                    
+                    dialog.showModal();
+                  }}
+                >
+                  Debug PDF
+                </Button>
+              </Box>
+            )} */}
+            
+            {/* Primary method: Try using an iframe for preview */}
+            <iframe
+              src={`${mediaFile.location}#toolbar=1&navpanes=1&scrollbar=1`}
+              style={{
+                width: "100%",
+                height: isMobile ? "400px" : "600px",
+                border: "none",
+                borderRadius: "4px",
+                overflow: "hidden",
+              }}
+              title="PDF Preview"
+              onError={(e) => {
+                // Show alternative PDF viewer on error
+                const iframe = e.target as HTMLIFrameElement;
+                if (iframe && iframe.style) {
+                  iframe.style.display = 'none';
+                }
+                
+                // Try to show the object tag fallback
+                const objectFallback = document.querySelector('.pdf-object-fallback') as HTMLElement;
+                if (objectFallback && objectFallback.style) {
+                  objectFallback.style.display = 'block';
+                  
+                  // If object also fails, show icon fallback
+                  setTimeout(() => {
+                    const objectElement = objectFallback.querySelector('object');
+                    if (objectElement && !objectElement.contentDocument) {
+                      objectFallback.style.display = 'none';
+                      const iconFallback = document.querySelector('.pdf-icon-fallback') as HTMLElement;
+                      if (iconFallback && iconFallback.style) {
+                        iconFallback.style.display = 'flex';
+                      }
+                    }
+                  }, 1000);
+                }
+              }}
+            />
+            
+            {/* Object tag fallback - works in some browsers where iframe doesn't */}
+            <Box 
+              className="pdf-object-fallback"
+              sx={{ 
+                display: 'none',
+                width: '100%',
+                height: isMobile ? "400px" : "600px",
+              }}
+            >
+              <object
+                data={mediaFile.location}
+                type="application/pdf"
+                width="100%"
+                height="100%"
+                style={{
+                  border: "none",
+                  borderRadius: "4px",
+                }}
+              >
+                <p>Your browser does not support PDF viewing.</p>
+              </object>
+            </Box>
+            
+            {/* Icon fallback as last resort */}
+            <Box 
+              className="pdf-icon-fallback"
+              sx={{ 
+                display: 'none',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                p: 3,
+                gap: 2
+              }}
+            >
+              <FaFilePdf size={isMobile ? 56 : 86} color="#ef4444" />
+              <Typography variant={isMobile ? "body2" : "body1"} sx={{ mt: 2, textAlign: 'center' }}>
+                PDF preview not available in this browser.
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<FaDownload />}
+                onClick={onDownload}
+                size={isMobile ? "small" : "medium"}
+                sx={{ mt: 2 }}
+              >
+                Download PDF
+              </Button>
+            </Box>
           </Box>
         ) : mediaFile.fileExtension &&
           ["doc", "docx"].includes(mediaFile.fileExtension.toLowerCase()) ? (

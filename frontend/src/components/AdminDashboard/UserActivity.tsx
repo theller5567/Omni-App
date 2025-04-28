@@ -48,9 +48,9 @@ interface UserType {
 }
 
 // Determine if we're running on localhost
-const isLocalhost = 
-  window.location.hostname === 'localhost' || 
-  window.location.hostname === '127.0.0.1';
+// const isLocalhost = 
+//   window.location.hostname === 'localhost' || 
+//   window.location.hostname === '127.0.0.1';
 
 const UserActivity: React.FC = () => {
   const [activities, setActivities] = useState<UserActivity[]>([]);

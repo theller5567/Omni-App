@@ -19,3 +19,9 @@ Implement Retention Policy: Add functionality to clean up old logs
 Add Dashboard Analytics: Create endpoints that provide aggregated statistics
 Add Real-time Notifications: Use WebSockets to notify admins of important activities
 Add Export Functionality: Allow downloading logs in CSV or Excel format
+
+Check for Race conditions.
+
+THink about using useQuery instead of useFetch.
+
+
