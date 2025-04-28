@@ -13,3 +13,9 @@
 
 6. Add a review system where only a admin or superAdmin can approve new mediaFiles and Types.
     6A. Add a notification system using users email when they need to review a file or type.
+
+7. Add More Tracking Points: Integrate with other controllers like mediaTypeController
+Implement Retention Policy: Add functionality to clean up old logs
+Add Dashboard Analytics: Create endpoints that provide aggregated statistics
+Add Real-time Notifications: Use WebSockets to notify admins of important activities
+Add Export Functionality: Allow downloading logs in CSV or Excel format

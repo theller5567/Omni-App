@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
-import { Paper, Typography, Box, Tab, Tabs, Chip, Divider } from '@mui/material';
+import { Paper, Typography, Box, Tab, Tabs } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { formatFileSize } from '../../utils/formatFileSize';
 
@@ -21,6 +21,7 @@ const DEFAULT_COLORS = [
 
 const StorageUsageChart: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState(0);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
   
   // Get media data from Redux store
   const allMedia = useSelector((state: RootState) => state.media.allMedia);
@@ -86,7 +87,8 @@ const StorageUsageChart: React.FC = () => {
           display: 'flex', 
           justifyContent: 'center', 
           alignItems: 'center', 
-          height: '300px' 
+          height: '400px',
+          minHeight: '400px'
         }}>
           <Typography variant="body1" color="textSecondary">
             No media files available to display storage usage.
@@ -101,12 +103,13 @@ const StorageUsageChart: React.FC = () => {
       display: 'grid',
       gridTemplateColumns: 'repeat(12, 1fr)',
       gap: '1.25rem',
-      marginBottom: '1.25rem'
+      marginBottom: '1.25rem',
+      minHeight: '500px'
     }}>
       <Paper 
         elevation={2} 
         className="dashboard-card storage-chart"
-        style={{ gridColumn: 'span 7' }}
+        style={{ gridColumn: 'span 7', minHeight: '500px' }}
       >
         <Typography variant="h6" gutterBottom>Storage Usage</Typography>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
@@ -122,14 +125,20 @@ const StorageUsageChart: React.FC = () => {
           </Tabs>
         </Box>
         
-        <Box sx={{ 
-          display: activeTab === 0 ? 'block' : 'none', 
-          height: 'calc(85% - 20px)',
-          minHeight: '300px',
-          position: 'relative'
-        }}>
-          <ResponsiveContainer width="100%" height="100%" minHeight={350}>
+        <Box 
+          ref={chartContainerRef}
+          sx={{ 
+            display: activeTab === 0 ? 'block' : 'none', 
+            height: '400px',
+            minHeight: '400px',
+            width: '100%',
+            position: 'relative'
+          }}
+        >
+          <ResponsiveContainer width="100%" height={400} minHeight={400}>
             <BarChart
+              width={500}
+              height={400}
               data={mediaTypeData}
               margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
               barSize={30}
@@ -166,14 +175,19 @@ const StorageUsageChart: React.FC = () => {
           </ResponsiveContainer>
         </Box>
         
-        <Box sx={{ 
-          display: activeTab === 1 ? 'block' : 'none', 
-          height: 'calc(85% - 20px)',
-          minHeight: '300px',
-          position: 'relative'
-        }}>
-          <ResponsiveContainer width="100%" height="100%" minHeight={350}>
+        <Box 
+          sx={{ 
+            display: activeTab === 1 ? 'block' : 'none', 
+            height: '400px',
+            minHeight: '400px',
+            width: '100%',
+            position: 'relative'
+          }}
+        >
+          <ResponsiveContainer width="100%" height={400} minHeight={400}>
             <BarChart
+              width={500}
+              height={400}
               data={extensionData}
               margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
               barSize={30}
@@ -214,7 +228,7 @@ const StorageUsageChart: React.FC = () => {
       <Paper 
         elevation={2} 
         className="dashboard-card has-scroll"
-        style={{ gridColumn: 'span 5', padding: '1rem' }}
+        style={{ gridColumn: 'span 5', padding: '1rem', minHeight: '500px' }}
       >
         <Box sx={{ 
           display: 'flex', 

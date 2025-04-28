@@ -11,6 +11,7 @@ import tagRoutes from './routes/tagRoutes.js';
 import mediaTypeRoutes from './routes/mediaTypeRoutes.js';
 import utilityRoutes from './routes/utilityRoutes.js';
 import tagCategoryRoutes from './routes/tagCategoryRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 // Load environment variables from .env file
 dotenv.config();
 
@@ -128,6 +129,7 @@ app.use('/api/tags', tagRoutes);
 app.use('/api/media-types', mediaTypeRoutes);
 app.use('/api/utility', utilityRoutes);
 app.use('/api/tag-categories', tagCategoryRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Root route
 app.get('/', (req, res) => {

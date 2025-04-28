@@ -107,20 +107,20 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
   return (
     <Box className="media-preview">
       <Box className="media-preview-header">
-      <Typography 
-        variant={isMobile ? "h5" : "h4"} 
-        gutterBottom 
-        style={{ 
-          color: 'var(--accent-color)',
-          fontSize: isMobile ? '1.25rem' : '2rem',
-          marginBottom: '0',
-        }}
-      >
-        {getMetadataField(mediaFile, 'fileName') || mediaFile.title || 'Untitled Media'}
-      </Typography>
-        {/* Add Action Buttons to Header */}
+        <Typography 
+          variant={isMobile ? "h5" : "h4"} 
+          gutterBottom 
+          style={{ 
+            color: 'var(--accent-color)',
+            fontSize: isMobile ? '1.25rem' : '2rem',
+            marginBottom: '0',
+          }}
+        >
+          {getMetadataField(mediaFile, 'fileName') || mediaFile.title || 'Untitled Media'}
+        </Typography>
+        
+        {/* Action Buttons */}
         <Box sx={{ 
-          marginLeft: 'auto', 
           display: 'flex',
           alignItems: 'center',
           gap: '8px'
@@ -144,11 +144,16 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
               variant="outlined"
               color="primary"
               startIcon={<EditIcon />}
-              onClick={onEdit}
+              onClick={(e) => {
+                console.log('Edit button clicked');
+                e.stopPropagation();
+                if (onEdit) onEdit();
+              }}
               size={isMobile ? "small" : "medium"}
               sx={{ 
                 padding: isMobile ? '4px 8px' : '6px 12px',
-                minWidth: isMobile ? 'auto' : '64px'
+                minWidth: isMobile ? 'auto' : '64px',
+                zIndex: 10  // Add a higher z-index to ensure it's clickable
               }}
             >
               {isMobile ? '' : 'Edit'}
@@ -395,7 +400,9 @@ const MediaDetail: React.FC = () => {
   };
 
   const handleEdit = () => {
+    console.log('handleEdit function called');
     setIsEditing(true);
+    console.log('isEditing set to true');
   };
 
   const handleSave = async (updatedMediaFile: Partial<MediaFile>) => {
@@ -406,6 +413,17 @@ const MediaDetail: React.FC = () => {
       const mediaId = mediaFile._id || mediaFile.id || '';
       const mediaSlug = mediaFile.slug || '';
       
+      console.log('Received data for update:', updatedMediaFile);
+      
+      // Log MediaType specific fields from updatedMediaFile.customFields
+      if (updatedMediaFile.customFields && mediaTypeConfig?.fields) {
+        console.log('MediaType specific fields to update:');
+        mediaTypeConfig.fields.forEach(field => {
+          console.log(`Field "${field.name}" (${field.type}):`, 
+            updatedMediaFile.customFields?.[field.name]);
+        });
+      }
+      
       // Extract only the properties we need to update
       const updatePayload = {
         _id: mediaId,
@@ -413,6 +431,9 @@ const MediaDetail: React.FC = () => {
         slug: mediaSlug, // Include the slug for the API endpoint
         title: updatedMediaFile.title,
         metadata: {
+          // Keep existing metadata values
+          ...(mediaFile.metadata || {}),
+          // Update with new values
           fileName: updatedMediaFile.fileName,
           altText: updatedMediaFile.altText,
           description: updatedMediaFile.description,
@@ -421,7 +442,22 @@ const MediaDetail: React.FC = () => {
         }
       };
       
-      console.log('Sending update with payload:', updatePayload);
+      // Add each custom field individually to ensure they're properly included
+      if (updatedMediaFile.customFields && Object.keys(updatedMediaFile.customFields).length > 0) {
+        Object.entries(updatedMediaFile.customFields).forEach(([key, value]) => {
+          if (key && value !== undefined) {
+            // Check if it's a MediaType field
+            const isMediaTypeField = mediaTypeConfig?.fields.some(field => field.name === key);
+            if (isMediaTypeField) {
+              console.log(`Adding MediaType field "${key}" with value:`, value);
+              // @ts-ignore - We're dynamically adding properties
+              updatePayload.metadata[key] = value;
+            }
+          }
+        });
+      }
+      
+      console.log('Final update payload:', updatePayload);
       
       // Call the Redux action to update the media file
       const resultAction = await dispatch(updateMedia(updatePayload));
@@ -429,12 +465,48 @@ const MediaDetail: React.FC = () => {
       if (updateMedia.fulfilled.match(resultAction)) {
         // Update was successful, update local state with the returned data
         const updatedData = resultAction.payload;
+        console.log('Update successful, server returned:', updatedData);
+        
+        // Inspect metadata from server response
+        console.log('Server returned metadata:', updatedData.metadata);
+        
+        // Examine specific custom fields in server response
+        if (mediaTypeConfig) {
+          mediaTypeConfig.fields.forEach(field => {
+            console.log(`Checking if "${field.name}" is in server response:`, 
+              updatedData.metadata?.[field.name]);
+          });
+        }
+        
+        // Create a new mediaFile object that properly preserves the custom fields
         setMediaFile(prevState => {
           if (!prevState) return null;
           
+          // Create a new metadata object that combines existing and updated values
+          const combinedMetadata = {
+            ...(prevState.metadata || {}),
+            ...(updatedData.metadata || {})
+          };
+          
+          // Ensure custom fields from the form are explicitly included
+          if (updatedMediaFile.customFields) {
+            mediaTypeConfig?.fields.forEach(field => {
+              const fieldValue = updatedMediaFile.customFields?.[field.name];
+              if (fieldValue !== undefined) {
+                combinedMetadata[field.name] = fieldValue;
+              }
+            });
+          }
+          
+          // Log the combined metadata for debugging
+          console.log('Combined metadata after update:', combinedMetadata);
+          
+          // Return a new media file object with the updated data
           return {
             ...prevState,
-            ...updatedData
+            ...updatedData,
+            // Ensure metadata is properly updated
+            metadata: combinedMetadata
           };
         });
         
@@ -463,6 +535,17 @@ const MediaDetail: React.FC = () => {
     { name: 'Visibility', value: getMetadataField(mediaFile, 'visibility', 'private')?.toUpperCase() },
   ];
 
+  // Update mediaTypeForEdit when mediaFile or mediaTypeConfig changes
+  useEffect(() => {
+    console.log("mediaFile or mediaTypeConfig changed, updating mediaTypeForEdit");
+    
+    // If fields are modified and saved, ensure they're reflected when reopening the dialog
+    if (mediaFile && isEditing) {
+      console.log("Dialog is open, refreshing values");
+      console.log("Current mediaFile metadata:", mediaFile.metadata);
+    }
+  }, [mediaFile, mediaTypeConfig, isEditing]);
+  
   // Prepare the media file for the edit dialog
   const mediaFileForEdit = mediaFile ? {
     id: mediaFile._id || mediaFile.id || '',
@@ -472,13 +555,32 @@ const MediaDetail: React.FC = () => {
     description: getMetadataField(mediaFile, 'description', ''),
     visibility: getMetadataField(mediaFile, 'visibility', 'private'),
     tags: getMetadataField(mediaFile, 'tags', []),
-    customFields: {} as Record<string, any>,
+    // Include both metadata and customFields for maximum compatibility
+    customFields: {
+      // First include all metadata fields
+      ...(mediaFile.metadata || {}),
+      // Ensure each MediaType specific field is explicitly included from metadata
+      ...(mediaTypeConfig?.fields.reduce((fields, field) => {
+        if (mediaFile.metadata && mediaFile.metadata[field.name] !== undefined) {
+          fields[field.name] = mediaFile.metadata[field.name];
+        }
+        return fields;
+      }, {} as Record<string, any>))
+    },
     fileType: mediaFile.fileExtension || '',
     url: mediaFile.location || ''
   } : null;
 
   // Find the media type based on the mediaFile
-  const mediaTypeForEdit = mediaTypeConfig;
+  const mediaTypeForEdit = mediaTypeConfig ? {
+    ...mediaTypeConfig,
+    // Ensure each field has a label property
+    fields: mediaTypeConfig.fields.map(field => ({
+      ...field,
+      // Use label if exists, otherwise use name as the label
+      label: field.label || field.name
+    }))
+  } : null;
 
   if (loading) {
     return (
@@ -544,6 +646,7 @@ const MediaDetail: React.FC = () => {
           {mediaTypeConfig && isEditing && mediaFileForEdit && mediaTypeForEdit && (
             <Suspense fallback={<LoadingFallback />}>
               <EditMediaDialog
+                key={`edit-dialog-${mediaFile._id}-${isEditing}-${new Date().getTime()}`}
                 open={isEditing}
                 onClose={() => setIsEditing(false)}
                 mediaFile={mediaFileForEdit}
@@ -556,6 +659,17 @@ const MediaDetail: React.FC = () => {
       </Box>
 
       <ToastContainer position="top-center" />
+
+      {process.env.NODE_ENV !== 'production' && (
+        <Box sx={{ position: 'fixed', bottom: 10, right: 10, p: 2, bgcolor: 'rgba(0,0,0,0.7)', color: 'white', zIndex: 9999, borderRadius: 1 }}>
+          <Typography variant="caption">
+            isEditing: {isEditing ? 'true' : 'false'}<br />
+            hasMediaType: {!!mediaTypeConfig ? 'true' : 'false'}<br />
+            hasMediaFile: {!!mediaFileForEdit ? 'true' : 'false'}<br />
+            isAdmin: {isEditingEnabled ? 'true' : 'false'}
+          </Typography>
+        </Box>
+      )}
     </motion.div>
   );
 };

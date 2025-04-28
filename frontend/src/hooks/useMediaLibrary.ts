@@ -1,6 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { initializeMedia, deleteMedia as reduxDelete, addMedia as reduxAdd } from '../store/slices/mediaSlice';
+import { 
+  initializeMedia, 
+  deleteMedia as reduxDelete, 
+  addMedia as reduxAdd,
+  deleteMediaThunk 
+} from '../store/slices/mediaSlice';
 import { RootState, AppDispatch } from '../store/store';
 import { BaseMediaFile } from '../interfaces/MediaFile';
 
@@ -33,7 +38,21 @@ export function useMediaLibrary() {
   }, [allMedia, selectedMediaType, searchQuery]);
 
   // Expose handlers
-  const deleteMedia = (id: string) => dispatch(reduxDelete(id));
+  const deleteMedia = async (id: string) => {
+    try {
+      const resultAction = await dispatch(deleteMediaThunk(id));
+      if (deleteMediaThunk.fulfilled.match(resultAction)) {
+        // Only update the local state if the API call was successful
+        dispatch(reduxDelete(id));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error deleting media:', error);
+      return false;
+    }
+  };
+  
   const addMedia = (file: BaseMediaFile) => dispatch(reduxAdd(file));
 
   return {

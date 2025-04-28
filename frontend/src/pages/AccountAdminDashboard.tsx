@@ -168,31 +168,31 @@ const AccountAdminDashboard: React.FC = () => {
         <div className="dashboard-tab-content" style={{ minHeight: '500px' }}>
           <TabPanel value={activeTab} index={0}>
             <Suspense fallback={<LoadingFallback />}>
-              <MediaTypeDistribution />
+              <MediaTypeDistribution key="media-type-distribution" />
             </Suspense>
           </TabPanel>
           
           <TabPanel value={activeTab} index={1}>
             <Suspense fallback={<LoadingFallback />}>
-              <StorageUsageChart />
+              <StorageUsageChart key="storage-usage-chart" />
             </Suspense>
           </TabPanel>
           
           <TabPanel value={activeTab} index={2}>
             <Suspense fallback={<LoadingFallback />}>
-              <UserActivity />
+              <UserActivity key="user-activity" />
             </Suspense>
           </TabPanel>
           
           <TabPanel value={activeTab} index={3}>
             <Suspense fallback={<LoadingFallback />}>
-              <DatabaseStats />
+              <DatabaseStats key="database-stats" />
             </Suspense>
           </TabPanel>
           
           <TabPanel value={activeTab} index={4}>
             <Suspense fallback={<LoadingFallback />}>
-              <RecentActivity />
+              <RecentActivity key="recent-activity" />
             </Suspense>
           </TabPanel>
         </div>

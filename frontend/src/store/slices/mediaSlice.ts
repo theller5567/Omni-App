@@ -44,17 +44,32 @@ export const updateMedia = createAsyncThunk(
       // Prepare the update payload
       const updatePayload = {
         title: mediaData.title,
-        metadata: mediaData.metadata
+        metadata: mediaData.metadata ? {
+          // Ensure we spread all fields properly
+          ...mediaData.metadata
+        } : undefined
       };
       
+      console.log('Server update payload:', JSON.stringify(updatePayload, null, 2));
+      
       let response;
+      
+      // Get the auth token from localStorage
+      const token = localStorage.getItem('authToken');
+      
+      // Set up the headers with authorization
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      };
       
       // Try the ID endpoint first
       try {
         console.log('Trying to update media using ID endpoint');
         response = await axios.put<BaseMediaFile>(
           `${env.BASE_URL}/media/update-by-id/${mediaId}`,
-          updatePayload
+          updatePayload,
+          { headers }
         );
       } catch (error: any) {
         // If ID endpoint fails with 404, try the slug endpoint
@@ -62,7 +77,8 @@ export const updateMedia = createAsyncThunk(
           console.log('ID endpoint failed, trying slug endpoint');
           response = await axios.put<BaseMediaFile>(
             `${env.BASE_URL}/media/update/${mediaSlug}`,
-            updatePayload
+            updatePayload,
+            { headers }
           );
         } else {
           // Re-throw the error if it's not a 404 or we don't have a slug
@@ -75,6 +91,37 @@ export const updateMedia = createAsyncThunk(
     } catch (error: any) {
       console.error('Error updating media:', error);
       return rejectWithValue(error.response?.data?.message || 'Failed to update media');
+    }
+  }
+);
+
+// Add new thunk for deleting media with authorization
+export const deleteMediaThunk = createAsyncThunk(
+  'media/deleteMediaThunk',
+  async (mediaId: string, { rejectWithValue }) => {
+    try {
+      console.log('Deleting media with ID:', mediaId);
+      
+      // Get the auth token from localStorage
+      const token = localStorage.getItem('authToken');
+      
+      // Set up the headers with authorization
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      };
+      
+      // Make the API call to delete the media
+      const response = await axios.delete<{ message: string, deletedId: string }>(
+        `${env.BASE_URL}/media/delete/${mediaId}`,
+        { headers }
+      );
+      
+      console.log('Media delete response:', response.data);
+      return response.data.deletedId;
+    } catch (error: any) {
+      console.error('Error deleting media:', error);
+      return rejectWithValue(error.response?.data?.message || 'Failed to delete media');
     }
   }
 );
@@ -135,6 +182,17 @@ const mediaSlice = createSlice({
       })
       .addCase(updateMedia.rejected, (state, action) => {
         console.error('Media update failed:', action.payload);
+        state.error = action.payload as string;
+      })
+      .addCase(deleteMediaThunk.pending, (state) => {
+        console.log('Media delete pending...');
+      })
+      .addCase(deleteMediaThunk.fulfilled, (state, action) => {
+        console.log('Media delete succeeded:', action.payload);
+        state.allMedia = state.allMedia.filter(media => media._id !== action.payload);
+      })
+      .addCase(deleteMediaThunk.rejected, (state, action) => {
+        console.error('Media delete failed:', action.payload);
         state.error = action.payload as string;
       });
   },

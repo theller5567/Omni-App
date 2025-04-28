@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../store/store';
-import { deleteMedia, initializeMedia, addMedia } from '../store/slices/mediaSlice';
+import { deleteMedia, initializeMedia, addMedia, deleteMediaThunk } from '../store/slices/mediaSlice';
 import { CircularProgress, Box, Typography } from '@mui/material';
 import '../components/MediaLibrary/MediaContainer.scss';
 import axios from 'axios';
 import env from '../config/env';
+import { toast } from 'react-toastify';
 
 // Lazy load components
 const MediaUploader = lazy(() => import('../components/MediaUploader/MediaUploader'));
@@ -129,11 +130,26 @@ const MediaContainer: React.FC = () => {
   const handleDeleteMedia = useCallback(async (id: string): Promise<boolean> => {
     try {
       console.log('Deleting media with ID:', id);
-      await axios.delete(`${env.BASE_URL}/media/delete/${id}`);
-      dispatch(deleteMedia(id));
-      return true;
+      
+      // Use the thunk action with authorization instead of direct axios call
+      const resultAction = await dispatch(deleteMediaThunk(id));
+      
+      if (deleteMediaThunk.fulfilled.match(resultAction)) {
+        // If the API call was successful, update the local state
+        dispatch(deleteMedia(id));
+        toast.success('Media deleted successfully');
+        return true;
+      } else {
+        // Handle rejected action
+        const errorMessage = typeof resultAction.payload === 'string' 
+          ? resultAction.payload 
+          : 'Error deleting media';
+        toast.error(errorMessage);
+        return false;
+      }
     } catch (error) {
       console.error('Error deleting media file:', error);
+      toast.error('Failed to delete media');
       return false;
     }
   }, [dispatch]);

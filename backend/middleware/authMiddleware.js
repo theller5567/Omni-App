@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import LoggerService from '../services/loggerService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,5 +36,41 @@ export const authenticate = (req, res, next) => {
     res.status(401).json({ error: 'Invalid token' });
   }
 }
+
+// Track user activities
+export const trackUserActivity = (activityType) => {
+  return async (req, res, next) => {
+    // Call the original handler
+    next();
+    
+    // After the response has been sent, log the activity
+    // This ensures we don't block the response
+    try {
+      if (req.user) {
+        // Get client info
+        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        const userAgent = req.headers['user-agent'];
+        
+        // Log the activity
+        await LoggerService.logUserActivity({
+          userId: req.user.id,
+          username: req.user.username || req.user.email,
+          email: req.user.email,
+          action: activityType,
+          ip,
+          userAgent,
+          details: {
+            // Include additional details if needed
+            path: req.originalUrl,
+            method: req.method
+          }
+        });
+      }
+    } catch (error) {
+      // Don't let logging errors affect the API response
+      console.error('Error logging user activity:', error);
+    }
+  };
+};
 
 export default authenticate;

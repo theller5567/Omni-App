@@ -68,7 +68,15 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   const [newTag, setNewTag] = useState('');
   // Track save in progress
   const [isSaving, setIsSaving] = useState(false);
-  const { control, handleSubmit, watch, setValue } = useForm<FormValues>({
+  
+  // State for forcing form rerendering
+  const [formVersion, setFormVersion] = useState(0);
+  
+  // Debug: Log media file custom fields
+  console.log('MediaFile customFields:', mediaFile.customFields);
+  console.log('MediaType fields:', mediaType.fields);
+  
+  const { control, handleSubmit, watch, setValue, reset } = useForm<FormValues>({
     defaultValues: {
       title: mediaFile.title || '',
       fileName: mediaFile.fileName || '',
@@ -76,40 +84,100 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
       description: mediaFile.description || '',
       visibility: mediaFile.visibility || 'private',
       tags: mediaFile.tags || [],
-      customFields: {
-        ...mediaFile.customFields,
-        'Webinar Title': mediaFile.customFields?.['Webinar Title'] || '',
-        'Webinar Summary': mediaFile.customFields?.['Webinar Summary'] || '',
-        'Webinar CTA': mediaFile.customFields?.['Webinar CTA'] || ''
-      }
+      customFields: mediaFile.customFields || {} // Pass all custom fields
     }
   });
 
+  // Reset form when the dialog opens or mediaFile changes
+  useEffect(() => {
+    if (open) {
+      console.log('Dialog opened, resetting form with fresh values');
+      
+      // Force reset with current mediaFile values
+      reset({
+        title: mediaFile.title || '',
+        fileName: mediaFile.fileName || '',
+        altText: mediaFile.altText || '',
+        description: mediaFile.description || '',
+        visibility: mediaFile.visibility || 'private',
+        tags: mediaFile.tags || [],
+        customFields: mediaFile.customFields || {}
+      });
+      
+      // Increment version to force re-render
+      setFormVersion(prev => prev + 1);
+    }
+  }, [open, mediaFile, reset]);
 
   // Initialize form with default values and ensure default tags are included
   useEffect(() => {
-    // Make sure all default tags from the media type are included in the tags
-    if (mediaType && mediaType.defaultTags && mediaType.defaultTags.length > 0) {
-      const currentTags = watch('tags') || [];
-      const defaultTags = mediaType.defaultTags;
+    // When the dialog opens, re-initialize form values from mediaFile
+    console.log('Dialog open state changed or mediaFile updated, refreshing form values');
+    
+    // Reset form values when dialog opens or mediaFile changes
+    if (open) {
+      // Make sure all default tags from the media type are included in the tags
+      if (mediaType && mediaType.defaultTags && mediaType.defaultTags.length > 0) {
+        const currentTags = watch('tags') || [];
+        const defaultTags = mediaType.defaultTags;
+        
+        // Check if all default tags are included
+        const allDefaultTagsIncluded = defaultTags.every(tag => currentTags.includes(tag));
+        
+        if (!allDefaultTagsIncluded) {
+          // Add any missing default tags
+          const updatedTags = [...currentTags];
+          defaultTags.forEach(tag => {
+            if (!updatedTags.includes(tag)) {
+              updatedTags.push(tag);
+            }
+          });
+          
+          // Update the form
+          setValue('tags', updatedTags);
+        }
+      }
       
-      // Check if all default tags are included
-      const allDefaultTagsIncluded = defaultTags.every(tag => currentTags.includes(tag));
-      
-      if (!allDefaultTagsIncluded) {
-        // Add any missing default tags
-        const updatedTags = [...currentTags];
-        defaultTags.forEach(tag => {
-          if (!updatedTags.includes(tag)) {
-            updatedTags.push(tag);
+      // Ensure all MediaType fields are properly loaded
+      if (mediaType && mediaType.fields && mediaType.fields.length > 0) {
+        console.log('Setting initial custom field values...');
+        
+        // Log all available customFields for debugging
+        console.log('Available customFields:', mediaFile.customFields);
+        
+        // Check if mediaFile has metadata as well
+        if ((mediaFile as any).metadata) {
+          console.log('Available metadata from mediaFile:', (mediaFile as any).metadata);
+        }
+        
+        mediaType.fields.forEach(field => {
+          // Try finding value in either customFields or metadata
+          const fieldValueFromCustomFields = mediaFile.customFields?.[field.name];
+          const fieldValueFromMetadata = (mediaFile as any).metadata?.[field.name];
+          
+          // Use the most appropriate value source
+          const fieldValue = fieldValueFromCustomFields !== undefined 
+            ? fieldValueFromCustomFields 
+            : fieldValueFromMetadata;
+          
+          console.log(`Setting field "${field.name}" to:`, fieldValue, 
+            `(from ${fieldValueFromCustomFields !== undefined ? 'customFields' : 'metadata'})`);
+          
+          // Set each field with appropriate type conversion
+          if (field.type === 'boolean') {
+            setValue(`customFields.${field.name}`, Boolean(fieldValue));
+          } else if (field.type === 'number') {
+            const numValue = fieldValue !== undefined && fieldValue !== null 
+              ? Number(fieldValue) : '';
+            setValue(`customFields.${field.name}`, numValue);
+          } else {
+            // For text, select, and other types
+            setValue(`customFields.${field.name}`, fieldValue !== undefined ? fieldValue : '');
           }
         });
-        
-        // Update the form
-        setValue('tags', updatedTags);
       }
     }
-  }, [mediaType, setValue, watch]);
+  }, [mediaType, setValue, watch, mediaFile.customFields, open, mediaFile]);
 
   // Reset the tag input field when the dialog opens or closes
   useEffect(() => {
@@ -249,6 +317,9 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
     
     // Only proceed with save if changes were made
     if (hasChanged) {
+      // Debug: Log custom fields before submission
+      console.log('Form custom fields before submission:', data.customFields);
+      
       // Format the data before sending
       const formattedData = {
         id: mediaFile.id,
@@ -260,11 +331,10 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
         description: data.description,
         visibility: data.visibility,
         tags: data.tags,
-        customFields: {
-          ...data.customFields,
-          thumbnailUrl: data.customFields?.thumbnailUrl
-        }
+        customFields: data.customFields // Pass all custom fields directly
       };
+
+      console.log('Sending formatted data to save:', formattedData);
 
       try {
         setIsSaving(true);
@@ -309,24 +379,39 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   };
 
   const renderCustomField = (field: MediaType['fields'][0], value: any, onChange: (value: any) => void) => {
+    // Use field.label if available, otherwise use field.name
+    const displayLabel = field.label || field.name;
+    
+    // Ensure the value is properly formatted based on field type
+    let formattedValue = value;
+    
+    // Debug the field value
+    console.log(`Formatting field "${field.name}" of type "${field.type}" with value:`, value);
+    
     switch (field.type) {
       case 'text':
+        formattedValue = value || '';
         return (
           <TextField
-            label={field.label}
-            value={value}
-            onChange={onChange}
+            label={displayLabel}
+            value={formattedValue}
+            onChange={(e) => onChange(e.target.value)}
             fullWidth
             size="small"
             required={field.required}
           />
         );
       case 'number':
+        // Ensure we have a numeric value or empty string
+        formattedValue = value !== undefined && value !== null ? Number(value) : '';
         return (
           <TextField
-            label={field.label}
-            value={value}
-            onChange={onChange}
+            label={displayLabel}
+            value={formattedValue}
+            onChange={(e) => {
+              const numericValue = e.target.value === '' ? '' : Number(e.target.value);
+              onChange(numericValue);
+            }}
             type="number"
             fullWidth
             size="small"
@@ -334,13 +419,15 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
           />
         );
       case 'select':
+        // Ensure we have a valid selection
+        formattedValue = value || '';
         return (
           <FormControl fullWidth size="small" required={field.required}>
-            <InputLabel>{field.label}</InputLabel>
+            <InputLabel>{displayLabel}</InputLabel>
             <Select
-              value={value}
-              onChange={onChange}
-              label={field.label}
+              value={formattedValue}
+              onChange={(e) => onChange(e.target.value)}
+              label={displayLabel}
             >
               {field.options?.map((option) => (
                 <MenuItem key={option} value={option}>
@@ -351,23 +438,27 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
           </FormControl>
         );
       case 'boolean':
+        // Ensure we have a boolean value
+        formattedValue = Boolean(value);
         return (
           <FormControlLabel
             control={
               <Switch
-                checked={value}
+                checked={formattedValue}
                 onChange={(e) => onChange(e.target.checked)}
               />
             }
-            label={field.label}
+            label={displayLabel}
           />
         );
       default:
+        // For any other type, use a text field
+        formattedValue = value || '';
         return (
           <TextField
-            label={field.label}
-            value={value}
-            onChange={onChange}
+            label={displayLabel}
+            value={formattedValue}
+            onChange={(e) => onChange(e.target.value)}
             fullWidth
             size="small"
           />
@@ -393,6 +484,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
 
   return (
     <Dialog
+      key={`media-edit-${mediaFile.id}-${open}`}
       open={open}
       onClose={handleDialogClose}
       className="edit-media-dialog"
@@ -412,7 +504,11 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
       </DialogTitle>
       
       <DialogContent className="dialog-content">
-        <form onSubmit={handleSubmit(onSubmit)} className="edit-form">
+        <form 
+          key={`form-${mediaFile.id}-${formVersion}`}
+          onSubmit={handleSubmit(onSubmit)} 
+          className="edit-form"
+        >
           {/* Unsaved tag warning alert */}
           {unsavedTag && (
             <Alert 
@@ -531,16 +627,29 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
             <Box className="form-section" sx={{ marginTop: isMobile ? 2 : 4, padding: 2 }}>
               <Typography variant={isMobile ? "subtitle1" : "h6"} gutterBottom>{mediaType.name} Fields</Typography>
               <Box sx={{ display: 'grid', gap: isMobile ? 2 : 4, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
-                {mediaType.fields.map((field) => (
-                  <Box key={field.name}>
-                    <Controller
-                      name={`customFields.${field.name}`}
-                      control={control}
-                      defaultValue={mediaFile.customFields?.[field.name] || ''}
-                      render={({ field: { value, onChange } }) => renderCustomField(field, value, onChange)}
-                    />
-                  </Box>
-                ))}
+                {mediaType.fields.map((field) => {
+                  // Log the current field definition and its value
+                  console.log(`Rendering field "${field.name}" (${field.type}):`, 
+                    mediaFile.customFields?.[field.name]);
+                    
+                  return (
+                    <Box key={field.name}>
+                      <Controller
+                        name={`customFields.${field.name}`}
+                        control={control}
+                        defaultValue={mediaFile.customFields?.[field.name] || ''}
+                        render={({ field: { value, onChange } }) => {
+                          // Log each value change 
+                          const handleChange = (newValue: any) => {
+                            console.log(`Field "${field.name}" changed to:`, newValue);
+                            onChange(newValue);
+                          };
+                          return renderCustomField(field, value, handleChange);
+                        }}
+                      />
+                    </Box>
+                  );
+                })}
               </Box>
             </Box>
           )}

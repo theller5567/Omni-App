@@ -1,5 +1,6 @@
 import express from "express";
-import { loginUser, verifyEmail, setupPassword, registerUser } from "../controllers/authController.js";  // ✅ Import the functions
+import { loginUser, logoutUser, verifyEmail, setupPassword, registerUser } from "../controllers/authController.js";  // ✅ Import the functions
+import { authenticate } from '../middleware/authMiddleware.js';
 import dotenv from 'dotenv';
 
 import { fileURLToPath } from 'url';
@@ -20,6 +21,9 @@ router.use(express.json());
 
 // Sign-in route
 router.post('/login', loginUser);
+
+// Logout route (requires authentication)
+router.post('/logout', authenticate, logoutUser);
 
 // Email verification route
 router.get('/verify-email/:token', verifyEmail);

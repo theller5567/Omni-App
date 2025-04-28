@@ -8,6 +8,8 @@ import axios from 'axios';
 import { pipeline } from 'stream/promises';
 import archiver from 'archiver';
 import { fileURLToPath } from 'url';
+import { authenticate } from '../middleware/authMiddleware.js';
+import ActivityTrackingService from '../services/activityTrackingService.js';
 import { 
   getAllMedia, 
   getMediaById, 
@@ -27,7 +29,7 @@ const uploadFields = upload.fields([
   { name: 'v_thumbnail', maxCount: 1 }
 ]);
 
-router.put('/update/:slug', updateMedia);
+router.put('/update/:slug', authenticate, updateMedia);
 
 router.get('/all', getAllMedia);
 
@@ -103,7 +105,7 @@ const validateFileType = async (req, res, next) => {
   }
 };
 
-router.post('/upload', uploadFields, async (req, res, next) => {
+router.post('/upload', authenticate, uploadFields, async (req, res, next) => {
   console.log('Received upload request');
   console.log('Files:', req.files);
   console.log('Body:', {
@@ -139,7 +141,7 @@ router.post('/upload', uploadFields, async (req, res, next) => {
   }
 }, validateFileType, uploadMedia);
 
-router.delete('/delete/:id', deleteMedia);
+router.delete('/delete/:id', authenticate, deleteMedia);
 
 // Get all media
 router.get('/', getAllMedia);
@@ -266,7 +268,7 @@ router.post('/batch-download', async (req, res) => {
 });
 
 // Add a route to update media by ID
-router.put('/update-by-id/:id', async (req, res) => {
+router.put('/update-by-id/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     console.log('Received update request for id:', id);
@@ -279,6 +281,10 @@ router.put('/update-by-id/:id', async (req, res) => {
       console.log('Media not found for id:', id);
       return res.status(404).json({ error: 'Media not found' });
     }
+    
+    // Save the original state before updates for comparison
+    const originalTitle = mediaFile.title;
+    const originalMetadata = { ...mediaFile.metadata };
     
     // Extract update data
     const { title, metadata } = req.body;
@@ -302,6 +308,27 @@ router.put('/update-by-id/:id', async (req, res) => {
     // Save the updated media file
     await mediaFile.save();
     console.log('Media file updated successfully');
+    
+    // Track the update activity if user is authenticated
+    if (req.user) {
+      // Determine which fields were changed
+      const changedFields = [];
+      if (title && title !== originalTitle) changedFields.push('title');
+      
+      if (metadata) {
+        Object.keys(metadata).forEach(key => {
+          if (JSON.stringify(metadata[key]) !== JSON.stringify(originalMetadata?.[key])) {
+            changedFields.push(`metadata.${key}`);
+          }
+        });
+      }
+      
+      // Log the activity
+      await ActivityTrackingService.trackMediaUpdate(req.user, mediaFile, changedFields);
+      console.log('Media update activity logged with changes:', changedFields);
+    } else {
+      console.log('Warning: Media file was updated but no user was attached to the request. Activity not logged.');
+    }
     
     res.status(200).json(mediaFile);
   } catch (error) {

@@ -102,12 +102,12 @@ $border-radius: 0.5rem;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      justify-content: flex-start;
+      justify-content: space-between;
       gap: 16px;
       margin-bottom: 0;
       background-color: var(--bg-lighter, var(--color-surface));
       border-radius: 4px 4px 0 0;
-      padding: 0.5rem;
+      padding: 0.5rem 1rem;
       min-height: 40px;
 
       @media screen and (max-width: 768px) {

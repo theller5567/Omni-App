@@ -178,17 +178,21 @@ const MediaTypeDistribution: React.FC = () => {
         <Box sx={{ 
           width: '100%', 
           height: 'calc(100% - 40px)', 
-          minHeight: '300px',
+          minHeight: '350px',
           position: 'relative'
         }}>
-          <ResponsiveContainer width="100%" height="100%" minHeight={300}>
-            <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+          <ResponsiveContainer width="100%" height="100%" minHeight={350}>
+            <PieChart 
+              width={500} 
+              height={350} 
+              margin={{ top: 20, right: 20, bottom: 40, left: 20 }}
+            >
               <Pie
                 data={data}
                 cx="50%"
-                cy="50%"
+                cy="45%"
                 labelLine={false}
-                outerRadius={100}
+                outerRadius={110}
                 innerRadius={60}
                 paddingAngle={2}
                 cornerRadius={3}

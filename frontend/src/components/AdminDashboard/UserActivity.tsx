@@ -68,47 +68,66 @@ const UserActivity: React.FC = () => {
     try {
       setLoading(true);
       
-      // Skip API call if we're running on localhost - just use mock data
-      if (isLocalhost) {
-        console.log('Using mock user activity data in local development');
-        createMockData();
-        return;
-      }
-      
-      // For development/demo, create mock data from MongoDB users
-      if (!API_BASE_URL || mongoUsers.length === 0) {
-        createMockData();
-        return;
-      }
-      
-      try {
-        const response = await axios.get<ApiResponse>(`${API_BASE_URL}/api/user-activities`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          },
-          params: {
-            page: page + 1,
-            limit: rowsPerPage
+      // Always attempt to fetch from API regardless of environment
+      if (API_BASE_URL) {
+        try {
+          // Get token from localStorage
+          const token = localStorage.getItem('authToken');
+          
+          if (!token) {
+            setError("Authentication token is missing. Please log in again.");
+            createMockData();
+            return;
           }
-        });
-        
-        // Filter to only include MongoDB users
-        const filteredActivities = response.data.data.filter(activity => {
-          return mongoUsers.some(user => 
-            user._id === activity.userId || 
-            user.id === activity.userId
-          );
-        });
-        
-        setActivities(filteredActivities);
-        setTotal(filteredActivities.length);
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching user activities:", err);
+          
+          const response = await axios.get<ApiResponse>(`${API_BASE_URL}/api/admin/user-activities`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            },
+            params: {
+              page: page + 1,
+              limit: rowsPerPage
+            }
+          });
+          
+          // Filter to only include MongoDB users
+          const filteredActivities = response.data.data.filter(activity => {
+            return mongoUsers.some(user => 
+              user._id === activity.userId || 
+              user.id === activity.userId
+            );
+          });
+          
+          setActivities(filteredActivities);
+          setTotal(response.data.total || filteredActivities.length);
+          setLoading(false);
+        } catch (err: any) {
+          console.error("Error fetching user activities:", err);
+          
+          // Handle different error types
+          if (err.response) {
+            if (err.response.status === 401) {
+              setError("Authentication failed. Please log in again or ensure you have admin privileges.");
+            } else if (err.response.status === 403) {
+              setError("You don't have permission to view user activities. Admin privileges required.");
+            } else {
+              setError(`Server error: ${err.response.status}. Using fallback data.`);
+            }
+          } else if (err.request) {
+            setError("No response from server. Check your connection.");
+          } else {
+            setError("Failed to fetch user activities. Using fallback data.");
+          }
+          
+          createMockData();
+        }
+      } else {
+        setError("API endpoint not configured. Using fallback data.");
         createMockData();
       }
     } catch (err) {
       console.error("Error in user activity handling:", err);
+      setError("An unexpected error occurred. Using fallback data.");
       createMockData();
     }
   };
@@ -116,6 +135,8 @@ const UserActivity: React.FC = () => {
   const createMockData = () => {
     // Create mock data based on actual MongoDB users
     const mockActivities: UserActivity[] = [];
+    // Use a counter to ensure unique IDs
+    let counter = 0;
     
     // If we have MongoDB users, use their information
     if (mongoUsers.length > 0) {
@@ -135,8 +156,9 @@ const UserActivity: React.FC = () => {
         
         // Add 1-2 activities per user
         for (let i = 0; i < Math.min(2, actions.length); i++) {
+          counter++;
           mockActivities.push({
-            id: `${userId}-${i}`,
+            id: `mock-${userId}-${i}-${counter}-${Math.random().toString(36).substring(2, 9)}`,
             userId,
             username,
             email,
@@ -149,28 +171,31 @@ const UserActivity: React.FC = () => {
       });
     } else {
       // Fallback mock data if no MongoDB users found
-      mockActivities.push(
-        {
-          id: '1',
-          userId: '1',
-          username: 'admin',
-          email: 'admin@example.com',
-          action: 'LOGIN',
-          ip: '192.168.1.1',
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          timestamp: new Date(Date.now() - 1000 * 60 * 10).toISOString()
-        },
-        {
-          id: '2',
-          userId: '2',
-          username: 'editor',
-          email: 'editor@example.com',
-          action: 'LOGIN',
-          ip: '192.168.1.2',
-          userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-          timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString()
-        }
-      );
+      counter++;
+      const mockActivity1 = {
+        id: `mock-1-${counter}-${Math.random().toString(36).substring(2, 9)}`,
+        userId: '1',
+        username: 'admin',
+        email: 'admin@example.com',
+        action: 'LOGIN',
+        ip: '192.168.1.1',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        timestamp: new Date(Date.now() - 1000 * 60 * 10).toISOString()
+      };
+      
+      counter++;
+      const mockActivity2 = {
+        id: `mock-2-${counter}-${Math.random().toString(36).substring(2, 9)}`,
+        userId: '2',
+        username: 'editor',
+        email: 'editor@example.com',
+        action: 'LOGIN',
+        ip: '192.168.1.2',
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString()
+      };
+      
+      mockActivities.push(mockActivity1, mockActivity2);
     }
     
     setActivities(mockActivities);
@@ -181,7 +206,8 @@ const UserActivity: React.FC = () => {
   
   useEffect(() => {
     fetchUserActivities();
-  }, [page, rowsPerPage, mongoUsers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, rowsPerPage, mongoUsers.length]);
   
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);

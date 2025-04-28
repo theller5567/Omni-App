@@ -11,14 +11,20 @@ import {
   Avatar,
   Divider,
   Box, 
-  Chip
+  Chip,
+  Button,
+  Link,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import FolderIcon from '@mui/icons-material/Folder';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config/config';
 
@@ -32,6 +38,9 @@ interface ActivityLog {
   resourceType: string;
   resourceId: string;
   timestamp: string;
+  // Add slug fields for tracking media
+  slug?: string;
+  mediaSlug?: string;
 }
 
 interface ApiResponse {
@@ -59,127 +68,298 @@ const RecentActivity: React.FC = () => {
   const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [disableMock, setDisableMock] = useState(false);
   
   // Get users from Redux store to ensure we only use MongoDB users
   const userState = useSelector((state: RootState) => state.user);
   const users: UserType[] = userState.users.allUsers || [];
   const media = useSelector((state: RootState) => state.media.allMedia);
   
-  useEffect(() => {
-    const fetchActivities = async () => {
-      try {
-        setLoading(true);
-        
-        // Skip API call if we're running on localhost - just use mock data
-        if (isLocalhost) {
-          console.log('Using mock activity data in local development');
-          createMockData();
-          return;
-        }
-        
-        // Only attempt to fetch from API if the endpoint is available
-        if (API_BASE_URL) {
-          try {
-            const response = await axios.get<ApiResponse>(`${API_BASE_URL}/api/activity-logs`, {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem('token')}`
-              },
-              params: {
-                limit: 20
-              }
-            });
-            
-            // Filter activities to only include MongoDB users
-            const filteredActivities = response.data.data.filter(activity => {
-              return users.some((user: UserType) => user.id === activity.userId || user._id === activity.userId);
-            });
-            
-            setActivities(filteredActivities);
-            setLoading(false);
-          } catch (err) {
-            console.error("Error fetching activity logs:", err);
-            createMockData();
+  // Function to create mock data for fallback
+  const createMockData = () => {
+    // For demo purposes, create mock data using the actual MongoDB users
+    const mockUsernames = users.length > 0 
+      ? users.map((user: UserType) => user.username || user.name || 'user')
+      : ['admin', 'editor'];
+    
+    const mockUserIds = users.length > 0
+      ? users.map((user: UserType) => user.id || user._id || '1')
+      : ['1', '2'];
+    
+    // Use a counter to ensure unique IDs
+    let counter = 0;
+    
+    // Create realistic activity based on actual media items when possible
+    const mockActivities: ActivityLog[] = [];
+    
+    // Generate a truly unique ID for mock data
+    const generateUniqueId = (prefix: string) => {
+      counter++;
+      return `${prefix}-${Date.now()}-${counter}-${Math.random().toString(36).substring(2, 9)}`;
+    };
+    
+    // Media upload activity
+    mockActivities.push({
+      id: generateUniqueId('mock-upload'),
+      userId: mockUserIds[0] || '1',
+      username: mockUsernames[0] || 'admin',
+      action: 'UPLOAD',
+      details: `Uploaded ${media.length > 0 ? media[0].title || 'a new file' : 'a new image file'}`,
+      resourceType: 'media',
+      resourceId: media.length > 0 ? media[0].id || '123' : '123',
+      timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString()
+    });
+    
+    // Media delete activity
+    mockActivities.push({
+      id: generateUniqueId('mock-delete'),
+      userId: mockUserIds.length > 1 ? mockUserIds[1] : mockUserIds[0] || '1',
+      username: mockUsernames.length > 1 ? mockUsernames[1] : mockUsernames[0] || 'admin',
+      action: 'DELETE',
+      details: 'Deleted a document file',
+      resourceType: 'media',
+      resourceId: '456',
+      timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString()
+    });
+    
+    // Media type creation activity
+    mockActivities.push({
+      id: generateUniqueId('mock-create'),
+      userId: mockUserIds[0] || '1',
+      username: mockUsernames[0] || 'admin',
+      action: 'CREATE',
+      details: 'Created a new media type: Videos',
+      resourceType: 'mediaType',
+      resourceId: '789',
+      timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString()
+    });
+    
+    // Media edit activity
+    mockActivities.push({
+      id: generateUniqueId('mock-edit'),
+      userId: mockUserIds.length > 1 ? mockUserIds[1] : mockUserIds[0] || '1',
+      username: mockUsernames.length > 1 ? mockUsernames[1] : mockUsernames[0] || 'admin',
+      action: 'EDIT',
+      details: 'Updated media metadata',
+      resourceType: 'media',
+      resourceId: media.length > 1 ? media[1].id || '456' : '456',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString()
+    });
+    
+    // View activity
+    mockActivities.push({
+      id: generateUniqueId('mock-view'),
+      userId: mockUserIds[0] || '1',
+      username: mockUsernames[0] || 'admin',
+      action: 'VIEW',
+      details: 'Accessed media library',
+      resourceType: 'system',
+      resourceId: 'media-library',
+      timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString()
+    });
+    
+    setActivities(mockActivities);
+    setLoading(false);
+    console.log("Using mock data since real data could not be fetched");
+  };
+  
+  const fetchActivities = async (forceFetch = false) => {
+    try {
+      setLoading(true);
+      console.log("Starting to fetch activity logs...");
+      
+      // Always attempt to fetch from API regardless of environment
+      if (API_BASE_URL) {
+        try {
+          // Get token from localStorage
+          const token = localStorage.getItem('authToken');
+          console.log("API_BASE_URL:", API_BASE_URL);
+          console.log("Auth token present:", !!token);
+          
+          if (!token) {
+            setError("Authentication token is missing. Please log in again.");
+            if (!disableMock && !forceFetch) {
+              createMockData();
+            } else {
+              setLoading(false);
+            }
+            return;
           }
-        } else {
-          createMockData();
+          
+          console.log("Making API request to:", `${API_BASE_URL}/api/admin/activity-logs`);
+          const response = await axios.get<ApiResponse>(`${API_BASE_URL}/api/admin/activity-logs`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            },
+            params: {
+              limit: 20
+            }
+          });
+          
+          console.log("API response status:", response.status);
+          console.log("API response data count:", response.data.data.length);
+          console.log("API response first few items:", response.data.data.slice(0, 2));
+          
+          // Filter activities to only include MongoDB users
+          const filteredActivities = response.data.data.filter(activity => {
+            return users.some((user: UserType) => user.id === activity.userId || user._id === activity.userId);
+          });
+          
+          console.log("Filtered activities count:", filteredActivities.length);
+          
+          // Fetch media slugs for media activities
+          const enrichedActivities = await enrichMediaActivities(filteredActivities, media);
+          
+          console.log("Enriched activities count:", enrichedActivities.length);
+          console.log("Activities with slugs:", enrichedActivities.filter(a => a.slug || a.mediaSlug).length);
+          
+          setActivities(enrichedActivities);
+          setLoading(false);
+          setError(null); // Clear any previous errors
+        } catch (err: any) {
+          console.error("Error fetching activity logs:", err);
+          console.log("Error details:", {
+            message: err.message,
+            status: err.response?.status,
+            statusText: err.response?.statusText,
+            data: err.response?.data
+          });
+          
+          // Handle different error types
+          if (err.response) {
+            if (err.response.status === 401) {
+              setError("Authentication failed. Please log in again or ensure you have admin privileges.");
+            } else if (err.response.status === 403) {
+              setError("You don't have permission to view activity logs. Admin privileges required.");
+            } else {
+              setError(`Server error: ${err.response.status}. ${disableMock ? '' : 'Using fallback data.'}`);
+            }
+          } else if (err.request) {
+            setError("No response from server. Check your connection.");
+          } else {
+            setError(`Failed to fetch activity logs. ${disableMock ? '' : 'Using fallback data.'}`);
+          }
+          
+          if (!disableMock && !forceFetch) {
+            createMockData();
+          } else {
+            setLoading(false);
+          }
         }
-      } catch (err) {
-        console.error("Error in activity handling:", err);
-        createMockData();
+      } else {
+        console.error("API_BASE_URL is not configured");
+        setError("API endpoint not configured. Using fallback data.");
+        if (!disableMock && !forceFetch) {
+          createMockData();
+        } else {
+          setLoading(false);
+        }
       }
-    };
-    
-    const createMockData = () => {
-      // For demo purposes, create mock data using the actual MongoDB users
-      const mockUsernames = users.length > 0 
-        ? users.map((user: UserType) => user.username || user.name || 'user')
-        : ['admin', 'editor'];
-      
-      const mockUserIds = users.length > 0
-        ? users.map((user: UserType) => user.id || user._id || '1')
-        : ['1', '2'];
-      
-      // Create realistic activity based on actual media items when possible
-      const mockActivities: ActivityLog[] = [
-        {
-          id: '1',
-          userId: mockUserIds[0] || '1',
-          username: mockUsernames[0] || 'admin',
-          action: 'UPLOAD',
-          details: `Uploaded ${media.length > 0 ? media[0].title || 'a new file' : 'a new image file'}`,
-          resourceType: 'media',
-          resourceId: media.length > 0 ? media[0].id || '123' : '123',
-          timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString()
-        },
-        {
-          id: '2',
-          userId: mockUserIds.length > 1 ? mockUserIds[1] : mockUserIds[0] || '1',
-          username: mockUsernames.length > 1 ? mockUsernames[1] : mockUsernames[0] || 'admin',
-          action: 'DELETE',
-          details: 'Deleted a document file',
-          resourceType: 'media',
-          resourceId: '456',
-          timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString()
-        },
-        {
-          id: '3',
-          userId: mockUserIds[0] || '1',
-          username: mockUsernames[0] || 'admin',
-          action: 'CREATE',
-          details: 'Created a new media type: Videos',
-          resourceType: 'mediaType',
-          resourceId: '789',
-          timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString()
-        },
-        {
-          id: '4',
-          userId: mockUserIds.length > 1 ? mockUserIds[1] : mockUserIds[0] || '1',
-          username: mockUsernames.length > 1 ? mockUsernames[1] : mockUsernames[0] || 'admin',
-          action: 'EDIT',
-          details: 'Updated media metadata',
-          resourceType: 'media',
-          resourceId: media.length > 1 ? media[1].id || '456' : '456',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString()
-        },
-        {
-          id: '5',
-          userId: mockUserIds[0] || '1',
-          username: mockUsernames[0] || 'admin',
-          action: 'VIEW',
-          details: 'Accessed media library',
-          resourceType: 'system',
-          resourceId: 'media-library',
-          timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString()
-        },
-      ];
-      
-      setActivities(mockActivities);
-      setLoading(false);
-      setError(null);
-    };
-    
+    } catch (err) {
+      console.error("Error in activity handling:", err);
+      setError("An unexpected error occurred. Using fallback data.");
+      if (!disableMock && !forceFetch) {
+        createMockData();
+      } else {
+        setLoading(false);
+      }
+    }
+  };
+  
+  // Handle manual refresh
+  const handleRefresh = () => {
+    fetchActivities(true);
+  };
+  
+  // Handle toggle mock data
+  const handleToggleMock = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setDisableMock(event.target.checked);
+  };
+  
+  useEffect(() => {
     fetchActivities();
-  }, [users, media]);
+  }, [users, media, disableMock]);
+  
+  // Function to enrich media activities with slugs
+  const enrichMediaActivities = async (activities: ActivityLog[], allMedia: any[]): Promise<ActivityLog[]> => {
+    // Only process activities related to media
+    const mediaActivities = activities.filter(activity => 
+      activity.resourceType === 'media' && activity.resourceId
+    );
+    
+    // If no media activities, return original list
+    if (mediaActivities.length === 0) return activities;
+    
+    console.log(`Enriching ${mediaActivities.length} media activities with slugs from ${allMedia.length} media files`);
+    
+    // Create a copy of activities to modify
+    const enrichedActivities = [...activities];
+    
+    // Match media activities with media files to get slugs
+    for (const activity of enrichedActivities) {
+      if (activity.resourceType === 'media') {
+        // If mediaSlug is already available from the API, use it
+        if (activity.mediaSlug) {
+          activity.slug = activity.mediaSlug;
+          console.log(`Using mediaSlug from API: ${activity.mediaSlug} for activity ${activity.id}`);
+          continue;
+        }
+
+        // Try to find matching media by resourceId
+        if (activity.resourceId) {
+          const mediaFile = allMedia.find(media => 
+            media._id === activity.resourceId || 
+            media.id === activity.resourceId
+          );
+          
+          if (mediaFile && mediaFile.slug) {
+            activity.slug = mediaFile.slug;
+            console.log(`Found slug ${mediaFile.slug} for activity ${activity.id}, action: ${activity.action}`);
+            continue; // Skip to next activity
+          }
+        }
+
+        // If no slug found yet, try to extract from details
+        if (activity.details) {
+          // Extract potential media title from activity details
+          let potentialTitle = '';
+          if (activity.action === 'UPLOAD' && activity.details.includes('Uploaded media file: ')) {
+            potentialTitle = activity.details.substring(activity.details.indexOf('Uploaded media file: ') + 'Uploaded media file: '.length);
+          } else if (activity.action === 'UPLOAD' && activity.details.includes('Uploaded ')) {
+            potentialTitle = activity.details.substring(activity.details.indexOf('Uploaded ') + 'Uploaded '.length);
+          } else if (activity.action === 'DELETE' && activity.details.includes('Deleted media file: ')) {
+            potentialTitle = activity.details.substring(activity.details.indexOf('Deleted media file: ') + 'Deleted media file: '.length);
+          } else if (activity.action === 'DELETE' && activity.details.includes('Deleted ')) {
+            potentialTitle = activity.details.substring(activity.details.indexOf('Deleted ') + 'Deleted '.length);
+          } else if (activity.action === 'EDIT' && activity.details.includes('Updated media file: ')) {
+            potentialTitle = activity.details.substring(activity.details.indexOf('Updated media file: ') + 'Updated media file: '.length);
+          } else if (activity.action === 'EDIT' && activity.details.includes('Updated ')) {
+            potentialTitle = activity.details.substring(activity.details.indexOf('Updated ') + 'Updated '.length);
+          }
+          
+          // Clean up potential title (remove anything after parenthesis)
+          if (potentialTitle.includes(' (')) {
+            potentialTitle = potentialTitle.substring(0, potentialTitle.indexOf(' ('));
+          }
+          
+          if (potentialTitle) {
+            // Try to find a media file with a matching title
+            const matchingMedia = allMedia.find(media => 
+              media.title === potentialTitle || 
+              media.metadata?.fileName === potentialTitle
+            );
+            
+            if (matchingMedia && matchingMedia.slug) {
+              activity.slug = matchingMedia.slug;
+              console.log(`Found slug ${matchingMedia.slug} for activity via title matching: "${potentialTitle}"`);
+            }
+          }
+        }
+      }
+    }
+    
+    return enrichedActivities;
+  };
   
   // Function to get icon based on action type
   const getActionIcon = (action: string) => {
@@ -236,6 +416,165 @@ const RecentActivity: React.FC = () => {
     return activityTime.toLocaleDateString();
   };
   
+  // Debug function to test authentication
+  const testAuthentication = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        setError("No authentication token found in localStorage. Please log in again.");
+        return;
+      }
+      
+      console.log("Current token:", token);
+      
+      // First try a simpler endpoint to test basic authentication
+      console.log("Testing authentication with database-stats endpoint...");
+      const statsResponse = await axios.get(`${API_BASE_URL}/api/admin/database-stats`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      console.log("Database stats authentication successful:", statsResponse.data);
+      
+      // Now specifically test the activity-logs endpoint
+      console.log("Testing authentication with activity-logs endpoint...");
+      const logsResponse = await axios.get<ApiResponse>(`${API_BASE_URL}/api/admin/activity-logs`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        params: {
+          limit: 5
+        }
+      });
+      
+      console.log("Activity logs authentication successful:", logsResponse.data);
+      
+      // Check if we got any actual logs back
+      if (logsResponse.data && logsResponse.data.data && logsResponse.data.data.length > 0) {
+        console.log(`Successfully retrieved ${logsResponse.data.data.length} activity logs`);
+        console.log("Sample log:", logsResponse.data.data[0]);
+        
+        // Filter logs by valid users
+        const filteredLogs = logsResponse.data.data.filter(activity => {
+          return users.some((user: UserType) => user.id === activity.userId || user._id === activity.userId);
+        });
+        
+        if (filteredLogs.length > 0) {
+          // Try to enrich them with slugs
+          const enrichedLogs = await enrichMediaActivities(filteredLogs, media);
+          console.log("Enriched logs sample:", enrichedLogs[0]);
+          
+          // Update the UI with these logs
+          setActivities(enrichedLogs);
+        }
+        
+        alert(`Authentication successful! You have admin privileges.\nSuccessfully retrieved ${logsResponse.data.data.length} activity logs.`);
+      } else {
+        console.log("Authentication successful but no activity logs found");
+        alert("Authentication successful, but no activity logs were found in the database.");
+      }
+      
+      setError(null);
+    } catch (err: any) {
+      console.error("Authentication test failed:", err);
+      
+      if (err.response) {
+        if (err.response.status === 401) {
+          setError(`Authentication failed (401): ${err.response.data.error || 'Invalid token'}. Please log in again.`);
+        } else if (err.response.status === 403) {
+          setError("You don't have admin privileges (403). Admin access is required for this feature.");
+        } else if (err.response.status === 404) {
+          setError(`API endpoint not found (404): ${err.config.url}. Check if backend routes are correctly configured.`);
+        } else {
+          setError(`Server error: ${err.response.status} - ${err.response.data.message || err.response.statusText || 'Unknown error'}`);
+        }
+      } else if (err.request) {
+        setError(`No response from server. Check if the backend is running at ${API_BASE_URL}.`);
+      } else {
+        setError(`Request error: ${err.message}`);
+      }
+    }
+  };
+  
+  // Function to render activity details with links for media files
+  const renderActivityDetails = (activity: ActivityLog) => {
+    // If it's a media activity and we have a slug, make it a link
+    if (activity.resourceType === 'media' && (activity.slug || activity.mediaSlug)) {
+      // Use either assigned slug or the mediaSlug from the API
+      const slug = activity.slug || activity.mediaSlug;
+      
+      // Extract the media file name from the details
+      const detailsText = activity.details;
+      
+      // Find where the file name starts in the details text based on action type
+      const getFileNameStartIndex = () => {
+        if (activity.action === 'UPLOAD' && detailsText.includes('Uploaded media file: ')) {
+          return detailsText.indexOf('Uploaded media file: ') + 'Uploaded media file: '.length;
+        }
+        if (activity.action === 'UPLOAD' && detailsText.includes('Uploaded ')) {
+          return detailsText.indexOf('Uploaded ') + 'Uploaded '.length;
+        }
+        if (activity.action === 'DELETE' && detailsText.includes('Deleted media file: ')) {
+          return detailsText.indexOf('Deleted media file: ') + 'Deleted media file: '.length;
+        }
+        if (activity.action === 'DELETE' && detailsText.includes('Deleted ')) {
+          return detailsText.indexOf('Deleted ') + 'Deleted '.length;
+        }
+        if (activity.action === 'EDIT' && detailsText.includes('Updated media file: ')) {
+          return detailsText.indexOf('Updated media file: ') + 'Updated media file: '.length;
+        }
+        if (activity.action === 'EDIT' && detailsText.includes('Updated ')) {
+          return detailsText.indexOf('Updated ') + 'Updated '.length;
+        }
+        return -1;
+      };
+      
+      const fileNameStartIndex = getFileNameStartIndex();
+      
+      if (fileNameStartIndex > 0) {
+        // Find where the file name ends (might be end of string or before parenthesis)
+        const endPattern = / \(/;
+        const fileNameEndIndex = detailsText.search(endPattern);
+        const fileName = fileNameEndIndex > 0 
+          ? detailsText.substring(fileNameStartIndex, fileNameEndIndex)
+          : detailsText.substring(fileNameStartIndex);
+        
+        const prefix = detailsText.substring(0, fileNameStartIndex);
+        const suffix = fileNameEndIndex > 0 ? detailsText.substring(fileNameEndIndex) : '';
+        
+        return (
+          <React.Fragment>
+            <Typography component="span" variant="body2" color="text.primary">
+              {prefix}
+              <Link 
+                component={RouterLink} 
+                to={`/media/slug/${slug}`}
+                sx={{ 
+                  fontWeight: 'medium',
+                  textDecoration: 'none',
+                  '&:hover': { textDecoration: 'underline' },
+                  color: 'primary.main'
+                }}
+              >
+                {fileName}
+              </Link>
+              {suffix}
+            </Typography>
+          </React.Fragment>
+        );
+      }
+    }
+    
+    // Default rendering for non-media activities or when slug isn't available
+    return (
+      <Typography component="span" variant="body2" color="text.primary">
+        {activity.details}
+      </Typography>
+    );
+  };
+  
   if (loading) {
     return (
       <Paper elevation={2} className="dashboard-card" style={{ minHeight: '450px' }}>
@@ -260,7 +599,41 @@ const RecentActivity: React.FC = () => {
   
   return (
     <Paper elevation={2} className="dashboard-card has-scroll" style={{ width: '100%', maxWidth: '100%', minHeight: '450px' }}>
-      <Typography variant="h6" gutterBottom>Recent Activity</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6">Recent Activity</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={disableMock}
+                onChange={handleToggleMock}
+                size="small"
+              />
+            }
+            label={<Typography variant="caption">Disable Mock Data</Typography>}
+          />
+          <Button 
+            variant="outlined" 
+            color="primary" 
+            size="small"
+            onClick={handleRefresh}
+            disabled={loading}
+            startIcon={<RefreshIcon />}
+          >
+            Refresh
+          </Button>
+          {error && (
+            <Button 
+              variant="outlined" 
+              color="secondary" 
+              size="small"
+              onClick={testAuthentication}
+            >
+              Test Auth
+            </Button>
+          )}
+        </Box>
+      </Box>
       
       {activities.length === 0 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 3, minHeight: '350px' }}>
@@ -269,7 +642,7 @@ const RecentActivity: React.FC = () => {
       ) : (
         <List sx={{ width: '100%', bgcolor: 'background.paper', minHeight: '350px' }}>
           {activities.map((activity, index) => (
-            <React.Fragment key={activity.id}>
+            <React.Fragment key={`activity-${activity.id || index}`}>
               <ListItem alignItems="flex-start">
                 <ListItemAvatar>
                   <Avatar sx={{ bgcolor: getAvatarColor(activity.action) }}>
@@ -283,6 +656,7 @@ const RecentActivity: React.FC = () => {
                         {activity.username}
                       </Typography>
                       <Chip
+                        key={`chip-${activity.id || index}`}
                         label={activity.action}
                         size="small"
                         sx={{ 
@@ -296,9 +670,7 @@ const RecentActivity: React.FC = () => {
                   }
                   secondary={
                     <React.Fragment>
-                      <Typography component="span" variant="body2" color="text.primary">
-                        {activity.details}
-                      </Typography>
+                      {renderActivityDetails(activity)}
                       <Typography component="span" variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                         {formatRelativeTime(activity.timestamp)}
                       </Typography>
@@ -306,7 +678,7 @@ const RecentActivity: React.FC = () => {
                   }
                 />
               </ListItem>
-              {index < activities.length - 1 && <Divider variant="inset" component="li" />}
+              {index < activities.length - 1 && <Divider key={`divider-${activity.id || index}`} variant="inset" component="li" />}
             </React.Fragment>
           ))}
         </List>

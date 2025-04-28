@@ -10,6 +10,7 @@ import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
+import ActivityTrackingService from '../services/activityTrackingService.js';
 
 // Set ffmpeg path
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -192,6 +193,11 @@ export const uploadMedia = async (req, res) => {
     const savedMedia = await newMedia.save();
     console.log('Saved media document:', savedMedia);
 
+    // Log the media upload activity
+    if (req.user) {
+      await ActivityTrackingService.trackMediaUpload(req.user, savedMedia);
+    }
+
     // Return the complete response
     const response = {
       _id: savedMedia._id,
@@ -268,6 +274,11 @@ export const deleteMedia = async (req, res) => {
     // Delete from MongoDB
     const result = await Media.findByIdAndDelete(id);
     console.log('Deleted media from MongoDB:', result);
+
+    // Log the media deletion activity
+    if (req.user) {
+      await ActivityTrackingService.trackMediaDeletion(req.user, mediaToDelete);
+    }
 
     res.status(200).json({ 
       message: 'Media deleted successfully',
@@ -566,33 +577,56 @@ export const updateMedia = async (req, res) => {
     const documentBeforeUpdate = await Media.findOne({ slug });
     
     if (!documentBeforeUpdate) {
-      console.log('Media not found for slug:', slug);
-      return res.status(404).json({ error: 'Media not found' });
+      console.log(`No document found with slug: ${slug}`);
+      return res.status(404).json({ error: 'Media file not found' });
     }
-
-    console.log('Found document before update:', documentBeforeUpdate);
-
-    // Build update fields
-    const updateFields = {
-      title: req.body.title,
-      metadata: {
-        ...documentBeforeUpdate.metadata, // Keep existing metadata
-        ...req.body.metadata, // Merge with new metadata
+    
+    console.log('Found document:', JSON.stringify(documentBeforeUpdate, null, 2));
+    
+    // Get the specific model for this document
+    const modelName = documentBeforeUpdate.constructor.modelName;
+    console.log(`Document model name: ${modelName}`);
+    
+    // Update the fields
+    if (req.body.title) {
+      documentBeforeUpdate.title = req.body.title;
+    }
+    
+    // Update metadata if it's provided
+    if (req.body.metadata) {
+      // Ensure there is a metadata object
+      if (!documentBeforeUpdate.metadata) {
+        documentBeforeUpdate.metadata = {};
       }
-    };
+      
+      // Update specified metadata fields
+      for (const [key, value] of Object.entries(req.body.metadata)) {
+        // Skip undefined values
+        if (value !== undefined) {
+          documentBeforeUpdate.metadata[key] = value;
+        }
+      }
+    }
+    
+    // Save the updated document
+    console.log('Saving updated document...');
+    const updatedMediaFile = await documentBeforeUpdate.save();
 
-    console.log('Constructed updateFields:', JSON.stringify(updateFields, null, 2));
-
-    // Perform the update using the Media model
-    const updatedMediaFile = await Media.findOneAndUpdate(
-      { slug },
-      { $set: updateFields },
-      { new: true, runValidators: true }
-    ).lean(); // Add lean() to convert to plain JavaScript object
-
-    if (!updatedMediaFile) {
-      console.log('Media not found during update for slug:', slug);
-      return res.status(404).json({ error: 'Media not found' });
+    // Log the media update activity
+    if (req.user) {
+      // Determine which fields were changed
+      const changedFields = [];
+      if (req.body.title !== documentBeforeUpdate.title) changedFields.push('title');
+      if (req.body.metadata) {
+        Object.keys(req.body.metadata).forEach(key => {
+          if (JSON.stringify(req.body.metadata[key]) !== JSON.stringify(documentBeforeUpdate.metadata?.[key])) {
+            changedFields.push(`metadata.${key}`);
+          }
+        });
+      }
+      
+      await ActivityTrackingService.trackMediaUpdate(req.user, updatedMediaFile, changedFields);
+      console.log('Media update activity logged with changes:', changedFields);
     }
 
     // Log the document after update
