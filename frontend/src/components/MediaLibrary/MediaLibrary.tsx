@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
-import { Box, Typography, Grid, Toolbar, IconButton, Tooltip, useMediaQuery, Theme, CircularProgress } from '@mui/material';
+import { Box, Typography, Toolbar, IconButton, Tooltip, useMediaQuery, Theme, CircularProgress } from '@mui/material';
 import { motion } from 'framer-motion';
 import './mediaLibrary.scss';
 import { useNavigate } from 'react-router-dom';
@@ -18,7 +18,7 @@ import { fetchTagCategories } from '../../store/slices/tagCategorySlice';
 
 // Lazy load subcomponents
 const HeaderComponent = lazy(() => import('./components/HeaderComponent'));
-const DataTable = lazy(() => import('./components/DataTable'));
+const DataTable = lazy(() => import('./components/VirtualizedDataTable'));
 const MediaCard = lazy(() => import('./components/MediaCard'));
 const ConfirmationModal = lazy(() => import('./components/ConfirmationModal'));
 
@@ -337,6 +337,11 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
     transition: { duration: isMobile ? 0.3 : 0.5 }
   };
 
+  // Add debugging logs
+  console.log('MediaLibrary Rendering - rows:', rows.length, 'items');
+  console.log('MediaLibrary Rendering - viewMode:', viewMode);
+  console.log('MediaLibrary Rendering - userRole:', userRole);
+
   return (
     <motion.div
       id="media-library"
@@ -381,17 +386,24 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
                 gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
                 gap: 2
               }}>
-                {rows.map((row) => (
-                  <Box key={row.id}>
-                    <Suspense fallback={<LoadingFallback />}>
-                      <MediaCard
-                        file={row}
-                        handleFileClick={() => handleFileClick(row)}
-                        onDeleteClick={userRole === 'superAdmin' ? () => handleDeleteClick(row.id) : undefined}
-                      />
-                    </Suspense>
-                  </Box>
-                ))}
+                {rows.map((row) => {
+                  return (
+                    <Box key={row.id}>
+                      <Suspense fallback={<LoadingFallback />}>
+                        <MediaCard
+                          file={row}
+                          handleFileClick={() => handleFileClick(row)}
+                          onDeleteClick={userRole === 'superAdmin' ? () => handleDeleteClick(row.id) : undefined}
+                        />
+                      </Suspense>
+                    </Box>
+                  );
+                })}
+                {rows.length === 0 && (
+                  <Typography variant="body1" color="textSecondary" sx={{ gridColumn: '1/-1', textAlign: 'center', py: 4 }}>
+                    No media files found. Try changing your filter or upload new media.
+                  </Typography>
+                )}
               </Box>
             </Box>
           )}

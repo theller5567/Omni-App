@@ -166,7 +166,11 @@ const App: React.FC = () => {
   };
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    // Only show loading screen for protected routes, not for login/auth page
+    if (window.location.pathname !== '/login' && !window.location.pathname.includes('/auth')) {
+      return <LoadingFallback />;
+    }
+    // For login/auth pages, continue rendering normally
   }
 
   return (

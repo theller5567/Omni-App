@@ -87,7 +87,6 @@ const AuthPage: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          backgroundColor: 'var(--primary-color)',
           borderRadius: 2,
           boxShadow: 3,
           width: '100%',
@@ -189,7 +188,7 @@ const AuthPage: React.FC = () => {
                 )}
               </Button>
               <Grid container justifyContent="center">
-                <Grid item>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', justifyItems: 'center' }}>
                   <Link 
                     component="button" 
                     variant="body2" 
@@ -202,7 +201,7 @@ const AuthPage: React.FC = () => {
                       ? 'Already have an account? Sign In'
                       : "Don't have an account? Sign Up"}
                   </Link>
-                </Grid>
+                </div>
               </Grid>
             </Box>
           </>

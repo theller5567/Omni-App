@@ -209,6 +209,38 @@ const UserActivity: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, rowsPerPage, mongoUsers.length]);
   
+  // Add a new effect to monitor the auth token
+  useEffect(() => {
+    // Create a function to check the token and trigger a refresh
+    const checkAuthAndRefresh = () => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        console.log('Auth token detected, fetching user activities');
+        fetchUserActivities(); // Fetch with the new token
+      } else {
+        console.log('No auth token found for user activities');
+      }
+    };
+
+    // Run once on component mount
+    checkAuthAndRefresh();
+    
+    // Monitor localStorage changes (browser storage event)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'authToken') {
+        console.log('Auth token changed in localStorage, refreshing user activities');
+        checkAuthAndRefresh();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Cleanup listener on unmount
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []); // Empty dependency array to run only once on mount
+  
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };

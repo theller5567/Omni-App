@@ -33,7 +33,7 @@ export const updateMedia = createAsyncThunk(
   'media/updateMedia',
   async (mediaData: Partial<BaseMediaFile>, { rejectWithValue }) => {
     try {
-      console.log('Updating media with data:', mediaData);
+      console.log('Updating media with data:', JSON.stringify(mediaData, null, 2));
       const mediaId = mediaData._id || '';
       const mediaSlug = mediaData.slug || '';
       
@@ -41,14 +41,21 @@ export const updateMedia = createAsyncThunk(
         return rejectWithValue('Missing media ID or slug');
       }
       
-      // Prepare the update payload
-      const updatePayload = {
-        title: mediaData.title,
-        metadata: mediaData.metadata ? {
-          // Ensure we spread all fields properly
-          ...mediaData.metadata
-        } : undefined
-      };
+      // Prepare the update payload - only include what's necessary
+      const updatePayload: {
+        title?: string;
+        metadata?: Record<string, any>;
+      } = {};
+      
+      // Only include title if provided
+      if (mediaData.title !== undefined) {
+        updatePayload.title = mediaData.title;
+      }
+      
+      // Only include metadata if provided and not empty
+      if (mediaData.metadata && Object.keys(mediaData.metadata).length > 0) {
+        updatePayload.metadata = { ...mediaData.metadata };
+      }
       
       console.log('Server update payload:', JSON.stringify(updatePayload, null, 2));
       
@@ -65,7 +72,7 @@ export const updateMedia = createAsyncThunk(
       
       // Try the ID endpoint first
       try {
-        console.log('Trying to update media using ID endpoint');
+        console.log('Trying to update media using ID endpoint for:', mediaId);
         response = await axios.put<BaseMediaFile>(
           `${env.BASE_URL}/media/update-by-id/${mediaId}`,
           updatePayload,
@@ -74,7 +81,7 @@ export const updateMedia = createAsyncThunk(
       } catch (error: any) {
         // If ID endpoint fails with 404, try the slug endpoint
         if (error.response && error.response.status === 404 && mediaSlug) {
-          console.log('ID endpoint failed, trying slug endpoint');
+          console.log('ID endpoint failed, trying slug endpoint for:', mediaSlug);
           response = await axios.put<BaseMediaFile>(
             `${env.BASE_URL}/media/update/${mediaSlug}`,
             updatePayload,
@@ -82,6 +89,7 @@ export const updateMedia = createAsyncThunk(
           );
         } else {
           // Re-throw the error if it's not a 404 or we don't have a slug
+          console.error('Update endpoint error:', error.response?.status, error.message);
           throw error;
         }
       }
@@ -137,6 +145,14 @@ const mediaSlice = createSlice({
         ...action.payload,
         modifiedDate: action.payload.modifiedDate ? new Date(action.payload.modifiedDate).toISOString() : new Date().toISOString()
       };
+      
+      // Add cache parameter to video thumbnails to prevent browser caching
+      if (formattedMedia.metadata?.v_thumbnail) {
+        const uniqueId = formattedMedia._id || formattedMedia.id || '';
+        const separator = formattedMedia.metadata.v_thumbnail.includes('?') ? '&' : '?';
+        formattedMedia.metadata.v_thumbnail = `${formattedMedia.metadata.v_thumbnail}${separator}mediaId=${uniqueId}`;
+      }
+      
       state.allMedia.unshift(formattedMedia); // Add to beginning of array for better visibility
     },
     updateMediaLocal: (state, action: PayloadAction<BaseMediaFile>) => {
@@ -160,17 +176,41 @@ const mediaSlice = createSlice({
       .addCase(initializeMedia.fulfilled, (state, action) => {
         console.log('Media initialization succeeded:', action.payload);
         state.status = 'succeeded';
-        state.allMedia = action.payload.map(media => ({
-          ...media,
-          modifiedDate: media.modifiedDate ? new Date(media.modifiedDate).toISOString() : new Date().toISOString()
-        }));
+        state.allMedia = action.payload.map(media => {
+          // Process each media item to ensure consistent formatting
+          const processedMedia = {
+            ...media,
+            modifiedDate: media.modifiedDate ? new Date(media.modifiedDate).toISOString() : new Date().toISOString()
+          };
+          
+          // Add cache parameter to video thumbnails to prevent browser caching
+          if (processedMedia.metadata?.v_thumbnail) {
+            const uniqueId = processedMedia._id || processedMedia.id || '';
+            const separator = processedMedia.metadata.v_thumbnail.includes('?') ? '&' : '?';
+            processedMedia.metadata.v_thumbnail = `${processedMedia.metadata.v_thumbnail}${separator}mediaId=${uniqueId}`;
+          }
+          
+          return processedMedia;
+        });
+        
+        // Add detailed logging to inspect data structure
+        console.log('Media data processed:', {
+          count: state.allMedia.length,
+          firstItem: state.allMedia.length > 0 ? {
+            id: state.allMedia[0]._id || state.allMedia[0].id,
+            location: state.allMedia[0].location,
+            metadata: state.allMedia[0].metadata,
+            mediaType: state.allMedia[0].mediaType
+          } : null,
+          mediaTypes: [...new Set(state.allMedia.map(media => media.mediaType || 'Unknown'))]
+        });
       })
       .addCase(initializeMedia.rejected, (state, action) => {
         console.error('Media initialization failed:', action.payload);
         state.status = 'failed';
         state.error = action.payload as string;
       })
-      .addCase(updateMedia.pending, (state) => {
+      .addCase(updateMedia.pending, (_state) => {
         console.log('Media update pending...');
       })
       .addCase(updateMedia.fulfilled, (state, action) => {
@@ -184,7 +224,7 @@ const mediaSlice = createSlice({
         console.error('Media update failed:', action.payload);
         state.error = action.payload as string;
       })
-      .addCase(deleteMediaThunk.pending, (state) => {
+      .addCase(deleteMediaThunk.pending, (_state) => {
         console.log('Media delete pending...');
       })
       .addCase(deleteMediaThunk.fulfilled, (state, action) => {

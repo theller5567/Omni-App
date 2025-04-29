@@ -597,7 +597,7 @@ const MediaDetail: React.FC = () => {
     console.log('isEditing set to true');
   };
 
-  const handleSave = async (updatedMediaFile: Partial<MediaFile>) => {
+  const handleSave = async (updatedMediaFile: Partial<MediaFile> & { metadata?: Record<string, any> }) => {
     if (!mediaFile) return;
     
     try {
@@ -611,107 +611,189 @@ const MediaDetail: React.FC = () => {
       if (updatedMediaFile.customFields && mediaTypeConfig?.fields) {
         console.log('MediaType specific fields to update:');
         mediaTypeConfig.fields.forEach(field => {
-          console.log(`Field "${field.name}" (${field.type}):`, 
-            updatedMediaFile.customFields?.[field.name]);
-        });
-      }
-      
-      // Extract only the properties we need to update
-      const updatePayload = {
-        _id: mediaId,
-        id: mediaId, // Include both ID formats
-        slug: mediaSlug, // Include the slug for the API endpoint
-        title: updatedMediaFile.title,
-        metadata: {
-          // Keep existing metadata values
-          ...(mediaFile.metadata || {}),
-          // Update with new values
-          fileName: updatedMediaFile.fileName,
-          altText: updatedMediaFile.altText,
-          description: updatedMediaFile.description,
-          visibility: updatedMediaFile.visibility,
-          tags: updatedMediaFile.tags,
-        }
-      };
-      
-      // Add each custom field individually to ensure they're properly included
-      if (updatedMediaFile.customFields && Object.keys(updatedMediaFile.customFields).length > 0) {
-        Object.entries(updatedMediaFile.customFields).forEach(([key, value]) => {
-          if (key && value !== undefined) {
-            // Check if it's a MediaType field
-            const isMediaTypeField = mediaTypeConfig?.fields.some(field => field.name === key);
-            if (isMediaTypeField) {
-              console.log(`Adding MediaType field "${key}" with value:`, value);
-              // @ts-ignore - We're dynamically adding properties
-              updatePayload.metadata[key] = value;
-            }
+          const fieldValue = updatedMediaFile.customFields?.[field.name];
+          console.log(`Field "${field.name}" (${field.type}):`, fieldValue, 
+            `(type: ${typeof fieldValue})`);
+          
+          // Check for undefined or null values that might be causing issues
+          if (fieldValue === undefined) {
+            console.warn(`Field "${field.name}" is undefined`);
+          } else if (fieldValue === null) {
+            console.warn(`Field "${field.name}" is null`);
+          } else if (fieldValue === '') {
+            console.warn(`Field "${field.name}" is empty string`);
           }
         });
       }
       
-      console.log('Final update payload:', updatePayload);
+      // If the updated data already has a metadata property, that means the EditDialog
+      // has already prepared the changed-only fields for us
+      if (updatedMediaFile.metadata) {
+        console.log('Received pre-filtered changed fields:', updatedMediaFile);
+        
+        // Make sure we have the required identifiers
+        const updatePayload = {
+          ...updatedMediaFile,
+          _id: mediaId,
+          id: mediaId,
+          slug: mediaSlug
+        };
+        
+        // Important: Do not add any other fields to the metadata
+        // The EditDialog has already filtered for only changed fields
+        
+        console.log('Using pre-filtered update payload:', JSON.stringify(updatePayload, null, 2));
+        const resultAction = await dispatch(updateMedia(updatePayload));
+        
+        // Process the result
+        if (updateMedia.fulfilled.match(resultAction)) {
+          handleSuccessfulUpdate(resultAction.payload, updatedMediaFile);
+        } else if (updateMedia.rejected.match(resultAction)) {
+          handleFailedUpdate(resultAction.payload);
+        }
+        
+        return;
+      }
+      
+      // Legacy format handling for backward compatibility
+      // Extract only the properties we need to update
+      const updatePayload: {
+        _id: string;
+        id: string;
+        slug: string;
+        title?: string;
+        metadata?: Record<string, any>;
+      } = {
+        _id: mediaId,
+        id: mediaId, // Include both ID formats
+        slug: mediaSlug, // Include the slug for the API endpoint
+        title: updatedMediaFile.title
+      };
+      
+      // Only add metadata if needed
+      if (updatedMediaFile.fileName || 
+          updatedMediaFile.altText || 
+          updatedMediaFile.description || 
+          updatedMediaFile.visibility || 
+          updatedMediaFile.tags ||
+          (updatedMediaFile.customFields && Object.keys(updatedMediaFile.customFields).length > 0)) {
+        
+        updatePayload.metadata = {};
+        
+        // Only add fields that were provided in the update
+        if (updatedMediaFile.fileName) updatePayload.metadata.fileName = updatedMediaFile.fileName;
+        if (updatedMediaFile.altText) updatePayload.metadata.altText = updatedMediaFile.altText;
+        if (updatedMediaFile.description) updatePayload.metadata.description = updatedMediaFile.description;
+        if (updatedMediaFile.visibility) updatePayload.metadata.visibility = updatedMediaFile.visibility;
+        if (updatedMediaFile.tags) updatePayload.metadata.tags = updatedMediaFile.tags;
+        
+        // Only add custom fields that were explicitly provided
+        if (updatedMediaFile.customFields && Object.keys(updatedMediaFile.customFields).length > 0) {
+          Object.entries(updatedMediaFile.customFields).forEach(([key, value]) => {
+            if (key && value !== undefined) {
+              // Check if it's a MediaType field
+              const isMediaTypeField = mediaTypeConfig?.fields.some(field => field.name === key);
+              if (isMediaTypeField) {
+                console.log(`Adding changed MediaType field "${key}" with value:`, value);
+                updatePayload.metadata![key] = value;
+              }
+            }
+          });
+        }
+      }
+      
+      console.log('Final update payload:', JSON.stringify(updatePayload, null, 2));
       
       // Call the Redux action to update the media file
       const resultAction = await dispatch(updateMedia(updatePayload));
       
       if (updateMedia.fulfilled.match(resultAction)) {
-        // Update was successful, update local state with the returned data
-        const updatedData = resultAction.payload;
-        console.log('Update successful, server returned:', updatedData);
-        
-        // Inspect metadata from server response
-        console.log('Server returned metadata:', updatedData.metadata);
-        
-        // Examine specific custom fields in server response
-        if (mediaTypeConfig) {
-          mediaTypeConfig.fields.forEach(field => {
-            console.log(`Checking if "${field.name}" is in server response:`, 
-              updatedData.metadata?.[field.name]);
-          });
-        }
-        
-        // Create a new mediaFile object that properly preserves the custom fields
-        setMediaFile(prevState => {
-          if (!prevState) return null;
-          
-          // Create a new metadata object that combines existing and updated values
-          const combinedMetadata = {
-            ...(prevState.metadata || {}),
-            ...(updatedData.metadata || {})
-          };
-          
-          // Ensure custom fields from the form are explicitly included
-          if (updatedMediaFile.customFields) {
-            mediaTypeConfig?.fields.forEach(field => {
-              const fieldValue = updatedMediaFile.customFields?.[field.name];
-              if (fieldValue !== undefined) {
-                combinedMetadata[field.name] = fieldValue;
-              }
-            });
-          }
-          
-          // Log the combined metadata for debugging
-          console.log('Combined metadata after update:', combinedMetadata);
-          
-          // Return a new media file object with the updated data
-          return {
-            ...prevState,
-            ...updatedData,
-            // Ensure metadata is properly updated
-            metadata: combinedMetadata
-          };
-        });
-        
-        toast.success('Media updated successfully');
+        handleSuccessfulUpdate(resultAction.payload, updatedMediaFile);
       } else if (updateMedia.rejected.match(resultAction)) {
-        // Handle specific error if available
-        const errorMsg = resultAction.payload ? String(resultAction.payload) : 'Update failed';
-        throw new Error(errorMsg);
+        handleFailedUpdate(resultAction.payload);
       }
     } catch (error) {
       console.error('Error updating media:', error);
       toast.error('Failed to update media: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
+  };
+
+  // Helper function to handle successful updates
+  const handleSuccessfulUpdate = (updatedData: any, updatedMediaFile: Partial<MediaFile> & { metadata?: Record<string, any> }) => {
+    console.log('Update successful, server returned:', updatedData);
+    
+    // Inspect metadata from server response
+    console.log('Server returned metadata:', updatedData.metadata);
+    
+    // Track if we had mediaType-specific fields to update
+    let hadMediaTypeFields = false;
+    
+    // Examine specific custom fields in server response
+    if (mediaTypeConfig && updatedMediaFile.metadata) {
+      hadMediaTypeFields = true;
+      
+      // Log comparison of what was submitted vs what the server returned
+      console.log('Checking server response against our submitted changes:');
+      
+      // Get the fields that should have been updated
+      Object.keys(updatedMediaFile.metadata).forEach(fieldName => {
+        const serverValue = updatedData.metadata?.[fieldName];
+        const submittedValue = updatedMediaFile.metadata?.[fieldName];
+        
+        console.log(`Field "${fieldName}":`, {
+          serverReturned: serverValue,
+          formSubmitted: submittedValue,
+          serverType: typeof serverValue,
+          submittedType: typeof submittedValue,
+          valueMatch: serverValue === submittedValue
+        });
+      });
+    }
+    
+    // Create a new mediaFile object that properly preserves the custom fields
+    setMediaFile(prevState => {
+      if (!prevState) return null;
+      
+      // Create a new metadata object that combines existing and updated values
+      const combinedMetadata = {
+        ...(prevState.metadata || {}),
+        ...(updatedData.metadata || {})
+      };
+      
+      // Ensure the submitted metadata changes take precedence over what the server returned
+      // This handles cases where the server might not have correctly updated all fields
+      if (hadMediaTypeFields && updatedMediaFile.metadata) {
+        console.log('Adding submitted form changes to final metadata');
+        Object.entries(updatedMediaFile.metadata).forEach(([key, value]) => {
+          if (value !== undefined) {
+            console.log(`Ensuring field "${key}" uses submitted value:`, value);
+            combinedMetadata[key] = value;
+          }
+        });
+      }
+      
+      // Log the combined metadata for debugging
+      console.log('Combined metadata after update:', combinedMetadata);
+      
+      // Return a new media file object with the updated data
+      return {
+        ...prevState,
+        ...updatedData,
+        // Ensure metadata is properly updated
+        metadata: combinedMetadata,
+        // Update customFields with the combined metadata for future edits
+        customFields: { ...combinedMetadata }
+      };
+    });
+    
+    toast.success('Media updated successfully');
+  };
+
+  // Helper function to handle failed updates
+  const handleFailedUpdate = (payload: unknown) => {
+    // Handle specific error if available
+    const errorMsg = payload ? String(payload) : 'Update failed';
+    throw new Error(errorMsg);
   };
 
   // Define base fields for the details component

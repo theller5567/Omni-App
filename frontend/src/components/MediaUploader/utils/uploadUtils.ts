@@ -91,12 +91,13 @@ export const uploadMedia = async ({
     
     // Add video thumbnail if available
     if (videoThumbnail) {
+      console.log('Video thumbnail found:', videoThumbnail);
       // Convert data URL to Blob for upload
       if (videoThumbnail.startsWith('data:')) {
         const res = await fetch(videoThumbnail);
         const blob = await res.blob();
-        formData.append('thumbnail', blob);
-        formData.append('thumbnailTimestamp', videoThumbnailTimestamp || '00:00:01');
+        formData.append('v_thumbnail', blob);
+        formData.append('v_thumbnailTimestamp', videoThumbnailTimestamp || '00:00:01');
       }
     }
     

@@ -60,9 +60,9 @@ interface UserType {
 }
 
 // Determine if we're running on localhost
-const isLocalhost = 
-  window.location.hostname === 'localhost' || 
-  window.location.hostname === '127.0.0.1';
+// const isLocalhost = 
+//   window.location.hostname === 'localhost' || 
+//   window.location.hostname === '127.0.0.1';
 
 const RecentActivity: React.FC = () => {
   const [activities, setActivities] = useState<ActivityLog[]>([]);
@@ -279,6 +279,38 @@ const RecentActivity: React.FC = () => {
   useEffect(() => {
     fetchActivities();
   }, [users, media, disableMock]);
+
+  // Add a new effect to monitor the auth token
+  useEffect(() => {
+    // Create a function to check the token and trigger a refresh
+    const checkAuthAndRefresh = () => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        console.log('Auth token detected, fetching activities');
+        fetchActivities(true); // Force fetch with the new token
+      } else {
+        console.log('No auth token found');
+      }
+    };
+
+    // Run once on component mount
+    checkAuthAndRefresh();
+    
+    // Monitor localStorage changes (browser storage event)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'authToken') {
+        console.log('Auth token changed in localStorage');
+        checkAuthAndRefresh();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Cleanup listener on unmount
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []); // Empty dependency array to run only once on mount
   
   // Function to enrich media activities with slugs
   const enrichMediaActivities = async (activities: ActivityLog[], allMedia: any[]): Promise<ActivityLog[]> => {
@@ -544,6 +576,96 @@ const RecentActivity: React.FC = () => {
         const prefix = detailsText.substring(0, fileNameStartIndex);
         const suffix = fileNameEndIndex > 0 ? detailsText.substring(fileNameEndIndex) : '';
         
+        // For EDIT actions, parse and format the changed fields
+        if (activity.action === 'EDIT' && suffix && suffix.includes('(') && suffix.includes(')')) {
+          // Extract the changed fields from the parentheses
+          const changedFieldsMatch = suffix.match(/\((.*?)\)/);
+          let changedFields: string[] = [];
+          
+          if (changedFieldsMatch && changedFieldsMatch[1]) {
+            changedFields = changedFieldsMatch[1].split(', ');
+          }
+          
+          // Format the changed fields more clearly
+          const formattedFields = changedFields
+            .filter(field => {
+              // Filter out fields we don't want to display or that are technical/internal
+              const unwantedFields = [
+                'modifiedBy',
+                'updatedAt',
+                'lastModified',
+                'metadata.modifiedBy',
+                'metadata.updatedAt',
+                'metadata.lastModified'
+              ];
+              return !unwantedFields.includes(field);
+            })
+            .map(field => {
+              // Clean up metadata prefix
+              if (field.startsWith('metadata.')) {
+                // Make field names more user-friendly
+                const fieldName = field.replace('metadata.', '');
+                
+                // More readable field names (camelCase to Title Case)
+                return fieldName
+                  .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+                  .replace(/^./, str => str.toUpperCase()); // Capitalize first letter
+              }
+              
+              // Format other fields with proper capitalization
+              return field
+                .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+                .replace(/^./, str => str.toUpperCase()); // Capitalize first letter
+            });
+          
+          // Create formatted chips for each changed field
+          const fieldChips = formattedFields.length > 0 ? (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5, ml: 0.5 }}>
+              {formattedFields.map((field, i) => (
+                <Chip
+                  key={`field-${i}`}
+                  label={field}
+                  size="small"
+                  variant="outlined"
+                  sx={{ 
+                    height: '18px', 
+                    fontSize: '0.65rem',
+                    borderColor: 'warning.light',
+                    color: 'text.secondary'
+                  }}
+                />
+              ))}
+            </Box>
+          ) : null;
+          
+          return (
+            <React.Fragment>
+              <Typography component="span" variant="body2" color="text.primary">
+                {prefix}
+                <Link 
+                  component={RouterLink} 
+                  to={`/media/slug/${slug}`}
+                  sx={{ 
+                    fontWeight: 'medium',
+                    textDecoration: 'none',
+                    '&:hover': { textDecoration: 'underline' },
+                    color: 'primary.main'
+                  }}
+                >
+                  {fileName}
+                </Link>
+              </Typography>
+              {formattedFields.length > 0 && (
+                <Typography component="span" variant="caption" sx={{ mt: 0.5, display: 'block', color: 'text.secondary' }}>
+                  Modified fields:
+                </Typography>
+              )}
+              {fieldChips}
+            </React.Fragment>
+          );
+        }
+        
+        // For non-EDIT actions or if no fields are found
         return (
           <React.Fragment>
             <Typography component="span" variant="body2" color="text.primary">

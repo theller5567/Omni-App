@@ -262,7 +262,7 @@ const DataTable: React.FC<DataTableProps> = ({
         }}
         slotProps={{
           toolbar: {
-            showQuickFilter: true,
+            showQuickFilter: false,
             quickFilterProps: { debounceMs: 500 },
           },
         }}

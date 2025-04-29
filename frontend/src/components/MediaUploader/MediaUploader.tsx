@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Box,
   Button,
@@ -29,7 +29,6 @@ import { BaseMediaFile } from "../../interfaces/MediaFile";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store/store";
 import { toast } from "react-toastify";
-import { initializeMediaTypes } from "../../store/slices/mediaTypeSlice";
 import type { MediaType } from "../../store/slices/mediaTypeSlice";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchTagCategories } from "../../store/slices/tagCategorySlice";
@@ -53,26 +52,42 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   onUploadComplete,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const mediaTypes = useSelector(
-    (state: RootState) => state.mediaTypes.mediaTypes
-  );
-  const user = useSelector((state: RootState) => state.user);
-  const tagCategories = useSelector(
-    (state: RootState) => state.tagCategories.tagCategories
-  );
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (mediaTypes.length === 0) {
-      dispatch(initializeMediaTypes());
-    }
-  }, [dispatch, mediaTypes.length]);
-
-  // All state hooks must be declared at the top level
+  const user = useSelector((state: RootState) => state.user);
+  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  const tagCategories = useSelector((state: RootState) => state.tagCategories.tagCategories);
+  
+  // =============== CONSTANTS ===============
+  const maxFileSizeMB = 200;
+  
+  // =============== STATE MANAGEMENT ===============
+  // Step management
   const [step, setStep] = useState(1);
+  const [preventStepReset, setPreventStepReset] = useState(false);
+  
+  // Media type selection state
+  const [selectedMediaType, setSelectedMediaType] = useState("");
+  const [currentTab, setCurrentTab] = useState(0);
+  
+  // File handling state
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [selectedMediaType, setSelectedMediaType] = useState("");
+  const [fileSelected, setFileSelected] = useState(false);
+  const [fileLoadingProgress, setFileLoadingProgress] = useState(0);
+  const [isPreviewReady, setIsPreviewReady] = useState(false);
+  
+  // Upload state
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadComplete, setUploadComplete] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [slug, setSlug] = useState<string | null>(null);
+  
+  // Video thumbnail state
+  const [videoThumbnail, setVideoThumbnail] = useState<string | undefined>();
+  const [videoThumbnailTimestamp, setVideoThumbnailTimestamp] = useState('00:00:01');
+  
+  // Metadata state
   const [metadata, setMetadata] = useState<MetadataState>({
     fileName: "",
     tags: [],
@@ -85,42 +100,24 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     modifiedBy: user.currentUser._id,
     mediaTypeId: "",
     mediaTypeName: "",
-    title: ""  // Initialize title explicitly
+    title: ""
   });
-  const [fileSelected, setFileSelected] = useState(false);
-  const [slug, setSlug] = useState<string | null>(null);
-  const [uploadComplete, setUploadComplete] = useState(false);
-  const [fileLoadingProgress, setFileLoadingProgress] = useState(0);
-  const [isPreviewReady, setIsPreviewReady] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [videoThumbnail, setVideoThumbnail] = useState<string | undefined>();
-  const [videoThumbnailTimestamp, setVideoThumbnailTimestamp] = useState('00:00:01');
-  const [currentTab, setCurrentTab] = useState(0);
-  const [preventStepReset, setPreventStepReset] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const [showTagFilter, setShowTagFilter] = useState(false);
 
-  // All refs must also be declared at the top level
+  // =============== REFS ===============
+  // Refs to handle state between renders
   const tagCategoriesFetchedRef = useRef(false);
   const uploaderStateRef = useRef({
     completionPending: false,
     isClosing: false,
     uploadedFileData: null as BaseMediaFile | null
   });
+  // Store upload completion status in a ref to prevent multiple callback invocations
+  const uploadCompletedRef = useRef(false);
+  // Flag to strictly lock step 4 after success
+  const stayOnStep4Ref = useRef(false);
 
-  // Add effect to fetch tag categories when component opens - with debounce
-  useEffect(() => {
-    // Only fetch tag categories once per component lifecycle
-    if (open && tagCategories.length === 0 && !tagCategoriesFetchedRef.current) {
-      console.log('Fetching tag categories on first open');
-      tagCategoriesFetchedRef.current = true;
-      dispatch(fetchTagCategories());
-    }
-  }, [dispatch, open, tagCategories.length]);
-
-  const maxFileSizeMB = 200;
-
+  // =============== UTILITY FUNCTIONS ===============
   const getFileTypeIcon = (fileType: string) => {
     if (fileType.startsWith("image")) return <FaFileImage size={24} />;
     if (fileType.startsWith("video")) return <FaFileVideo size={24} />;
@@ -133,7 +130,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     return (size / (1024 * 1024)).toFixed(1) + " MB";
   };
 
-  // Add the function to check if a file type is valid for the selected media type
+  // Check if a file type is valid for the selected media type
   const isFileTypeValid = (file: File): boolean => {
     if (!selectedMediaType) return false;
     
@@ -159,229 +156,213 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     return false;
   };
 
-  // Dynamic file type accepter based on selected media type
-  const getAcceptedFileTypes = () => {
-    // If no media type is selected, return empty object (don't accept any files)
+  // Handle metadata field changes
+  const handleMetadataChange = (field: string, value: any) => {
+    setMetadata((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // Handle image preview loading
+  const handleImagePreviewLoad = (fileUrl: string) => {
+    const img = new Image();
+    img.onload = () => {
+      setMetadata((prev) => ({
+        ...prev,
+        imageWidth: img.width,
+        imageHeight: img.height,
+      }));
+      setFileLoadingProgress(100);
+      setIsPreviewReady(true);
+    };
+    
+    img.onerror = () => {
+      console.error('Error loading image preview');
+      setFileLoadingProgress(100);
+      setIsPreviewReady(true);
+    };
+    
+    img.src = fileUrl;
+  };
+
+  // =============== HOOKS ===============
+  // Get accepted file types for react-dropzone
+  const acceptedFileTypes = useMemo(() => {
     if (!selectedMediaType) {
-      return {};
+      return undefined;
     }
     
-    // Find the selected media type
     const mediaType = mediaTypes.find(type => type._id === selectedMediaType);
-    
-    // If media type not found or has no accepted file types, return empty object
     if (!mediaType || !mediaType.acceptedFileTypes || mediaType.acceptedFileTypes.length === 0) {
-      return {};
+      return undefined;
     }
     
-    // Create a map of accepted file types for react-dropzone
-    const acceptedTypesMap: Record<string, string[]> = {};
+    // Create an object with MIME types as keys for react-dropzone
+    const acceptObject: Record<string, string[]> = {};
     
-    // First collect all the non-wildcard types
-    mediaType.acceptedFileTypes.forEach(type => {
+    mediaType.acceptedFileTypes.forEach((type: string) => {
       if (type.includes('/')) {
-        const [category, subtype] = type.split('/');
+        const [category] = type.split('/');
+        const key = `${category}/*`;
         
-        // Skip wildcards for now
-        if (subtype !== '*') {
-          // Initialize the category array if needed
-          if (!acceptedTypesMap[`${category}/*`]) {
-            acceptedTypesMap[`${category}/*`] = [];
-          }
-          
-          // Add the extension (assuming extension matches subtype)
-          // This avoids the "invalid file extension" warning
-          acceptedTypesMap[`${category}/*`].push(`.${subtype}`);
+        if (!acceptObject[key]) {
+          acceptObject[key] = [];
         }
       }
     });
     
-    // Now handle wildcards - if we have image/* but no specific image types,
-    // we need to include some common extensions
-    mediaType.acceptedFileTypes.forEach(type => {
-      if (type.includes('/')) {
-        const [category, subtype] = type.split('/');
-        
-        if (subtype === '*') {
-          // Initialize category if needed
-          if (!acceptedTypesMap[`${category}/*`]) {
-            acceptedTypesMap[`${category}/*`] = [];
-            
-            // Add common extensions for each category
-            switch (category) {
-              case 'image':
-                acceptedTypesMap[`${category}/*`] = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
-                break;
-              case 'video':
-                acceptedTypesMap[`${category}/*`] = ['.mp4', '.webm', '.ogg', '.mov'];
-                break;
-              case 'audio':
-                acceptedTypesMap[`${category}/*`] = ['.mp3', '.wav', '.ogg', '.m4a'];
-                break;
-              case 'application':
-                acceptedTypesMap[`${category}/*`] = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'];
-                break;
-              default:
-                // For unknown categories, leave as empty array
-                break;
-            }
-          }
-        }
-      }
-    });
-    
-    return acceptedTypesMap;
-  };
+    return acceptObject;
+  }, [selectedMediaType, mediaTypes]);
 
-  // Add this function to group accepted file types by category for better display
+  // Generate a human-readable summary of accepted file types
   const getAcceptedFileTypesSummary = () => {
-    if (!selectedMediaType) return 'Select a media type to upload files';
+    if (!selectedMediaType) {
+      return "Please select a media type";
+    }
     
     const mediaType = mediaTypes.find(type => type._id === selectedMediaType);
-    if (!mediaType || !mediaType.acceptedFileTypes || mediaType.acceptedFileTypes.length === 0) {
-      return 'No file types are accepted for this media type';
+    if (!mediaType) {
+      return "Invalid media type selected";
     }
-
-    // Group by category (image, video, etc.)
-    const byCategory: Record<string, string[]> = {};
+    
+    if (!mediaType.acceptedFileTypes || mediaType.acceptedFileTypes.length === 0) {
+      return "All file types";
+    }
+    
+    // Group by category (image, video, etc)
+    const categories: Record<string, string[]> = {};
     
     mediaType.acceptedFileTypes.forEach(type => {
-      if (type.includes('/')) {
+      if (type.includes('/*')) {
+        // Handle wildcards like "image/*"
+        const category = type.split('/')[0];
+        categories[category] = ["all"];
+      } else {
+        // Handle specific types like "image/png"
         const [category, subtype] = type.split('/');
-        if (!byCategory[category]) {
-          byCategory[category] = [];
+        
+        if (!categories[category]) {
+          categories[category] = [];
         }
-        if (subtype !== '*') {
-          byCategory[category].push(subtype);
-        } else {
-          byCategory[category].push('All types');
+        
+        if (categories[category][0] !== "all") {
+          categories[category].push(subtype);
         }
       }
     });
-
-    return Object.entries(byCategory)
-      .map(([category, subtypes]) => {
-        const subtypesText = subtypes.includes('All types') 
-          ? 'All types' 
-          : subtypes.join(', ');
-        return `${category.charAt(0).toUpperCase() + category.slice(1)}: ${subtypesText}`;
-      })
-      .join(', ');
+    
+    // Convert to readable format
+    const parts = Object.entries(categories).map(([category, subtypes]) => {
+      if (subtypes.length === 0 || subtypes[0] === "all") {
+        return `All ${category} files`;
+      }
+      
+      // Limit the number of subtypes shown to 3
+      const displayedSubtypes = subtypes.slice(0, 3);
+      const remaining = subtypes.length - 3;
+      
+      const subtypeText = displayedSubtypes.map(subtype => `.${subtype}`).join(', ');
+      
+      if (remaining > 0) {
+        return `${category.toUpperCase()}: ${subtypeText}, and ${remaining} more`;
+      }
+      
+      return `${category.toUpperCase()}: ${subtypeText}`;
+    });
+    
+    return parts.join(' • ');
   };
 
-  // Define onDrop function before useDropzone
-  const onDrop = useCallback(
-    (acceptedFiles: File[], fileRejections: any[]) => {
+  // Handle file drop and selection
+  const handleFileDrop = useCallback((acceptedFiles: File[], fileRejections: any[]) => {
     if (fileRejections.length > 0) {
-        const { file, errors } = fileRejections[0];
-        const fileSizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-        let errorMessage = "";
-
-        if (errors[0].code === "file-too-large") {
-          errorMessage = `File is too large. Maximum size is ${maxFileSizeMB} MB. Your file was ${fileSizeInMB} MB.`;
-        } else if (errors[0].code === "file-invalid-type") {
-          const mediaType = mediaTypes.find(type => type._id === selectedMediaType);
-          if (mediaType) {
-            errorMessage = `Invalid file type. This media type only accepts: ${mediaType.acceptedFileTypes.join(', ')}`;
-          } else {
-            errorMessage = `Invalid file type. Please upload an accepted file type.`;
-          }
-        } else {
-          errorMessage = errors[0].message;
-        }
-
-        toast.error(errorMessage);
+      const rejection = fileRejections[0];
+      const error = rejection.errors[0];
+      
+      if (error.code === 'file-too-large') {
+        toast.error(`File is too large. Maximum size is ${maxFileSizeMB}MB.`);
+      } else if (error.code === 'file-invalid-type') {
+        const mediaType = mediaTypes.find(type => type._id === selectedMediaType);
+        toast.error(`Invalid file type. This media type only accepts: ${mediaType?.acceptedFileTypes.join(', ')}`);
+      } else {
+        toast.error(`Error uploading file: ${error.message}`);
+      }
       return;
     }
 
     const file = acceptedFiles[0];
     if (file) {
-        // Extra validation to ensure file type is acceptable
-        if (!isFileTypeValid(file)) {
-          const mediaType = mediaTypes.find(type => type._id === selectedMediaType);
-          toast.error(`Invalid file type. This media type only accepts: ${mediaType?.acceptedFileTypes.join(', ')}`);
-          return;
-        }
+      // Extra validation to ensure file type is acceptable
+      if (!isFileTypeValid(file)) {
+        const mediaType = mediaTypes.find(type => type._id === selectedMediaType);
+        toast.error(`Invalid file type. This media type only accepts: ${mediaType?.acceptedFileTypes.join(', ')}`);
+        return;
+      }
 
       setFile(file);
       setFileSelected(true);
-        setIsPreviewReady(false);
-        setFileLoadingProgress(0);
+      setIsPreviewReady(false);
+      setFileLoadingProgress(0);
 
-        let progress = 0;
-        const interval = setInterval(() => {
-          progress += 5;
-          setFileLoadingProgress(Math.min(progress, 90));
-          if (progress >= 90) clearInterval(interval);
-        }, 50);
+      // Show progress indicator
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 5;
+        setFileLoadingProgress(Math.min(progress, 90));
+        if (progress >= 90) clearInterval(interval);
+      }, 50);
 
+      // Read the file for preview
       const reader = new FileReader();
 
-        reader.onloadstart = () => {
-          setFileLoadingProgress(0);
-        };
+      reader.onloadstart = () => {
+        setFileLoadingProgress(0);
+      };
 
-        reader.onprogress = (event) => {
-          if (event.lengthComputable) {
-            const progress = Math.round((event.loaded / event.total) * 100);
-            setFileLoadingProgress(progress);
-          }
-        };
+      reader.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const progress = Math.round((event.loaded / event.total) * 100);
+          setFileLoadingProgress(progress);
+        }
+      };
 
       reader.onloadend = () => {
-          const fileUrl = reader.result as string;
-          setFilePreview(fileUrl);
+        const fileUrl = reader.result as string;
+        setFilePreview(fileUrl);
 
-          // Check if the file is an image
-          if (file.type.startsWith('image')) {
-            const img = new Image();
-            img.onload = () => {
-              setMetadata((prev) => ({
-                ...prev,
-                imageWidth: img.width,
-                imageHeight: img.height,
-              }));
-              setFileLoadingProgress(100);
-              setIsPreviewReady(true);
-              clearInterval(interval);
-            };
-            img.onerror = () => {
-              console.error('Error loading image preview');
-              setFileLoadingProgress(100);
-              setIsPreviewReady(true);
-              clearInterval(interval);
-            };
-            img.src = fileUrl;
-          } else {
-            // Handle non-image files (like videos)
-            console.log('Non-image file detected, skipping image dimension extraction');
-            // For video files, we won't have image dimensions, so we can set them to undefined
-            setMetadata((prev) => ({
-              ...prev,
-              imageWidth: undefined,
-              imageHeight: undefined,
-            }));
-            setFileLoadingProgress(100);
-            setIsPreviewReady(true);
-            clearInterval(interval);
-          }
-        };
-
-        reader.onerror = () => {
-          console.error('Error reading file');
-          toast.error('Error preparing file preview');
+        // Handle preview based on file type
+        if (file.type.startsWith('image')) {
+          handleImagePreviewLoad(fileUrl);
+        } else {
+          // Handle non-image files
+          setMetadata((prev) => ({
+            ...prev,
+            imageWidth: undefined,
+            imageHeight: undefined,
+          }));
           setFileLoadingProgress(100);
           setIsPreviewReady(true);
           clearInterval(interval);
-        };
+        }
+      };
+
+      reader.onerror = () => {
+        console.error('Error reading file');
+        toast.error('Error preparing file preview');
+        setFileLoadingProgress(100);
+        setIsPreviewReady(true);
+        clearInterval(interval);
+      };
 
       reader.readAsDataURL(file);
+      
+      // Set the filename in metadata
+      handleMetadataChange("fileName", file.name || "");
     }
-    },
-    [maxFileSizeMB, selectedMediaType, mediaTypes]
-  );
+  }, [selectedMediaType, mediaTypes, maxFileSizeMB]);
 
-  // Update the useDropzone setup
+  // Configure dropzone - must be after handleFileDrop and acceptedFileTypes are defined
   const {
     getRootProps,
     getInputProps,
@@ -389,68 +370,24 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     isDragReject,
     isDragAccept,
   } = useDropzone({
-    onDrop,
-    accept: getAcceptedFileTypes(),
+    onDrop: handleFileDrop,
+    accept: acceptedFileTypes,
     maxSize: maxFileSizeMB * 1024 * 1024,
     multiple: false,
     disabled: !selectedMediaType, // Disable if no media type selected
   });
 
-  // Modify the media type selection to show accepted file types and apply default tags
-  const handleChange = (event: SelectChangeEvent) => {
-    const newMediaTypeId = event.target.value;
-    setSelectedMediaType(newMediaTypeId);
-    
-    // Find the media type object for applying default tags
-    const selectedType = mediaTypes.find(type => type._id === newMediaTypeId);
-    
-    // Update metadata with media type ID and name
-    handleMetadataChange("mediaTypeId", newMediaTypeId);
-    if (selectedType) {
-      handleMetadataChange("mediaTypeName", selectedType.name);
+  // =============== EFFECTS ===============
+  // Effect to fetch tag categories when component opens
+  useEffect(() => {
+    if (open && tagCategories.length === 0 && !tagCategoriesFetchedRef.current) {
+      console.log('Fetching tag categories on first open');
+      tagCategoriesFetchedRef.current = true;
+      dispatch(fetchTagCategories());
     }
-    
-    // Apply default tags from the selected media type
-    if (selectedType && selectedType.defaultTags && Array.isArray(selectedType.defaultTags) && selectedType.defaultTags.length > 0) {
-      console.log('Applying default tags:', selectedType.defaultTags);
-      
-      // Validate default tags - ensure they are all strings and filter out any invalid values
-      const validDefaultTags = selectedType.defaultTags
-        .filter(tag => typeof tag === 'string' && tag.trim() !== '')
-        .map(tag => tag.trim());
-      
-      if (validDefaultTags.length > 0) {
-      // Get existing tags and normalize them for comparison
-      const existingTags = metadata.tags || [];
-        const normalizedExistingTags = existingTags
-          .filter(tag => typeof tag === 'string')
-          .map(tag => normalizeTag(tag));
-      
-      // Only add default tags that don't already exist (case-insensitive)
-      const newTags = [...existingTags];
-      
-        validDefaultTags.forEach(defaultTag => {
-        const normalizedDefaultTag = normalizeTag(defaultTag);
-          if (normalizedDefaultTag && !normalizedExistingTags.includes(normalizedDefaultTag)) {
-          newTags.push(defaultTag);
-        }
-      });
-      
-      handleMetadataChange("tags", newTags);
-      }
-    }
-    
-    // Reset file if media type changes
-    if (file) {
-      setFile(null);
-      setFilePreview(null);
-      setFileSelected(false);
-    }
-    
-    // Reset step to 1 if changing media type
-    setStep(1);
-  };
+  }, [dispatch, open, tagCategories.length]);
 
+  // Set user ID in metadata when user changes
   useEffect(() => {
     if (user) {
       setMetadata((prevMetadata) => ({
@@ -461,6 +398,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     }
   }, [user]);
 
+  // Reset upload progress when changing to step 2
   useEffect(() => {
     if (step === 2) {
       setUploadProgress(0);
@@ -468,25 +406,10 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     }
   }, [step]);
 
-  // Add a new useEffect near the top of the component, with other useEffect hooks
-  useEffect(() => {
-    if (step === 3) {
-      console.log('Step 3 - Selected Media Type:', selectedMediaType);
-      console.log('Step 3 - Media Types available:', mediaTypes.map(t => ({id: t._id, name: t.name})));
-    }
-  }, [step, selectedMediaType, mediaTypes]);
-
-  // Store upload completion status in a ref to prevent multiple callback invocations
-  const uploadCompletedRef = useRef(false);
-  // Add a flag to strictly lock step 4 after success
-  const stayOnStep4Ref = useRef(false);
-
-  // Make sure the useEffect doesn't conflict - Prevent step change after upload completion
+  // Prevent step change after upload completion
   useEffect(() => {
     if (uploadComplete && preventStepReset && !stayOnStep4Ref.current) {
-      console.log('Setting hard lock to stay on step 4');
       stayOnStep4Ref.current = true;
-      
       // Force step to remain at 4
       setStep(4);
     }
@@ -495,18 +418,14 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   // Override any attempts to change step if we're locked to step 4
   useEffect(() => {
     if (stayOnStep4Ref.current && step !== 4) {
-      console.log('Forcing step back to 4 due to lock');
       setStep(4);
     }
   }, [step]);
 
-  // Add this useEffect to handle onUploadComplete after all other useEffects - with single callback guaranteed
+  // Handle onUploadComplete after all other useEffects
   useEffect(() => {
-    // Only call onUploadComplete if upload is complete and we have slug (indicating successful upload)
-    // Also check if we haven't already processed this completion
+    // Only call onUploadComplete if upload is complete and we have slug
     if (uploadComplete && slug && !uploaderStateRef.current.isClosing && !uploadCompletedRef.current) {
-      console.log('Upload complete, preparing callback data');
-      
       // Mark as completed to prevent duplicate callbacks
       uploadCompletedRef.current = true;
       // Lock to step 4
@@ -547,427 +466,10 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
       
       return () => clearTimeout(timer);
     }
-  }, [uploadComplete, slug]);  // Reduced dependency array to prevent multiple triggers
+  }, [uploadComplete, slug, file, metadata, onUploadComplete, selectedMediaType, videoThumbnail, videoThumbnailTimestamp]);
 
-  // Early return after all hooks
-  if (!open) return null;
-
-  const handleMetadataChange = (field: string, value: any) => {
-    setMetadata((prevMetadata: any) => ({
-      ...prevMetadata,
-      [field]: value,
-    }));
-  };
-
-  const handleTagsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    handleMetadataChange("tagsInput", event.target.value);
-  };
-
-  const handleTagsBlur = () => {
-    if (metadata.tagsInput) {
-      // Split by comma, normalize each tag, and filter out empty strings
-      const newTags = metadata.tagsInput
-        .split(",")
-        .map((tag) => normalizeTag(tag))
-        .filter((tag) => typeof tag === 'string' && tag.trim() !== "");
-      
-      // Remove duplicates after normalization
-      const uniqueTags = Array.from(new Set(newTags));
-      
-      // Update the tags array with valid strings only
-      handleMetadataChange("tags", uniqueTags);
-      // Clear the input field
-      handleMetadataChange("tagsInput", "");
-    }
-  };
-
-  const handleTagsKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      event.preventDefault(); // Prevent form submission
-      handleTagsBlur();
-    }
-  };
-
-  const handleTagCategoryChange = (event: SelectChangeEvent) => {
-    const categoryId = event.target.value;
-    handleMetadataChange("selectedTagCategoryId", categoryId);
-  };
-
-  const getAvailableTags = (): string[] => {
-    // First, get all tags based on category selection
-    let allTags: string[];
-    if (!metadata.selectedTagCategoryId) {
-      // If no category selected, return all tags from all categories
-      allTags = tagCategories.flatMap(category => 
-        category.tags?.map(tag => tag.name) || []
-      );
-    } else {
-      // Return tags only from selected category
-      const selectedCategory = tagCategories.find(cat => cat._id === metadata.selectedTagCategoryId);
-      allTags = selectedCategory?.tags?.map(tag => tag.name) || [];
-    }
-    
-    // Then filter by search query if one exists
-    if (metadata.tagSearchQuery) {
-      const searchLower = metadata.tagSearchQuery.toLowerCase();
-      return allTags.filter(tag => tag.toLowerCase().includes(searchLower));
-    }
-    
-    return allTags;
-  };
-
-  // Add function to handle tag search
-  const handleTagSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    handleMetadataChange("tagSearchQuery", event.target.value);
-  };
-
-  const renderUploadStatus = () => {
-    return (
-      <Box sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "400px",
-        padding: "2rem",
-      }}>
-        <Typography variant="h6" sx={{ mb: 3 }}>
-          {isProcessing ? "Processing Upload" : "Upload Progress"}
-        </Typography>
-        <Box sx={{ width: "100%", maxWidth: "400px", mb: 3, position: "relative" }}>
-          <LinearProgress
-            variant={isProcessing ? "indeterminate" : "determinate"}
-            value={uploadProgress}
-            sx={{ height: 10, borderRadius: 5 }}
-          />
-          <Typography
-            variant="body2"
-            color="textSecondary"
-            align="center"
-            sx={{ 
-              mt: 2,
-              fontWeight: "bold", 
-              position: "absolute", 
-              top: -5, 
-              left: "50%", 
-              transform: "translateX(-50%)",
-              backgroundColor: "rgba(255,255,255,0.7)",
-              px: 1,
-              borderRadius: 1,
-              fontSize: "0.75rem",
-              display: isProcessing ? "none" : "block"
-            }}
-          >
-            {uploadProgress}%
-          </Typography>
-          <Typography
-            variant="body2"
-            color="textSecondary"
-            align="center"
-            sx={{ mt: 2 }}
-          >
-            {isProcessing ? "Processing your upload..." : `${uploadProgress}% Uploaded`}
-          </Typography>
-        </Box>
-      </Box>
-    );
-  };
-
-  const handleThumbnailSelect = (timestamp: string) => {
-    if (!file) return;
-    
-    console.log('Generating thumbnail at timestamp:', timestamp);
-    
-    const video = document.createElement('video');
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    video.onloadeddata = () => {
-      console.log('Video loaded, seeking to timestamp');
-      // Convert timestamp format (HH:MM:SS) to seconds
-      const [hours, minutes, seconds] = timestamp.split(':').map(Number);
-      const timeInSeconds = (hours * 3600) + (minutes * 60) + seconds;
-      video.currentTime = timeInSeconds;
-    };
-    
-    video.onseeked = () => {
-      console.log('Video seeked to timestamp, generating thumbnail');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const thumbnail = canvas.toDataURL('image/jpeg', 0.7);
-      console.log('Thumbnail generated, updating state');
-      setVideoThumbnail(thumbnail);
-      setVideoThumbnailTimestamp(timestamp);
-      
-      // Clean up
-      URL.revokeObjectURL(video.src);
-    };
-    
-    video.onerror = (e) => {
-      console.error('Error loading video:', e);
-      toast.error('Failed to generate thumbnail');
-      URL.revokeObjectURL(video.src);
-    };
-    
-    const videoUrl = URL.createObjectURL(file);
-    console.log('Created video URL:', videoUrl);
-    video.src = videoUrl;
-  };
-
-  const handleUpload = async (file: File) => {
-    if (!file || !selectedMediaType) {
-      console.error('File or media type not selected');
-      setUploadError('File or media type not selected');
-      setIsProcessing(false);
-      return;
-    }
-    
-    try {
-      // Find the matching media type
-      const mediaType = findMediaType(mediaTypes, selectedMediaType);
-      
-      if (!mediaType) {
-        setUploadError('Selected media type not found');
-        setIsProcessing(false);
-        return;
-      }
-      
-      // Prepare metadata
-      const preparedMetadata = prepareMetadataForUpload(metadata, user.currentUser._id);
-      preparedMetadata.mediaTypeId = mediaType._id;
-      preparedMetadata.mediaTypeName = mediaType.name;
-      
-      // Add default tags from media type if provided
-      if (mediaType.defaultTags && mediaType.defaultTags.length > 0) {
-        // Ensure preparedMetadata.tags is an array before spreading
-        const currentTags = Array.isArray(preparedMetadata.tags) ? preparedMetadata.tags : [];
-        // Filter out duplicates
-        const uniqueTags = [...new Set([
-          ...currentTags,
-          ...mediaType.defaultTags
-        ])];
-        preparedMetadata.tags = uniqueTags;
-      }
-      
-      // Set the upload to complete in our reference to avoid race conditions
-      uploadCompletedRef.current = true;
-      
-      // Upload the file
-      const uploadedFile = await uploadMedia({
-        file,
-        metadata: preparedMetadata,
-        videoThumbnailTimestamp: videoThumbnailTimestamp,
-        onProgress: (progress) => {
-          setUploadProgress(progress);
-        },
-        onError: (error) => {
-          console.error('Upload error:', error);
-          setUploadError(error.message || 'File upload failed');
-          setIsProcessing(false);
-        }
-      });
-      
-      // Store the uploaded file data in our ref
-      uploaderStateRef.current.uploadedFileData = uploadedFile;
-      
-      // Set upload complete state
-      setUploadComplete(true);
-      setSlug(uploadedFile.slug || '');
-      setIsProcessing(false);
-      
-      // Call the onUploadComplete callback
-      onUploadComplete(uploadedFile);
-      
-      // Set completion states
-      uploaderStateRef.current.completionPending = false;
-      stayOnStep4Ref.current = true;
-    } catch (error: any) {
-      console.error('Error during upload:', error);
-      setUploadError(error.message || 'File upload failed');
-      setIsProcessing(false);
-      
-      // Make sure we don't close prematurely
-      uploadCompletedRef.current = false;
-      uploaderStateRef.current.completionPending = false;
-    }
-  };
-
-  const handleClose = () => {
-    // Mark as closing to prevent callbacks from firing
-    uploaderStateRef.current.isClosing = true;
-    
-    // Reset all completion tracking
-    uploadCompletedRef.current = false;
-    stayOnStep4Ref.current = false;
-    
-    // Only reset states if explicitly closed by user
-    setPreventStepReset(false);
-    setStep(1);
-    setFile(null);
-    setFilePreview(null);
-    setFileSelected(false);
-    setSlug(null);
-    setUploadProgress(0);
-    setIsProcessing(false);
-    setUploadComplete(false);
-    setSelectedMediaType("");
-    setMetadata({
-      fileName: "",
-      tags: [],
-      tagsInput: "",
-      visibility: "public",
-      altText: "",
-      description: "",
-      recordedDate: new Date().toISOString(),
-      uploadedBy: user.currentUser._id,
-      modifiedBy: user.currentUser._id,
-      mediaTypeId: "",
-      mediaTypeName: "",
-      title: ""  // Initialize title explicitly
-    });
-    
-    // Close with a slight delay to ensure state updates complete
-    return setTimeout(() => {
-      onClose();
-      
-      // Reset closing state (even though component will unmount)
-      uploaderStateRef.current.isClosing = false;
-      tagCategoriesFetchedRef.current = false;
-    }, 50);
-  };
-
-  const handleAddMore = () => {
-    // Reset the completion flags
-    setPreventStepReset(false);
-    uploadCompletedRef.current = false;
-    stayOnStep4Ref.current = false;
-    
-    // Prevent state reset while in the middle of a transition
-    if (isProcessing) {
-      console.log('Cannot add more while processing');
-      return;
-    }
-    
-    setUploadProgress(0);
-    setFilePreview(null);
-    setFile(null);
-    setSelectedMediaType("");
-    setMetadata({
-      fileName: "",
-      tags: [],
-      tagsInput: "",
-      visibility: "public",
-      altText: "",
-      description: "",
-      recordedDate: new Date().toISOString(),
-      uploadedBy: user.currentUser._id,
-      modifiedBy: user.currentUser._id,
-      mediaTypeId: "",
-      mediaTypeName: "",
-      title: ""  // Initialize title explicitly
-    });
-    setFileSelected(false);
-    setUploadComplete(false);
-    setUploadError(null);
-    setSlug(null);
-    
-    // Now it's safe to reset the step
-    setStep(1);
-  };
-
-  const handleNext = () => {
-    const nextStep = step + 1;
-    // Apply default tags when moving from step 2 to step 3
-    if (step === 2 && nextStep === 3) {
-      const selectedType = mediaTypes.find(type => type._id === selectedMediaType);
-      if (selectedType && Array.isArray(selectedType.defaultTags) && selectedType.defaultTags.length > 0) {
-        // Update metadata with default tags, preserving any existing tags
-        setMetadata(prev => ({
-          ...prev,
-          tags: [...new Set([...prev.tags, ...selectedType.defaultTags as string[]])]
-        }));
-      }
-    }
-    
-    if (nextStep === 4) {
-      // Show processing state immediately when moving to upload step
-      setIsProcessing(true);
-      setUploadProgress(0);
-      
-      // Set the step first to ensure we're on step 4
-      setStep(nextStep);
-      
-      // Then trigger upload
-      setTimeout(() => {
-        if (file) {
-          handleUpload(file);
-        } else {
-          console.error('No file available for upload');
-          setIsProcessing(false);
-        }
-      }, 100);
-    } else {
-      // For other steps, just update the step
-      setStep(nextStep);
-    }
-  };
-
-  const handleBack = () => setStep((prev) => (prev === 1 ? 1 : prev - 1));
-
-  const steps = [
-    "Select Media Type",
-    "Upload File",
-    "Add Metadata",
-    "Completion",
-  ];
-
-  const handleViewMedia = () => {
-    if (!slug) {
-      console.error('Cannot view media: slug is not set');
-      return;
-    }
-    
-    handleClose();
-    // Then navigate to the media detail page
-    setTimeout(() => {
-      navigate(`/media/slug/${slug}`);
-    }, 100);
-  };
-
-  // Add a function to validate if all required fields are filled
-  const validateRequiredFields = () => {
-    // If no media type is selected, validation fails
-    if (!selectedMediaType) return false;
-    
-    // Find the selected media type to get its fields
-    const selectedType = mediaTypes.find(type => type._id === selectedMediaType);
-    if (!selectedType) return false;
-    
-    // Check if all required fields in metadata have values
-    const requiredFields = [
-      // Standard required fields
-      ...(metadata.fileName.trim() === '' ? ['fileName'] : []),
-      
-      // Check media type specific required fields
-      ...selectedType.fields
-        .filter(field => field.required)
-        .filter(field => {
-          // For different field types, check if they have valid values
-          if (field.type === 'MultiSelect') {
-            return !metadata[field.name] || (Array.isArray(metadata[field.name]) && metadata[field.name].length === 0);
-          }
-          
-          // For all other field types
-          return metadata[field.name] === undefined || metadata[field.name] === "";
-        })
-        .map(field => field.name)
-    ];
-    
-    // If any required fields are missing values, validation fails
-    return requiredFields.length === 0;
-  };
-
+  // =============== HANDLERS AND OTHER FUNCTIONS ===============
+  // Update the renderDropzone to use the hook values defined above
   const renderDropzone = () => {
     return (
       <>
@@ -1028,9 +530,9 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
                         {formatFileSize(file?.size || 0)}
                       </Typography>
                     </div>
-                )}
-              </>
-            )}
+                  )}
+                </>
+              )}
             </div>
           )}
         </div>
@@ -1052,108 +554,503 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     );
   };
 
-  const renderMediaTypeSelector = () => {
-    // Helper function to get an appropriate icon based on accepted file types
-    const getFileTypeIcons = (mediaType: MediaType) => {
-      if (!mediaType.acceptedFileTypes || mediaType.acceptedFileTypes.length === 0) {
-        return null;
-      }
+  // Handle video thumbnail selection
+  const handleThumbnailSelect = (timestamp: string) => {
+    if (!file) return;
+    
+    const video = document.createElement('video');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    video.onloadeddata = () => {
+      // Convert timestamp format (HH:MM:SS) to seconds
+      const [hours, minutes, seconds] = timestamp.split(':').map(Number);
+      const timeInSeconds = (hours * 3600) + (minutes * 60) + seconds;
+      video.currentTime = timeInSeconds;
+    };
+    
+    video.onseeked = () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const thumbnail = canvas.toDataURL('image/jpeg', 0.7);
+      setVideoThumbnail(thumbnail);
+      setVideoThumbnailTimestamp(timestamp);
+      
+      // Clean up
+      URL.revokeObjectURL(video.src);
+    };
+    
+    video.onerror = (e) => {
+      console.error('Error loading video:', e);
+      toast.error('Failed to generate thumbnail');
+      URL.revokeObjectURL(video.src);
+    };
+    
+    const videoUrl = URL.createObjectURL(file);
+    console.log('Created video URL:', videoUrl);
+    video.src = videoUrl;
+  };
 
-      const hasImages = mediaType.acceptedFileTypes.some(type => type.startsWith('image/'));
-      const hasVideos = mediaType.acceptedFileTypes.some(type => type.startsWith('video/'));
-      const hasAudio = mediaType.acceptedFileTypes.some(type => type.startsWith('audio/'));
-      const hasDocuments = mediaType.acceptedFileTypes.some(type => 
-        type.includes('pdf') || type.includes('doc') || type.includes('text/')
+  // Handle media type selection change
+  const handleChange = (event: SelectChangeEvent) => {
+    const newMediaTypeId = event.target.value;
+    setSelectedMediaType(newMediaTypeId);
+    
+    // Find the media type object for applying default tags
+    const selectedType = mediaTypes.find(type => type._id === newMediaTypeId);
+    
+    // Update metadata with media type ID and name
+    handleMetadataChange("mediaTypeId", newMediaTypeId);
+    if (selectedType) {
+      handleMetadataChange("mediaTypeName", selectedType.name);
+    }
+    
+    // Apply default tags from the selected media type
+    if (selectedType && selectedType.defaultTags && Array.isArray(selectedType.defaultTags) && selectedType.defaultTags.length > 0) {
+      applyDefaultTags(selectedType.defaultTags);
+    }
+    
+    // Reset file if media type changes
+    if (file) {
+      setFile(null);
+      setFilePreview(null);
+      setFileSelected(false);
+    }
+    
+    // Reset step to 1 if changing media type
+    setStep(1);
+  };
+
+  // Apply default tags from media type
+  const applyDefaultTags = (defaultTags: string[]) => {
+    // Validate default tags - ensure they are all strings and filter out any invalid values
+    const validDefaultTags = defaultTags
+      .filter(tag => typeof tag === 'string' && tag.trim() !== '')
+      .map(tag => tag.trim());
+    
+    if (validDefaultTags.length > 0) {
+      // Get existing tags and normalize them for comparison
+      const existingTags = metadata.tags || [];
+      const normalizedExistingTags = existingTags
+        .filter(tag => typeof tag === 'string')
+        .map(tag => normalizeTag(tag));
+    
+      // Only add default tags that don't already exist (case-insensitive)
+      const newTags = [...existingTags];
+    
+      validDefaultTags.forEach(defaultTag => {
+        const normalizedDefaultTag = normalizeTag(defaultTag);
+        if (normalizedDefaultTag && !normalizedExistingTags.includes(normalizedDefaultTag)) {
+          newTags.push(defaultTag);
+        }
+      });
+    
+      handleMetadataChange("tags", newTags);
+    }
+  };
+
+  // Handle tags input change
+  const handleTagsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    handleMetadataChange("tagsInput", event.target.value);
+  };
+
+  // Handle tags input blur
+  const handleTagsBlur = () => {
+    const tagsInput = metadata.tagsInput;
+    if (tagsInput && tagsInput.trim() !== "") {
+      // Split by comma and create an array of tags
+      const newTags = tagsInput
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag !== "");
+
+      // Add these tags to the existing tags
+      const existingTags = metadata.tags || [];
+      
+      // Normalize tags to check for duplicates
+      const normalizedExistingTags = existingTags.map(tag => 
+        normalizeTag(tag)
       );
       
-      return (
-        <Box sx={{ display: 'flex', ml: 'auto', gap: 0.5 }}>
-          {hasImages && <FaImage size={12} style={{ color: '#4dabf5' }} />}
-          {hasVideos && <FaVideo size={12} style={{ color: '#f57c00' }} />}
-          {hasAudio && <FaFileAudio size={12} style={{ color: '#7e57c2' }} />}
-          {hasDocuments && <FaFileWord size={12} style={{ color: '#2196f3' }} />}
-        </Box>
-      );
-    };
+      // Only add tags that don't already exist
+      const uniqueNewTags = newTags.filter(tag => {
+        const normalizedTag = normalizeTag(tag);
+        return !normalizedExistingTags.includes(normalizedTag);
+      });
+      
+      handleMetadataChange("tags", [...existingTags, ...uniqueNewTags]);
+      handleMetadataChange("tagsInput", "");
+    }
+  };
 
-    // Filter out archived media types
-    const activeMediaTypes = mediaTypes.filter(type => type.status !== 'archived');
+  // Handle tag input key down events (Enter to add tags)
+  const handleTagsKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleTagsBlur();
+    }
+  };
 
+  // Handle tag category selection
+  const handleTagCategoryChange = (event: SelectChangeEvent) => {
+    setShowTagFilter(!!event.target.value);
+  };
+
+  // Filter and return available tags based on selected category
+  const getAvailableTags = (): string[] => {
+    const currentTagInput = metadata.tagsInput || '';
+    const searchLower = currentTagInput.toLowerCase().trim();
+    
+    // Default to returning empty array if no categories loaded
+    if (tagCategories.length === 0) {
+      console.log('No tag categories available');
+      return [];
+    }
+    
+    // Map of category names to tags
+    const availableTags: string[] = [];
+    
+    // Combine all tags from all categories
+    tagCategories.forEach((category: any) => {
+      if (category.tags && Array.isArray(category.tags)) {
+        category.tags.forEach((tag: any) => {
+          if (typeof tag === 'string' && !availableTags.includes(tag)) {
+            // Filter tags by the search term if provided
+            if (!searchLower || tag.toLowerCase().includes(searchLower)) {
+              availableTags.push(tag);
+            }
+          }
+        });
+      }
+    });
+    
+    return availableTags;
+  };
+
+  // Handle tag search input
+  const handleTagSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+    handleMetadataChange("tagsInput", event.target.value);
+  };
+
+  // Handle file upload process
+  const handleUpload = async (file: File) => {
+    if (!file || !selectedMediaType) {
+      console.error('File or media type not selected');
+      setUploadError('File or media type not selected');
+      setIsProcessing(false);
+      return;
+    }
+    
+    try {
+      // Find the matching media type
+      const mediaType = findMediaType(mediaTypes, selectedMediaType);
+      
+      if (!mediaType) {
+        setUploadError('Selected media type not found');
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Prepare metadata
+      const preparedMetadata = prepareMetadataForUpload(metadata, user.currentUser._id);
+      preparedMetadata.mediaTypeId = mediaType._id;
+      preparedMetadata.mediaTypeName = mediaType.name;
+      
+      // Add default tags from media type if provided
+      if (mediaType.defaultTags && mediaType.defaultTags.length > 0) {
+        // Ensure preparedMetadata.tags is an array before spreading
+        const currentTags = Array.isArray(preparedMetadata.tags) ? preparedMetadata.tags : [];
+        // Filter out duplicates
+        const uniqueTags = [...new Set([
+          ...currentTags,
+          ...mediaType.defaultTags
+        ])];
+        preparedMetadata.tags = uniqueTags;
+      }
+      
+      // Set the upload to complete in our reference to avoid race conditions
+      uploadCompletedRef.current = true;
+      
+      // Upload the file
+      const uploadedFile = await uploadMedia({
+        file,
+        metadata: preparedMetadata,
+        videoThumbnailTimestamp: videoThumbnailTimestamp,
+        videoThumbnail: videoThumbnail,
+        onProgress: (progress) => {
+          setUploadProgress(progress);
+        },
+        onError: (error) => {
+          console.error('Upload error:', error);
+          setUploadError(error.message || 'File upload failed');
+          setIsProcessing(false);
+        }
+      });
+      
+      // Store the uploaded file data in our ref
+      uploaderStateRef.current.uploadedFileData = uploadedFile;
+      
+      // Set upload complete state
+      setUploadComplete(true);
+      setSlug(uploadedFile.slug || '');
+      setIsProcessing(false);
+      
+      // Call the onUploadComplete callback
+      onUploadComplete(uploadedFile);
+      
+      // Set completion states
+      uploaderStateRef.current.completionPending = false;
+      stayOnStep4Ref.current = true;
+    } catch (error: any) {
+      console.error('Error during upload:', error);
+      setUploadError(error.message || 'File upload failed');
+      setIsProcessing(false);
+      
+      // Make sure we don't close prematurely
+      uploadCompletedRef.current = false;
+      uploaderStateRef.current.completionPending = false;
+    }
+  };
+
+  // Handle dialog close
+  const handleClose = () => {
+    // Mark as closing to prevent callbacks from firing
+    uploaderStateRef.current.isClosing = true;
+    
+    // Reset all completion tracking
+    uploadCompletedRef.current = false;
+    stayOnStep4Ref.current = false;
+    
+    // Only reset states if explicitly closed by user
+    setPreventStepReset(false);
+    setStep(1);
+    setFile(null);
+    setFilePreview(null);
+    setFileSelected(false);
+    setSlug(null);
+    setUploadProgress(0);
+    setIsProcessing(false);
+    setUploadComplete(false);
+    setSelectedMediaType("");
+    setMetadata({
+      fileName: "",
+      tags: [],
+      tagsInput: "",
+      visibility: "public",
+      altText: "",
+      description: "",
+      recordedDate: new Date().toISOString(),
+      uploadedBy: user.currentUser._id,
+      modifiedBy: user.currentUser._id,
+      mediaTypeId: "",
+      mediaTypeName: "",
+      title: ""  // Initialize title explicitly
+    });
+    
+    // Close with a slight delay to ensure state updates complete
+    return setTimeout(() => {
+      onClose();
+      
+      // Reset closing state (even though component will unmount)
+      uploaderStateRef.current.isClosing = false;
+      tagCategoriesFetchedRef.current = false;
+    }, 50);
+  };
+
+  // Handle "Add More" after successful upload
+  const handleAddMore = () => {
+    // Reset the completion flags
+    setPreventStepReset(false);
+    uploadCompletedRef.current = false;
+    stayOnStep4Ref.current = false;
+    
+    // Prevent state reset while in the middle of a transition
+    if (isProcessing) {
+      console.log('Cannot add more while processing');
+      return;
+    }
+    
+    // Reset all state to initial values
+    setUploadProgress(0);
+    setFilePreview(null);
+    setFile(null);
+    setSelectedMediaType("");
+    setMetadata({
+      fileName: "",
+      tags: [],
+      tagsInput: "",
+      visibility: "public",
+      altText: "",
+      description: "",
+      recordedDate: new Date().toISOString(),
+      uploadedBy: user.currentUser._id,
+      modifiedBy: user.currentUser._id,
+      mediaTypeId: "",
+      mediaTypeName: "",
+      title: ""  // Initialize title explicitly
+    });
+    setFileSelected(false);
+    setUploadComplete(false);
+    setUploadError(null);
+    setSlug(null);
+    
+    // Now it's safe to reset the step
+    setStep(1);
+  };
+
+  // Handle next step button
+  const handleNext = () => {
+    const nextStep = step + 1;
+    // Apply default tags when moving from step 2 to step 3
+    if (step === 2 && nextStep === 3) {
+      const selectedType = mediaTypes.find(type => type._id === selectedMediaType);
+      if (selectedType && Array.isArray(selectedType.defaultTags) && selectedType.defaultTags.length > 0) {
+        // Update metadata with default tags, preserving any existing tags
+        setMetadata(prev => ({
+          ...prev,
+          tags: [...new Set([...prev.tags, ...selectedType.defaultTags as string[]])]
+        }));
+      }
+    }
+    
+    if (nextStep === 4) {
+      // Show processing state immediately when moving to upload step
+      setIsProcessing(true);
+      setUploadProgress(0);
+      
+      // Set the step first to ensure we're on step 4
+      setStep(nextStep);
+      
+      // Then trigger upload
+      setTimeout(() => {
+        if (file) {
+          handleUpload(file);
+        } else {
+          console.error('No file available for upload');
+          setIsProcessing(false);
+        }
+      }, 100);
+    } else {
+      // For other steps, just update the step
+      setStep(nextStep);
+    }
+  };
+
+  // Handle back button
+  const handleBack = () => setStep((prev) => (prev === 1 ? 1 : prev - 1));
+
+  // Handle View Media button after successful upload
+  const handleViewMedia = () => {
+    if (!slug) {
+      console.error('Cannot view media: slug is not set');
+      return;
+    }
+    
+    handleClose();
+    // Then navigate to the media detail page
+    setTimeout(() => {
+      navigate(`/media/slug/${slug}`);
+    }, 100);
+  };
+
+  // Validate required fields before proceeding
+  const validateRequiredFields = () => {
+    // If no media type is selected, validation fails
+    if (!selectedMediaType) return false;
+    
+    // Find the selected media type to get its fields
+    const selectedType = mediaTypes.find(type => type._id === selectedMediaType);
+    if (!selectedType) return false;
+    
+    // Check if all required fields in metadata have values
+    const requiredFields = [
+      // Standard required fields
+      ...(metadata.fileName.trim() === '' ? ['fileName'] : []),
+      
+      // Check media type specific required fields
+      ...selectedType.fields
+        .filter(field => field.required)
+        .filter(field => {
+          // For different field types, check if they have valid values
+          if (field.type === 'MultiSelect') {
+            return !metadata[field.name] || (Array.isArray(metadata[field.name]) && metadata[field.name].length === 0);
+          }
+          
+          // For all other field types
+          return metadata[field.name] === undefined || metadata[field.name] === "";
+        })
+        .map(field => field.name)
+    ];
+    
+    // If any required fields are missing values, validation fails
+    return requiredFields.length === 0;
+  };
+
+  // Early return if dialog is not open
+  if (!open) return null;
+
+  // =============== RENDER FUNCTIONS ===============
+  const renderUploadStatus = () => {
     return (
-      <Box sx={{ mb: 3 }}>
-        <FormControl fullWidth>
-          <InputLabel id="media-type-label">Media Type</InputLabel>
-          <Select
-            labelId="media-type-label"
-            id="media-type-select"
-            value={selectedMediaType}
-            onChange={handleChange}
-            label="Media Type"
+      <Box sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "400px",
+        padding: "2rem",
+      }}>
+        <Typography variant="h6" sx={{ mb: 3 }}>
+          {isProcessing ? "Processing Upload" : "Upload Progress"}
+        </Typography>
+        <Box sx={{ width: "100%", maxWidth: "400px", mb: 3, position: "relative" }}>
+          <LinearProgress
+            variant={isProcessing ? "indeterminate" : "determinate"}
+            value={uploadProgress}
+            sx={{ height: 10, borderRadius: 5 }}
+          />
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            align="center"
+            sx={{ 
+              mt: 2,
+              fontWeight: "bold", 
+              position: "absolute", 
+              top: -5, 
+              left: "50%", 
+              transform: "translateX(-50%)",
+              backgroundColor: "rgba(255,255,255,0.7)",
+              px: 1,
+              borderRadius: 1,
+              fontSize: "0.75rem",
+              display: isProcessing ? "none" : "block"
+            }}
           >
-            {activeMediaTypes.map((type) => (
-              <MenuItem 
-                key={type._id} 
-                value={type._id}
-                sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  py: 1
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  {type.name}
-                  {type.status === 'deprecated' && (
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
-                        ml: 1, 
-                        color: 'warning.main', 
-                        fontSize: '0.7rem',
-                        fontStyle: 'italic'
-                      }}
-                    >
-                      (deprecated)
-                    </Typography>
-                  )}
-                  {type.acceptedFileTypes && type.acceptedFileTypes.length > 0 && (
-                    <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary', fontSize: '0.7rem' }}>
-                      ({type.acceptedFileTypes.length} file types)
-                    </Typography>
-                  )}
-                </Box>
-                {getFileTypeIcons(type)}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        
-        {selectedMediaType && (
-          <Box sx={{ mt: 1, p: 1, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-            <Typography variant="body2" fontWeight="bold">
-              Accepted File Types:
-            </Typography>
-            <Typography variant="body2">
-              {getAcceptedFileTypesSummary()}
-            </Typography>
-          </Box>
-        )}
+            {uploadProgress}%
+          </Typography>
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            align="center"
+            sx={{ mt: 2 }}
+          >
+            {isProcessing ? "Processing your upload..." : `${uploadProgress}% Uploaded`}
+          </Typography>
+        </Box>
       </Box>
     );
   };
 
   const renderCompletionStep = () => {
-    console.log('Rendering completion step, uploadComplete:', uploadComplete, 'isProcessing:', isProcessing);
-    
     // If still processing, show the upload status
     if (isProcessing) {
-      console.log('Showing upload progress/processing UI');
       return renderUploadStatus();
     }
 
     // If upload is not complete and not processing, there was an error
     if (!uploadComplete) {
-      console.log('Showing upload failure UI');
       return (
         <Box
           sx={{
@@ -1195,7 +1092,6 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     }
 
     // Success state
-    console.log('Showing upload success UI, slug:', slug);
     return (
       <Box
         sx={{
@@ -1330,11 +1226,100 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     );
   };
 
+  const renderMediaTypeSelector = () => {
+    // Helper function to get an appropriate icon based on accepted file types
+    const getFileTypeIcons = (mediaType: MediaType) => {
+      if (!mediaType.acceptedFileTypes || mediaType.acceptedFileTypes.length === 0) {
+        return null;
+      }
+
+      const hasImages = mediaType.acceptedFileTypes.some(type => type.startsWith('image/'));
+      const hasVideos = mediaType.acceptedFileTypes.some(type => type.startsWith('video/'));
+      const hasAudio = mediaType.acceptedFileTypes.some(type => type.startsWith('audio/'));
+      const hasDocuments = mediaType.acceptedFileTypes.some(type => 
+        type.includes('pdf') || type.includes('doc') || type.includes('text/')
+      );
+      
+      return (
+        <Box sx={{ display: 'flex', ml: 'auto', gap: 0.5 }}>
+          {hasImages && <FaImage size={12} style={{ color: '#4dabf5' }} />}
+          {hasVideos && <FaVideo size={12} style={{ color: '#f57c00' }} />}
+          {hasAudio && <FaFileAudio size={12} style={{ color: '#7e57c2' }} />}
+          {hasDocuments && <FaFileWord size={12} style={{ color: '#2196f3' }} />}
+        </Box>
+      );
+    };
+
+    // Filter out archived media types
+    const activeMediaTypes = mediaTypes.filter(type => type.status !== 'archived');
+
+    return (
+      <Box sx={{ mb: 3 }}>
+        <FormControl fullWidth>
+          <InputLabel id="media-type-label">Media Type</InputLabel>
+          <Select
+            labelId="media-type-label"
+            id="media-type-select"
+            value={selectedMediaType}
+            onChange={handleChange}
+            label="Media Type"
+          >
+            {activeMediaTypes.map((type) => (
+              <MenuItem 
+                key={type._id} 
+                value={type._id}
+                sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  py: 1
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  {type.name}
+                  {type.status === 'deprecated' && (
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        ml: 1, 
+                        color: 'warning.main', 
+                        fontSize: '0.7rem',
+                        fontStyle: 'italic'
+                      }}
+                    >
+                      (deprecated)
+                    </Typography>
+                  )}
+                  {type.acceptedFileTypes && type.acceptedFileTypes.length > 0 && (
+                    <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary', fontSize: '0.7rem' }}>
+                      ({type.acceptedFileTypes.length} file types)
+                    </Typography>
+                  )}
+                </Box>
+                {getFileTypeIcons(type)}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        
+        {selectedMediaType && (
+          <Box sx={{ mt: 1, p: 1, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <Typography variant="body2" fontWeight="bold">
+              Accepted File Types:
+            </Typography>
+            <Typography variant="body2">
+              {getAcceptedFileTypesSummary()}
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    );
+  };
+
   return (
     <Dialog
       open={open}
       onClose={(_, reason) => {
-        console.log('Dialog onClose triggered with reason:', reason);
         // Only allow closing through explicit button clicks
         if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
           console.log('Preventing automatic close from:', reason);
@@ -1399,7 +1384,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
               borderColor: 'divider' 
             }}
           >
-            {steps.map((label) => (
+            {["Select Media Type", "Upload File", "Add Metadata", "Completion"].map((label) => (
               <Step key={label}>
                 <StepLabel>{label}</StepLabel>
               </Step>

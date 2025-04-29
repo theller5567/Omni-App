@@ -112,9 +112,12 @@ const CustomSidebar: React.FC = () => {
 
   const handleSignOut = () => {
     console.log("User signed out");
+    // First dispatch action to clear user state
+    dispatch(clearUser());
+    // Then remove localStorage items
     localStorage.removeItem("authToken");
     localStorage.removeItem("refreshToken");
-    dispatch(clearUser());
+    // Finally navigate to login page
     navigate("/login");
   };
 

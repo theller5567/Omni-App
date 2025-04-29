@@ -68,7 +68,10 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
       }
       
       if (isVideoFile(params.row.fileExtension) || params.row.mediaType?.includes('Video')) {
+       console.log('Video file detected:', params.row.metadata);
         if (params.row.metadata?.v_thumbnail) {
+          // Add a cache-busting parameter using a stable ID for each media item
+          const thumbnailWithCacheBuster = `${params.row.metadata.v_thumbnail}${params.row.metadata.v_thumbnail.includes('?') ? '&' : '?'}id=${params.row._id || params.row.id || ''}`;
           return (
             <div style={{
               width: '100%',
@@ -91,7 +94,7 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
                 position: 'relative',
               }}>
                 <img 
-                  src={params.row.metadata.v_thumbnail} 
+                  src={thumbnailWithCacheBuster} 
                   alt={params.row.title} 
                   style={{ 
                     position: 'absolute',

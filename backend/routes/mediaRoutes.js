@@ -282,6 +282,8 @@ router.put('/update-by-id/:id', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Media not found' });
     }
     
+    console.log('Original metadata before update:', JSON.stringify(mediaFile.metadata || {}, null, 2));
+    
     // Save the original state before updates for comparison
     const originalTitle = mediaFile.title;
     const originalMetadata = { ...mediaFile.metadata };
@@ -297,13 +299,28 @@ router.put('/update-by-id/:id', authenticate, async (req, res) => {
       // Ensure metadata exists
       if (!mediaFile.metadata) mediaFile.metadata = {};
       
-      // Update each metadata field
+      // Update each metadata field with proper type preservation
       for (const [key, value] of Object.entries(metadata)) {
         if (value !== undefined) {
-          mediaFile.metadata[key] = value;
+          console.log(`Updating metadata field "${key}" from`, originalMetadata[key], 'to', value, 
+                    `(types: ${typeof originalMetadata[key]} → ${typeof value})`);
+          
+          // Special handling for numbers and booleans to ensure correct type
+          if (typeof value === 'boolean') {
+            mediaFile.metadata[key] = Boolean(value);
+          } else if (typeof value === 'number') {
+            mediaFile.metadata[key] = Number(value);
+          } else if (typeof value === 'string' && !isNaN(Number(value)) && value !== '') {
+            // Convert numeric strings to actual numbers if they look like numbers
+            mediaFile.metadata[key] = Number(value);
+          } else {
+            mediaFile.metadata[key] = value;
+          }
         }
       }
     }
+    
+    console.log('Updated metadata before save:', JSON.stringify(mediaFile.metadata || {}, null, 2));
     
     // Save the updated media file
     await mediaFile.save();

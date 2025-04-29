@@ -1,6 +1,8 @@
 {
     "cSpell.words": [
-        "omnilogo"
+        "navpanes",
+        "omnilogo",
+        "quicktime"
     ],
     "files.exclude": {
         "**/*.d.ts": true
