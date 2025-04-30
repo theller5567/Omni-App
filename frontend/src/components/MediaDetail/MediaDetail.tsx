@@ -1,4 +1,4 @@
-import React, { useEffect, useState, lazy, Suspense } from "react";
+import React, { useEffect, useState, lazy, Suspense, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   Box, 
@@ -8,6 +8,8 @@ import {
   Typography,
   useMediaQuery,
   Theme,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import axios from "axios";
 import { BaseMediaFile } from "../../interfaces/MediaFile";
@@ -32,6 +34,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import { updateMedia } from '../../store/slices/mediaSlice';
+import RelatedMediaItem from "./RelatedMediaItem";
 
 // Lazy load subcomponents
 const MediaInformation = lazy(() => import('./MediaInformation'));
@@ -102,8 +105,328 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
   isEditingEnabled 
 }) => {
   // Get uploadedBy from either direct property or metadata
-
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
+  
+  // Add state for the active tab
+  const [activeTab, setActiveTab] = useState(0);
+  
+  // Check if there are related media files
+  const hasRelatedMedia = mediaFile.metadata?.relatedMedia && 
+    (Array.isArray(mediaFile.metadata.relatedMedia) ? 
+      mediaFile.metadata.relatedMedia.length > 0 : 
+      mediaFile.metadata.relatedMedia.mediaId);
+  
+  // Handler for tab changes
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
+  
+  // Component to render media content based on file type
+  const RenderMediaContent = React.useCallback(() => {
+    if (!mediaFile) return null;
+    
+    if (mediaFile.fileExtension &&
+      ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(
+        mediaFile.fileExtension.toLowerCase()
+      )) {
+      // Image preview
+      return (
+        <img
+          src={mediaFile.location}
+          alt={mediaFile.metadata?.altText || ""}
+        />
+      );
+    } else if (mediaFile.fileExtension &&
+      ["mp4", "webm", "ogg", "mov"].includes(
+        mediaFile.fileExtension.toLowerCase()
+      )) {
+      // Video preview
+      return (
+        <Box
+          sx={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            background: "#000",
+          }}
+        >
+          <video
+            controls
+            autoPlay={false}
+            style={{
+              width: "100%",
+              maxHeight: isMobile ? "300px" : "600px",
+            }}
+            poster={mediaFile.metadata?.v_thumbnail}
+          >
+            <source
+              src={mediaFile.location}
+              type={`video/${
+                mediaFile.fileExtension === "mov"
+                  ? "quicktime"
+                  : mediaFile.fileExtension.toLowerCase()
+              }`}
+            />
+            Your browser does not support the video tag.
+          </video>
+        </Box>
+      );
+    } else if (mediaFile.fileExtension &&
+      ["mp3", "wav", "ogg", "m4a"].includes(
+        mediaFile.fileExtension.toLowerCase()
+      )) {
+      // Audio preview
+      return (
+        <Box
+          sx={{
+            p: 4,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          <FaFileAudio size={isMobile ? 48 : 64} />
+          <audio
+            controls
+            src={mediaFile.location}
+            style={{ width: "100%" }}
+          >
+            Your browser does not support the audio element.
+          </audio>
+        </Box>
+      );
+    } else if (mediaFile.fileExtension &&
+      ["pdf"].includes(mediaFile.fileExtension.toLowerCase())) {
+      // PDF preview
+      return (
+        <Box
+          sx={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            p: 2,
+            position: "relative", // Add for debugging overlay
+          }}
+        >
+          {/* Primary method: Try using an iframe for preview */}
+          <iframe
+            src={`${mediaFile.location}#toolbar=1&navpanes=1&scrollbar=1`}
+            style={{
+              width: "100%",
+              height: isMobile ? "400px" : "600px",
+              border: "none",
+              borderRadius: "4px",
+              overflow: "hidden",
+            }}
+            title="PDF Preview"
+            onError={(e) => {
+              // Show alternative PDF viewer on error
+              const iframe = e.target as HTMLIFrameElement;
+              if (iframe && iframe.style) {
+                iframe.style.display = 'none';
+              }
+              
+              // Try to show the object tag fallback
+              const objectFallback = document.querySelector('.pdf-object-fallback') as HTMLElement;
+              if (objectFallback && objectFallback.style) {
+                objectFallback.style.display = 'block';
+                
+                // If object also fails, show icon fallback
+                setTimeout(() => {
+                  const objectElement = objectFallback.querySelector('object');
+                  if (objectElement && !objectElement.contentDocument) {
+                    objectFallback.style.display = 'none';
+                    const iconFallback = document.querySelector('.pdf-icon-fallback') as HTMLElement;
+                    if (iconFallback && iconFallback.style) {
+                      iconFallback.style.display = 'flex';
+                    }
+                  }
+                }, 1000);
+              }
+            }}
+          />
+          
+          {/* Object tag fallback - works in some browsers where iframe doesn't */}
+          <Box 
+            className="pdf-object-fallback"
+            sx={{ 
+              display: 'none',
+              width: '100%',
+              height: isMobile ? "400px" : "600px",
+            }}
+          >
+            <object
+              data={mediaFile.location}
+              type="application/pdf"
+              width="100%"
+              height="100%"
+              style={{
+                border: "none",
+                borderRadius: "4px",
+              }}
+            >
+              <p>Your browser does not support PDF viewing.</p>
+            </object>
+          </Box>
+          
+          {/* Icon fallback as last resort */}
+          <Box 
+            className="pdf-icon-fallback"
+            sx={{ 
+              display: 'none',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              p: 3,
+              gap: 2
+            }}
+          >
+            <FaFilePdf size={isMobile ? 56 : 86} color="#ef4444" />
+            <Typography variant={isMobile ? "body2" : "body1"} sx={{ mt: 2, textAlign: 'center' }}>
+              PDF preview not available in this browser.
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<FaDownload />}
+              onClick={onDownload}
+              size={isMobile ? "small" : "medium"}
+              sx={{ mt: 2 }}
+            >
+              Download PDF
+            </Button>
+          </Box>
+        </Box>
+      );
+    } else if (mediaFile.fileExtension &&
+      ["doc", "docx"].includes(mediaFile.fileExtension.toLowerCase())) {
+      // Word document
+      return (
+        <Box
+          sx={{
+            p: 4,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          <FaFileWord size={isMobile ? 48 : 64} />
+          <Typography variant={isMobile ? "body2" : "body1"}>
+            Microsoft Word Document Preview Not Available
+          </Typography>
+        </Box>
+      );
+    } else if (mediaFile.fileExtension &&
+      ["xls", "xlsx"].includes(mediaFile.fileExtension.toLowerCase())) {
+      // Excel document
+      return (
+        <Box
+          sx={{
+            p: 4,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          <FaFileExcel size={isMobile ? 48 : 64} />
+          <Typography variant={isMobile ? "body2" : "body1"}>
+            Microsoft Excel Document Preview Not Available
+          </Typography>
+        </Box>
+      );
+    } else {
+      // Generic file
+      return (
+        <Box
+          sx={{
+            p: 4,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          <FaFile size={isMobile ? 48 : 64} />
+          <Typography variant={isMobile ? "body2" : "body1"}>
+            {mediaFile.fileExtension
+              ? `${mediaFile.fileExtension.toUpperCase()} File Preview Not Available`
+              : "File Preview Not Available"}
+          </Typography>
+        </Box>
+      );
+    }
+  }, [mediaFile, isMobile, onDownload]);
+
+  // Inside the MediaDetailPreview component, after the RenderMediaContent component definition
+  // Add a new piece of state to track the content height
+  const [contentHeight, setContentHeight] = useState<number>(400); // Default min height
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Use ResizeObserver to track content height changes
+  useEffect(() => {
+    if (!contentRef.current) return;
+    
+    // Function to measure height
+    const updateHeight = () => {
+      if (contentRef.current && activeTab === 0) {
+        const height = contentRef.current.offsetHeight;
+        if (height > 200) { // Only update if it's a meaningful height
+          setContentHeight(height);
+        }
+      }
+    };
+    
+    // Initial measurement
+    updateHeight();
+    
+    // Set up ResizeObserver for dynamic updates
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === contentRef.current && activeTab === 0) {
+          updateHeight();
+        }
+      }
+    });
+    
+    // Start observing
+    resizeObserver.observe(contentRef.current);
+    
+    // Cleanup
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [activeTab, mediaFile]);
+
+  // Media type specific adjustment: ensure proper height for different media types
+  useEffect(() => {
+    if (!mediaFile) return;
+    
+    // Set larger minimum height for certain file types
+    if (mediaFile.fileExtension) {
+      const ext = mediaFile.fileExtension.toLowerCase();
+      
+      // Videos and PDFs need more height
+      if (['mp4', 'webm', 'ogg', 'mov', 'pdf'].includes(ext)) {
+        setContentHeight(prev => Math.max(prev, 600));
+      }
+      // Images can vary
+      else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+        // Don't set a fixed height, let the image determine it
+      }
+      // Other file types need less space
+      else {
+        setContentHeight(prev => Math.max(prev, 300));
+      }
+    }
+  }, [mediaFile]);
 
   return (
     <Box className="media-preview">
@@ -162,320 +485,79 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
           )}
         </Box>
       </Box>
-      <Box className="media-preview-media">
-        {mediaFile.fileExtension &&
-        ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(
-          mediaFile.fileExtension.toLowerCase()
-        ) ? (
-          // Image preview
-          <img
-            src={mediaFile.location}
-            alt={mediaFile.metadata?.altText || ""}
-          />
-        ) : mediaFile.fileExtension &&
-          ["mp4", "webm", "ogg", "mov"].includes(
-            mediaFile.fileExtension.toLowerCase()
-          ) ? (
-          // Video preview
-          <Box
-            sx={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              background: "#000",
-            }}
-          >
-            <video
-              controls
-              autoPlay={false}
-              style={{
-                width: "100%",
-                maxHeight: isMobile ? "300px" : "600px",
-              }}
-              poster={mediaFile.metadata?.v_thumbnail}
-            >
-              <source
-                src={mediaFile.location}
-                type={`video/${
-                  mediaFile.fileExtension === "mov"
-                    ? "quicktime"
-                    : mediaFile.fileExtension.toLowerCase()
-                }`}
-              />
-              Your browser does not support the video tag.
-            </video>
-          </Box>
-        ) : mediaFile.fileExtension &&
-          ["mp3", "wav", "ogg", "m4a"].includes(
-            mediaFile.fileExtension.toLowerCase()
-          ) ? (
-          // Audio preview
-          <Box
-            sx={{
-              p: 4,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 2,
-            }}
-          >
-            <FaFileAudio size={isMobile ? 48 : 64} />
-            <audio
-              controls
-              src={mediaFile.location}
-              style={{ width: "100%" }}
-            >
-              Your browser does not support the audio element.
-            </audio>
-          </Box>
-        ) : mediaFile.fileExtension &&
-          ["pdf"].includes(mediaFile.fileExtension.toLowerCase()) ? (
-          // PDF preview
-          <Box
-            sx={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              p: 2,
-              position: "relative", // Add for debugging overlay
-            }}
-          >
-            {/* Add a debug button in development mode */}
-            {/* {process.env.NODE_ENV !== 'production' && (
-              <Box 
-                sx={{ 
-                  position: 'absolute',
-                  top: 0,
-                  right: 0,
-                  zIndex: 10,
-                  p: 1,
-                }}
-              >
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => {
-                    console.log('PDF Debug Info:');
-                    console.log('- PDF URL:', mediaFile.location);
-                    console.log('- File Extension:', mediaFile.fileExtension);
-                    console.log('- Content Type:', mediaFile.metadata?.contentType);
-                    
-                    // Log iframe status
-                    const iframe = document.querySelector('iframe[title="PDF Preview"]');
-                    console.log('- iframe element:', iframe);
-                    
-                    // Log object status
-                    const objectElem = document.querySelector('.pdf-object-fallback object');
-                    console.log('- object element:', objectElem);
-                    
-                    // Try different display methods
-                    const showIframe = () => {
-                      const iframe = document.querySelector('iframe[title="PDF Preview"]') as HTMLElement;
-                      const objectFallback = document.querySelector('.pdf-object-fallback') as HTMLElement;
-                      const iconFallback = document.querySelector('.pdf-icon-fallback') as HTMLElement;
-                      
-                      if (iframe && iframe.style) iframe.style.display = 'block';
-                      if (objectFallback && objectFallback.style) objectFallback.style.display = 'none';
-                      if (iconFallback && iconFallback.style) iconFallback.style.display = 'none';
-                    };
-                    
-                    const showObject = () => {
-                      const iframe = document.querySelector('iframe[title="PDF Preview"]') as HTMLElement;
-                      const objectFallback = document.querySelector('.pdf-object-fallback') as HTMLElement;
-                      const iconFallback = document.querySelector('.pdf-icon-fallback') as HTMLElement;
-                      
-                      if (iframe && iframe.style) iframe.style.display = 'none';
-                      if (objectFallback && objectFallback.style) objectFallback.style.display = 'block';
-                      if (iconFallback && iconFallback.style) iconFallback.style.display = 'none';
-                    };
-                    
-                    const showIconFallback = () => {
-                      const iframe = document.querySelector('iframe[title="PDF Preview"]') as HTMLElement;
-                      const objectFallback = document.querySelector('.pdf-object-fallback') as HTMLElement;
-                      const iconFallback = document.querySelector('.pdf-icon-fallback') as HTMLElement;
-                      
-                      if (iframe && iframe.style) iframe.style.display = 'none';
-                      if (objectFallback && objectFallback.style) objectFallback.style.display = 'none';
-                      if (iconFallback && iconFallback.style) iconFallback.style.display = 'flex';
-                    };
-                    
-                    // Show a dialog with buttons for each method
-                    const dialogContent = document.createElement('div');
-                    dialogContent.innerHTML = `
-                      <div style="padding: 16px; display: flex; flex-direction: column; gap: 8px;">
-                        <button id="btn-iframe">Try iframe</button>
-                        <button id="btn-object">Try object tag</button>
-                        <button id="btn-icon">Show icon fallback</button>
-                        <button id="btn-close">Close</button>
-                      </div>
-                    `;
-                    const dialog = document.createElement('dialog');
-                    dialog.appendChild(dialogContent);
-                    document.body.appendChild(dialog);
-                    
-                    // Add event listeners
-                    dialog.querySelector('#btn-iframe')?.addEventListener('click', showIframe);
-                    dialog.querySelector('#btn-object')?.addEventListener('click', showObject);
-                    dialog.querySelector('#btn-icon')?.addEventListener('click', showIconFallback);
-                    dialog.querySelector('#btn-close')?.addEventListener('click', () => dialog.close());
-                    
-                    dialog.showModal();
-                  }}
-                >
-                  Debug PDF
-                </Button>
-              </Box>
-            )} */}
-            
-            {/* Primary method: Try using an iframe for preview */}
-            <iframe
-              src={`${mediaFile.location}#toolbar=1&navpanes=1&scrollbar=1`}
-              style={{
-                width: "100%",
-                height: isMobile ? "400px" : "600px",
-                border: "none",
-                borderRadius: "4px",
-                overflow: "hidden",
-              }}
-              title="PDF Preview"
-              onError={(e) => {
-                // Show alternative PDF viewer on error
-                const iframe = e.target as HTMLIFrameElement;
-                if (iframe && iframe.style) {
-                  iframe.style.display = 'none';
-                }
-                
-                // Try to show the object tag fallback
-                const objectFallback = document.querySelector('.pdf-object-fallback') as HTMLElement;
-                if (objectFallback && objectFallback.style) {
-                  objectFallback.style.display = 'block';
-                  
-                  // If object also fails, show icon fallback
-                  setTimeout(() => {
-                    const objectElement = objectFallback.querySelector('object');
-                    if (objectElement && !objectElement.contentDocument) {
-                      objectFallback.style.display = 'none';
-                      const iconFallback = document.querySelector('.pdf-icon-fallback') as HTMLElement;
-                      if (iconFallback && iconFallback.style) {
-                        iconFallback.style.display = 'flex';
-                      }
-                    }
-                  }, 1000);
-                }
-              }}
-            />
-            
-            {/* Object tag fallback - works in some browsers where iframe doesn't */}
-            <Box 
-              className="pdf-object-fallback"
-              sx={{ 
-                display: 'none',
-                width: '100%',
-                height: isMobile ? "400px" : "600px",
-              }}
-            >
-              <object
-                data={mediaFile.location}
-                type="application/pdf"
-                width="100%"
-                height="100%"
-                style={{
-                  border: "none",
-                  borderRadius: "4px",
-                }}
-              >
-                <p>Your browser does not support PDF viewing.</p>
-              </object>
-            </Box>
-            
-            {/* Icon fallback as last resort */}
-            <Box 
-              className="pdf-icon-fallback"
-              sx={{ 
-                display: 'none',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                p: 3,
-                gap: 2
-              }}
-            >
-              <FaFilePdf size={isMobile ? 56 : 86} color="#ef4444" />
-              <Typography variant={isMobile ? "body2" : "body1"} sx={{ mt: 2, textAlign: 'center' }}>
-                PDF preview not available in this browser.
-              </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<FaDownload />}
-                onClick={onDownload}
-                size={isMobile ? "small" : "medium"}
-                sx={{ mt: 2 }}
-              >
-                Download PDF
-              </Button>
-            </Box>
-          </Box>
-        ) : mediaFile.fileExtension &&
-          ["doc", "docx"].includes(mediaFile.fileExtension.toLowerCase()) ? (
-          // Word document
-          <Box
-            sx={{
-              p: 4,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 2,
-            }}
-          >
-            <FaFileWord size={isMobile ? 48 : 64} />
-            <Typography variant={isMobile ? "body2" : "body1"}>
-              Microsoft Word Document Preview Not Available
-            </Typography>
-          </Box>
-        ) : mediaFile.fileExtension &&
-          ["xls", "xlsx"].includes(mediaFile.fileExtension.toLowerCase()) ? (
-          // Excel document
-          <Box
-            sx={{
-              p: 4,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 2,
-            }}
-          >
-            <FaFileExcel size={isMobile ? 48 : 64} />
-            <Typography variant={isMobile ? "body2" : "body1"}>
-              Microsoft Excel Document Preview Not Available
-            </Typography>
-          </Box>
-        ) : (
-          // Generic file
-          <Box
-            sx={{
-              p: 4,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 2,
-            }}
-          >
-            <FaFile size={isMobile ? 48 : 64} />
-            <Typography variant={isMobile ? "body2" : "body1"}>
-              {mediaFile.fileExtension
-                ? `${mediaFile.fileExtension.toUpperCase()} File Preview Not Available`
-                : "File Preview Not Available"}
-            </Typography>
-          </Box>
-        )}
-      </Box>
       
+      {/* Tabs only shown if related media exists */}
+      {hasRelatedMedia ? (
+        <>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 2 }}>
+            <Tabs value={activeTab} onChange={handleTabChange} aria-label="media content tabs">
+              <Tab label="Main File" id="tab-0" aria-controls="tabpanel-0" />
+              <Tab label="Related Files" id="tab-1" aria-controls="tabpanel-1" />
+            </Tabs>
+          </Box>
+          
+          {/* Shared container with minimum height */}
+          <Box 
+            className="tab-content-container"
+            sx={{ 
+              mt: 2, 
+              minHeight: contentHeight ? `${contentHeight}px` : 'auto',
+              transition: 'min-height 0.3s ease-in-out'
+            }}
+          >
+            {/* Main File Tab Content */}
+            <Box 
+              className="tab-panel"
+              role="tabpanel"
+              hidden={activeTab !== 0}
+              id="tabpanel-0"
+              aria-labelledby="tab-0"
+            >
+              {activeTab === 0 && (
+                <Box className="media-preview-media" ref={contentRef}>
+                  <RenderMediaContent />
+                </Box>
+              )}
+            </Box>
+            
+            {/* Related Files Tab Content */}
+            <Box 
+              className="tab-panel related-tab"
+              role="tabpanel"
+              hidden={activeTab !== 1}
+              id="tabpanel-1"
+              aria-labelledby="tab-1"
+              sx={{ 
+                height: contentHeight ? `${contentHeight}px` : 'auto',
+                overflowY: 'auto'
+              }}
+            >
+              {activeTab === 1 && (
+                <Box className="related-media-container">
+                  <Box className="related-media-list">
+                    {/* Render related media */}
+                    {Array.isArray(mediaFile.metadata?.relatedMedia) ? (
+                      mediaFile.metadata.relatedMedia.map((item, index) => (
+                        <RelatedMediaItem key={index} media={item} />
+                      ))
+                    ) : (
+                      // Single object case
+                      mediaFile.metadata?.relatedMedia?.mediaId && (
+                        <RelatedMediaItem media={mediaFile.metadata.relatedMedia} />
+                      )
+                    )}
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </>
+      ) : (
+        // No tabs, just show the main media
+        <Box className="media-preview-media" sx={{ mt: 2 }}>
+          <RenderMediaContent />
+        </Box>
+      )}
     </Box>
   );
 };
@@ -819,7 +901,7 @@ const MediaDetail: React.FC = () => {
       console.log("Current mediaFile metadata:", mediaFile.metadata);
     }
   }, [mediaFile, mediaTypeConfig, isEditing]);
-  
+
   // Prepare the media file for the edit dialog
   const mediaFileForEdit = mediaFile ? {
     id: mediaFile._id || mediaFile.id || '',

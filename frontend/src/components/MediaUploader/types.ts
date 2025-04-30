@@ -1,5 +1,4 @@
 import { BaseMediaFile } from "../../interfaces/MediaFile";
-import { MediaType } from "../../store/slices/mediaTypeSlice";
 
 export interface MediaTypeUploaderProps {
   open: boolean;

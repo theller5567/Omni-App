@@ -1,3 +1,5 @@
+import { RelatedMedia } from "../components/MediaUploader/types";
+
 export interface BaseMediaFile {
   _id?: string; // MongoDB's ObjectId
   id?: string; // Custom UUID
@@ -11,6 +13,7 @@ export interface BaseMediaFile {
   modifiedBy?: string;
   mediaType?: string;
   __t?: string;
+  relatedMedia?: RelatedMedia[];
   metadata?: {
     fileName?: string;
     tags?: string[];
