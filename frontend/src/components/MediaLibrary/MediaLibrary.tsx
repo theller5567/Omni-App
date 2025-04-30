@@ -383,7 +383,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
             <Box className="media-card-grid" sx={{ p: 2, overflow: 'auto' }}>
               <Box sx={{ 
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
                 gap: 2
               }}>
                 {rows.map((row) => {

@@ -84,7 +84,8 @@ export const transformConfigToApiData = (config: MediaTypeConfig) => {
     includeBaseFields: config.includeBaseFields !== false,
     acceptedFileTypes: config.acceptedFileTypes || [],
     status: config.status || 'active',
-    defaultTags: config.defaultTags || []
+    defaultTags: config.defaultTags || [],
+    settings: config.settings || { allowRelatedMedia: false }
   };
   
   console.log('transformConfigToApiData - Output result:', JSON.stringify(result, null, 2));

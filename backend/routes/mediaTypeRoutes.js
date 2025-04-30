@@ -126,4 +126,65 @@ router.get('/:id/files-needing-tags', getFilesNeedingTags);
 // Fix specific media file's tags
 router.post('/:mediaTypeId/fix-file/:fileId', fixSpecificMediaFile);
 
+// Debug endpoint to check media type settings
+router.get('/:id/settings', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const mediaType = await MediaType.findById(id);
+    
+    if (!mediaType) {
+      return res.status(404).json({ message: 'Media type not found' });
+    }
+    
+    res.status(200).json({
+      mediaTypeId: mediaType._id,
+      name: mediaType.name,
+      settings: mediaType.settings,
+      // Include the raw document for debugging
+      _doc: mediaType._doc
+    });
+  } catch (error) {
+    console.error('Error fetching media type settings:', error);
+    res.status(500).json({ message: 'Error fetching media type settings', error: error.toString() });
+  }
+});
+
+// Migration endpoint to fix settings field on all media types
+router.post('/update-settings/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { allowRelatedMedia } = req.body;
+    
+    // Find the media type
+    const mediaType = await MediaType.findById(id);
+    
+    if (!mediaType) {
+      return res.status(404).json({ message: 'Media type not found' });
+    }
+    
+    // Ensure settings object exists
+    if (!mediaType.settings) {
+      mediaType.settings = {};
+    }
+    
+    // Update allowRelatedMedia
+    mediaType.settings.allowRelatedMedia = allowRelatedMedia === true || allowRelatedMedia === 'true';
+    
+    // Save the media type
+    await mediaType.save();
+    
+    res.status(200).json({
+      message: 'Media type settings updated successfully',
+      mediaType: {
+        id: mediaType._id,
+        name: mediaType.name,
+        settings: mediaType.settings
+      }
+    });
+  } catch (error) {
+    console.error('Error updating media type settings:', error);
+    res.status(500).json({ message: 'Error updating media type settings', error: error.toString() });
+  }
+});
+
 export default router;

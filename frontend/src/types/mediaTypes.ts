@@ -42,6 +42,9 @@ export interface MediaTypeConfig {
   catColor?: string;
   defaultTags?: string[];
   _id?: string;
+  settings?: {
+    allowRelatedMedia?: boolean;
+  };
 }
 
 // Store types
@@ -72,6 +75,9 @@ export interface ApiMediaTypeRequest {
   acceptedFileTypes: string[];
   status: 'active' | 'deprecated' | 'archived';
   defaultTags?: string[];
+  settings?: {
+    allowRelatedMedia?: boolean;
+  };
 }
 
 export interface ApiMediaTypeResponse {
@@ -84,6 +90,9 @@ export interface ApiMediaTypeResponse {
   includeBaseFields?: boolean;
   catColor?: string;
   defaultTags?: string[];
+  settings?: {
+    allowRelatedMedia?: boolean;
+  };
 }
 
 export interface ApiMediaData {
@@ -160,7 +169,7 @@ export const transformFormToApiData = (formData: MediaFormData): ApiMediaData =>
 };
 
 export const transformConfigToApiData = (config: MediaTypeConfig): ApiMediaTypeRequest => {
-  const { name, fields, baseType, includeBaseFields, acceptedFileTypes, status, defaultTags } = config;
+  const { name, fields, baseType, includeBaseFields, acceptedFileTypes, status, defaultTags, settings } = config;
   return {
     name,
     fields,
@@ -168,7 +177,8 @@ export const transformConfigToApiData = (config: MediaTypeConfig): ApiMediaTypeR
     includeBaseFields: includeBaseFields ?? true,
     acceptedFileTypes,
     status: status ?? 'active',
-    defaultTags
+    defaultTags,
+    settings
   };
 };
 

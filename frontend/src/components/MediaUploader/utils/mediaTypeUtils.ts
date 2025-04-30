@@ -145,4 +145,14 @@ export const findMediaType = (
   }
   
   return matchingType || null;
+};
+
+/**
+ * Checks if a media type supports related media
+ */
+export const supportsRelatedMedia = (mediaType: MediaType | null): boolean => {
+  if (!mediaType) return false;
+  
+  // Check if the mediaType has the settings property with allowRelatedMedia: true
+  return !!mediaType.settings?.allowRelatedMedia;
 }; 

@@ -100,7 +100,8 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     modifiedBy: user.currentUser._id,
     mediaTypeId: "",
     mediaTypeName: "",
-    title: ""
+    title: "",
+    relatedMedia: []
   });
   const [showTagFilter, setShowTagFilter] = useState(false);
 
@@ -845,7 +846,8 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
       modifiedBy: user.currentUser._id,
       mediaTypeId: "",
       mediaTypeName: "",
-      title: ""  // Initialize title explicitly
+      title: "",
+      relatedMedia: []
     });
     
     // Close with a slight delay to ensure state updates complete
@@ -888,7 +890,8 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
       modifiedBy: user.currentUser._id,
       mediaTypeId: "",
       mediaTypeName: "",
-      title: ""  // Initialize title explicitly
+      title: "",
+      relatedMedia: []
     });
     setFileSelected(false);
     setUploadComplete(false);

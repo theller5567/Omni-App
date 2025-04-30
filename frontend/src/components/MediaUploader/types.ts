@@ -4,27 +4,24 @@ import { MediaType } from "../../store/slices/mediaTypeSlice";
 export interface MediaTypeUploaderProps {
   open: boolean;
   onClose: () => void;
-  onUploadComplete: (newFile: BaseMediaFile) => void;
+  onUploadComplete: (file: any | null) => void;
 }
 
 export interface MetadataState {
   fileName: string;
   tags: string[];
-  tagsInput?: string;
+  tagsInput: string;
   visibility: string;
   altText: string;
   description: string;
   recordedDate: string;
-  uploadedBy: string;
-  modifiedBy: string;
-  imageWidth?: number;
-  imageHeight?: number;
-  mediaTypeId?: string;
-  mediaTypeName?: string;
+  uploadedBy?: string;
+  modifiedBy?: string;
+  mediaTypeId: string;
+  mediaTypeName: string;
   title: string;
-  selectedTagCategoryId?: string;
-  tagSearchQuery?: string;
-  [key: string]: any; // Allow dynamic fields for media type specific fields
+  relatedMedia?: RelatedMedia[];
+  [key: string]: any; // Allow for additional properties
 }
 
 export interface UploaderState {
@@ -37,4 +34,14 @@ export interface FieldLabelProps {
   name: string;
   required: boolean;
   isValid: boolean | null;
+}
+
+export interface RelatedMedia {
+  mediaId: string;
+  relationship: string; // e.g., "reference", "version", "attachment"
+  note?: string;
+  _display?: {
+    title?: string;
+    thumbnail?: string;
+  };
 } 

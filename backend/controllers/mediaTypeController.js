@@ -5,7 +5,17 @@ import Media from '../models/Media.js';
 export const addMediaType = async (req, res) => {
   try {
     console.log('Adding new media type with data:', req.body);
-    const { name, fields, acceptedFileTypes, catColor, baseType, includeBaseFields, defaultTags } = req.body;
+    const { 
+      name, 
+      fields, 
+      acceptedFileTypes, 
+      catColor, 
+      baseType, 
+      includeBaseFields, 
+      defaultTags,
+      settings 
+    } = req.body;
+    
     const newMediaType = new MediaType({ 
       name, 
       fields,
@@ -13,7 +23,8 @@ export const addMediaType = async (req, res) => {
       catColor: catColor || '#2196f3',
       baseType: baseType || 'Media',
       includeBaseFields: includeBaseFields !== undefined ? includeBaseFields : true,
-      defaultTags: defaultTags || []
+      defaultTags: defaultTags || [],
+      settings: settings || { allowRelatedMedia: false }
     });
     
     const savedType = await newMediaType.save();
@@ -286,7 +297,7 @@ export const deleteMediaType = async (req, res) => {
 export const updateMediaType = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, fields, acceptedFileTypes, catColor, defaultTags } = req.body;
+    const { name, fields, acceptedFileTypes, catColor, defaultTags, settings } = req.body;
     
     console.log('Updating media type with data:', { id, requestBody: req.body });
     console.log('Received defaultTags:', defaultTags);
@@ -316,8 +327,30 @@ export const updateMediaType = async (req, res) => {
       console.log('defaultTags not provided in request');
     }
     
+    // We also always allow updating settings
+    if (settings !== undefined) {
+      console.log('Setting settings from', mediaType.settings, 'to', settings);
+      if (typeof settings === 'object') {
+        // Initialize settings if it doesn't exist
+        if (!mediaType.settings) {
+          mediaType.settings = {};
+        }
+        
+        // Update specific settings fields
+        Object.keys(settings).forEach(key => {
+          mediaType.settings[key] = settings[key];
+        });
+        
+        console.log('Updated settings:', mediaType.settings);
+      } else {
+        console.log('Warning: settings is not an object:', settings);
+      }
+    } else {
+      console.log('settings not provided in request');
+    }
+    
     if (count > 0) {
-      // For media types in use, we can only update acceptedFileTypes, catColor, and defaultTags
+      // For media types in use, we can only update acceptedFileTypes, catColor, defaultTags, and settings
       // Cannot change fields or name as it could break existing media files
       let updated = false;
       
@@ -331,20 +364,25 @@ export const updateMediaType = async (req, res) => {
         updated = true;
       }
       
-      if (updated || defaultTags !== undefined) {
+      if (updated || defaultTags !== undefined || settings !== undefined) {
         const savedMediaType = await mediaType.save();
         
         console.log('Updated media type in use:', {
           id,
           name: mediaType.name,
-          defaultTags: savedMediaType.defaultTags
+          defaultTags: savedMediaType.defaultTags,
+          settings: savedMediaType.settings
         });
         
-        return res.status(200).json({
+        // Log the final media type data that will be sent to client
+        const responseData = {
           ...savedMediaType._doc,
           usageCount: count,
-          warningMessage: "Only acceptedFileTypes, catColor, and defaultTags were updated as this media type is in use by existing files"
-        });
+          warningMessage: "Only acceptedFileTypes, catColor, defaultTags, and settings were updated as this media type is in use by existing files"
+        };
+        console.log('Response data (in use case):', JSON.stringify(responseData, null, 2));
+        
+        return res.status(200).json(responseData);
       } else {
         return res.status(400).json({ 
           message: 'Cannot modify fields or name of a media type that is in use by existing files',
@@ -366,13 +404,18 @@ export const updateMediaType = async (req, res) => {
     console.log('Updated media type:', {
       id,
       name: savedMediaType.name,
-      defaultTags: savedMediaType.defaultTags
+      defaultTags: savedMediaType.defaultTags,
+      settings: savedMediaType.settings
     });
     
-    res.status(200).json({
+    // Log the final media type data that will be sent to client
+    const responseData = {
       ...savedMediaType._doc,
       usageCount: count
-    });
+    };
+    console.log('Response data:', JSON.stringify(responseData, null, 2));
+    
+    res.status(200).json(responseData);
   } catch (error) {
     console.error('Error updating media type:', error);
     res.status(500).json({ message: 'Error updating media type', error });

@@ -25,6 +25,10 @@ export interface MediaType {
   includeBaseFields?: boolean;
   catColor?: string;
   defaultTags?: string[];
+  settings?: {
+    allowRelatedMedia?: boolean;
+    [key: string]: any;
+  };
 }
 
 interface MediaTypeState {

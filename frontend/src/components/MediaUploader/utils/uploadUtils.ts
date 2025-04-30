@@ -49,7 +49,13 @@ export const prepareMetadataForUpload = (
     uploadedBy: metadata.uploadedBy || userId,
     modifiedBy: metadata.modifiedBy || userId,
     // Ensure tags are valid strings, filtering out any undefined/null values
-    tags: (metadata.tags || []).filter((tag: any) => typeof tag === 'string' && tag !== '')
+    tags: (metadata.tags || []).filter((tag: any) => typeof tag === 'string' && tag !== ''),
+    // Include related media if present, but strip out _display which is only for UI
+    relatedMedia: (metadata.relatedMedia || []).map((item: any) => ({
+      mediaId: item.mediaId,
+      relationship: item.relationship,
+      note: item.note
+    }))
   };
 };
 

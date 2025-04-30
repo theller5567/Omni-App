@@ -139,6 +139,18 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ mediaTypeConfig, inputOptions, 
           </Box>
         </Box>
         
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="subtitle1">Related Media Settings:</Typography>
+          <Typography variant="body1" sx={{ mt: 1 }}>
+            Allow Related Media: {mediaTypeConfig.settings?.allowRelatedMedia ? 'Yes' : 'No'}
+          </Typography>
+          <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
+            {mediaTypeConfig.settings?.allowRelatedMedia 
+              ? 'Users will be able to associate related media files with this media type.' 
+              : 'Users will not be able to associate related media files with this media type.'}
+          </Typography>
+        </Box>
+        
         <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           {inputOptions.map(type => {
             const count = mediaTypeConfig.fields.filter(f => f.type === type).length;

@@ -26,7 +26,10 @@ const mediaTypeSchema = new mongoose.Schema({
   },
   includeBaseFields: { type: Boolean, default: true },
   catColor: { type: String, default: '#2196f3' },
-  defaultTags: { type: [String], default: [] }
+  defaultTags: { type: [String], default: [] },
+  settings: {
+    allowRelatedMedia: { type: Boolean, default: false }
+  }
 }, { timestamps: true });
 
 const MediaType = mongoose.models.mediaTypes || mongoose.model('mediaTypes', mediaTypeSchema);

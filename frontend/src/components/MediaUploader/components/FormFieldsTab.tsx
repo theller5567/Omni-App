@@ -41,6 +41,8 @@ interface FormFieldsTabProps {
   handleTagCategoryChange: (event: SelectChangeEvent) => void;
   handleTagSearch: (event: React.ChangeEvent<HTMLInputElement>) => void;
   file: File | null;
+  isCustomSection?: boolean;
+  mediaType?: MediaType | null;
 }
 
 interface TabPanelProps {
@@ -101,7 +103,9 @@ const FormFieldsTab: React.FC<FormFieldsTabProps> = ({
   handleTagsKeyDown,
   handleTagCategoryChange,
   handleTagSearch,
-  file
+  file,
+  isCustomSection = false,
+  mediaType = null
 }) => {
   const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -177,21 +181,53 @@ const FormFieldsTab: React.FC<FormFieldsTabProps> = ({
 
         <Box className="tab-panels-container">
         <TabPanel value={currentTab} index={0}>
-          <Paper className="tab-content-paper" elevation={0} variant="outlined">
-            <StandardFields 
-              metadata={metadata}
-              handleMetadataChange={handleMetadataChange}
-              showTagFilter={showTagFilter}
-              setShowTagFilter={setShowTagFilter}
-              tagCategories={tagCategories}
-              getAvailableTags={getAvailableTags}
-              handleTagsChange={handleTagsChange}
-              handleTagsBlur={handleTagsBlur}
-              handleTagsKeyDown={handleTagsKeyDown}
-              handleTagCategoryChange={handleTagCategoryChange}
-              handleTagSearch={handleTagSearch}
-            />
-          </Paper>
+          {!isCustomSection ? (
+            <Paper className="tab-content-paper" elevation={0} variant="outlined">
+              <StandardFields 
+                metadata={metadata}
+                handleMetadataChange={handleMetadataChange}
+                showTagFilter={showTagFilter}
+                setShowTagFilter={setShowTagFilter}
+                tagCategories={tagCategories}
+                getAvailableTags={getAvailableTags}
+                handleTagsChange={handleTagsChange}
+                handleTagsBlur={handleTagsBlur}
+                handleTagsKeyDown={handleTagsKeyDown}
+                handleTagCategoryChange={handleTagCategoryChange}
+                handleTagSearch={handleTagSearch}
+              />
+            </Paper>
+          ) : (
+            <Paper className="tab-content-paper" elevation={0} variant="outlined">
+              {mediaType && mediaType.fields && mediaType.fields.length > 0 ? (
+                <Box className="fields-grid">
+                  {mediaType.fields.map((field: any, index) => (
+                    <Box 
+                      className={field.type === 'TextArea' ? 'field-full-width' : 'field-half-width'}
+                      key={`${field.name}-${index}`}
+                    >
+                      <FieldLabel 
+                        name={field.name} 
+                        required={field.required} 
+                        isValid={field.required ? (metadata[field.name] ? true : false) : null}
+                      />
+                      <FieldInput
+                        field={field}
+                        keyName={field.name}
+                        metadata={metadata}
+                        tagCategories={tagCategories}
+                        handleMetadataChange={handleMetadataChange}
+                      />
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body1" className="empty-message" align="center">
+                  No custom fields for this media type.
+                </Typography>
+              )}
+            </Paper>
+          )}
         </TabPanel>
         
         <TabPanel value={currentTab} index={1}>

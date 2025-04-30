@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -81,6 +81,16 @@ const fileTypeCategories: FileTypeCategory[] = [
   }
 ];
 
+// Debug logging function
+const logSettings = (action: string, settings: any) => {
+  console.log(`[MediaTypeUploader] ${action}:`, {
+    settings,
+    allowRelatedMedia: settings?.allowRelatedMedia,
+    type: typeof settings,
+    isObject: settings !== null && typeof settings === 'object'
+  });
+};
+
 // Initial media type configuration
 const initialMediaTypeConfig: MediaTypeConfig = {
   name: '',
@@ -91,7 +101,10 @@ const initialMediaTypeConfig: MediaTypeConfig = {
   status: 'active',
   catColor: '#2196f3', // Default blue color
   defaultTags: [], // Initialize with empty array
-  _id: undefined
+  _id: undefined,
+  settings: {
+    allowRelatedMedia: false
+  }
 };
 
 // Define step constants
@@ -190,6 +203,9 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
           required: field.required || false
         })) || [];
         
+        // Log settings from media type
+        logSettings('mediaTypeToEdit settings', mediaTypeToEdit.settings);
+        
         setMediaTypeConfig({
           _id: mediaTypeToEdit._id,
           name: mediaTypeToEdit.name,
@@ -199,7 +215,8 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
           acceptedFileTypes: mediaTypeToEdit.acceptedFileTypes || [],
           status: mediaTypeToEdit.status || 'active',
           catColor: mediaTypeToEdit.catColor || '#2196f3',
-          defaultTags: mediaTypeToEdit.defaultTags || []
+          defaultTags: mediaTypeToEdit.defaultTags || [],
+          settings: mediaTypeToEdit.settings || { allowRelatedMedia: false }
         });
         setIsEditMode(true);
       }
@@ -369,18 +386,42 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       const catColor = mediaTypeConfig.catColor || '#2196f3';
       const colorName = predefinedColors.find(c => c.hex === catColor)?.name || 'Default Blue';
       
+      // Log settings before saving
+      logSettings('Before creating API data, settings', mediaTypeConfig.settings);
+      
       // Create API data from the media type config
       const apiData = {
         ...transformConfigToApiData(mediaTypeConfig),
-        catColor // Make sure catColor is explicitly included
+        catColor, // Make sure catColor is explicitly included
+        settings: {
+          allowRelatedMedia: mediaTypeConfig.settings?.allowRelatedMedia || false
+        }
       };
+      
+      // Log API data
+      console.log('API data being sent:', JSON.stringify(apiData, null, 2));
       
       if (isEditMode && mediaTypeConfig._id) {
         try {
-          await axios.put<ApiMediaTypeResponse>(
+          const updateResponse = await axios.put<ApiMediaTypeResponse>(
             `${env.BASE_URL}/api/media-types/${mediaTypeConfig._id}`,
             apiData
           );
+          
+          console.log('API response from update:', updateResponse.data);
+          
+          // Also make a specific request to update the settings field
+          if (mediaTypeConfig.settings) {
+            try {
+              await axios.post(
+                `${env.BASE_URL}/api/media-types/update-settings/${mediaTypeConfig._id}`,
+                { allowRelatedMedia: mediaTypeConfig.settings.allowRelatedMedia }
+              );
+              console.log('Successfully updated settings separately');
+            } catch (settingsError) {
+              console.error('Error updating settings separately:', settingsError);
+            }
+          }
           
           // Refresh all media types to ensure store is updated
           dispatch(initializeMediaTypes());
@@ -410,6 +451,21 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
             `${env.BASE_URL}/api/media-types`,
             apiData
           );
+          
+          console.log('API response from create:', response.data);
+      
+          // Also make a specific request to update the settings field
+          if (mediaTypeConfig.settings && response.data._id) {
+            try {
+              await axios.post(
+                `${env.BASE_URL}/api/media-types/update-settings/${response.data._id}`,
+                { allowRelatedMedia: mediaTypeConfig.settings.allowRelatedMedia }
+              );
+              console.log('Successfully added settings separately for new media type');
+            } catch (settingsError) {
+              console.error('Error adding settings separately for new media type:', settingsError);
+            }
+          }
       
           // Add the media type to the store with type assertion
           const storeData = {
@@ -641,6 +697,45 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
             *At least one file type must be selected
           </Typography>
         )}
+      </Box>
+
+      <Box sx={{ mt: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Typography variant="h6">Related Media Settings</Typography>
+          <Tooltip title="Allow users to associate related media files with this media type">
+            <IconButton size="small" sx={{ ml: 1 }}>
+              <FaQuestionCircle size={14} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <input 
+            type="checkbox" 
+            id="allowRelatedMedia"
+            checked={mediaTypeConfig.settings?.allowRelatedMedia || false}
+            onChange={(e) => {
+              const newSettings = {
+                ...mediaTypeConfig.settings,
+                allowRelatedMedia: e.target.checked
+              };
+              logSettings('Checkbox changed, new settings', newSettings);
+              setMediaTypeConfig(prev => ({
+                ...prev,
+                settings: newSettings
+              }));
+            }}
+            style={{ marginRight: '8px' }}
+          />
+          <label htmlFor="allowRelatedMedia">
+            <Typography variant="body1">
+              Allow related media to be attached to this media type
+            </Typography>
+          </label>
+        </Box>
+        <Typography variant="body2" color="textSecondary" sx={{ mt: 1, ml: 4 }}>
+          This will add a section to the metadata form where users can choose related media files
+        </Typography>
       </Box>
     </div>
   );
