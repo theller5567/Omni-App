@@ -5,8 +5,6 @@ import { deleteMedia, initializeMedia, addMedia, deleteMediaThunk } from '../sto
 import { initializeMediaTypes } from '../store/slices/mediaTypeSlice';
 import { CircularProgress, Box, Typography } from '@mui/material';
 import '../components/MediaLibrary/MediaContainer.scss';
-import axios from 'axios';
-import env from '../config/env';
 import { toast } from 'react-toastify';
 
 // Lazy load components
@@ -70,10 +68,12 @@ const MediaContainer: React.FC = () => {
     // Only log meaningful transitions
     if (prevState.status !== currentState.status || prevState.count !== currentState.count) {
       if (currentState.status === 'succeeded' && currentState.count > 0) {
-        console.log('MediaLibraryPage - Ready:', {
-          status: currentState.status,
-          items: currentState.count
-        });
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('MediaLibraryPage - Ready:', {
+            status: currentState.status,
+            items: currentState.count
+          });
+        }
       }
     }
 
@@ -91,7 +91,9 @@ const MediaContainer: React.FC = () => {
 
   const handleUploadComplete = useCallback((newFile: any | null) => {
     if (newFile && !processingUploadRef.current) {
-      console.log('Upload complete, new file:', newFile);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Upload complete, new file:', newFile);
+      }
       
       // Set processing flag to prevent multiple refreshes
       processingUploadRef.current = true;
@@ -110,7 +112,9 @@ const MediaContainer: React.FC = () => {
 
   const handleDeleteMedia = useCallback(async (id: string): Promise<boolean> => {
     try {
-      console.log('Deleting media with ID:', id);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Deleting media with ID:', id);
+      }
       
       // Use the thunk action with authorization instead of direct axios call
       const resultAction = await dispatch(deleteMediaThunk(id));
@@ -177,14 +181,19 @@ const MediaContainer: React.FC = () => {
 
   // Add debugging logs
   useEffect(() => {
-    console.log('MediaLibraryPage - MediaState:', {
-      status: mediaState.status,
-      totalMedia: mediaState.allMedia.length,
-      filteredMedia: filteredMediaFiles.length
-    });
-    
-    if (filteredMediaFiles.length > 0) {
-      console.log('MediaLibraryPage - Sample media:', filteredMediaFiles[0]);
+    if (process.env.NODE_ENV !== 'production') {
+      // Limit logging frequency to avoid console spam
+      if (Math.random() < 0.1) {
+        console.log('MediaLibraryPage - MediaState:', {
+          status: mediaState.status,
+          totalMedia: mediaState.allMedia.length,
+          filteredMedia: filteredMediaFiles.length
+        });
+        
+        if (filteredMediaFiles.length > 0) {
+          console.log('MediaLibraryPage - Sample media:', filteredMediaFiles[0]);
+        }
+      }
     }
   }, [mediaState.status, mediaState.allMedia.length, filteredMediaFiles.length, filteredMediaFiles]);
 

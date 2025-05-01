@@ -42,6 +42,19 @@ const EditMediaDialog = lazy(() => import('./EditMediaDialog').then(module => ({
   default: module.default || module.EditMediaDialog 
 })));
 
+// Add the formatThumbnailUrl utility function at the top of the file (after imports)
+
+/**
+ * Helper function to clean thumbnail URL and add consistent cache-busting
+ */
+const formatThumbnailUrl = (url: string, mediaId: string, forceRefresh = true): string => {
+  if (!url) return '';
+  // Remove any existing query parameters
+  const cleanUrl = url.split('?')[0];
+  // Always use timestamp for video thumbnails to prevent caching issues
+  return `${cleanUrl}?id=${mediaId}${forceRefresh ? `&t=${Date.now()}` : ''}`;
+};
+
 // Loading fallback component
 const LoadingFallback = () => (
   <Box display="flex" justifyContent="center" alignItems="center" p={2}>
@@ -66,6 +79,15 @@ const getMetadataField = (mediaFile: any, fieldName: string, defaultValue: any =
   // Return default if not found anywhere
   return defaultValue;
 };
+
+// Add a type extension for the BaseMediaFile with _refreshKey
+// Place this after imports but before the components
+
+// Extend BaseMediaFile with additional properties used in this component
+interface ExtendedMediaFile extends BaseMediaFile {
+  _refreshKey?: number;
+  customFields?: Record<string, any>;
+}
 
 // Extract subcomponents for better organization and code splitting
 
@@ -147,6 +169,7 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
             width: "100%",
             height: "100%",
             display: "flex",
+            flexDirection: "column",
             justifyContent: "center",
             alignItems: "center",
             background: "#000",
@@ -154,12 +177,15 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
         >
           <video
             controls
-            autoPlay={false}
+            preload="metadata"
             style={{
               width: "100%",
               maxHeight: isMobile ? "300px" : "600px",
             }}
-            poster={mediaFile.metadata?.v_thumbnail}
+            poster={mediaFile.metadata?.v_thumbnail ? 
+              formatThumbnailUrl(mediaFile.metadata.v_thumbnail, mediaFile._id || mediaFile.id || '') : 
+              undefined}
+            key={`video-player-${mediaFile._id || mediaFile.id}-${mediaFile.metadata?.v_thumbnailTimestamp || ''}-${Date.now()}`}
           >
             <source
               src={mediaFile.location}
@@ -171,6 +197,23 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
             />
             Your browser does not support the video tag.
           </video>
+          {mediaFile.metadata?.v_thumbnail && (
+            <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Typography
+                variant={isMobile ? "caption" : "body2"}
+                sx={{ color: "#fff" }}
+              >
+                {mediaFile.metadata.v_thumbnail.includes(mediaFile.id) 
+                  ? "Custom thumbnail set for this video" 
+                  : "Warning: This video may be using a shared thumbnail"}
+              </Typography>
+              {!mediaFile.metadata.v_thumbnail.includes(mediaFile.id) && (
+                <Typography variant="caption" sx={{ color: "#ffaaaa", mt: 0.5 }}>
+                  Consider updating the thumbnail to ensure it's unique to this video
+                </Typography>
+              )}
+            </Box>
+          )}
         </Box>
       );
     } else if (mediaFile.fileExtension &&
@@ -499,7 +542,7 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
           {/* Shared container with minimum height */}
           <Box 
             className="tab-content-container"
-            sx={{ 
+            sx={{
               mt: 2, 
               minHeight: contentHeight ? `${contentHeight}px` : 'auto',
               transition: 'min-height 0.3s ease-in-out'
@@ -518,16 +561,16 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
                   <RenderMediaContent />
                 </Box>
               )}
-            </Box>
+          </Box>
             
             {/* Related Files Tab Content */}
-            <Box 
+          <Box
               className="tab-panel related-tab"
               role="tabpanel"
               hidden={activeTab !== 1}
               id="tabpanel-1"
               aria-labelledby="tab-1"
-              sx={{ 
+            sx={{
                 height: contentHeight ? `${contentHeight}px` : 'auto',
                 overflowY: 'auto'
               }}
@@ -549,15 +592,15 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
                   </Box>
                 </Box>
               )}
-            </Box>
+          </Box>
           </Box>
         </>
-      ) : (
+        ) : (
         // No tabs, just show the main media
         <Box className="media-preview-media" sx={{ mt: 2 }}>
           <RenderMediaContent />
-        </Box>
-      )}
+          </Box>
+        )}
     </Box>
   );
 };
@@ -565,7 +608,7 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
 const MediaDetail: React.FC = () => {
   // All state hooks first
   const { slug } = useParams();
-  const [mediaFile, setMediaFile] = useState<BaseMediaFile | null>(null);
+  const [mediaFile, setMediaFile] = useState<ExtendedMediaFile | null>(null);
   const [mediaTypeConfig, setMediaTypeConfig] = useState<MediaType | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -577,6 +620,9 @@ const MediaDetail: React.FC = () => {
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   const dispatch = useDispatch<AppDispatch>();
+  
+  // Create the ref at component level, not inside useEffect
+  const hasLoggedRef = useRef(false);
 
   useEffect(() => {
     const fetchFile = async () => {
@@ -588,7 +634,10 @@ const MediaDetail: React.FC = () => {
       try {
         setLoading(true);
         const response = await axios.get<BaseMediaFile>(`${env.BASE_URL}/media/slug/${slug}`);
-        console.log("Media file:", response.data);
+        // Only log in development environment
+        if (process.env.NODE_ENV !== 'production') {
+          // console.log("Media file:", response.data);
+        }
         setMediaFile(response.data);
 
         // Find the corresponding media type
@@ -598,7 +647,10 @@ const MediaDetail: React.FC = () => {
           );
           
           if (mediaType) {
-            console.log("Media type found:", mediaType);
+            // Only log in development environment
+            if (process.env.NODE_ENV !== 'production') {
+              console.log("Media type found:", mediaType);
+            }
             // Create a properly typed MediaType object from our store type
             setMediaTypeConfig({
               id: mediaType._id || '',
@@ -625,6 +677,22 @@ const MediaDetail: React.FC = () => {
 
     fetchFile();
   }, [slug, mediaTypes]);
+
+  // Replace the old useEffect with a fixed version
+  useEffect(() => {
+    // Only log on initial load or significant changes
+    const mediaFileId = mediaFile?._id || mediaFile?.id;
+    const mediaTypeId = mediaTypeConfig?.id;
+    
+    if (mediaFile && mediaTypeConfig && !hasLoggedRef.current && process.env.NODE_ENV !== 'production') {
+      console.log('MediaDetail - Fully loaded:', { 
+        mediaFileId, 
+        mediaTypeId,
+        title: mediaFile.title
+      });
+      hasLoggedRef.current = true;
+    }
+  }, [mediaFile, mediaTypeConfig]);
 
   const handleDownload = async () => {
     if (!mediaFile) return;
@@ -691,12 +759,8 @@ const MediaDetail: React.FC = () => {
       
       // Log MediaType specific fields from updatedMediaFile.customFields
       if (updatedMediaFile.customFields && mediaTypeConfig?.fields) {
-        console.log('MediaType specific fields to update:');
         mediaTypeConfig.fields.forEach(field => {
           const fieldValue = updatedMediaFile.customFields?.[field.name];
-          console.log(`Field "${field.name}" (${field.type}):`, fieldValue, 
-            `(type: ${typeof fieldValue})`);
-          
           // Check for undefined or null values that might be causing issues
           if (fieldValue === undefined) {
             console.warn(`Field "${field.name}" is undefined`);
@@ -711,8 +775,6 @@ const MediaDetail: React.FC = () => {
       // If the updated data already has a metadata property, that means the EditDialog
       // has already prepared the changed-only fields for us
       if (updatedMediaFile.metadata) {
-        console.log('Received pre-filtered changed fields:', updatedMediaFile);
-        
         // Make sure we have the required identifiers
         const updatePayload = {
           ...updatedMediaFile,
@@ -724,7 +786,6 @@ const MediaDetail: React.FC = () => {
         // Important: Do not add any other fields to the metadata
         // The EditDialog has already filtered for only changed fields
         
-        console.log('Using pre-filtered update payload:', JSON.stringify(updatePayload, null, 2));
         const resultAction = await dispatch(updateMedia(updatePayload));
         
         // Process the result
@@ -776,15 +837,12 @@ const MediaDetail: React.FC = () => {
               // Check if it's a MediaType field
               const isMediaTypeField = mediaTypeConfig?.fields.some(field => field.name === key);
               if (isMediaTypeField) {
-                console.log(`Adding changed MediaType field "${key}" with value:`, value);
                 updatePayload.metadata![key] = value;
               }
             }
           });
         }
       }
-      
-      console.log('Final update payload:', JSON.stringify(updatePayload, null, 2));
       
       // Call the Redux action to update the media file
       const resultAction = await dispatch(updateMedia(updatePayload));
@@ -807,6 +865,12 @@ const MediaDetail: React.FC = () => {
     // Inspect metadata from server response
     console.log('Server returned metadata:', updatedData.metadata);
     
+    // Check if this update includes a thumbnail change
+    const hasThumbnailUpdate = updatedMediaFile.metadata?.v_thumbnail !== undefined;
+    if (hasThumbnailUpdate) {
+      console.log('Detected thumbnail update:', updatedMediaFile.metadata?.v_thumbnail);
+    }
+    
     // Track if we had mediaType-specific fields to update
     let hadMediaTypeFields = false;
     
@@ -818,19 +882,22 @@ const MediaDetail: React.FC = () => {
       console.log('Checking server response against our submitted changes:');
       
       // Get the fields that should have been updated
-      Object.keys(updatedMediaFile.metadata).forEach(fieldName => {
-        const serverValue = updatedData.metadata?.[fieldName];
-        const submittedValue = updatedMediaFile.metadata?.[fieldName];
+      // Object.keys(updatedMediaFile.metadata).forEach(fieldName => {
+      //   const serverValue = updatedData.metadata?.[fieldName];
+      //   const submittedValue = updatedMediaFile.metadata?.[fieldName];
         
-        console.log(`Field "${fieldName}":`, {
-          serverReturned: serverValue,
-          formSubmitted: submittedValue,
-          serverType: typeof serverValue,
-          submittedType: typeof submittedValue,
-          valueMatch: serverValue === submittedValue
-        });
-      });
+      //   console.log(`Field "${fieldName}":`, {
+      //     serverReturned: serverValue,
+      //     formSubmitted: submittedValue,
+      //     serverType: typeof serverValue,
+      //     submittedType: typeof submittedValue,
+      //     valueMatch: serverValue === submittedValue
+      //   });
+      // });
     }
+    
+    // Generate a unique refresh key to force component re-render
+    const refreshTimestamp = Date.now();
     
     // Create a new mediaFile object that properly preserves the custom fields
     setMediaFile(prevState => {
@@ -845,13 +912,19 @@ const MediaDetail: React.FC = () => {
       // Ensure the submitted metadata changes take precedence over what the server returned
       // This handles cases where the server might not have correctly updated all fields
       if (hadMediaTypeFields && updatedMediaFile.metadata) {
-        console.log('Adding submitted form changes to final metadata');
         Object.entries(updatedMediaFile.metadata).forEach(([key, value]) => {
           if (value !== undefined) {
-            console.log(`Ensuring field "${key}" uses submitted value:`, value);
             combinedMetadata[key] = value;
           }
         });
+      }
+      
+      // For thumbnail updates, ensure we're using the correct URL and strip cache parameters
+      if (hasThumbnailUpdate && updatedMediaFile.metadata?.v_thumbnail) {
+        // Clean the URL by removing any cache parameters
+        let cleanUrl = updatedMediaFile.metadata.v_thumbnail.split('?')[0];
+        combinedMetadata.v_thumbnail = cleanUrl;
+        console.log('Using clean thumbnail URL in final metadata:', cleanUrl);
       }
       
       // Log the combined metadata for debugging
@@ -864,9 +937,34 @@ const MediaDetail: React.FC = () => {
         // Ensure metadata is properly updated
         metadata: combinedMetadata,
         // Update customFields with the combined metadata for future edits
-        customFields: { ...combinedMetadata }
+        customFields: { ...combinedMetadata },
+        // Add a refresh key to force component re-render
+        _refreshKey: refreshTimestamp
       };
     });
+    
+    // Force a refresh of the video element by manipulating the DOM directly
+    if (hasThumbnailUpdate) {
+      console.log('Forcing video element refresh for thumbnail update');
+      
+      setTimeout(() => {
+        // Try to find the video element after the component has had time to update
+        const videoElement = document.querySelector('video') as HTMLVideoElement;
+        if (videoElement) {
+          // Clean the URL
+          const thumbnailUrl = updatedMediaFile.metadata?.v_thumbnail?.split('?')[0];
+          
+          // Set a refreshed poster attribute with a new timestamp
+          if (thumbnailUrl) {
+            videoElement.poster = `${thumbnailUrl}?id=${mediaFile?._id || mediaFile?.id || ''}&t=${Date.now()}`;
+            console.log('Updated video poster URL:', videoElement.poster);
+            
+            // Force a redraw of the video element
+            videoElement.load();
+          }
+        }
+      }, 100);
+    }
     
     toast.success('Media updated successfully');
   };
@@ -898,7 +996,6 @@ const MediaDetail: React.FC = () => {
     // If fields are modified and saved, ensure they're reflected when reopening the dialog
     if (mediaFile && isEditing) {
       console.log("Dialog is open, refreshing values");
-      console.log("Current mediaFile metadata:", mediaFile.metadata);
     }
   }, [mediaFile, mediaTypeConfig, isEditing]);
 
@@ -924,7 +1021,11 @@ const MediaDetail: React.FC = () => {
       }, {} as Record<string, any>))
     },
     fileType: mediaFile.fileExtension || '',
-    url: mediaFile.location || ''
+    url: mediaFile.location || '',
+    // Add required BaseMediaFile properties
+    location: mediaFile.location,
+    slug: mediaFile.slug,
+    modifiedDate: mediaFile.modifiedDate
   } : null;
 
   // Find the media type based on the mediaFile
@@ -967,65 +1068,68 @@ const MediaDetail: React.FC = () => {
 
   return (
     <motion.div className="media-detail-container" {...motionProps}>
-      <Button
-        className="back-button"
-        onClick={() => navigate("/media-library")}
-        variant="outlined"
-        size={isMobile ? "small" : "medium"}
-      >
-        <ArrowBackIcon fontSize={isMobile ? "small" : "medium"} />
-      </Button>
-      <Box className="media-detail">
-        <MediaDetailPreview 
-          mediaFile={mediaFile} 
-          onEdit={handleEdit}
-          onDownload={handleDownload}
-          isEditingEnabled={isEditingEnabled}
-        />
+      {/* Add key to force re-render when data changes */}
+      <div key={`media-container-${mediaFile?._refreshKey || Date.now()}`}>
+        <Button
+          className="back-button"
+          onClick={() => navigate("/media-library")}
+          variant="outlined"
+          size={isMobile ? "small" : "medium"}
+        >
+          <ArrowBackIcon fontSize={isMobile ? "small" : "medium"} />
+        </Button>
+        <Box className="media-detail">
+          <MediaDetailPreview 
+            mediaFile={mediaFile} 
+            onEdit={handleEdit}
+            onDownload={handleDownload}
+            isEditingEnabled={isEditingEnabled}
+          />
 
-        <Box className="media-detail-info">
-         
+          <Box className="media-detail-info">
+           
 
-          {mediaFile && (
-            <div className="media-information-container">
+            {mediaFile && (
+              <div className="media-information-container">
+                <Suspense fallback={<LoadingFallback />}>
+                  <MediaInformation
+                    mediaFile={mediaFile}
+                    mediaTypeConfig={mediaTypeConfig}
+                    baseFields={baseFields}
+                    getMetadataField={getMetadataField}
+                  />
+                </Suspense>
+              </div>
+            )}
+
+            {mediaTypeConfig && isEditing && mediaFileForEdit && mediaTypeForEdit && (
               <Suspense fallback={<LoadingFallback />}>
-                <MediaInformation
-                  mediaFile={mediaFile}
-                  mediaTypeConfig={mediaTypeConfig}
-                  baseFields={baseFields}
-                  getMetadataField={getMetadataField}
+                <EditMediaDialog
+                  key={`edit-dialog-${mediaFile._id}-${isEditing}-${new Date().getTime()}`}
+                  open={isEditing}
+                  onClose={() => setIsEditing(false)}
+                  mediaFile={mediaFileForEdit}
+                  mediaType={mediaTypeForEdit}
+                  onSave={handleSave}
                 />
               </Suspense>
-            </div>
-          )}
-
-          {mediaTypeConfig && isEditing && mediaFileForEdit && mediaTypeForEdit && (
-            <Suspense fallback={<LoadingFallback />}>
-              <EditMediaDialog
-                key={`edit-dialog-${mediaFile._id}-${isEditing}-${new Date().getTime()}`}
-                open={isEditing}
-                onClose={() => setIsEditing(false)}
-                mediaFile={mediaFileForEdit}
-                mediaType={mediaTypeForEdit}
-                onSave={handleSave}
-              />
-            </Suspense>
-          )}
+            )}
+          </Box>
         </Box>
-      </Box>
 
-      <ToastContainer position="top-center" />
+        <ToastContainer position="top-center" />
 
-      {process.env.NODE_ENV !== 'production' && (
-        <Box sx={{ position: 'fixed', bottom: 10, right: 10, p: 2, bgcolor: 'rgba(0,0,0,0.7)', color: 'white', zIndex: 9999, borderRadius: 1 }}>
-          <Typography variant="caption">
-            isEditing: {isEditing ? 'true' : 'false'}<br />
-            hasMediaType: {!!mediaTypeConfig ? 'true' : 'false'}<br />
-            hasMediaFile: {!!mediaFileForEdit ? 'true' : 'false'}<br />
-            isAdmin: {isEditingEnabled ? 'true' : 'false'}
-          </Typography>
-        </Box>
-      )}
+        {process.env.NODE_ENV !== 'production' && (
+          <Box sx={{ position: 'fixed', bottom: 10, right: 10, p: 2, bgcolor: 'rgba(0,0,0,0.7)', color: 'white', zIndex: 9999, borderRadius: 1 }}>
+            <Typography variant="caption">
+              isEditing: {isEditing ? 'true' : 'false'}<br />
+              hasMediaType: {!!mediaTypeConfig ? 'true' : 'false'}<br />
+              hasMediaFile: {!!mediaFileForEdit ? 'true' : 'false'}<br />
+              isAdmin: {isEditingEnabled ? 'true' : 'false'}
+            </Typography>
+          </Box>
+        )}
+      </div>
     </motion.div>
   );
 };

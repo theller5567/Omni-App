@@ -135,10 +135,12 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
 
     const dataString = JSON.stringify({ count: newRows.length, types: [...new Set(newRows.map(row => row.mediaType))] });
     if (newRows.length > 0 && dataString !== prevDataRef.current) {
-      console.log('MediaLibrary - Data ready:', {
-        count: newRows.length,
-        types: [...new Set(newRows.map(row => row.mediaType))]
-      });
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('MediaLibrary - Data ready:', {
+          count: newRows.length,
+          types: [...new Set(newRows.map(row => row.mediaType))]
+        });
+      }
       prevDataRef.current = dataString;
     }
 
@@ -338,9 +340,14 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
   };
 
   // Add debugging logs
-  console.log('MediaLibrary Rendering - rows:', rows.length, 'items');
-  console.log('MediaLibrary Rendering - viewMode:', viewMode);
-  console.log('MediaLibrary Rendering - userRole:', userRole);
+  if (process.env.NODE_ENV !== 'production') {
+    // Limit logging frequency to avoid console spam
+    if (Math.random() < 0.2) {
+      console.log('MediaLibrary Rendering - rows:', rows.length, 'items');
+      console.log('MediaLibrary Rendering - viewMode:', viewMode);
+      console.log('MediaLibrary Rendering - userRole:', userRole);
+    }
+  }
 
   return (
     <motion.div

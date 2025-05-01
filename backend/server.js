@@ -1,5 +1,5 @@
 import express from 'express';
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import bodyParser from 'body-parser';
 import cors from 'cors';
@@ -12,8 +12,20 @@ import mediaTypeRoutes from './routes/mediaTypeRoutes.js';
 import utilityRoutes from './routes/utilityRoutes.js';
 import tagCategoryRoutes from './routes/tagCategoryRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
-// Load environment variables from .env file
-dotenv.config();
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get the directory name of the current module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from the root directory's .env file
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
+// Test that the variables are loaded correctly
+console.log('AWS Environment Check:');
+console.log('AWS_REGION:', process.env.AWS_REGION || 'not set');
+console.log('AWS_S3_BUCKET_NAME:', process.env.AWS_S3_BUCKET_NAME || 'not set');
 
 const app = express();
 

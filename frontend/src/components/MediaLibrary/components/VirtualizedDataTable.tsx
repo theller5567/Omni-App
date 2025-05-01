@@ -7,6 +7,26 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../../store/store';
 import { isImageFile, isVideoFile, getFileIcon } from '../utils';
 
+/**
+ * Helper function to clean thumbnail URL and add consistent cache-busting
+ * @param url - The thumbnail URL to format
+ * @param mediaId - The media ID to use as a stable cache key
+ * @param forceRefresh - Whether to force a refresh with a timestamp (default: false)
+ */
+const formatThumbnailUrl = (url: string, mediaId: string, forceRefresh = false): string => {
+  if (!url) return '';
+  // Remove any existing query parameters
+  const cleanUrl = url.split('?')[0];
+  
+  // For initial rendering or stable display, use just the mediaId as cache key
+  // For explicit refresh actions (like after updating thumbnail), add timestamp
+  if (forceRefresh) {
+    return `${cleanUrl}?id=${mediaId}&t=${Date.now()}`;
+  } else {
+    return `${cleanUrl}?id=${mediaId}`;
+  }
+};
+
 interface VirtualizedDataTableProps {
   rows: any[];
   onSelectionChange: (selection: GridRowSelectionModel) => void;
@@ -68,10 +88,17 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
       }
       
       if (isVideoFile(params.row.fileExtension) || params.row.mediaType?.includes('Video')) {
-       console.log('Video file detected:', params.row.metadata);
+        // Only log in development and with a low frequency
+        if (process.env.NODE_ENV !== 'production' && Math.random() < 0.1) {
+          console.log('Video file detected:', params.row.metadata);
+        }
         if (params.row.metadata?.v_thumbnail) {
-          // Add a cache-busting parameter using a stable ID for each media item
-          const thumbnailWithCacheBuster = `${params.row.metadata.v_thumbnail}${params.row.metadata.v_thumbnail.includes('?') ? '&' : '?'}id=${params.row._id || params.row.id || ''}`;
+          // Use consistent thumbnail formatting
+          const thumbnailWithCacheBuster = formatThumbnailUrl(
+            params.row.metadata.v_thumbnail, 
+            params.row._id || params.row.id || '',
+            true
+          );
           return (
             <div style={{
               width: '100%',

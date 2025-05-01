@@ -11,7 +11,8 @@ const s3Client = new S3Client({
   }
 });
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
+// Export the BUCKET_NAME constant
+export const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET;
 
 // Helper function to format the filename
 const formatFileName = (originalName) => {
@@ -36,91 +37,122 @@ const formatFileName = (originalName) => {
   return `${baseName}_${ext}_${dateStr}`;
 };
 
+// Update the validation code to check for both variable names
 // Validate AWS configuration
-if (!process.env.AWS_S3_BUCKET_NAME) {
-  console.error('AWS_S3_BUCKET_NAME environment variable is not set');
+if (!BUCKET_NAME) {
+  console.error('AWS S3 bucket name is not set. Please set AWS_S3_BUCKET_NAME environment variable.');
 }
 
 if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
   console.error('AWS credentials are not properly configured');
 }
 
-export const uploadFileToS3 = async (file, prefix = '') => {
+export const uploadFileToS3 = async ({ bucket, key, body, contentType, originalName, formattedName, isThumbnail = false }) => {
   try {
-    if (!file) {
-      throw new Error('No file provided');
+    // Validate input parameters
+    if (!bucket) {
+      bucket = BUCKET_NAME;
+      if (!bucket) {
+        throw new Error('S3 bucket not specified and no default bucket is configured');
+      }
     }
-
-    if (!BUCKET_NAME) {
-      throw new Error('AWS S3 bucket name is not configured');
-    }
-
-    // Determine if this is a thumbnail upload
-    const isThumbnail = file.originalname.includes('_thumbnail_');
-
-    // Use the original thumbnail name if it's a thumbnail, otherwise format the filename
-    const finalFilename = isThumbnail ? file.originalname : formatFileName(file.originalname);
-
-    // Generate the unique filename with prefix
-    const uniqueFilename = prefix ? `${prefix}${finalFilename}` : finalFilename;
-
-    // Log upload attempt
-    console.log('Attempting S3 upload:', {
-      bucket: BUCKET_NAME,
-      key: uniqueFilename,
-      contentType: file.mimetype,
-      fileSize: file.size,
-      originalName: file.originalname,
-      formattedName: finalFilename,
-      isThumbnail: isThumbnail
-    });
-
-    // Prepare the upload parameters
-    const uploadParams = {
-      Bucket: BUCKET_NAME,
-      Key: uniqueFilename,
-      Body: file.buffer,
-      ContentType: file.mimetype
-    };
-
-    // Upload to S3 using the v3 SDK
-    const command = new PutObjectCommand(uploadParams);
-    const result = await s3Client.send(command);
     
-    // V3 doesn't return Location directly, so we need to construct it
-    const location = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFilename}`;
-    
-    if (!location) {
-      throw new Error('S3 upload successful but location not returned');
+    if (!key) {
+      if (!formattedName) {
+        throw new Error('Neither key nor formattedName provided for S3 upload');
+      }
+      key = formattedName;
     }
-
-    console.log('S3 upload successful:', {
-      location: location,
-      key: uniqueFilename,
-      bucket: BUCKET_NAME
-    });
-
-    return {
-      Location: location,
-      Key: uniqueFilename,
-      Bucket: BUCKET_NAME
+    
+    if (!body) {
+      throw new Error('No body/content provided for S3 upload');
+    }
+    
+    // Detect content type if not specified
+    if (!contentType) {
+      // Try to determine content type from file extension
+      if (originalName) {
+        const ext = path.extname(originalName).toLowerCase();
+        switch (ext) {
+          case '.jpg':
+          case '.jpeg':
+            contentType = 'image/jpeg';
+            break;
+          case '.png':
+            contentType = 'image/png';
+            break;
+          case '.svg':
+            contentType = 'image/svg+xml';
+            break;
+          case '.mp4':
+            contentType = 'video/mp4';
+            break;
+          case '.webm':
+            contentType = 'video/webm';
+            break;
+          default:
+            contentType = 'application/octet-stream';
+        }
+      } else {
+        contentType = 'application/octet-stream';
+      }
+    }
+    
+    // Set up the upload parameters
+    const params = {
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+      // Add metadata to help identify the file
+      Metadata: {
+        'original-name': originalName || 'unknown',
+        'upload-date': new Date().toISOString(),
+        'is-thumbnail': isThumbnail ? 'true' : 'false'
+      }
     };
+    
+    // Log the upload attempt
+    console.log(`Uploading to S3: ${bucket}/${key} (${contentType}) - Size: ${body.length || 'unknown'} bytes`);
+    
+    // Use the appropriate S3 client based on what's available in this file
+    let result;
+    if (typeof s3 !== 'undefined' && s3.upload) {
+      // Use the v2 SDK if available
+      result = await s3.upload(params).promise();
+    } else if (typeof s3Client !== 'undefined') {
+      // Use the v3 SDK if available
+      const command = new PutObjectCommand(params);
+      result = await s3Client.send(command);
+      
+      // V3 doesn't return Location directly, so construct it
+      result.Location = `https://${bucket}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${key}`;
+      result.Key = key;
+      result.Bucket = bucket;
+    } else {
+      throw new Error('No S3 client available');
+    }
+    
+    // Log success
+    console.log(`S3 upload successful: ${result.Location}`);
+    
+    return result;
   } catch (error) {
-    console.error('Error uploading to S3:', error);
+    // Enhanced error logging
+    console.error(`S3 upload error: ${error.message}`, error);
     
-    // Enhanced error reporting
-    const errorDetails = {
-      originalError: error.message,
-      bucketName: BUCKET_NAME,
-      fileInfo: file ? {
-        originalName: file.originalname,
-        mimeType: file.mimetype,
-        size: file.size
-      } : 'No file provided'
+    // Add more context to the error
+    const enhancedError = new Error(`S3 upload failed: ${error.message}`);
+    enhancedError.originalError = error;
+    enhancedError.params = {
+      bucket,
+      key,
+      contentType,
+      originalName,
+      size: body ? (body.length || 'unknown') : 'no body provided'
     };
     
-    console.error('Upload error details:', errorDetails);
-    throw new Error(`Failed to upload to S3: ${error.message}`);
+    throw enhancedError;
   }
 };
 
@@ -130,19 +162,55 @@ export const deleteFileFromS3 = async (fileUrl) => {
       throw new Error('AWS S3 bucket name is not configured');
     }
 
-    // Extract the key from the URL
-    const key = fileUrl.split('/').pop();
+    // Log the full URL for debugging
+    console.log('Attempting to delete file with URL:', fileUrl);
+    
+    // Handle different URL formats
+    let key;
+    
+    if (!fileUrl) {
+      throw new Error('No file URL provided');
+    }
+    
+    if (fileUrl.includes('amazonaws.com')) {
+      // This is a full S3 URL
+      // Parse the URL to extract the key after the bucket name
+      const urlParts = fileUrl.split('/');
+      // Find the position of the bucket name
+      const bucketIndex = urlParts.findIndex(part => part.includes(BUCKET_NAME));
+      
+      if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
+        // The key is everything after the bucket name
+        key = urlParts.slice(bucketIndex + 1).join('/');
+      } else {
+        // Fallback to the last part of the URL
+        key = urlParts[urlParts.length - 1];
+      }
+    } else if (fileUrl.startsWith('/')) {
+      // This is a path without hostname
+      key = fileUrl.startsWith('/') ? fileUrl.substring(1) : fileUrl;
+    } else {
+      // This might be just the key
+      key = fileUrl;
+    }
+    
+    // Remove any query parameters
+    if (key && key.includes('?')) {
+      key = key.split('?')[0];
+    }
     
     if (!key) {
-      throw new Error('Could not extract file key from URL');
+      throw new Error('Could not extract file key from URL: ' + fileUrl);
     }
 
+    console.log('Extracted S3 key for deletion:', key);
+    
     const deleteParams = {
       Bucket: BUCKET_NAME,
       Key: key
     };
 
-    console.log('Attempting to delete from S3:', {
+    console.log('Deleting from S3:', {
       bucket: BUCKET_NAME,
       key: key
     });

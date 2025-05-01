@@ -17,7 +17,9 @@ import {
   deleteMedia, 
   uploadMedia,
   searchMedia,
-  debugMediaFile
+  debugMediaFile,
+  updateVideoThumbnail,
+  testUpdateThumbnail
 } from '../controllers/mediaController.js';
 
 const router = express.Router();
@@ -172,6 +174,9 @@ router.get('/slug/:slug', async (req, res) => {
 
 // Debug media file
 router.get('/:id/debug', debugMediaFile);
+
+// Update video thumbnail route
+router.post('/thumbnail/:id', updateVideoThumbnail);
 
 // Get specific media by ID
 router.get('/:id', getMediaById);
@@ -353,6 +358,9 @@ router.put('/update-by-id/:id', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Failed to update media file' });
   }
 });
+
+// Add the test route near the other thumbnail route
+router.post('/test-thumbnail/:id', testUpdateThumbnail);
 
 export default router;
 
