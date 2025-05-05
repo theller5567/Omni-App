@@ -24,4 +24,24 @@ Check for Race conditions.
 
 THink about using useQuery instead of useFetch.
 
+Allow user to search mediaFiles with a mediaType of videoThumbnail when creating or updating a video thumbnail.
+
+MediaTYpes
+    when adding a new field, when the user forgets to click on the add button and hits next, give the user a message asking if they want to add the field.
+
+
+Use inline Notifications instead of toast notifications. 
+I am getting redundant messages and sometimes the user is unable to view the toast notification because 
+it is behind the popup they are looking at.
+
+
+Eventually remove the ability for users to create their own tags and only allow the user to use existing tags or existing tagCategories
+
+New mediaFIles should not be visible to all users below admin roles if not yet approved by an admin. 
+unapproved mediaFIles should show up in a component under the dashboard called nonApprovedMediaFiles.
+An admin should be able to approve or disapprove a mediaFile as well as add a note on why the media 
+file was disapproved that would be sent via email to the user who created the mediaFile
+
+
+
 

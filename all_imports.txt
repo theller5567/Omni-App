@@ -1,0 +1,708 @@
+./frontend/src/App.tsx:import React, { useState, useEffect, lazy, Suspense } from 'react';
+./frontend/src/App.tsx:import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+./frontend/src/App.tsx:import Sidebar from './components/Sidebar/Sidebar';
+./frontend/src/App.tsx:import { ThemeProvider } from '@mui/material/styles';
+./frontend/src/App.tsx:import CssBaseline from '@mui/material/CssBaseline';
+./frontend/src/App.tsx:import { lightTheme, darkTheme } from './theme';
+./frontend/src/App.tsx:import './App.scss';
+./frontend/src/App.tsx:import { useDispatch, useSelector } from 'react-redux';
+./frontend/src/App.tsx:import ProtectedRoute from './components/ProtectedRoute';
+./frontend/src/App.tsx:import { setUser, initializeUser } from './store/slices/userSlice';
+./frontend/src/App.tsx:import { initializeMedia } from './store/slices/mediaSlice';
+./frontend/src/App.tsx:import { initializeMediaTypes } from './store/slices/mediaTypeSlice';
+./frontend/src/App.tsx:import { RootState } from './store/store';
+./frontend/src/App.tsx:import { AppDispatch } from './store/store';
+./frontend/src/App.tsx:import axios from 'axios';
+./frontend/src/App.tsx:import { Box, CircularProgress } from '@mui/material';
+./frontend/src/App.tsx:const MediaDetail = lazy(() => import('./components/MediaDetail/MediaDetail'));
+./frontend/src/App.tsx:const Account = lazy(() => import('./pages/Account'));
+./frontend/src/App.tsx:const Home = lazy(() => import('./components/Home'));
+./frontend/src/App.tsx:const AuthPage = lazy(() => import('./pages/AuthPage'));
+./frontend/src/App.tsx:const PasswordSetupPage = lazy(() => import('./pages/PasswordSetup'));
+./frontend/src/App.tsx:const MediaLibraryPage = lazy(() => import('./pages/MediaLibraryPage'));
+./frontend/src/App.tsx:const AccountUsers = lazy(() => import('./pages/AccountUsers'));
+./frontend/src/App.tsx:const AccountTags = lazy(() => import('./pages/AccountTags'));
+./frontend/src/App.tsx:const AccountMediaTypes = lazy(() => import('./pages/AccountMediaTypes'));
+./frontend/src/App.tsx:const AccountAdminDashboard = lazy(() => import('./pages/AccountAdminDashboard'));
+./frontend/src/App.tsx:const StyleGuidePage = lazy(() => import('./pages/StyleGuidePage'));
+./frontend/src/App.tsx:const TestThumbnailPage = lazy(() => import('./pages/TestThumbnailPage'));
+./frontend/src/main.tsx:import ReactDOM from 'react-dom/client'
+./frontend/src/main.tsx:import './styles/index.scss'
+./frontend/src/main.tsx:import App from './App'
+./frontend/src/main.tsx:import { Provider } from 'react-redux'
+./frontend/src/main.tsx:import store from './store/store'
+./frontend/src/theme.d.ts:declare const lightTheme: import("@mui/material").Theme;
+./frontend/src/theme.d.ts:declare const darkTheme: import("@mui/material").Theme;
+./frontend/src/types/mediaCore.ts:import { MediaType } from '../store/slices/mediaTypeSlice';
+./frontend/src/App.d.ts:import React from 'react';
+./frontend/src/App.d.ts:import './App.scss';
+./frontend/src/config/env.ts:  BASE_URL: import.meta.env.VITE_BASE_URL || 'http://localhost:5002'
+./frontend/src/main.d.ts:import './styles/index.scss';
+./frontend/src/utils/mediaTypeUploaderUtils.ts:import { MediaTypeField, FieldType, SelectField, MediaTypeConfig } from '../types/mediaTypes';
+./frontend/src/utils/__tests__/formatFileSize.test.ts:import { formatFileSize } from '../formatFileSize';
+./frontend/src/utils/videoUtils.ts:import env from '../config/env';
+./frontend/src/components/Sidebar/Sidebar.d.ts:import './sidebar.scss';
+./frontend/src/components/Sidebar/Sidebar.d.ts:import './sidebar.scss';
+./frontend/src/components/Sidebar/Sidebar.tsx:import "./sidebar.scss";
+./frontend/src/components/Sidebar/Sidebar.tsx:import { Sidebar, Menu, MenuItem } from "react-pro-sidebar";
+./frontend/src/components/Sidebar/Sidebar.tsx:import { Box, Avatar } from "@mui/material";
+./frontend/src/components/Sidebar/Sidebar.tsx:import { motion, AnimatePresence } from "framer-motion";
+./frontend/src/components/Sidebar/Sidebar.tsx:import "./sidebar.scss";
+./frontend/src/components/Sidebar/Sidebar.tsx:import { NavLink, useLocation, useNavigate } from "react-router-dom";
+./frontend/src/components/Sidebar/Sidebar.tsx:import { useSelector, useDispatch } from "react-redux";
+./frontend/src/components/Sidebar/Sidebar.tsx:import { RootState } from "../../store/store";
+./frontend/src/components/Sidebar/Sidebar.tsx:import logoLight from "../../assets/Omni-new-logo-revvity-grey.png";
+./frontend/src/components/Sidebar/Sidebar.tsx:import logoDark from "../../assets/Omni-new-logo-revvity-white.png";
+./frontend/src/components/Sidebar/Sidebar.tsx:import { useTheme } from "@mui/material/styles";
+./frontend/src/components/Sidebar/Sidebar.tsx:import { 
+./frontend/src/components/Sidebar/Sidebar.tsx:import { useState, useEffect, ReactNode } from "react";
+./frontend/src/components/Sidebar/Sidebar.tsx:import { clearUser } from "../../store/slices/userSlice";
+./frontend/src/components/NavBar/NavBar.tsx:import React from 'react';
+./frontend/src/components/NavBar/NavBar.tsx:import { useNavigate } from 'react-router-dom';
+./frontend/src/components/NavBar/NavBar.tsx:import { useDispatch } from 'react-redux';
+./frontend/src/components/NavBar/NavBar.tsx:import { clearUser } from '../../store/slices/userSlice';
+./frontend/src/components/ProtectedRoute.tsx:import React, { Suspense } from 'react';
+./frontend/src/components/ProtectedRoute.tsx:import { Navigate } from 'react-router-dom';
+./frontend/src/components/ProtectedRoute.tsx:import { useSelector } from 'react-redux';
+./frontend/src/components/ProtectedRoute.tsx:import { RootState } from '../store/store';
+./frontend/src/components/ProtectedRoute.tsx:import { Box, CircularProgress } from '@mui/material';
+./frontend/src/components/ThemeToggle/ThemeToggle.tsx:import React from 'react';
+./frontend/src/components/ThemeToggle/ThemeToggle.tsx:import { ToggleButtonGroup, ToggleButton, Box, Typography } from '@mui/material';
+./frontend/src/components/ThemeToggle/ThemeToggle.tsx:import { FaSun, FaMoon } from 'react-icons/fa';
+./frontend/src/components/ThemeToggle/ThemeToggle.tsx:import './themeToggle.scss';
+./frontend/src/components/ThemeToggle/ThemeToggle.d.ts:import React from 'react';
+./frontend/src/components/ThemeToggle/ThemeToggle.d.ts:import './themeToggle.scss';
+./frontend/src/components/MediaTypeUploader/components/ReviewStep.tsx:import React from 'react';
+./frontend/src/components/MediaTypeUploader/components/ReviewStep.tsx:import { Box, Typography, Chip, List, ListItem, ListItemText } from '@mui/material';
+./frontend/src/components/MediaTypeUploader/components/ReviewStep.tsx:import { FaExclamationCircle, FaTag, FaTags } from 'react-icons/fa';
+./frontend/src/components/MediaTypeUploader/components/ReviewStep.tsx:import { MediaTypeConfig, SelectField } from '../../../types/mediaTypes';
+./frontend/src/components/MediaTypeUploader/components/ReviewStep.tsx:import { isSelectField, predefinedColors } from '../../../utils/mediaTypeUploaderUtils';
+./frontend/src/components/MediaTypeUploader/components/ReviewStep.tsx:import { useSelector } from 'react-redux';
+./frontend/src/components/MediaTypeUploader/components/ReviewStep.tsx:import { RootState } from '../../../store/store';
+./frontend/src/components/MediaTypeUploader/components/MediaTypeCard.tsx:import React from 'react';
+./frontend/src/components/MediaTypeUploader/components/MediaTypeCard.tsx:import {
+./frontend/src/components/MediaTypeUploader/components/MediaTypeCard.tsx:import { FaEye, FaEdit, FaTrash, FaTags } from 'react-icons/fa';
+./frontend/src/components/MediaTypeUploader/components/FieldPreview.tsx:import React from 'react';
+./frontend/src/components/MediaTypeUploader/components/FieldPreview.tsx:import { Box, Typography, Chip, List, ListItem } from '@mui/material';
+./frontend/src/components/MediaTypeUploader/components/FieldPreview.tsx:import { MediaTypeField } from '../../../types/mediaTypes';
+./frontend/src/components/MediaTypeUploader/components/FieldPreview.tsx:import { isSelectField } from '../../../utils/mediaTypeUploaderUtils';
+./frontend/src/components/MediaTypeUploader/components/FileTypeSelector.tsx:import React from 'react';
+./frontend/src/components/MediaTypeUploader/components/FileTypeSelector.tsx:import { Box, Typography, Checkbox, FormControlLabel, Chip } from '@mui/material';
+./frontend/src/components/MediaTypeUploader/components/FileTypeSelector.tsx:import { FileTypeCategory, isCategorySelected, isCategoryPartiallySelected } from '../../../utils/mediaTypeUploaderUtils';
+./frontend/src/components/MediaTypeUploader/components/FieldEditor.tsx:import React, { useState, useEffect } from 'react';
+./frontend/src/components/MediaTypeUploader/components/FieldEditor.tsx:import { 
+./frontend/src/components/MediaTypeUploader/components/FieldEditor.tsx:import { FaPlus, FaCheck, FaTimes, FaStar, FaTags, FaEdit } from 'react-icons/fa';
+./frontend/src/components/MediaTypeUploader/components/FieldEditor.tsx:import { 
+./frontend/src/components/MediaTypeUploader/components/FieldEditor.tsx:import { 
+./frontend/src/components/MediaTypeUploader/components/FieldEditor.tsx:import { useSelector } from 'react-redux';
+./frontend/src/components/MediaTypeUploader/components/FieldEditor.tsx:import { RootState } from '../../../store/store';
+./frontend/src/components/MediaTypeUploader/components/ColorPicker.tsx:import React from 'react';
+./frontend/src/components/MediaTypeUploader/components/ColorPicker.tsx:import { Box, FormControl, InputLabel, Select, MenuItem, Typography, Badge } from '@mui/material';
+./frontend/src/components/MediaTypeUploader/components/ColorPicker.tsx:import { predefinedColors } from '../../../utils/mediaTypeUploaderUtils';
+./frontend/src/components/MediaTypeUploader/components/ColorPicker.tsx:import { toast } from 'react-toastify';
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import React, { useState, useEffect, useCallback, useRef } from 'react';
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import {
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import { useDispatch, useSelector } from 'react-redux';
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import { addMediaType, initializeMediaTypes } from '../../store/slices/mediaTypeSlice';
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import { fetchTagCategories } from '../../store/slices/tagCategorySlice';
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import { toast } from 'react-toastify';
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import axios from 'axios';
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import { FaArrowRight, FaArrowLeft, FaSave, FaQuestionCircle } from 'react-icons/fa';
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import CloseIcon from '@mui/icons-material/Close';
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import { 
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import '../MediaTypeUploader.scss';
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import env from '../../config/env';
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import { RootState, AppDispatch } from '../../store/store';
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import { 
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import {
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import { FaImage, FaVideo, FaFileAudio, FaFileWord } from 'react-icons/fa';
+./frontend/src/components/MediaTypeUploader/MediaTypeUploader.tsx:import debounce from 'lodash/debounce';
+./frontend/src/components/MediaTypeUploader/index.ts:import MediaTypeUploader from './MediaTypeUploader';
+./frontend/src/components/Home.tsx:import React, { useEffect, useState, useMemo, useCallback } from 'react';
+./frontend/src/components/Home.tsx:import { ToastContainer } from "react-toastify"; // Import Toastify for success message
+./frontend/src/components/Home.tsx:import "react-toastify/dist/ReactToastify.css"; // Import the CSS for Toast notifications
+./frontend/src/components/Home.tsx:import { Box, Paper, Typography } from "@mui/material";
+./frontend/src/components/Home.tsx:import axios from 'axios';
+./frontend/src/components/Home.tsx:import { DataGrid, GridColDef, GridPaginationModel, GridToolbar } from '@mui/x-data-grid';
+./frontend/src/components/Home.tsx:import { motion } from 'framer-motion';
+./frontend/src/components/Home.tsx:import './home.scss';
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import {
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import CloseIcon from "@mui/icons-material/Close";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import { useDropzone } from "react-dropzone";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import { FaFileImage, FaFileVideo, FaUpload, FaImage, FaVideo, FaFileAudio, FaFileWord } from "react-icons/fa";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import "./MediaUploader.scss";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import { useNavigate } from "react-router-dom";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import { BaseMediaFile } from "../../interfaces/MediaFile";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import { useSelector, useDispatch } from "react-redux";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import { RootState, AppDispatch } from "../../store/store";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import { toast } from "react-toastify";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import type { MediaType } from "../../store/slices/mediaTypeSlice";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import { motion, AnimatePresence } from "framer-motion";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import { fetchTagCategories } from "../../store/slices/tagCategorySlice";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import {
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import { MediaTypeUploaderProps, MetadataState } from "./types";
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import UploadThumbnailSelector from '../VideoThumbnailSelector/UploadThumbnailSelector';
+./frontend/src/components/MediaUploader/MediaUploader.tsx:import MetadataForm from "./components/MetadataForm";
+./frontend/src/components/MediaUploader/utils/validationUtils.ts:import { MetadataState } from "../types";
+./frontend/src/components/MediaUploader/utils/validationUtils.ts:import { MediaType } from "../../../store/slices/mediaTypeSlice";
+./frontend/src/components/MediaUploader/utils/mediaTypeUtils.ts:import { MediaType } from "../../../store/slices/mediaTypeSlice";
+./frontend/src/components/MediaUploader/utils/mediaTypeUtils.ts:import { TagCategory } from "../../../store/slices/tagCategorySlice";
+./frontend/src/components/MediaUploader/utils/fileUtils.ts:import { MediaType } from "../../../store/slices/mediaTypeSlice";
+./frontend/src/components/MediaUploader/utils/uploadUtils.ts:import axios from 'axios';
+./frontend/src/components/MediaUploader/utils/uploadUtils.ts:import env from '../../../config/env';
+./frontend/src/components/MediaUploader/utils/uploadUtils.ts:import { MetadataState } from '../types';
+./frontend/src/components/MediaUploader/utils/uploadUtils.ts:import { BaseMediaFile } from '../../../interfaces/MediaFile';
+./frontend/src/components/MediaUploader/types.ts:import { BaseMediaFile } from "../../interfaces/MediaFile";
+./frontend/src/components/MediaUploader/components/UploadStatus.tsx:import React from "react";
+./frontend/src/components/MediaUploader/components/UploadStatus.tsx:import {
+./frontend/src/components/MediaUploader/components/UploadStatus.tsx:import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+./frontend/src/components/MediaUploader/components/UploadStatus.tsx:import ErrorIcon from "@mui/icons-material/Error";
+./frontend/src/components/MediaUploader/components/SimpleFormFieldsTab.tsx:import React from "react";
+./frontend/src/components/MediaUploader/components/SimpleFormFieldsTab.tsx:import { 
+./frontend/src/components/MediaUploader/components/SimpleFormFieldsTab.tsx:import FieldLabel from "./FieldLabel";
+./frontend/src/components/MediaUploader/components/SimpleFormFieldsTab.tsx:import FieldInput from "./FieldInput";
+./frontend/src/components/MediaUploader/components/SimpleFormFieldsTab.tsx:import { MediaType } from "../../../store/slices/mediaTypeSlice";
+./frontend/src/components/MediaUploader/components/SimpleFormFieldsTab.tsx:import { TagCategory } from "../../../store/slices/tagCategorySlice";
+./frontend/src/components/MediaUploader/components/SimpleFormFieldsTab.tsx:import { MetadataState } from "../types";
+./frontend/src/components/MediaUploader/components/SimpleFormFieldsTab.tsx:import StandardFields from "./StandardFields";
+./frontend/src/components/MediaUploader/components/SimpleFormFieldsTab.tsx:import { SelectChangeEvent } from "@mui/material";
+./frontend/src/components/MediaUploader/components/SimpleFormFieldsTab.tsx:import "./FormFieldsTab.css";
+./frontend/src/components/MediaUploader/components/FieldLabel.tsx:import React from "react";
+./frontend/src/components/MediaUploader/components/FieldLabel.tsx:import { Box, Typography } from "@mui/material";
+./frontend/src/components/MediaUploader/components/FieldLabel.tsx:import CircleIcon from "@mui/icons-material/Circle";
+./frontend/src/components/MediaUploader/components/FieldLabel.tsx:import { FieldLabelProps } from "../types";
+./frontend/src/components/MediaUploader/components/FieldLabel.tsx:import "./FieldLabel.css";
+./frontend/src/components/MediaUploader/components/MetadataForm.tsx:import React, { useEffect } from 'react';
+./frontend/src/components/MediaUploader/components/MetadataForm.tsx:import {
+./frontend/src/components/MediaUploader/components/MetadataForm.tsx:import { MetadataState } from '../types';
+./frontend/src/components/MediaUploader/components/MetadataForm.tsx:import SimpleFormFieldsTab from "./SimpleFormFieldsTab";
+./frontend/src/components/MediaUploader/components/MetadataForm.tsx:import RelatedMediaSection from "./RelatedMediaSection";
+./frontend/src/components/MediaUploader/components/MetadataForm.tsx:import { MediaType } from "../../../store/slices/mediaTypeSlice";
+./frontend/src/components/MediaUploader/components/MetadataForm.tsx:import { TagCategory } from "../../../store/slices/tagCategorySlice";
+./frontend/src/components/MediaUploader/components/MetadataForm.tsx:import { 
+./frontend/src/components/MediaUploader/components/StandardFields.tsx:import React from "react";
+./frontend/src/components/MediaUploader/components/StandardFields.tsx:import {
+./frontend/src/components/MediaUploader/components/StandardFields.tsx:import FilterListIcon from "@mui/icons-material/FilterList";
+./frontend/src/components/MediaUploader/components/StandardFields.tsx:import SearchIcon from "@mui/icons-material/Search";
+./frontend/src/components/MediaUploader/components/StandardFields.tsx:import FieldLabel from "./FieldLabel";
+./frontend/src/components/MediaUploader/components/StandardFields.tsx:import { MetadataState } from "../types";
+./frontend/src/components/MediaUploader/components/StandardFields.tsx:import { TagCategory } from "../../../store/slices/tagCategorySlice";
+./frontend/src/components/MediaUploader/components/FieldInput.tsx:import React from "react";
+./frontend/src/components/MediaUploader/components/FieldInput.tsx:import {
+./frontend/src/components/MediaUploader/components/FieldInput.tsx:import { TagCategory } from "../../../store/slices/tagCategorySlice";
+./frontend/src/components/MediaUploader/components/FieldInput.tsx:import { MetadataState } from "../types";
+./frontend/src/components/MediaUploader/components/RelatedMediaSection.tsx:import React, { useState } from 'react';
+./frontend/src/components/MediaUploader/components/RelatedMediaSection.tsx:import {
+./frontend/src/components/MediaUploader/components/RelatedMediaSection.tsx:import DeleteIcon from '@mui/icons-material/Delete';
+./frontend/src/components/MediaUploader/components/RelatedMediaSection.tsx:import AddIcon from '@mui/icons-material/Add';
+./frontend/src/components/MediaUploader/components/RelatedMediaSection.tsx:import { MetadataState } from '../types';
+./frontend/src/components/MediaUploader/components/RelatedMediaSection.tsx:import MediaPicker from '../../MediaPicker/MediaPicker';
+./frontend/src/components/MediaUploader/components/RelatedMediaSection.tsx:import { BaseMediaFile } from '../../../interfaces/MediaFile';
+./frontend/src/components/MediaUploader/components/FormFieldsTab.tsx:import React from "react";
+./frontend/src/components/MediaUploader/components/FormFieldsTab.tsx:import { 
+./frontend/src/components/MediaUploader/components/FormFieldsTab.tsx:import DoneIcon from "@mui/icons-material/Done";
+./frontend/src/components/MediaUploader/components/FormFieldsTab.tsx:import CircleIcon from "@mui/icons-material/Circle";
+./frontend/src/components/MediaUploader/components/FormFieldsTab.tsx:import FieldLabel from "./FieldLabel";
+./frontend/src/components/MediaUploader/components/FormFieldsTab.tsx:import FieldInput from "./FieldInput";
+./frontend/src/components/MediaUploader/components/FormFieldsTab.tsx:import { MediaType } from "../../../store/slices/mediaTypeSlice";
+./frontend/src/components/MediaUploader/components/FormFieldsTab.tsx:import { TagCategory } from "../../../store/slices/tagCategorySlice";
+./frontend/src/components/MediaUploader/components/FormFieldsTab.tsx:import { MetadataState } from "../types";
+./frontend/src/components/MediaUploader/components/FormFieldsTab.tsx:import StandardFields from "./StandardFields";
+./frontend/src/components/MediaUploader/components/FormFieldsTab.tsx:import { SelectChangeEvent } from "@mui/material";
+./frontend/src/components/MediaUploader/components/FormFieldsTab.tsx:import "./FormFieldsTab.css";
+./frontend/src/components/MediaUploader/MediaUploader.d.ts:import React from 'react';
+./frontend/src/components/MediaUploader/MediaUploader.d.ts:import './MediaUploader.scss';
+./frontend/src/components/MediaUploader/MediaUploader.d.ts:import { MediaFile } from '../../interfaces/MediaFile';
+./frontend/src/components/MediaDetail/EditMediaDialog.tsx:import React, { useState, useEffect } from 'react';
+./frontend/src/components/MediaDetail/EditMediaDialog.tsx:import { useForm, Controller } from 'react-hook-form';
+./frontend/src/components/MediaDetail/EditMediaDialog.tsx:import {
+./frontend/src/components/MediaDetail/EditMediaDialog.tsx:import CloseIcon from '@mui/icons-material/Close';
+./frontend/src/components/MediaDetail/EditMediaDialog.tsx:import { MediaFile, MediaType } from '../../types/media';
+./frontend/src/components/MediaDetail/EditMediaDialog.tsx:import './EditMediaDialog.scss';
+./frontend/src/components/MediaDetail/EditMediaDialog.tsx:import { useSelector } from 'react-redux';
+./frontend/src/components/MediaDetail/EditMediaDialog.tsx:import { RootState } from '../../store/store';
+./frontend/src/components/MediaDetail/EditMediaDialog.tsx:import { normalizeTag } from '../../utils/mediaTypeUploaderUtils';
+./frontend/src/components/MediaDetail/RelatedMediaItem.tsx:import React, { useState, useEffect } from 'react';
+./frontend/src/components/MediaDetail/RelatedMediaItem.tsx:import { Box, Typography, CircularProgress, Paper } from '@mui/material';
+./frontend/src/components/MediaDetail/RelatedMediaItem.tsx:import { RelatedMedia } from '../MediaUploader/types';
+./frontend/src/components/MediaDetail/RelatedMediaItem.tsx:import axios from 'axios';
+./frontend/src/components/MediaDetail/RelatedMediaItem.tsx:import { BaseMediaFile } from '../../interfaces/MediaFile';
+./frontend/src/components/MediaDetail/RelatedMediaItem.tsx:import env from '../../config/env';
+./frontend/src/components/MediaDetail/RelatedMediaItem.tsx:import { useNavigate } from 'react-router-dom';
+./frontend/src/components/MediaDetail/MediaInformation.tsx:import React from 'react';
+./frontend/src/components/MediaDetail/MediaInformation.tsx:import { 
+./frontend/src/components/MediaDetail/MediaInformation.tsx:import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+./frontend/src/components/MediaDetail/MediaInformation.tsx:import { formatFileSize } from '../../utils/formatFileSize';
+./frontend/src/components/MediaDetail/MediaInformation.tsx:import { shouldHideField } from '../../config/mediaInfoConfig';
+./frontend/src/components/MediaDetail/MediaInformation.tsx:import './MediaInformation.scss';
+./frontend/src/components/MediaDetail/MediaInformation.tsx:import { MediaDetailTags } from './MediaDetail';
+./frontend/src/components/MediaDetail/MediaInformation.tsx:import { useUsername } from '../../hooks/useUsername';
+./frontend/src/components/MediaDetail/ThumbnailUpdateDialog.tsx:import React from 'react';
+./frontend/src/components/MediaDetail/ThumbnailUpdateDialog.tsx:import { 
+./frontend/src/components/MediaDetail/ThumbnailUpdateDialog.tsx:import CloseIcon from '@mui/icons-material/Close';
+./frontend/src/components/MediaDetail/ThumbnailUpdateDialog.tsx:import MediaDetailThumbnailSelector from '../VideoThumbnailSelector/MediaDetailThumbnailSelector';
+./frontend/src/components/MediaDetail/ThumbnailUpdateDialog.tsx:import { getProxiedVideoUrl } from '../../utils/videoUtils';
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import React, { useEffect, useState, lazy, Suspense, useRef } from "react";
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import { useParams, useNavigate } from "react-router-dom";
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import { 
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import axios from "axios";
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import { BaseMediaFile } from "../../interfaces/MediaFile";
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import { MediaFile, MediaType } from "../../types/media";
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import { motion } from 'framer-motion';
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import { formatFileSize } from "../../utils/formatFileSize";
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import "./mediaDetail.scss";
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import { useSelector, useDispatch } from "react-redux";
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import { RootState, AppDispatch } from "../../store/store";
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import { toast, ToastContainer } from 'react-toastify';
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import 'react-toastify/dist/ReactToastify.css';
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import { useUsername } from '../../hooks/useUsername';
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import env from '../../config/env';
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import { 
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import EditIcon from '@mui/icons-material/Edit';
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import PhotoIcon from '@mui/icons-material/Photo';
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import { updateMedia } from '../../store/slices/mediaSlice';
+./frontend/src/components/MediaDetail/MediaDetail.tsx:import RelatedMediaItem from "./RelatedMediaItem";
+./frontend/src/components/MediaDetail/MediaDetail.tsx:const MediaInformation = lazy(() => import('./MediaInformation'));
+./frontend/src/components/MediaDetail/MediaDetail.tsx:const EditMediaDialog = lazy(() => import('./EditMediaDialog').then(module => ({ 
+./frontend/src/components/MediaDetail/MediaDetail.tsx:const ThumbnailUpdateDialog = lazy(() => import('./ThumbnailUpdateDialog'));
+./frontend/src/components/MediaDetail/MediaDetail.tsx:// Add this type definition near the top of the file, after your imports
+./frontend/src/components/MediaDetail/MediaDetail.d.ts:import React from "react";
+./frontend/src/components/MediaDetail/MediaDetail.d.ts:import "./mediaDetail.scss";
+./frontend/src/components/SearchInput/SearchInput.d.ts:import React from 'react';
+./frontend/src/components/SearchInput/SearchInput.d.ts:import './searchInput.scss';
+./frontend/src/components/SearchInput/SearchInput.tsx:import React from 'react';
+./frontend/src/components/SearchInput/SearchInput.tsx:import TextField from '@mui/material/TextField';
+./frontend/src/components/SearchInput/SearchInput.tsx:import Autocomplete from '@mui/material/Autocomplete';
+./frontend/src/components/SearchInput/SearchInput.tsx:import { InputAdornment } from '@mui/material';
+./frontend/src/components/SearchInput/SearchInput.tsx:import SearchIcon from '@mui/icons-material/Search';
+./frontend/src/components/SearchInput/SearchInput.tsx:import './searchInput.scss';
+./frontend/src/components/SearchInput/SearchInput.tsx:import { BaseMediaFile } from '../../interfaces/MediaFile';
+./frontend/src/components/StyleGuide/TypographyDemo.tsx:import React from 'react';
+./frontend/src/components/StyleGuide/TypographyDemo.tsx:import { Box, Container, Divider, Grid, Paper } from '@mui/material';
+./frontend/src/components/StyleGuide/TypographyDemo.tsx:import { DisplayHeading, PageTitle, SectionHeading, LeadText, TruncatedText, GradientText } from '../../theme/extendedComponents';
+./frontend/src/components/StyleGuide/TypographyDemo.tsx:import { HoverCard, StatusChip, GradientBox } from '../../theme/extendedComponents';
+./frontend/src/components/AdminDashboard/UserActivity.tsx:import React, { useState, useEffect } from 'react';
+./frontend/src/components/AdminDashboard/UserActivity.tsx:import { 
+./frontend/src/components/AdminDashboard/UserActivity.tsx:import axios from 'axios';
+./frontend/src/components/AdminDashboard/UserActivity.tsx:import { API_BASE_URL } from '../../config/config';
+./frontend/src/components/AdminDashboard/UserActivity.tsx:import { useSelector } from 'react-redux';
+./frontend/src/components/AdminDashboard/UserActivity.tsx:import { RootState } from '../../store/store';
+./frontend/src/components/AdminDashboard/DatabaseStats.tsx:import React, { useState, useEffect } from 'react';
+./frontend/src/components/AdminDashboard/DatabaseStats.tsx:import { 
+./frontend/src/components/AdminDashboard/DatabaseStats.tsx:import RefreshIcon from '@mui/icons-material/Refresh';
+./frontend/src/components/AdminDashboard/DatabaseStats.tsx:import StorageIcon from '@mui/icons-material/Storage';
+./frontend/src/components/AdminDashboard/DatabaseStats.tsx:import CloudIcon from '@mui/icons-material/Cloud';
+./frontend/src/components/AdminDashboard/DatabaseStats.tsx:import GroupIcon from '@mui/icons-material/Group';
+./frontend/src/components/AdminDashboard/DatabaseStats.tsx:import CollectionsIcon from '@mui/icons-material/Collections';
+./frontend/src/components/AdminDashboard/DatabaseStats.tsx:import CategoryIcon from '@mui/icons-material/Category';
+./frontend/src/components/AdminDashboard/DatabaseStats.tsx:import TagIcon from '@mui/icons-material/Tag';
+./frontend/src/components/AdminDashboard/DatabaseStats.tsx:import axios from 'axios';
+./frontend/src/components/AdminDashboard/DatabaseStats.tsx:import { useSelector } from 'react-redux';
+./frontend/src/components/AdminDashboard/DatabaseStats.tsx:import { RootState } from '../../store/store';
+./frontend/src/components/AdminDashboard/DatabaseStats.tsx:import { formatFileSize } from '../../utils/formatFileSize';
+./frontend/src/components/AdminDashboard/DatabaseStats.tsx:import { API_BASE_URL } from '../../config/config';
+./frontend/src/components/AdminDashboard/MediaTypeDistribution.tsx:import React from 'react';
+./frontend/src/components/AdminDashboard/MediaTypeDistribution.tsx:import { useSelector } from 'react-redux';
+./frontend/src/components/AdminDashboard/MediaTypeDistribution.tsx:import { RootState } from '../../store/store';
+./frontend/src/components/AdminDashboard/MediaTypeDistribution.tsx:import { Paper, Typography, Box } from '@mui/material';
+./frontend/src/components/AdminDashboard/MediaTypeDistribution.tsx:import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+./frontend/src/components/AdminDashboard/RecentActivity.tsx:import React, { useEffect, useState } from 'react';
+./frontend/src/components/AdminDashboard/RecentActivity.tsx:import { useSelector } from 'react-redux';
+./frontend/src/components/AdminDashboard/RecentActivity.tsx:import { RootState } from '../../store/store';
+./frontend/src/components/AdminDashboard/RecentActivity.tsx:import { 
+./frontend/src/components/AdminDashboard/RecentActivity.tsx:import { Link as RouterLink } from 'react-router-dom';
+./frontend/src/components/AdminDashboard/RecentActivity.tsx:import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+./frontend/src/components/AdminDashboard/RecentActivity.tsx:import DeleteIcon from '@mui/icons-material/Delete';
+./frontend/src/components/AdminDashboard/RecentActivity.tsx:import EditIcon from '@mui/icons-material/Edit';
+./frontend/src/components/AdminDashboard/RecentActivity.tsx:import PersonIcon from '@mui/icons-material/Person';
+./frontend/src/components/AdminDashboard/RecentActivity.tsx:import SettingsIcon from '@mui/icons-material/Settings';
+./frontend/src/components/AdminDashboard/RecentActivity.tsx:import FolderIcon from '@mui/icons-material/Folder';
+./frontend/src/components/AdminDashboard/RecentActivity.tsx:import RefreshIcon from '@mui/icons-material/Refresh';
+./frontend/src/components/AdminDashboard/RecentActivity.tsx:import axios from 'axios';
+./frontend/src/components/AdminDashboard/RecentActivity.tsx:import { API_BASE_URL } from '../../config/config';
+./frontend/src/components/AdminDashboard/StorageUsageChart.tsx:import React, { useRef } from 'react';
+./frontend/src/components/AdminDashboard/StorageUsageChart.tsx:import { useSelector } from 'react-redux';
+./frontend/src/components/AdminDashboard/StorageUsageChart.tsx:import { RootState } from '../../store/store';
+./frontend/src/components/AdminDashboard/StorageUsageChart.tsx:import { Paper, Typography, Box, Tab, Tabs } from '@mui/material';
+./frontend/src/components/AdminDashboard/StorageUsageChart.tsx:import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+./frontend/src/components/AdminDashboard/StorageUsageChart.tsx:import { formatFileSize } from '../../utils/formatFileSize';
+./frontend/src/components/TagCategoryManager/TagCategoryForm.tsx:import React, { useState, useEffect } from 'react';
+./frontend/src/components/TagCategoryManager/TagCategoryForm.tsx:import {
+./frontend/src/components/TagCategoryManager/TagCategoryForm.tsx:import { FaTag, FaSearch, FaPlus, FaTimes, FaArrowRight } from 'react-icons/fa';
+./frontend/src/components/TagCategoryManager/TagCategoryForm.tsx:import { useSelector, useDispatch } from 'react-redux';
+./frontend/src/components/TagCategoryManager/TagCategoryForm.tsx:import { RootState, AppDispatch } from '../../store/store';
+./frontend/src/components/TagCategoryManager/TagCategoryForm.tsx:import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DraggableProvided } from '@hello-pangea/dnd';
+./frontend/src/components/TagCategoryManager/TagCategoryForm.tsx:import { addTag } from '../../store/slices/tagSlice';
+./frontend/src/components/TagCategoryManager/TagCategoryManager.tsx:import React, { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
+./frontend/src/components/TagCategoryManager/TagCategoryManager.tsx:import {
+./frontend/src/components/TagCategoryManager/TagCategoryManager.tsx:import { useSelector, useDispatch } from 'react-redux';
+./frontend/src/components/TagCategoryManager/TagCategoryManager.tsx:import { RootState, AppDispatch } from '../../store/store';
+./frontend/src/components/TagCategoryManager/TagCategoryManager.tsx:import {
+./frontend/src/components/TagCategoryManager/TagCategoryManager.tsx:import { FaPlus } from 'react-icons/fa';
+./frontend/src/components/TagCategoryManager/TagCategoryManager.tsx:import { toast } from 'react-toastify';
+./frontend/src/components/TagCategoryManager/TagCategoryManager.tsx:const TagCategoryForm = lazy(() => import('./TagCategoryForm'));
+./frontend/src/components/TagCategoryManager/TagCategoryManager.tsx:const TagCategoryItem = lazy(() => import('./TagCategoryItem'));
+./frontend/src/components/TagCategoryManager/TagCategoryManager.tsx:const DeleteConfirmationDialog = lazy(() => import('./DeleteConfirmationDialog'));
+./frontend/src/components/TagCategoryManager/TagCategoryItem.tsx:import React from 'react';
+./frontend/src/components/TagCategoryManager/TagCategoryItem.tsx:import {
+./frontend/src/components/TagCategoryManager/TagCategoryItem.tsx:import { FaEdit, FaTrash, FaTag } from 'react-icons/fa';
+./frontend/src/components/TagCategoryManager/TagCategoryItem.tsx:import { TagCategory } from '../../store/slices/tagCategorySlice';
+./frontend/src/components/TagCategoryManager/DeleteConfirmationDialog.tsx:import React from 'react';
+./frontend/src/components/TagCategoryManager/DeleteConfirmationDialog.tsx:import {
+./frontend/src/components/MediaTypeWarningDialog.tsx:import React from 'react';
+./frontend/src/components/MediaTypeWarningDialog.tsx:import { 
+./frontend/src/components/MediaTypeWarningDialog.tsx:import { FaExclamationTriangle } from 'react-icons/fa';
+./frontend/src/components/MediaTypeWarningDialog.tsx:import { MediaType } from '../store/slices/mediaTypeSlice';
+./frontend/src/components/MediaLibrary/MediaCard.d.ts:import React from 'react';
+./frontend/src/components/MediaLibrary/MediaCard.d.ts:import './MediaCard.scss';
+./frontend/src/components/MediaLibrary/HeaderComponent.d.ts:import React from 'react';
+./frontend/src/components/MediaLibrary/HeaderComponent.d.ts:import './HeaderComponent.scss';
+./frontend/src/components/MediaLibrary/HeaderComponent.d.ts:import { MediaFile } from '../../interfaces/MediaFile';
+./frontend/src/components/MediaLibrary/utils/iconUtils.tsx:import { FaFileVideo, FaFileAudio, FaFilePdf, FaFileWord, FaFileExcel, FaFile } from 'react-icons/fa';
+./frontend/src/components/MediaLibrary/utils/iconUtils.tsx:import { isVideoFile, isAudioFile } from './fileUtils';
+./frontend/src/components/MediaLibrary/components/VirtualizedDataTable.tsx:import React from 'react';
+./frontend/src/components/MediaLibrary/components/VirtualizedDataTable.tsx:import { DataGrid, GridColDef, GridToolbar, GridRowSelectionModel, GridRowParams } from '@mui/x-data-grid';
+./frontend/src/components/MediaLibrary/components/VirtualizedDataTable.tsx:import { Link, useNavigate } from 'react-router-dom';
+./frontend/src/components/MediaLibrary/components/VirtualizedDataTable.tsx:import { Box, Chip, Stack } from '@mui/material';
+./frontend/src/components/MediaLibrary/components/VirtualizedDataTable.tsx:import { formatFileSize } from '../../../utils/formatFileSize';
+./frontend/src/components/MediaLibrary/components/VirtualizedDataTable.tsx:import { useSelector } from 'react-redux';
+./frontend/src/components/MediaLibrary/components/VirtualizedDataTable.tsx:import { RootState } from '../../../store/store';
+./frontend/src/components/MediaLibrary/components/VirtualizedDataTable.tsx:import { isImageFile, isVideoFile, getFileIcon } from '../utils';
+./frontend/src/components/MediaLibrary/components/MediaCard.tsx:import React from 'react';
+./frontend/src/components/MediaLibrary/components/MediaCard.tsx:import { Card, CardContent, Typography, Box} from '@mui/material';
+./frontend/src/components/MediaLibrary/components/MediaCard.tsx:import '../MediaCard.scss';
+./frontend/src/components/MediaLibrary/components/MediaCard.tsx:import { isImageFile, isVideoFile, getFileIcon } from '../utils';
+./frontend/src/components/MediaLibrary/components/MediaCard.tsx:import { useSelector } from 'react-redux';
+./frontend/src/components/MediaLibrary/components/MediaCard.tsx:import { RootState } from '../../../store/store';
+./frontend/src/components/MediaLibrary/components/DataTable.tsx:import React from 'react';
+./frontend/src/components/MediaLibrary/components/DataTable.tsx:import { DataGrid, GridColDef, GridToolbar, GridRowSelectionModel, GridRowParams } from '@mui/x-data-grid';
+./frontend/src/components/MediaLibrary/components/DataTable.tsx:import { Link, useNavigate } from 'react-router-dom';
+./frontend/src/components/MediaLibrary/components/DataTable.tsx:import { Box, Chip, Tooltip, Typography } from '@mui/material';
+./frontend/src/components/MediaLibrary/components/DataTable.tsx:import { formatFileSize } from '../../../utils/formatFileSize';
+./frontend/src/components/MediaLibrary/components/DataTable.tsx:import { useSelector } from 'react-redux';
+./frontend/src/components/MediaLibrary/components/DataTable.tsx:import { RootState } from '../../../store/store';
+./frontend/src/components/MediaLibrary/components/DataTable.tsx:import { isImageFile, isVideoFile, getFileIcon } from '../utils';
+./frontend/src/components/MediaLibrary/components/ConfirmationModal.tsx:import React from 'react';
+./frontend/src/components/MediaLibrary/components/ConfirmationModal.tsx:import { Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button } from '@mui/material';
+./frontend/src/components/MediaLibrary/components/HeaderComponent.tsx:import React, { useMemo } from 'react';
+./frontend/src/components/MediaLibrary/components/HeaderComponent.tsx:import { Box, ToggleButtonGroup, ToggleButton, Button, ButtonGroup, useMediaQuery, Theme } from '@mui/material';
+./frontend/src/components/MediaLibrary/components/HeaderComponent.tsx:import '../HeaderComponent.scss';
+./frontend/src/components/MediaLibrary/components/HeaderComponent.tsx:import SearchInput from '../../SearchInput/SearchInput';
+./frontend/src/components/MediaLibrary/components/HeaderComponent.tsx:import { BaseMediaFile } from '../../../interfaces/MediaFile';
+./frontend/src/components/MediaLibrary/components/HeaderComponent.tsx:import { FaPlus, FaList, FaThLarge } from 'react-icons/fa';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import { Box, Typography, Toolbar, IconButton, Tooltip, useMediaQuery, Theme, CircularProgress } from '@mui/material';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import { motion } from 'framer-motion';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import './mediaLibrary.scss';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import { useNavigate } from 'react-router-dom';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import { FaTrash, FaDownload, FaSpinner } from 'react-icons/fa';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import { BaseMediaFile } from '../../interfaces/MediaFile';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import { alpha } from '@mui/material/styles';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import { toast } from 'react-toastify';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import { ToastContainer } from 'react-toastify';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import 'react-toastify/dist/ReactToastify.css';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import { GridRowSelectionModel } from '@mui/x-data-grid';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import { useSelector, useDispatch } from 'react-redux';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import { RootState, AppDispatch } from '../../store/store';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import axios from 'axios';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import env from '../../config/env';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:import { fetchTagCategories } from '../../store/slices/tagCategorySlice';
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:const HeaderComponent = lazy(() => import('./components/HeaderComponent'));
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:const DataTable = lazy(() => import('./components/VirtualizedDataTable'));
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:const MediaCard = lazy(() => import('./components/MediaCard'));
+./frontend/src/components/MediaLibrary/MediaLibrary.tsx:const ConfirmationModal = lazy(() => import('./components/ConfirmationModal'));
+./frontend/src/components/MediaLibrary/MediaLibrary.d.ts:import React from 'react';
+./frontend/src/components/MediaLibrary/MediaLibrary.d.ts:import './MediaLibrary.scss';
+./frontend/src/components/MediaLibrary/MediaLibrary.d.ts:import { MediaFile } from '../../interfaces/MediaFile';
+./frontend/src/components/MediaLibrary/MediaLibrary.d.ts:import 'react-toastify/dist/ReactToastify.css';
+./frontend/src/components/MediaLibrary/ConfirmationModal.d.ts:import React from 'react';
+./frontend/src/components/MediaPicker/MediaPicker.tsx:import React, { useState, useEffect } from 'react';
+./frontend/src/components/MediaPicker/MediaPicker.tsx:import { 
+./frontend/src/components/MediaPicker/MediaPicker.tsx:import { useSelector, useDispatch } from 'react-redux';
+./frontend/src/components/MediaPicker/MediaPicker.tsx:import { RootState, AppDispatch } from '../../store/store';
+./frontend/src/components/MediaPicker/MediaPicker.tsx:import { initializeMedia } from '../../store/slices/mediaSlice';
+./frontend/src/components/MediaPicker/MediaPicker.tsx:import CloseIcon from '@mui/icons-material/Close';
+./frontend/src/components/MediaPicker/MediaPicker.tsx:import SearchIcon from '@mui/icons-material/Search';
+./frontend/src/components/MediaPicker/MediaPicker.tsx:import { BaseMediaFile } from '../../interfaces/MediaFile';
+./frontend/src/components/MediaPicker/MediaPicker.tsx:import { isImageFile, isVideoFile } from '../MediaLibrary/utils/fileUtils';
+./frontend/src/components/MediaPicker/MediaPicker.tsx:import './MediaPicker.scss';
+./frontend/src/components/MediaPicker/index.ts:import MediaPicker from './MediaPicker';
+./frontend/src/components/Home.d.ts:import React from 'react';
+./frontend/src/components/Home.d.ts:import "react-toastify/dist/ReactToastify.css";
+./frontend/src/components/Home.d.ts:import './home.scss';
+./frontend/src/components/VideoThumbnailSelector/MediaDetailThumbnailSelector.tsx:import React, { useState, useRef, useEffect, useMemo } from 'react';
+./frontend/src/components/VideoThumbnailSelector/MediaDetailThumbnailSelector.tsx:import {
+./frontend/src/components/VideoThumbnailSelector/MediaDetailThumbnailSelector.tsx:import {
+./frontend/src/components/VideoThumbnailSelector/MediaDetailThumbnailSelector.tsx:import './VideoThumbnailSelector.scss';
+./frontend/src/components/VideoThumbnailSelector/MediaDetailThumbnailSelector.tsx:import axios from 'axios';
+./frontend/src/components/VideoThumbnailSelector/MediaDetailThumbnailSelector.tsx:import env from '../../config/env';
+./frontend/src/components/VideoThumbnailSelector/MediaDetailThumbnailSelector.tsx:import { toast } from 'react-toastify';
+./frontend/src/components/VideoThumbnailSelector/UploadThumbnailSelector.tsx:import React, { useState, useRef, useEffect } from 'react';
+./frontend/src/components/VideoThumbnailSelector/UploadThumbnailSelector.tsx:import {
+./frontend/src/components/VideoThumbnailSelector/UploadThumbnailSelector.tsx:import {
+./frontend/src/components/VideoThumbnailSelector/UploadThumbnailSelector.tsx:import './VideoThumbnailSelector.scss';
+./frontend/src/components/VideoThumbnailSelector/ThumbnailSelectorTestPage.tsx:import React, { useState, useEffect, useMemo } from 'react';
+./frontend/src/components/VideoThumbnailSelector/ThumbnailSelectorTestPage.tsx:import { Box, Typography, Container, Paper, CircularProgress, Alert } from '@mui/material';
+./frontend/src/components/VideoThumbnailSelector/ThumbnailSelectorTestPage.tsx:import MediaDetailThumbnailSelector from './MediaDetailThumbnailSelector';
+./frontend/src/components/VideoThumbnailSelector/ThumbnailSelectorTestPage.tsx:import { getProxiedVideoUrl } from '../../utils/videoUtils';
+./frontend/src/components/VideoThumbnailSelector/ThumbnailSelectorTestPage.tsx:import axios from 'axios';
+./frontend/src/components/VideoThumbnailSelector/ThumbnailSelectorTestPage.tsx:import env from '../../config/env';
+./frontend/src/components/VideoThumbnailSelector/ThumbnailSelectorTestPage.tsx:import { useDispatch, useSelector } from 'react-redux';
+./frontend/src/components/VideoThumbnailSelector/ThumbnailSelectorTestPage.tsx:import { updateMediaLocal } from '../../store/slices/mediaSlice';
+./frontend/src/components/VideoThumbnailSelector/ThumbnailSelectorTestPage.tsx:import { useParams } from 'react-router-dom';
+./frontend/src/components/VideoThumbnailSelector/MediaDetailThumbnailSelector.test.tsx:import '@testing-library/jest-dom';
+./frontend/src/components/ProtectedRoute.d.ts:import React from 'react';
+./frontend/src/components/ViewModeToggle/ViewModeToggle.tsx:import React from 'react';
+./frontend/src/components/ViewModeToggle/ViewModeToggle.tsx:import { ToggleButtonGroup, ToggleButton, Box, Typography } from '@mui/material';
+./frontend/src/components/ViewModeToggle/ViewModeToggle.tsx:import { FaList, FaTh } from 'react-icons/fa';
+./frontend/src/components/ViewModeToggle/ViewModeToggle.tsx:import './viewModeToggle.scss';
+./frontend/src/components/EditAcceptedFileTypes.tsx:import React, { useState, useEffect } from 'react';
+./frontend/src/components/EditAcceptedFileTypes.tsx:import { 
+./frontend/src/components/EditAcceptedFileTypes.tsx:import { FaImage, FaVideo, FaFileAudio, FaFileWord, FaPlus } from 'react-icons/fa';
+./frontend/src/components/EditAcceptedFileTypes.tsx:import { MediaType } from '../store/slices/mediaTypeSlice';
+./frontend/src/components/EditAcceptedFileTypes.tsx:import './MediaTypeUploader.scss';
+./frontend/src/theme/extendedComponents.tsx:import { 
+./frontend/src/theme/extendedComponents.tsx:import { styled } from '@mui/material/styles';
+./frontend/src/theme/typography.ts:import { styled } from '@mui/material/styles';
+./frontend/src/theme/typography.ts:import Typography, { TypographyProps } from '@mui/material/Typography';
+./frontend/src/theme/typography.ts:import { fontWeights } from '../utils/fontUtils';
+./frontend/src/hooks/useMediaLibrary.ts:import { useEffect, useState, useMemo } from 'react';
+./frontend/src/hooks/useMediaLibrary.ts:import { useSelector, useDispatch } from 'react-redux';
+./frontend/src/hooks/useMediaLibrary.ts:import { 
+./frontend/src/hooks/useMediaLibrary.ts:import { RootState, AppDispatch } from '../store/store';
+./frontend/src/hooks/useMediaLibrary.ts:import { BaseMediaFile } from '../interfaces/MediaFile';
+./frontend/src/hooks/useFileHandler.ts:import { useState, useCallback } from 'react';
+./frontend/src/hooks/useFileUpload.ts:import { useState } from 'react';
+./frontend/src/hooks/useFileUpload.d.ts:    setUploadProgress: import("react").Dispatch<import("react").SetStateAction<number>>;
+./frontend/src/hooks/useFileHandler.d.ts:    setFile: import("react").Dispatch<import("react").SetStateAction<File | null>>;
+./frontend/src/hooks/useFileHandler.d.ts:    setFilePreview: import("react").Dispatch<import("react").SetStateAction<string | null>>;
+./frontend/src/hooks/useUsername.ts:import { useState, useEffect } from 'react';
+./frontend/src/hooks/useUsername.ts:import axios from 'axios';
+./frontend/src/hooks/useUsername.ts:import env from '../config/env';
+./frontend/src/hooks/useAuthHandler.ts:import { useDispatch } from 'react-redux';
+./frontend/src/hooks/useAuthHandler.ts:import { useNavigate } from 'react-router-dom';
+./frontend/src/hooks/useAuthHandler.ts:import { register, login } from '../store/slices/authSlice';
+./frontend/src/hooks/useAuthHandler.ts:import { setUser } from '../store/slices/userSlice';
+./frontend/src/hooks/useAuthHandler.ts:import { AppDispatch } from '../store/store';
+./frontend/src/api/apiClient.ts:import axios from 'axios';
+./frontend/src/api/apiClient.ts:import env from '../config/env';
+./frontend/src/theme.ts:import { createTheme, Theme } from '@mui/material/styles';
+./frontend/src/theme.ts:import { fontFamily, fontWeights } from './utils/fontUtils';
+./frontend/src/theme.ts:import './assets/fonts/fonts.css';
+./frontend/src/pages/AccountUsers.tsx:import { useEffect, useState } from 'react';
+./frontend/src/pages/AccountUsers.tsx:import { useDispatch, useSelector } from 'react-redux';
+./frontend/src/pages/AccountUsers.tsx:import { RootState } from '../store/store';
+./frontend/src/pages/AccountUsers.tsx:import { fetchAllUsers, updateUser } from '../store/slices/userSlice';
+./frontend/src/pages/AccountUsers.tsx:import { DataGrid, GridColDef, GridToolbar, GridRenderCellParams } from '@mui/x-data-grid';
+./frontend/src/pages/AccountUsers.tsx:import { 
+./frontend/src/pages/AccountUsers.tsx:import { toast } from 'react-toastify';
+./frontend/src/pages/AccountUsers.tsx:import { FaTrash, FaEdit, FaUser, FaEnvelope, FaIdCard, FaUserTag } from 'react-icons/fa';
+./frontend/src/pages/AccountUsers.tsx:import { motion } from 'framer-motion';
+./frontend/src/pages/AccountUsers.tsx:import './accountUsers.scss';
+./frontend/src/pages/AccountUsers.tsx:import { AppDispatch } from '../store/store';
+./frontend/src/pages/AccountUsers.tsx:import type { User } from '../types/userTypes';
+./frontend/src/pages/AccountUsers.tsx:import { SelectChangeEvent } from '@mui/material';
+./frontend/src/pages/AccountMediaTypes.tsx:import { useEffect, useState, useRef, createContext, useContext } from 'react';
+./frontend/src/pages/AccountMediaTypes.tsx:import { 
+./frontend/src/pages/AccountMediaTypes.tsx:import './accountMediaTypes.scss';
+./frontend/src/pages/AccountMediaTypes.tsx:import { motion } from 'framer-motion';
+./frontend/src/pages/AccountMediaTypes.tsx:import { ToastContainer, toast } from 'react-toastify';
+./frontend/src/pages/AccountMediaTypes.tsx:import MediaTypeUploader from '../components/MediaTypeUploader/MediaTypeUploader';
+./frontend/src/pages/AccountMediaTypes.tsx:import { useSelector, useDispatch } from 'react-redux';
+./frontend/src/pages/AccountMediaTypes.tsx:import { RootState, AppDispatch } from '../store/store';
+./frontend/src/pages/AccountMediaTypes.tsx:import { 
+./frontend/src/pages/AccountMediaTypes.tsx:import { FaPlus, FaSync } from 'react-icons/fa';
+./frontend/src/pages/AccountMediaTypes.tsx:import MediaTypeCard from '../components/MediaTypeUploader/components/MediaTypeCard';
+./frontend/src/pages/VerifyEmailPage.tsx:import { useEffect, useState } from "react";
+./frontend/src/pages/VerifyEmailPage.tsx:import axios from "axios";
+./frontend/src/pages/VerifyEmailPage.tsx:import { useParams, useNavigate } from "react-router-dom";  // Use useNavigate from v6
+./frontend/src/pages/VerifyEmailPage.tsx:import { Box, Typography, CircularProgress, Button } from "@mui/material";
+./frontend/src/pages/VerifyEmailPage.tsx:import env from '../config/env';
+./frontend/src/pages/MediaLibraryPage.tsx:import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
+./frontend/src/pages/MediaLibraryPage.tsx:import { useSelector, useDispatch } from 'react-redux';
+./frontend/src/pages/MediaLibraryPage.tsx:import { RootState, AppDispatch } from '../store/store';
+./frontend/src/pages/MediaLibraryPage.tsx:import { deleteMedia, initializeMedia, addMedia, deleteMediaThunk } from '../store/slices/mediaSlice';
+./frontend/src/pages/MediaLibraryPage.tsx:import { initializeMediaTypes } from '../store/slices/mediaTypeSlice';
+./frontend/src/pages/MediaLibraryPage.tsx:import { CircularProgress, Box, Typography } from '@mui/material';
+./frontend/src/pages/MediaLibraryPage.tsx:import '../components/MediaLibrary/MediaContainer.scss';
+./frontend/src/pages/MediaLibraryPage.tsx:import axios from 'axios';
+./frontend/src/pages/MediaLibraryPage.tsx:import env from '../config/env';
+./frontend/src/pages/MediaLibraryPage.tsx:import { toast } from 'react-toastify';
+./frontend/src/pages/MediaLibraryPage.tsx:const MediaUploader = lazy(() => import('../components/MediaUploader/MediaUploader'));
+./frontend/src/pages/MediaLibraryPage.tsx:const MediaLibrary = lazy(() => import('../components/MediaLibrary/MediaLibrary'));
+./frontend/src/pages/Login.tsx:import React, { useState } from 'react';
+./frontend/src/pages/Login.tsx:import axios from 'axios';
+./frontend/src/pages/Login.tsx:import { useNavigate } from 'react-router-dom';
+./frontend/src/pages/Login.tsx:import { useDispatch } from 'react-redux';
+./frontend/src/pages/Login.tsx:import { AppDispatch } from '../store/store';
+./frontend/src/pages/Login.tsx:import { API_BASE_URL } from '../config/config';
+./frontend/src/pages/Login.tsx:import { initializeUser, fetchAllUsers } from '../store/slices/userSlice'; // Correct import
+./frontend/src/pages/StyleGuidePage.tsx:import React from 'react';
+./frontend/src/pages/StyleGuidePage.tsx:import { Box, Container, Tabs, Tab, Paper } from '@mui/material';
+./frontend/src/pages/StyleGuidePage.tsx:import TypographyDemo from '../components/StyleGuide/TypographyDemo';
+./frontend/src/pages/StyleGuidePage.tsx:import { PageTitle } from '../theme/extendedComponents';
+./frontend/src/pages/Account.tsx:import React, { useState, useContext } from 'react';
+./frontend/src/pages/Account.tsx:import { useFormik } from 'formik';
+./frontend/src/pages/Account.tsx:import * as Yup from 'yup';
+./frontend/src/pages/Account.tsx:import axios from 'axios';
+./frontend/src/pages/Account.tsx:import { toast, ToastContainer } from 'react-toastify';
+./frontend/src/pages/Account.tsx:import 'react-toastify/dist/ReactToastify.css';
+./frontend/src/pages/Account.tsx:import { 
+./frontend/src/pages/Account.tsx:import { motion } from 'framer-motion';
+./frontend/src/pages/Account.tsx:import { useSelector } from 'react-redux';
+./frontend/src/pages/Account.tsx:import { RootState } from '../store/store';
+./frontend/src/pages/Account.tsx:import EditIcon from '@mui/icons-material/Edit';
+./frontend/src/pages/Account.tsx:import SaveIcon from '@mui/icons-material/Save';
+./frontend/src/pages/Account.tsx:import PersonIcon from '@mui/icons-material/Person';
+./frontend/src/pages/Account.tsx:import LockIcon from '@mui/icons-material/Lock';
+./frontend/src/pages/Account.tsx:import BrushIcon from '@mui/icons-material/Brush';
+./frontend/src/pages/Account.tsx:import ThemeToggle from '../components/ThemeToggle/ThemeToggle';
+./frontend/src/pages/Account.tsx:import { ThemeContext } from '../App';
+./frontend/src/pages/Account.tsx:import ViewModeToggle from '../components/ViewModeToggle/ViewModeToggle';
+./frontend/src/pages/Home.tsx:import React, { useEffect, useState } from 'react';
+./frontend/src/pages/Home.tsx:import { toast, ToastContainer } from "react-toastify"; // Import Toastify for success message
+./frontend/src/pages/Home.tsx:import "react-toastify/dist/ReactToastify.css"; // Import the CSS for Toast notifications
+./frontend/src/pages/Home.tsx:import { Box, Paper, Typography, Button } from "@mui/material";
+./frontend/src/pages/Home.tsx:import { useNavigate } from "react-router-dom"; // Import useNavigate
+./frontend/src/pages/Home.tsx:import axios from 'axios';
+./frontend/src/pages/Home.tsx:import { DataGrid, GridColDef } from '@mui/x-data-grid';
+./frontend/src/pages/AuthPage.tsx:import React, { useState, useEffect } from 'react';
+./frontend/src/pages/AuthPage.tsx:import { TextField, Button, Typography, Box, CircularProgress, Container, Alert, Grid, Link } from '@mui/material';
+./frontend/src/pages/AuthPage.tsx:import { useDispatch, useSelector } from 'react-redux';
+./frontend/src/pages/AuthPage.tsx:import { register, login } from '../store/slices/authSlice';
+./frontend/src/pages/AuthPage.tsx:import { RootState } from '../store/store';
+./frontend/src/pages/AuthPage.tsx:import { useLocation, useNavigate } from 'react-router-dom';
+./frontend/src/pages/AuthPage.tsx:import { AppDispatch } from '../store/store';
+./frontend/src/pages/AuthPage.tsx:import { toast } from 'react-toastify';
+./frontend/src/pages/AuthPage.tsx:import 'react-toastify/dist/ReactToastify.css';
+./frontend/src/pages/AuthPage.tsx:import { setUser } from '../store/slices/userSlice';
+./frontend/src/pages/AuthPage.d.ts:import React from 'react';
+./frontend/src/pages/AuthPage.d.ts:import 'react-toastify/dist/ReactToastify.css';
+./frontend/src/pages/Account.d.ts:import React from 'react';
+./frontend/src/pages/Account.d.ts:import 'react-toastify/dist/ReactToastify.css';
+./frontend/src/pages/TestThumbnailPage.tsx:import React from 'react';
+./frontend/src/pages/TestThumbnailPage.tsx:import ThumbnailSelectorTestPage from '../components/VideoThumbnailSelector/ThumbnailSelectorTestPage';
+./frontend/src/pages/Login.d.ts:import React from 'react';
+./frontend/src/pages/PasswordSetup.d.ts:import React from 'react';
+./frontend/src/pages/AccountAdminDashboard.tsx:import React, { useState, lazy, Suspense } from 'react';
+./frontend/src/pages/AccountAdminDashboard.tsx:import { 
+./frontend/src/pages/AccountAdminDashboard.tsx:import { useSelector } from 'react-redux';
+./frontend/src/pages/AccountAdminDashboard.tsx:import { RootState } from '../store/store';
+./frontend/src/pages/AccountAdminDashboard.tsx:import '../components/AdminDashboard/dashboard.scss';
+./frontend/src/pages/AccountAdminDashboard.tsx:const MediaTypeDistribution = lazy(() => import('../components/AdminDashboard/MediaTypeDistribution'));
+./frontend/src/pages/AccountAdminDashboard.tsx:const StorageUsageChart = lazy(() => import('../components/AdminDashboard/StorageUsageChart'));
+./frontend/src/pages/AccountAdminDashboard.tsx:const RecentActivity = lazy(() => import('../components/AdminDashboard/RecentActivity'));
+./frontend/src/pages/AccountAdminDashboard.tsx:const DatabaseStats = lazy(() => import('../components/AdminDashboard/DatabaseStats'));
+./frontend/src/pages/AccountAdminDashboard.tsx:const UserActivity = lazy(() => import('../components/AdminDashboard/UserActivity'));
+./frontend/src/pages/MediaLibraryPage.d.ts:import React from 'react';
+./frontend/src/pages/MediaLibraryPage.d.ts:import '../components/MediaLibrary/MediaContainer.scss';
+./frontend/src/pages/AccountMediaTypes.backup.tsx:import React, { useEffect, useState } from 'react';
+./frontend/src/pages/AccountMediaTypes.backup.tsx:import { 
+./frontend/src/pages/AccountMediaTypes.backup.tsx:import './accountMediaTypes.scss';
+./frontend/src/pages/AccountMediaTypes.backup.tsx:import { motion } from 'framer-motion';
+./frontend/src/pages/AccountMediaTypes.backup.tsx:import { ToastContainer, toast } from 'react-toastify';
+./frontend/src/pages/AccountMediaTypes.backup.tsx:import MediaTypeUploader from '../components/MediaTypeUploader/MediaTypeUploader';
+./frontend/src/pages/AccountMediaTypes.backup.tsx:import { useSelector, useDispatch } from 'react-redux';
+./frontend/src/pages/AccountMediaTypes.backup.tsx:import { RootState, AppDispatch } from '../store/store';
+./frontend/src/pages/AccountMediaTypes.backup.tsx:import { 
+./frontend/src/pages/AccountMediaTypes.backup.tsx:import { FaEdit, FaTrash, FaPlus, FaArrowRight, FaSync } from 'react-icons/fa';
+./frontend/src/pages/AccountMediaTypes.backup.tsx:import MediaTypeCard from '../components/MediaTypeUploader/components/MediaTypeCard';
+./frontend/src/pages/AccountMediaTypes.backup.tsx:import axios from 'axios';
+./frontend/src/pages/AccountMediaTypes.backup.tsx:import env from '../config/env';
+./frontend/src/pages/Home.d.ts:import React from 'react';
+./frontend/src/pages/Home.d.ts:import "react-toastify/dist/ReactToastify.css";
+./frontend/src/pages/tmp/AccountMediaTypes.tsx:import { useEffect, useState, useRef } from 'react';
+./frontend/src/pages/tmp/AccountMediaTypes.tsx:import { 
+./frontend/src/pages/tmp/AccountMediaTypes.tsx:import '../accountMediaTypes.scss';
+./frontend/src/pages/tmp/AccountMediaTypes.tsx:import { motion } from 'framer-motion';
+./frontend/src/pages/tmp/AccountMediaTypes.tsx:import { ToastContainer, toast } from 'react-toastify';
+./frontend/src/pages/tmp/AccountMediaTypes.tsx:import MediaTypeUploader from '../../components/MediaTypeUploader/MediaTypeUploader';
+./frontend/src/pages/tmp/AccountMediaTypes.tsx:import { useSelector, useDispatch } from 'react-redux';
+./frontend/src/pages/tmp/AccountMediaTypes.tsx:import { RootState, AppDispatch } from '../../store/store';
+./frontend/src/pages/tmp/AccountMediaTypes.tsx:import { 
+./frontend/src/pages/tmp/AccountMediaTypes.tsx:import { FaPlus, FaSync } from 'react-icons/fa';
+./frontend/src/pages/tmp/AccountMediaTypes.tsx:import MediaTypeCard from '../../components/MediaTypeUploader/components/MediaTypeCard';
+./frontend/src/pages/PasswordSetup.tsx:import React, { useEffect, useState } from 'react';
+./frontend/src/pages/PasswordSetup.tsx:import axios from 'axios';
+./frontend/src/pages/PasswordSetup.tsx:import { useNavigate, useLocation } from 'react-router-dom';
+./frontend/src/pages/PasswordSetup.tsx:import { useFormik } from 'formik';
+./frontend/src/pages/PasswordSetup.tsx:import * as Yup from 'yup';
+./frontend/src/pages/PasswordSetup.tsx:import { TextField, Button, Typography, Box } from '@mui/material';
+./frontend/src/pages/PasswordSetup.tsx:import env from '../config/env';
+./frontend/src/pages/AccountTags.tsx:import React, { useEffect, useState, useMemo, useCallback } from "react";
+./frontend/src/pages/AccountTags.tsx:import { useDispatch, useSelector } from "react-redux";
+./frontend/src/pages/AccountTags.tsx:import { RootState, AppDispatch } from "../store/store";
+./frontend/src/pages/AccountTags.tsx:import { fetchTags, addTag, updateTag, deleteTag } from "../store/slices/tagSlice";
+./frontend/src/pages/AccountTags.tsx:import TagCategoryManager from "../components/TagCategoryManager/TagCategoryManager";
+./frontend/src/pages/AccountTags.tsx:import { toast } from "react-toastify";
+./frontend/src/pages/AccountTags.tsx:import { resetTagCategories } from "../store/slices/tagCategorySlice";
+./frontend/src/pages/AccountTags.tsx:import { fetchTagCategories } from "../store/slices/tagCategorySlice";
+./frontend/src/pages/AccountTags.tsx:import { ToastContainer } from 'react-toastify';
+./frontend/src/pages/AccountTags.tsx:import 'react-toastify/dist/ReactToastify.css';
+./frontend/src/pages/AccountTags.tsx:import { 
+./frontend/src/pages/AccountTags.tsx:import { FaEdit, FaTrash, FaPlus, FaSearch, FaTimes, FaTag, FaRedo } from "react-icons/fa";
+./frontend/src/pages/AccountTags.tsx:import { motion } from "framer-motion";
+./frontend/src/pages/AccountTags.tsx:import { normalizeTag, normalizeTagForComparison, validateTag, areTagsEquivalent } from "../utils/tagUtils";
+./frontend/src/pages/AccountTags.tsx:import "./accountTags.scss";
+./frontend/src/interfaces/MediaFile.ts:import { RelatedMedia } from "../components/MediaUploader/types";
+./frontend/src/interfaces/ProductImageMetadata.d.ts:import { MediaFile } from './MediaFile';
+./frontend/src/interfaces/ProductImageMetadata.ts:import { BaseMediaFile } from './MediaFile';
+./frontend/src/store/slices/userSlice.d.ts:export declare const setUser: import("@reduxjs/toolkit").ActionCreatorWithPayload<UserState, "user/setUser">, clearUser: import("@reduxjs/toolkit").ActionCreatorWithoutPayload<"user/clearUser">;
+./frontend/src/store/slices/userSlice.d.ts:declare const _default: import("redux").Reducer<UserState>;
+./frontend/src/store/slices/tagCategorySlice.ts:import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+./frontend/src/store/slices/tagCategorySlice.ts:import axios from 'axios';
+./frontend/src/store/slices/tagCategorySlice.ts:import env from '../../config/env';
+./frontend/src/store/slices/tagCategorySlice.ts:import { RootState } from '../store';
+./frontend/src/store/slices/tagCategorySlice.ts:import { toast } from 'react-toastify';
+./frontend/src/store/slices/tagCategorySlice.ts:import { PayloadAction } from '@reduxjs/toolkit';
+./frontend/src/store/slices/authSlice.ts:import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+./frontend/src/store/slices/authSlice.ts:import axios from "axios";
+./frontend/src/store/slices/authSlice.ts:import env from '../../config/env';
+./frontend/src/store/slices/userSlice.ts:import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+./frontend/src/store/slices/userSlice.ts:import { useSelector } from 'react-redux';
+./frontend/src/store/slices/userSlice.ts:import { RootState } from '../../store/store';
+./frontend/src/store/slices/userSlice.ts:import axios from 'axios';
+./frontend/src/store/slices/userSlice.ts:import type { User } from '../../types/userTypes';
+./frontend/src/store/slices/userSlice.ts:import env from '../../config/env';
+./frontend/src/store/slices/mediaSlice.ts:import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+./frontend/src/store/slices/mediaSlice.ts:import axios from 'axios';
+./frontend/src/store/slices/mediaSlice.ts:import { BaseMediaFile } from '../../interfaces/MediaFile';
+./frontend/src/store/slices/mediaSlice.ts:import env from '../../config/env';
+./frontend/src/store/slices/__tests__/mediaTypeSlice.test.ts:import reducer, { 
+./frontend/src/store/slices/__tests__/mediaSlice.test.ts:import reducer, { 
+./frontend/src/store/slices/__tests__/mediaSlice.test.ts:import { configureStore } from '@reduxjs/toolkit';
+./frontend/src/store/slices/__tests__/mediaSlice.test.ts:import { BaseMediaFile } from '../../../interfaces/MediaFile';
+./frontend/src/store/slices/authSlice.d.ts:export declare const registerUser: import("@reduxjs/toolkit").AsyncThunk<unknown, UserData, {
+./frontend/src/store/slices/authSlice.d.ts:    dispatch?: import("redux-thunk").ThunkDispatch<unknown, unknown, import("redux").UnknownAction>;
+./frontend/src/store/slices/authSlice.d.ts:export declare const loginUser: import("@reduxjs/toolkit").AsyncThunk<unknown, {
+./frontend/src/store/slices/authSlice.d.ts:    dispatch?: import("redux-thunk").ThunkDispatch<unknown, unknown, import("redux").UnknownAction>;
+./frontend/src/store/slices/authSlice.d.ts:export declare const logout: import("@reduxjs/toolkit").ActionCreatorWithoutPayload<"auth/logout">;
+./frontend/src/store/slices/authSlice.d.ts:declare const _default: import("redux").Reducer<AuthState>;
+./frontend/src/store/slices/mediaTypeSlice.ts:import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+./frontend/src/store/slices/mediaTypeSlice.ts:import axios from 'axios';
+./frontend/src/store/slices/mediaTypeSlice.ts:import env from '../../config/env';
+./frontend/src/store/slices/mediaTypeSlice.ts:import { RootState } from '../store';
+./frontend/src/store/slices/tagSlice.ts:import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+./frontend/src/store/slices/tagSlice.ts:import axios from 'axios';
+./frontend/src/store/slices/tagSlice.ts:import env from '../../config/env';
+./frontend/src/store/slices/tagSlice.ts:import { toast } from 'react-toastify';
+./frontend/src/store/store.d.ts:declare const store: import("@reduxjs/toolkit").EnhancedStore<{
+./frontend/src/store/store.d.ts:    auth: import("./slices/authSlice").AuthState;
+./frontend/src/store/store.d.ts:    user: import("./slices/userSlice").UserState;
+./frontend/src/store/store.d.ts:}, import("redux").UnknownAction, import("@reduxjs/toolkit").Tuple<[import("redux").StoreEnhancer<{
+./frontend/src/store/store.d.ts:    dispatch: import("redux-thunk").ThunkDispatch<{
+./frontend/src/store/store.d.ts:        auth: import("./slices/authSlice").AuthState;
+./frontend/src/store/store.d.ts:        user: import("./slices/userSlice").UserState;
+./frontend/src/store/store.d.ts:    }, undefined, import("redux").UnknownAction>;
+./frontend/src/store/store.d.ts:}>, import("redux").StoreEnhancer]>>;
+./frontend/src/store/store.ts:import { configureStore } from "@reduxjs/toolkit";
+./frontend/src/store/store.ts:import { enableMapSet } from "immer";
+./frontend/src/store/store.ts:import authReducer from "./slices/authSlice";
+./frontend/src/store/store.ts:import userReducer from './slices/userSlice';
+./frontend/src/store/store.ts:import tagReducer from './slices/tagSlice';
+./frontend/src/store/store.ts:import mediaTypeReducer from './slices/mediaTypeSlice';
+./frontend/src/store/store.ts:import mediaReducer from './slices/mediaSlice';
+./frontend/src/store/store.ts:import tagCategoryReducer from './slices/tagCategorySlice';

@@ -28,7 +28,6 @@ const AccountTags = lazy(() => import('./pages/AccountTags'));
 const AccountMediaTypes = lazy(() => import('./pages/AccountMediaTypes'));
 const AccountAdminDashboard = lazy(() => import('./pages/AccountAdminDashboard'));
 const StyleGuidePage = lazy(() => import('./pages/StyleGuidePage'));
-const TestThumbnailPage = lazy(() => import('./pages/TestThumbnailPage'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -208,7 +207,6 @@ const App: React.FC = () => {
                   <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} />} />
                   <Route path="/login" element={<AuthPage />} />
                   <Route path="/" element={<AuthPage />} />
-                  <Route path="/test-thumbnail" element={<ProtectedRoute element={<TestThumbnailPage />} />} />
                 </Routes>
               </Suspense>
             </div>
