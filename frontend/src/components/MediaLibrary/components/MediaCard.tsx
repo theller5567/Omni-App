@@ -15,16 +15,41 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
   // Add error boundary
   const [hasError, setHasError] = React.useState(false);
   
+  // Add lazy loading with Intersection Observer
+  const [isVisible, setIsVisible] = React.useState(false);
+  const cardRef = React.useRef<HTMLDivElement>(null);
+  
+  React.useEffect(() => {
+    const currentRef = cardRef.current;
+    
+    if (!currentRef) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          // Once visible, no need to observe anymore
+          observer.disconnect();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '100px', // Load images 100px before they come into view
+        threshold: 0.1,
+      }
+    );
+    
+    observer.observe(currentRef);
+    
+    return () => {
+      if (currentRef) observer.unobserve(currentRef);
+    };
+  }, []);
+  
   // Add debugging logs
   React.useEffect(() => {
-    console.log('MediaCard rendering with file:', {
-      id: file?.id,
-      location: file?.location?.substring(0, 30) + '...',
-      mediaType: file?.mediaType,
-      fileExtension: file?.fileExtension
-    });
-    
-    // Check for required fields
+    // Only log serious errors, not regular rendering info
     if (!file?.location && !file?.fileExtension) {
       console.warn('MediaCard missing required fields:', file);
     }
@@ -62,6 +87,15 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
         return (
           <div className="icon-container">
             {getFileIcon('', '', 48)}
+          </div>
+        );
+      }
+      
+      // Only load images/thumbnails when card is visible in viewport
+      if (!isVisible) {
+        return (
+          <div className="icon-container">
+            {getFileIcon(file.fileExtension, file.mediaType, 48)}
           </div>
         );
       }
@@ -124,6 +158,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
         className="media-card" 
         onClick={handleFileClick}
         data-extension={fileExtension}
+        ref={cardRef}
       >
         {/* Color indicator circle */}
         <div 

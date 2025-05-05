@@ -55,7 +55,9 @@ export const fetchAllUsers = createAsyncThunk(
     const response = await axios.get<User[]>(`${env.BASE_URL}/api/users`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    console.log('Fetched users:', response.data);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Fetched users:', response.data.length);
+    }
     return response.data;
   }
 );
@@ -69,7 +71,9 @@ export const initializeUser = createAsyncThunk(
     // Get token from localStorage
     const token = localStorage.getItem('authToken');
     
-    console.log('Initialize user - token exists:', !!token);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Initialize user - token exists:', !!token);
+    }
     
     // Skip the request if user is already fully loaded with a valid ID
     // We don't skip if there was an error or if the user is still loading
@@ -77,7 +81,9 @@ export const initializeUser = createAsyncThunk(
         !state.user.currentUser.isLoading && 
         state.user.currentUser.error === null &&
         state.user.currentUser.token === token) { // Ensure token matches
-      console.log('Skipping user profile fetch - already loaded with valid ID:', state.user.currentUser._id);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Skipping user profile fetch - already loaded with valid ID:', state.user.currentUser._id);
+      }
       return { currentUser: state.user.currentUser };
     }
     
@@ -86,14 +92,19 @@ export const initializeUser = createAsyncThunk(
         throw new Error('No token found');
       }
 
-      console.log('Fetching user profile with token:', token.substring(0, 10) + '...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Fetching user profile with token:', token.substring(0, 10) + '...');
+      }
       
       // Fetch user profile
       const profileResponse = await axios.get<User>(`${env.BASE_URL}/api/user/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
-      console.log('Profile response:', profileResponse.data);
+      // Only log profile in development and with less detail
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Profile retrieved successfully');
+      }
 
       // Transform the flat user object into the expected structure
       const userData = {
@@ -108,12 +119,12 @@ export const initializeUser = createAsyncThunk(
       // If user is admin or super-admin, also fetch all users
       if (profileResponse.data.role === 'admin' || 
           profileResponse.data.role === 'superAdmin') {
-        console.log('User is admin/super-admin, fetching all users');
-        // Only check for succeeded status, retry if failed
+        // Only fetch users if needed, with minimal logging
         if (state.user.users.status !== 'succeeded') {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Admin user detected, fetching users');
+          }
           dispatch(fetchAllUsers());
-        } else {
-          console.log('Skipping users fetch - already loaded successfully');
         }
       }
 

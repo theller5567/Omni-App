@@ -76,12 +76,19 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
   // Handle initial data loading silently - with debounce
   const tagsFetchedRef = useRef(false);
   
+  // Only fetch tag categories when the user actually interacts with the filter
+  // or switches to card view where tags are displayed
   useEffect(() => {
-    if (!tagsFetchedRef.current) {
-      tagsFetchedRef.current = true;
-      dispatch(fetchTagCategories());
-    }
-  }, [dispatch]);
+    // Delay tag loading to prioritize more important UI components
+    const tagLoadTimer = setTimeout(() => {
+      if (!tagsFetchedRef.current) {
+        tagsFetchedRef.current = true;
+        dispatch(fetchTagCategories());
+      }
+    }, 2000); // 2 second delay
+    
+    return () => clearTimeout(tagLoadTimer);
+  }, [dispatch, viewMode]);
   
   // Clean up references on unmount
   useEffect(() => {
@@ -337,10 +344,14 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
     transition: { duration: isMobile ? 0.3 : 0.5 }
   };
 
-  // Add debugging logs
-  console.log('MediaLibrary Rendering - rows:', rows.length, 'items');
-  console.log('MediaLibrary Rendering - viewMode:', viewMode);
-  console.log('MediaLibrary Rendering - userRole:', userRole);
+  // Only log on dev environment and only once per render cycle with a stable key
+  if (process.env.NODE_ENV === 'development' && rows.length > 0 && !prevDataRef.current.includes(rows.length.toString())) {
+    console.log('MediaLibrary - Rendering with:', {
+      rows: rows.length,
+      viewMode,
+      userRole
+    });
+  }
 
   return (
     <motion.div

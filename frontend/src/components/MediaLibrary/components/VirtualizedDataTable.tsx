@@ -68,7 +68,6 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
       }
       
       if (isVideoFile(params.row.fileExtension) || params.row.mediaType?.includes('Video')) {
-       console.log('Video file detected:', params.row.metadata);
         if (params.row.metadata?.v_thumbnail) {
           // Add a cache-busting parameter using timestamp to ensure fresh image on every render
           const timestamp = params.row.metadata?.v_thumbnailTimestamp || Date.now();

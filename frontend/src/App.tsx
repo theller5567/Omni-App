@@ -83,43 +83,61 @@ const App: React.FC = () => {
     if (isInitialized) return;
 
     const token = localStorage.getItem('authToken');
-    console.log('Initializing app with token:', token ? 'exists' : 'none');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Initializing app with token:', token ? 'exists' : 'none');
+    }
     
     const initializeApp = async () => {
       if (token) {
         try {
           // First initialize user (authentication)
-          console.log('Starting data initialization sequence...');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Starting data initialization sequence...');
+          }
           const userResult = await dispatch(initializeUser()).unwrap();
           
           // Skip media initialization if we're not signed in
           if (!userResult.currentUser?._id) {
-            console.log('User initialization did not return a valid user - skipping media initialization');
+            if (process.env.NODE_ENV === 'development') {
+              console.log('User initialization did not return a valid user - skipping media initialization');
+            }
             setIsInitialized(true);
             return;
           }
           
-          // PERFORMANCE IMPROVEMENT: Load media types and media concurrently
-          // This will significantly reduce startup time by running network requests in parallel
-          console.log('Starting parallel initialization of media types and media...');
-          
-          try {
-            // Launch both requests in parallel using Promise.all
-            const [mediaTypesResult, mediaResult] = await Promise.all([
-              dispatch(initializeMediaTypes()).unwrap(),
-              dispatch(initializeMedia()).unwrap()
-            ]);
+          // PERFORMANCE IMPROVEMENT: Only load media data if we're viewing the media library
+          // For other pages, we'll lazy load these when needed
+          const currentPath = window.location.pathname;
+          if (currentPath.includes('/media-library') || currentPath.includes('/media/slug/')) {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Detected media page, initializing media data...');
+            }
             
-            console.log('Parallel data initialization complete:');
-            console.log(`- Media types: ${mediaTypesResult.length} items loaded`);
-            console.log(`- Media: ${mediaResult.length} items loaded`);
-          } catch (dataError) {
-            console.error('Error during parallel data initialization:', dataError);
-            // Even if there's an error loading data, we consider the app initialized
-            // This prevents a broken state where the app never finishes loading
+            try {
+              // Launch both requests in parallel using Promise.all
+              const [mediaTypesResult, mediaResult] = await Promise.all([
+                dispatch(initializeMediaTypes()).unwrap(),
+                dispatch(initializeMedia()).unwrap()
+              ]);
+              
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Media data initialized:');
+                console.log(`- Media types: ${mediaTypesResult.length} items`);
+                console.log(`- Media: ${mediaResult.length} items`);
+              }
+            } catch (dataError) {
+              console.error('Error during media data initialization:', dataError);
+              // Even if there's an error loading data, we consider the app initialized
+            }
+          } else {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Not on media page, skipping media data initialization for faster loading');
+            }
           }
           
-          console.log('App initialization complete');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('App initialization complete');
+          }
         } catch (authError) {
           console.error('Authentication failed:', authError);
           // Handle auth error - clear token and set empty user

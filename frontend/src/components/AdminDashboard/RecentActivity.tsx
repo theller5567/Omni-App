@@ -69,6 +69,7 @@ const RecentActivity: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [disableMock, setDisableMock] = useState(false);
+  const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
   
   // Get users from Redux store to ensure we only use MongoDB users
   const userState = useSelector((state: RootState) => state.user);
@@ -165,16 +166,31 @@ const RecentActivity: React.FC = () => {
   
   const fetchActivities = async (forceFetch = false) => {
     try {
+      // Check if we should skip fetching due to recent cache
+      const now = Date.now();
+      
+      // Skip if data was fetched recently (within last 30 seconds) and we're not forcing a refresh
+      if (!forceFetch && lastFetchTime && now - lastFetchTime < 30000 && activities.length > 0) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Skipping activity logs fetch - data is recent (${Math.round((now - lastFetchTime) / 1000)}s old)`);
+        }
+        return;
+      }
+      
       setLoading(true);
-      console.log("Starting to fetch activity logs...");
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Starting to fetch activity logs...");
+      }
       
       // Always attempt to fetch from API regardless of environment
       if (API_BASE_URL) {
         try {
           // Get token from localStorage
           const token = localStorage.getItem('authToken');
-          console.log("API_BASE_URL:", API_BASE_URL);
-          console.log("Auth token present:", !!token);
+          if (process.env.NODE_ENV === 'development') {
+            console.log("API_BASE_URL:", API_BASE_URL);
+            console.log("Auth token present:", !!token);
+          }
           
           if (!token) {
             setError("Authentication token is missing. Please log in again.");
@@ -186,7 +202,9 @@ const RecentActivity: React.FC = () => {
             return;
           }
           
-          console.log("Making API request to:", `${API_BASE_URL}/api/admin/activity-logs`);
+          if (process.env.NODE_ENV === 'development') {
+            console.log("Making API request to:", `${API_BASE_URL}/api/admin/activity-logs`);
+          }
           const response = await axios.get<ApiResponse>(`${API_BASE_URL}/api/admin/activity-logs`, {
             headers: {
               Authorization: `Bearer ${token}`
@@ -196,24 +214,31 @@ const RecentActivity: React.FC = () => {
             }
           });
           
-          console.log("API response status:", response.status);
-          console.log("API response data count:", response.data.data.length);
-          console.log("API response first few items:", response.data.data.slice(0, 2));
+          if (process.env.NODE_ENV === 'development') {
+            console.log("API response status:", response.status);
+            console.log("API response data count:", response.data.data.length);
+            console.log("API response first few items:", response.data.data.slice(0, 2));
+          }
           
           // Filter activities to only include MongoDB users
           const filteredActivities = response.data.data.filter(activity => {
             return users.some((user: UserType) => user.id === activity.userId || user._id === activity.userId);
           });
           
-          console.log("Filtered activities count:", filteredActivities.length);
+          if (process.env.NODE_ENV === 'development') {
+            console.log("Filtered activities count:", filteredActivities.length);
+          }
           
           // Fetch media slugs for media activities
           const enrichedActivities = await enrichMediaActivities(filteredActivities, media);
           
-          console.log("Enriched activities count:", enrichedActivities.length);
-          console.log("Activities with slugs:", enrichedActivities.filter(a => a.slug || a.mediaSlug).length);
+          if (process.env.NODE_ENV === 'development') {
+            console.log("Enriched activities count:", enrichedActivities.length);
+            console.log("Activities with slugs:", enrichedActivities.filter(a => a.slug || a.mediaSlug).length);
+          }
           
           setActivities(enrichedActivities);
+          setLastFetchTime(Date.now()); // Update the last fetch time
           setLoading(false);
           setError(null); // Clear any previous errors
         } catch (err: any) {
@@ -278,6 +303,8 @@ const RecentActivity: React.FC = () => {
   
   useEffect(() => {
     fetchActivities();
+    // Note: We don't include lastFetchTime in the dependency array because
+    // it's used within fetchActivities to implement our caching strategy
   }, [users, media, disableMock]);
 
   // Add a new effect to monitor the auth token
@@ -286,8 +313,13 @@ const RecentActivity: React.FC = () => {
     const checkAuthAndRefresh = () => {
       const token = localStorage.getItem('authToken');
       if (token) {
-        console.log('Auth token detected, fetching activities');
-        fetchActivities(true); // Force fetch with the new token
+        // Only log in development to reduce console noise
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Auth token detected, fetching activities');
+        }
+        
+        // Don't force fetch if we already have recent data
+        fetchActivities(false);
       } else {
         console.log('No auth token found');
       }
@@ -300,7 +332,7 @@ const RecentActivity: React.FC = () => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'authToken') {
         console.log('Auth token changed in localStorage');
-        checkAuthAndRefresh();
+        fetchActivities(true); // Force fetch with the new token
       }
     };
     
@@ -322,7 +354,9 @@ const RecentActivity: React.FC = () => {
     // If no media activities, return original list
     if (mediaActivities.length === 0) return activities;
     
-    console.log(`Enriching ${mediaActivities.length} media activities with slugs from ${allMedia.length} media files`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Enriching ${mediaActivities.length} media activities with slugs from ${allMedia.length} media files`);
+    }
     
     // Create a copy of activities to modify
     const enrichedActivities = [...activities];
@@ -333,7 +367,9 @@ const RecentActivity: React.FC = () => {
         // If mediaSlug is already available from the API, use it
         if (activity.mediaSlug) {
           activity.slug = activity.mediaSlug;
-          console.log(`Using mediaSlug from API: ${activity.mediaSlug} for activity ${activity.id}`);
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`Using mediaSlug from API: ${activity.mediaSlug} for activity ${activity.id}`);
+          }
           continue;
         }
 
@@ -346,7 +382,9 @@ const RecentActivity: React.FC = () => {
           
           if (mediaFile && mediaFile.slug) {
             activity.slug = mediaFile.slug;
-            console.log(`Found slug ${mediaFile.slug} for activity ${activity.id}, action: ${activity.action}`);
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`Found slug ${mediaFile.slug} for activity ${activity.id}, action: ${activity.action}`);
+            }
             continue; // Skip to next activity
           }
         }
@@ -383,7 +421,9 @@ const RecentActivity: React.FC = () => {
             
             if (matchingMedia && matchingMedia.slug) {
               activity.slug = matchingMedia.slug;
-              console.log(`Found slug ${matchingMedia.slug} for activity via title matching: "${potentialTitle}"`);
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`Found slug ${matchingMedia.slug} for activity via title matching: "${potentialTitle}"`);
+              }
             }
           }
         }
@@ -640,7 +680,7 @@ const RecentActivity: React.FC = () => {
           
           return (
             <React.Fragment>
-              <Typography component="span" variant="body2" color="text.primary">
+              <Typography component="div" variant="body2" color="text.primary">
                 {prefix}
                 <Link 
                   component={RouterLink} 
@@ -656,7 +696,7 @@ const RecentActivity: React.FC = () => {
                 </Link>
               </Typography>
               {formattedFields.length > 0 && (
-                <Typography component="span" variant="caption" sx={{ mt: 0.5, display: 'block', color: 'text.secondary' }}>
+                <Typography component="div" variant="caption" sx={{ mt: 0.5, display: 'block', color: 'text.secondary' }}>
                   Modified fields:
                 </Typography>
               )}
@@ -668,7 +708,7 @@ const RecentActivity: React.FC = () => {
         // For non-EDIT actions or if no fields are found
         return (
           <React.Fragment>
-            <Typography component="span" variant="body2" color="text.primary">
+            <Typography component="div" variant="body2" color="text.primary">
               {prefix}
               <Link 
                 component={RouterLink} 
@@ -691,7 +731,7 @@ const RecentActivity: React.FC = () => {
     
     // Default rendering for non-media activities or when slug isn't available
     return (
-      <Typography component="span" variant="body2" color="text.primary">
+      <Typography component="div" variant="body2" color="text.primary">
         {activity.details}
       </Typography>
     );

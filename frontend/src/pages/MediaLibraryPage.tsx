@@ -34,14 +34,32 @@ const MediaContainer: React.FC = () => {
 
   // Initialize media and media types
   useEffect(() => {
-    if (mediaState.status === 'idle' && mediaState.allMedia.length === 0) {
-      dispatch(initializeMedia());
-    }
+    // Define data loading function to load both media and types
+    const loadMediaData = async () => {
+      const loadingPromises = [];
+      
+      // Check if we need to load media
+      if (mediaState.status === 'idle' && mediaState.allMedia.length === 0) {
+        loadingPromises.push(dispatch(initializeMedia()));
+      }
+      
+      // Check if we need to load media types
+      if (mediaTypesState.status === 'idle' && mediaTypesState.mediaTypes.length === 0) {
+        loadingPromises.push(dispatch(initializeMediaTypes()));
+      }
+      
+      // If any data needs loading, show a single loading indicator and execute in parallel
+      if (loadingPromises.length > 0) {
+        try {
+          await Promise.all(loadingPromises);
+        } catch (error) {
+          console.error('Error loading media library data:', error);
+        }
+      }
+    };
     
-    // Also initialize media types if they haven't been loaded yet
-    if (mediaTypesState.status === 'idle' && mediaTypesState.mediaTypes.length === 0) {
-      dispatch(initializeMediaTypes());
-    }
+    // Call the loading function
+    loadMediaData();
   }, [dispatch, mediaState.status, mediaState.allMedia.length, mediaTypesState.status, mediaTypesState.mediaTypes.length]);
 
   // Add effect to handle refresh after upload - with debounce
@@ -91,7 +109,9 @@ const MediaContainer: React.FC = () => {
 
   const handleUploadComplete = useCallback((newFile: any | null) => {
     if (newFile && !processingUploadRef.current) {
-      console.log('Upload complete, new file:', newFile);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Upload complete, new file added to state');
+      }
       
       // Set processing flag to prevent multiple refreshes
       processingUploadRef.current = true;
@@ -141,14 +161,6 @@ const MediaContainer: React.FC = () => {
 
   // Filter media files based on search query
   const filteredMediaFiles = useMemo(() => {
-    // First log some debug information
-    if (mediaState.allMedia.length > 0) {
-      console.log('MediaLibraryPage - Filtering media files:', {
-        total: mediaState.allMedia.length,
-        searchQuery
-      });
-    }
-    
     return mediaState.allMedia
       .filter(file => {
         // Basic field validation - ensure required fields exist
@@ -175,18 +187,18 @@ const MediaContainer: React.FC = () => {
       }));
   }, [mediaState.allMedia, searchQuery]);
 
-  // Add debugging logs
+  // Only log in development and limit frequency
+  const prevFilterCountRef = useRef(0);
   useEffect(() => {
-    console.log('MediaLibraryPage - MediaState:', {
-      status: mediaState.status,
-      totalMedia: mediaState.allMedia.length,
-      filteredMedia: filteredMediaFiles.length
-    });
-    
-    if (filteredMediaFiles.length > 0) {
-      console.log('MediaLibraryPage - Sample media:', filteredMediaFiles[0]);
+    if (process.env.NODE_ENV === 'development' && 
+        Math.abs(prevFilterCountRef.current - filteredMediaFiles.length) > 10) {
+      console.log('MediaLibraryPage - Filter updated:', {
+        total: mediaState.allMedia.length,
+        filtered: filteredMediaFiles.length
+      });
+      prevFilterCountRef.current = filteredMediaFiles.length;
     }
-  }, [mediaState.status, mediaState.allMedia.length, filteredMediaFiles.length, filteredMediaFiles]);
+  }, [filteredMediaFiles.length, mediaState.allMedia.length]);
 
   if (mediaState.status === 'loading') {
     return (

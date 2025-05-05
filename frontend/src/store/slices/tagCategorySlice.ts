@@ -114,15 +114,19 @@ export const fetchTagCategories = createAsyncThunk<TagCategory[], { includeInact
     // Skip if a fetch operation is already in progress
     const hasPendingFetch = state.tagCategories.pendingOperations.some(id => id.startsWith('fetch-'));
     if (hasPendingFetch) {
-      console.log('Skipping fetch tag categories - already in progress');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Skipping fetch tag categories - already in progress');
+      }
       return state.tagCategories.tagCategories;
     }
     
-    // Skip if data was fetched recently (within last 3 seconds)
+    // Skip if data was fetched recently (within last 10 seconds)
     if (state.tagCategories.lastFetchTime && 
-        now - state.tagCategories.lastFetchTime < 3000 && 
+        now - state.tagCategories.lastFetchTime < 10000 && 
         state.tagCategories.tagCategories.length > 0) {
-      console.log('Skipping fetch tag categories - fetched recently');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Skipping fetch tag categories - fetched recently');
+      }
       return state.tagCategories.tagCategories;
     }
     
@@ -133,25 +137,21 @@ export const fetchTagCategories = createAsyncThunk<TagCategory[], { includeInact
     }));
     
     try {
-      console.log('Fetching all tag categories', options ? `with options: ${JSON.stringify(options)}` : '');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Fetching all tag categories', options?.includeInactive ? '(including inactive)' : '');
+      }
       
       // Add optional query params
       const additionalParams: Record<string, string> = {};
       if (options?.includeInactive) {
         additionalParams.includeInactive = 'true';
-        console.log('Including inactive categories in fetch request');
       }
       
       const config = getRequestConfig(additionalParams);
       const response = await axios.get<TagCategory[]>(`${env.BASE_URL}/api/tag-categories`, config);
       
-      console.log('Tag categories fetched:', response.data.length);
-      if (response.data.length > 0) {
-        console.log('First category:', {
-          id: response.data[0]._id,
-          name: response.data[0].name,
-          isActive: response.data[0].isActive
-        });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Tag categories fetched:', response.data.length);
       }
       
       dispatch(tagCategorySlice.actions.operationCompleted({
@@ -440,7 +440,9 @@ const tagCategorySlice = createSlice({
       console.log('Tag category state has been completely reset');
     },
     operationStarted: (state, action: PayloadAction<{ type: 'fetch' | 'create' | 'update' | 'delete', id: string }>) => {
-      console.log(`Operation started: ${action.payload.type} (${action.payload.id})`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Operation started: ${action.payload.type} (${action.payload.id})`);
+      }
       if (!state.pendingOperations.includes(action.payload.id)) {
         state.pendingOperations.push(action.payload.id); // Use array push instead of Set.add
       }
@@ -456,7 +458,9 @@ const tagCategorySlice = createSlice({
       id: string,
       status: 'success' | 'error'
     }>) => {
-      console.log(`Operation completed: ${action.payload.type} (${action.payload.id}) - ${action.payload.status}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Operation completed: ${action.payload.type} (${action.payload.id}) - ${action.payload.status}`);
+      }
       // Filter out the completed operation ID instead of using Set.delete
       state.pendingOperations = state.pendingOperations.filter(id => id !== action.payload.id);
       state.lastOperation = {

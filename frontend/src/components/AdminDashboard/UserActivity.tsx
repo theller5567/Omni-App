@@ -378,7 +378,7 @@ const UserActivity: React.FC = () => {
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">{activity.ip}</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  <Typography display="block" variant="caption" color="text.secondary">
                     {activity.userAgent.split(' ')[0]}
                   </Typography>
                 </TableCell>

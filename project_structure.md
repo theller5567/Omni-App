@@ -7,37 +7,37 @@ Omni-App is a comprehensive media management system designed to organize, store,
 
 ```
 Omni-App/
-├── frontend/                     # React-based frontend application
+├── frontend/                                  # React-based frontend application
 │   ├── src/
-│   │   ├── components/           # UI components
-│   │   │   ├── AdminDashboard/   # Admin analytics and management
-│   │   │   ├── MediaDetail/      # Media file details view
-│   │   │   ├── MediaLibrary/     # Media browsing and management
-│   │   │   ├── MediaPicker/      # Component for selecting media files
-│   │   │   ├── MediaTypeUploader/# Media type definition management
-│   │   │   ├── MediaUploader/    # File upload and metadata entry
-│   │   │   ├── Sidebar/          # Application navigation sidebar
-│   │   │   ├── TagCategoryManager/# Tag category and tag management 
-│   │   │   ├── ThemeToggle/      # Light/dark theme switching
-│   │   │   └── VideoThumbnailSelector/# Video thumbnail generation tool
-│   │   ├── store/                # Redux state management
-│   │   │   └── slices/           # Redux toolkit slices
-│   │   ├── hooks/                # Custom React hooks
-│   │   ├── utils/                # Utility functions
-│   │   ├── styles/               # Global styling
-│   │   └── types/                # TypeScript type definitions
-│   └── public/                   # Static assets
+│   │   ├── components/                        # UI components
+│   │   │   ├── AdminDashboard/                # Admin analytics and management
+│   │   │   ├── MediaDetail/                   # Media file details view
+│   │   │   ├── MediaLibrary/                  # Media browsing and management
+│   │   │   ├── MediaPicker/                   # Component for selecting media files
+│   │   │   ├── MediaTypeUploader/             # Media type definition management
+│   │   │   ├── MediaUploader/                 # File upload and metadata entry
+│   │   │   ├── Sidebar/                       # Application navigation sidebar
+│   │   │   ├── TagCategoryManager/            # Tag category and tag management 
+│   │   │   ├── ThemeToggle/                   # Light/dark theme switching
+│   │   │   └── VideoThumbnailSelector/        # Video thumbnail generation tool
+│   │   ├── store/                             # Redux state management
+│   │   │   └── slices/                        # Redux toolkit slices
+│   │   ├── hooks/                             # Custom React hooks
+│   │   ├── utils/                             # Utility functions
+│   │   ├── styles/                            # Global styling
+│   │   └── types/                             # TypeScript type definitions
+│   └── public/                                # Static assets
 │
-├── backend/                      # Node.js/Express backend server
-│   ├── controllers/              # Business logic handlers
-│   ├── models/                   # MongoDB data models
-│   │   └── baseSchemas/          # Base schemas for media types
-│   ├── routes/                   # API route definitions
-│   ├── middleware/               # Express middleware
-│   ├── services/                 # Service layer (S3, video processing, etc.)
-│   └── utils/                    # Utility functions
+├── backend/                                   # Node.js/Express backend server
+│   ├── controllers/                           # Business logic handlers
+│   ├── models/                                # MongoDB data models
+│   │   └── baseSchemas/                       # Base schemas for media types
+│   ├── routes/                                # API route definitions
+│   ├── middleware/                            # Express middleware
+│   ├── services/                              # Service layer (S3, video processing, etc.)
+│   └── utils/                                 # Utility functions
 │
-└── shared_directory/             # Shared resources between frontend and backend
+└── shared_directory/                          # Shared resources between frontend and backend
 ```
 
 ## Key Features
