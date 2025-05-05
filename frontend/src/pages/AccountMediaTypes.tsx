@@ -86,14 +86,10 @@ const EmptyState = ({ onRefresh }: { onRefresh: () => void }) => (
 
 // Header Component
 const Header = () => {
-  const { mediaTypes } = useMediaTypesContext();
   
   return (
     <Typography variant="h1" align="left" sx={{ paddingBottom: "2rem" }}>
       Account Media Types
-      <Typography variant="caption" sx={{ fontSize: '0.8rem', ml: 1, color: '#999' }}>
-        ({mediaTypes.length} types)
-      </Typography>
     </Typography>
   );
 };

@@ -55,6 +55,14 @@ export const updateMedia = createAsyncThunk(
       // Only include metadata if provided and not empty
       if (mediaData.metadata && Object.keys(mediaData.metadata).length > 0) {
         updatePayload.metadata = { ...mediaData.metadata };
+        
+        // Ensure the v_thumbnail URL doesn't contain cache parameters
+        if (updatePayload.metadata.v_thumbnail) {
+          console.log('Original v_thumbnail URL:', updatePayload.metadata.v_thumbnail);
+          // Strip any query parameters to ensure we're storing the clean S3 URL
+          updatePayload.metadata.v_thumbnail = updatePayload.metadata.v_thumbnail.split('?')[0];
+          console.log('Cleaned v_thumbnail URL for database:', updatePayload.metadata.v_thumbnail);
+        }
       }
       
       console.log('Server update payload:', JSON.stringify(updatePayload, null, 2));
@@ -95,6 +103,17 @@ export const updateMedia = createAsyncThunk(
       }
       
       console.log('Media update response:', response.data);
+      
+      // Verify that the response has the updated thumbnail
+      if (updatePayload.metadata?.v_thumbnail && response.data.metadata) {
+        console.log('Verifying thumbnail URL in response:', response.data.metadata.v_thumbnail);
+        if (response.data.metadata.v_thumbnail !== updatePayload.metadata.v_thumbnail) {
+          console.warn('Warning: Server returned different thumbnail URL than what was sent');
+          // Update the response data to match what we sent
+          response.data.metadata.v_thumbnail = updatePayload.metadata.v_thumbnail;
+        }
+      }
+      
       return response.data;
     } catch (error: any) {
       console.error('Error updating media:', error);

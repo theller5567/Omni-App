@@ -12,6 +12,7 @@ import mediaTypeRoutes from './routes/mediaTypeRoutes.js';
 import utilityRoutes from './routes/utilityRoutes.js';
 import tagCategoryRoutes from './routes/tagCategoryRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import { configureBucketCors } from './services/awsService.js';
 // Load environment variables from .env file
 dotenv.config();
 
@@ -151,8 +152,15 @@ mongoose.connect(mongoUri)
   .then(() => {
     console.log('MongoDB connected');
     const PORT = process.env.PORT || 5002;
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+    app.listen(PORT, async () => {
+      console.log(`Server running on port ${PORT}`);
+      
+      // Set up CORS configuration for the S3 bucket
+      try {
+        await configureBucketCors();
+      } catch (error) {
+        console.error('Error configuring S3 bucket CORS:', error);
+      }
     });
   })
   .catch(err => {

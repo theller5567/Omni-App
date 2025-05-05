@@ -70,8 +70,10 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
       if (isVideoFile(params.row.fileExtension) || params.row.mediaType?.includes('Video')) {
        console.log('Video file detected:', params.row.metadata);
         if (params.row.metadata?.v_thumbnail) {
-          // Add a cache-busting parameter using a stable ID for each media item
-          const thumbnailWithCacheBuster = `${params.row.metadata.v_thumbnail}${params.row.metadata.v_thumbnail.includes('?') ? '&' : '?'}id=${params.row._id || params.row.id || ''}`;
+          // Add a cache-busting parameter using timestamp to ensure fresh image on every render
+          const timestamp = params.row.metadata?.v_thumbnailTimestamp || Date.now();
+          const thumbnailUrl = params.row.metadata.v_thumbnail.split('?')[0]; // Get clean URL
+          const thumbnailWithCacheBuster = `${thumbnailUrl}?t=${timestamp}&id=${params.row.id || ''}`;
           return (
             <div style={{
               width: '100%',
@@ -103,7 +105,8 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
                     objectFit: 'cover',
                     objectPosition: 'center',
                   }} 
-                  loading="lazy" // Add lazy loading for images
+                  loading="lazy" 
+                  key={`thumb-${params.row.id}-${timestamp}`} // Add key to force re-render
                 />
               </div>
             </div>

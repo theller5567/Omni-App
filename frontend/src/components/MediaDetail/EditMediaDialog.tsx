@@ -17,19 +17,14 @@ import {
   Switch,
   Typography,
   Box,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   useMediaQuery,
   Theme,
   Alert,
   CircularProgress
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { MediaFile, MediaType } from '../../types/media';
 import './EditMediaDialog.scss';
-import VideoThumbnailSelector from '../VideoThumbnailSelector/VideoThumbnailSelector';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
 import { normalizeTag } from '../../utils/mediaTypeUploaderUtils';
@@ -51,6 +46,7 @@ interface FormValues {
   tags: string[];
   customFields: Record<string, any>;
 }
+
 
 export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   open,
@@ -451,7 +447,6 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
         delete changedData.metadata;
       }
 
-      console.log('Sending only changed fields to server:', changedData);
 
       try {
         setIsSaving(true);
@@ -615,22 +610,6 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
           />
         );
     }
-  };
-
-  const isVideoFile = mediaFile.fileType?.toLowerCase().match(/^(mp4|webm|ogg|mov)$/);
-
-  // Only show video thumbnail selector if we have all required props
-  const showVideoThumbnailSelector = Boolean(
-    isVideoFile && 
-    mediaFile.url && 
-    mediaFile.id
-  );
-
-  // After your existing useState hooks, add a new state for tracking accordion expansion
-  const [expandedAccordion, setExpandedAccordion] = useState<string | false>(false);
-
-  const handleAccordionChange = (panel: string) => (_: React.SyntheticEvent, isExpanded: boolean) => {
-    setExpandedAccordion(isExpanded ? panel : false);
   };
 
   return (
@@ -845,78 +824,6 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
               </Box>
             </Box>
           </Box>
-
-          {/* Video Thumbnail Section */}
-          {showVideoThumbnailSelector && mediaFile.url && mediaFile.id && (
-            <>
-              <Box className="form-section" sx={{ marginTop: isMobile ? 1 : 2 }}>
-                <Accordion 
-                  expanded={expandedAccordion === 'videoThumbnail'} 
-                  onChange={handleAccordionChange('videoThumbnail')}
-                  sx={{ 
-                    backgroundColor: 'transparent', 
-                    boxShadow: 'none',
-                    '&:before': {
-                      display: 'none', // Hide the default divider
-                    },
-                  }}
-                >
-                  <AccordionSummary
-                    expandIcon={<ExpandMoreIcon fontSize={isMobile ? "small" : "medium"} />}
-                    aria-controls="video-thumbnail-content"
-                    id="video-thumbnail-header"
-                    sx={{ 
-                      backgroundColor: 'var(--input-background)', 
-                      borderRadius: 'var(--border-radius-md)',
-                      '&:hover': {
-                        backgroundColor: 'var(--input-background-hover)',
-                      }
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      <Typography variant={isMobile ? "body1" : "subtitle1"} sx={{ fontWeight: 'medium', fontSize: isMobile ? '0.85rem' : 'inherit' }}>
-                        Edit Video Thumbnail
-                      </Typography>
-                      {mediaFile.customFields?.thumbnailUrl && (
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          ml: 'auto', 
-                          gap: 1,
-                          opacity: 0.7,
-                          '& img': { 
-                            width: isMobile ? 30 : 36,
-                            height: isMobile ? 16 : 20,
-                            objectFit: 'cover',
-                            borderRadius: 0.5,
-                            border: '1px solid var(--border-color)'
-                          }
-                        }}>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: isMobile ? '0.65rem' : '0.75rem' }}>
-                            Custom thumbnail set
-                          </Typography>
-                          <img 
-                            src={mediaFile.customFields.thumbnailUrl} 
-                            alt="Current thumbnail" 
-                          />
-                        </Box>
-                      )}
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails sx={{ padding: isMobile ? 1 : 2, paddingLeft: isMobile ? 2 : 3, paddingRight: isMobile ? 2 : 3, mt: isMobile ? 1 : 2 }}>
-                    <VideoThumbnailSelector
-                      videoUrl={mediaFile.url}
-                      mediaId={mediaFile.id}
-                      currentThumbnail={mediaFile.customFields?.thumbnailUrl}
-                      onThumbnailUpdate={(thumbnailUrl) => {
-                        setValue('customFields.thumbnailUrl', thumbnailUrl);
-                      }}
-                    />
-                  </AccordionDetails>
-                </Accordion>
-              </Box>
-            </>
-          )}
         </form>
       </DialogContent>
 

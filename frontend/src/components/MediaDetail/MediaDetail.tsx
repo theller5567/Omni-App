@@ -10,6 +10,7 @@ import {
   Theme,
   Tabs,
   Tab,
+  Tooltip
 } from "@mui/material";
 import axios from "axios";
 import { BaseMediaFile } from "../../interfaces/MediaFile";
@@ -33,6 +34,7 @@ import {
 } from 'react-icons/fa';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
+import PhotoIcon from '@mui/icons-material/Photo';
 import { updateMedia } from '../../store/slices/mediaSlice';
 import RelatedMediaItem from "./RelatedMediaItem";
 
@@ -41,6 +43,7 @@ const MediaInformation = lazy(() => import('./MediaInformation'));
 const EditMediaDialog = lazy(() => import('./EditMediaDialog').then(module => ({ 
   default: module.default || module.EditMediaDialog 
 })));
+const ThumbnailUpdateDialog = lazy(() => import('./ThumbnailUpdateDialog'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -66,6 +69,18 @@ const getMetadataField = (mediaFile: any, fieldName: string, defaultValue: any =
   // Return default if not found anywhere
   return defaultValue;
 };
+
+// Add this type definition near the top of the file, after your imports
+interface MediaMetadata {
+  fileName?: string;
+  altText?: string;
+  description?: string;
+  visibility?: string;
+  tags?: string[];
+  v_thumbnail?: string;
+  v_thumbnailTimestamp?: string;
+  [key: string]: any; // Allow for additional properties
+}
 
 // Extract subcomponents for better organization and code splitting
 
@@ -96,13 +111,15 @@ interface MediaDetailPreviewProps {
   onEdit?: () => void;
   onDownload: () => void;
   isEditingEnabled: boolean;
+  onThumbnailUpdate?: () => void;
 }
 
 export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({ 
   mediaFile, 
   onEdit, 
   onDownload, 
-  isEditingEnabled 
+  isEditingEnabled,
+  onThumbnailUpdate
 }) => {
   // Get uploadedBy from either direct property or metadata
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
@@ -115,6 +132,10 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
     (Array.isArray(mediaFile.metadata.relatedMedia) ? 
       mediaFile.metadata.relatedMedia.length > 0 : 
       mediaFile.metadata.relatedMedia.mediaId);
+  
+  // Check if this is a video file
+  const isVideo = mediaFile.fileExtension && 
+    ['mp4', 'webm', 'ogg', 'mov'].includes(mediaFile.fileExtension.toLowerCase());
   
   // Handler for tab changes
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -159,7 +180,7 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
               width: "100%",
               maxHeight: isMobile ? "300px" : "600px",
             }}
-            poster={mediaFile.metadata?.v_thumbnail}
+            poster={mediaFile.metadata?.v_thumbnail || undefined}
           >
             <source
               src={mediaFile.location}
@@ -483,6 +504,25 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
               {isMobile ? '' : 'Edit'}
             </Button>
           )}
+          
+          {/* Add thumbnail button for video files */}
+          {isEditingEnabled && isVideo && onThumbnailUpdate && (
+            <Tooltip title="Update Video Thumbnail">
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<PhotoIcon />}
+                onClick={onThumbnailUpdate}
+                size={isMobile ? "small" : "medium"}
+                sx={{ 
+                  padding: isMobile ? '4px 8px' : '6px 12px',
+                  minWidth: isMobile ? 'auto' : '64px',
+                }}
+              >
+                {isMobile ? '' : 'Thumbnail'}
+              </Button>
+            </Tooltip>
+          )}
         </Box>
       </Box>
       
@@ -577,6 +617,9 @@ const MediaDetail: React.FC = () => {
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   const dispatch = useDispatch<AppDispatch>();
+
+  // Add state for thumbnail dialog
+  const [thumbnailDialogOpen, setThumbnailDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchFile = async () => {
@@ -784,6 +827,32 @@ const MediaDetail: React.FC = () => {
         }
       }
       
+      // ALWAYS include thumbnail URLs if they exist in data, even if unchanged
+      // This ensures changes are saved properly and prevents caching issues
+      if (updatedMediaFile.metadata && 'v_thumbnail' in updatedMediaFile.metadata) {
+        // Ensure metadata exists
+        if (!updatePayload.metadata) {
+          updatePayload.metadata = {};
+        }
+        // Type assertion and null check
+        const thumbnailUrl = (updatedMediaFile.metadata as MediaMetadata).v_thumbnail;
+        if (thumbnailUrl) {
+          (updatePayload.metadata as MediaMetadata).v_thumbnail = thumbnailUrl.split('?')[0];
+        }
+      }
+      
+      if (updatedMediaFile.metadata && 'v_thumbnailTimestamp' in updatedMediaFile.metadata) {
+        // Ensure metadata exists
+        if (!updatePayload.metadata) {
+          updatePayload.metadata = {};
+        }
+        // Type assertion with non-null assertion
+        const timestamp = (updatedMediaFile.metadata as MediaMetadata).v_thumbnailTimestamp;
+        if (timestamp) {
+          (updatePayload.metadata as MediaMetadata).v_thumbnailTimestamp = timestamp;
+        }
+      }
+      
       console.log('Final update payload:', JSON.stringify(updatePayload, null, 2));
       
       // Call the Redux action to update the media file
@@ -852,6 +921,21 @@ const MediaDetail: React.FC = () => {
             combinedMetadata[key] = value;
           }
         });
+      }
+      
+      // Special handling for thumbnails
+      if (updatedMediaFile.metadata && 'v_thumbnail' in updatedMediaFile.metadata) {
+        const thumbnailUrl = (updatedMediaFile.metadata as MediaMetadata).v_thumbnail;
+        if (thumbnailUrl) {
+          (combinedMetadata as MediaMetadata).v_thumbnail = thumbnailUrl.split('?')[0];
+        }
+      }
+      
+      if (updatedMediaFile.metadata && 'v_thumbnailTimestamp' in updatedMediaFile.metadata) {
+        const timestamp = (updatedMediaFile.metadata as MediaMetadata).v_thumbnailTimestamp;
+        if (timestamp) {
+          (combinedMetadata as MediaMetadata).v_thumbnailTimestamp = timestamp;
+        }
       }
       
       // Log the combined metadata for debugging
@@ -938,6 +1022,46 @@ const MediaDetail: React.FC = () => {
     }))
   } : null;
 
+  // Function to handle thumbnail update
+  const handleThumbnailUpdate = (thumbnailUrl: string, updatedMedia?: any) => {
+    console.log('Thumbnail updated:', thumbnailUrl);
+    
+    if (updatedMedia) {
+      console.log('Updated media file:', updatedMedia);
+      // Use our existing handleSuccessfulUpdate function to update the state
+      handleSuccessfulUpdate({
+        success: true,
+        message: 'Thumbnail updated successfully',
+        data: updatedMedia
+      }, updatedMedia);
+      
+      // Update the Redux store with the complete media object
+      if ('_id' in updatedMedia) {
+        dispatch(updateMedia(updatedMedia));
+      }
+    } else if (mediaFile && thumbnailUrl) {
+      // Create updated media file object with new thumbnail
+      const updatedMediaFile = {
+        ...mediaFile,
+        metadata: {
+          ...mediaFile.metadata,
+          v_thumbnail: thumbnailUrl,
+          v_thumbnailTimestamp: Date.now()
+        }
+      };
+      
+      // Update the state
+      handleSuccessfulUpdate({
+        success: true,
+        message: 'Thumbnail updated successfully',
+        data: updatedMediaFile
+      }, updatedMediaFile);
+      
+      // Update the Redux store with the complete media object
+      dispatch(updateMedia(updatedMediaFile));
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
@@ -981,6 +1105,7 @@ const MediaDetail: React.FC = () => {
           onEdit={handleEdit}
           onDownload={handleDownload}
           isEditingEnabled={isEditingEnabled}
+          onThumbnailUpdate={() => setThumbnailDialogOpen(true)}
         />
 
         <Box className="media-detail-info">
@@ -1011,6 +1136,18 @@ const MediaDetail: React.FC = () => {
               />
             </Suspense>
           )}
+
+          {/* Add the thumbnail dialog */}
+          <Suspense fallback={<LoadingFallback />}>
+            {mediaFile && (
+              <ThumbnailUpdateDialog
+                open={thumbnailDialogOpen}
+                onClose={() => setThumbnailDialogOpen(false)}
+                mediaData={mediaFile}
+                onThumbnailUpdate={handleThumbnailUpdate}
+              />
+            )}
+          </Suspense>
         </Box>
       </Box>
 

@@ -87,14 +87,17 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
       
       if (isVideoFile(file.fileExtension) || file.mediaType?.includes('Video')) {
         if (file.metadata?.v_thumbnail) {
-          // Add a cache-busting parameter using a stable ID for each media item
-          const thumbnailWithCacheBuster = `${file.metadata.v_thumbnail}${file.metadata.v_thumbnail.includes('?') ? '&' : '?'}id=${file._id || file.id || ''}`;
+          // Add a timestamp to always get the fresh thumbnail
+          const timestamp = file.metadata?.v_thumbnailTimestamp || Date.now();
+          const thumbnailUrl = file.metadata.v_thumbnail.split('?')[0]; // Get clean URL
+          const thumbnailWithCacheBuster = `${thumbnailUrl}?t=${timestamp}&id=${file.id || ''}`;
           return (
             <img 
               src={thumbnailWithCacheBuster} 
               alt={file.metadata?.fileName || file.title || 'Video'} 
               className="preview-image"
               loading="lazy"
+              key={`thumb-card-${file.id}-${timestamp}`} // Add key to force re-render
               onError={(e) => {
                 console.warn('Error loading video thumbnail:', file.metadata.v_thumbnail);
                 // Replace with fallback

@@ -7,10 +7,12 @@ import MediaType from '../models/MediaType.js';
 import { getBaseModelForMimeType } from '../utils/mediaTypeUtils.js';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
-import { promises as fs } from 'fs';
+import fs from 'fs';
+import { promises as fsPromises } from 'fs';
 import path from 'path';
 import os from 'os';
 import ActivityTrackingService from '../services/activityTrackingService.js';
+import axios from 'axios';
 
 // Set ffmpeg path
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -19,30 +21,87 @@ const generateSlug = (title) => {
   return `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${uuidv4()}`;
 };
 
-// Function to generate video thumbnail
+// Update the generateVideoThumbnail function to handle URLs better
 const generateVideoThumbnail = async (videoPath, timestamp = '00:00:01') => {
   const thumbnailPath = path.join(os.tmpdir(), `${uuidv4()}.jpg`);
+  const tempVideoPath = path.join(os.tmpdir(), `${uuidv4()}.mp4`);
   
-  return new Promise((resolve, reject) => {
-    ffmpeg(videoPath)
-      .screenshots({
-        timestamps: [timestamp],
-        filename: thumbnailPath,
-        size: '320x240'
-      })
-      .on('end', async () => {
-        try {
-          // Read the generated thumbnail
-          const thumbnailBuffer = await fs.readFile(thumbnailPath);
-          // Clean up the temporary file
-          await fs.unlink(thumbnailPath);
-          resolve(thumbnailBuffer);
-        } catch (error) {
-          reject(error);
-        }
-      })
-      .on('error', (err) => reject(err));
-  });
+  try {
+    console.log(`Generating thumbnail for video at: ${videoPath} with timestamp: ${timestamp}`);
+    
+    // Check if the video path is a URL (likely an S3 URL)
+    if (videoPath.startsWith('http')) {
+      console.log('Detected URL, downloading video to temp file first');
+      
+      // Download the file to a temporary location
+      const response = await axios({
+        method: 'GET',
+        url: videoPath,
+        responseType: 'stream'
+      });
+      
+      // Create write stream and pipe the response to it
+      const writer = fs.createWriteStream(tempVideoPath);
+      response.data.pipe(writer);
+      
+      // Return a promise that resolves when the download is complete
+      await new Promise((resolve, reject) => {
+        writer.on('finish', resolve);
+        writer.on('error', reject);
+      });
+      
+      console.log(`Downloaded video to: ${tempVideoPath}`);
+      
+      // Use the local file path instead of the URL
+      videoPath = tempVideoPath;
+    }
+    
+    // Generate thumbnail from the video file
+    return new Promise((resolve, reject) => {
+      ffmpeg(videoPath)
+        .screenshots({
+          timestamps: [timestamp],
+          filename: thumbnailPath,
+          size: '320x240'
+        })
+        .on('end', async () => {
+          try {
+            // Read the generated thumbnail
+            const thumbnailBuffer = await fsPromises.readFile(thumbnailPath);
+            
+            // Clean up the temporary files
+            await fsPromises.unlink(thumbnailPath).catch(err => console.warn('Error deleting thumbnail:', err));
+            if (tempVideoPath !== videoPath) {
+              await fsPromises.unlink(tempVideoPath).catch(err => console.warn('Error deleting temp video:', err));
+            }
+            
+            resolve(thumbnailBuffer);
+          } catch (error) {
+            reject(error);
+          }
+        })
+        .on('error', (err) => {
+          console.error('FFmpeg error:', err);
+          // Clean up temp files on error too
+          fsPromises.unlink(thumbnailPath).catch(() => {});
+          if (tempVideoPath !== videoPath) {
+            fsPromises.unlink(tempVideoPath).catch(() => {});
+          }
+          reject(err);
+        });
+    });
+  } catch (error) {
+    // Clean up temporary files if there was an error
+    try {
+      await fsPromises.unlink(thumbnailPath).catch(() => {});
+      if (tempVideoPath !== videoPath) {
+        await fsPromises.unlink(tempVideoPath).catch(() => {});
+      }
+    } catch {}
+    
+    console.error('Error in generateVideoThumbnail:', error);
+    throw error;
+  }
 };
 
 // Function to extract video metadata
@@ -69,36 +128,8 @@ const getVideoMetadata = (videoPath) => {
 
 // Function to update video thumbnail
 export const updateVideoThumbnail = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { timestamp } = req.body;
-
-    // Find the media file
-    const mediaFile = await Media.findById(id);
-    if (!mediaFile || !mediaFile.location) {
-      return res.status(404).json({ error: 'Media file not found' });
-    }
-
-    // Generate new thumbnail
-    const thumbnailBuffer = await generateVideoThumbnail(mediaFile.location, timestamp);
-    
-    // Upload thumbnail to S3
-    const thumbnailLocation = await uploadFileToS3({
-      buffer: thumbnailBuffer,
-      mimetype: 'image/jpeg',
-      originalname: `${mediaFile.id}-thumbnail.jpg`
-    }, mediaFile.uploadedBy);
-
-    // Update media file with new thumbnail URL
-    mediaFile.metadata.thumbnailUrl = thumbnailLocation;
-    mediaFile.metadata.thumbnailTimestamp = timestamp;
-    await mediaFile.save();
-
-    res.status(200).json({ thumbnailUrl: thumbnailLocation });
-  } catch (error) {
-    console.error('Error updating video thumbnail:', error);
-    res.status(500).json({ error: 'Failed to update thumbnail' });
-  }
+  // This entire function will be removed as it's part of the MediaDetail thumbnail functionality
+  // We'll re-implement this from scratch if needed
 };
 
 export const uploadMedia = async (req, res) => {

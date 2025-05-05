@@ -10,6 +10,7 @@ import archiver from 'archiver';
 import { fileURLToPath } from 'url';
 import { authenticate } from '../middleware/authMiddleware.js';
 import ActivityTrackingService from '../services/activityTrackingService.js';
+import { uploadFileToS3, deleteFileFromS3 } from '../services/awsService.js';
 import { 
   getAllMedia, 
   getMediaById, 
@@ -19,6 +20,7 @@ import {
   searchMedia,
   debugMediaFile
 } from '../controllers/mediaController.js';
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
@@ -351,6 +353,437 @@ router.put('/update-by-id/:id', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Error updating media file by ID:', error);
     res.status(500).json({ error: 'Failed to update media file' });
+  }
+});
+
+// Update the route for handling thumbnail uploads from the frontend
+router.post('/update-thumbnail/:id', authenticate, upload.single('thumbnail'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { timestamp } = req.body;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No thumbnail file uploaded' });
+    }
+    
+    console.log(`Processing thumbnail update for media ID ${id} with uploaded file`);
+    console.log(`File info:`, {
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      originalname: req.file.originalname
+    });
+    
+    // Find the media file to update
+    const mediaFile = await Media.findById(id);
+    if (!mediaFile) {
+      return res.status(404).json({ error: 'Media file not found' });
+    }
+    
+    // Check if there's an existing thumbnail that needs to be deleted
+    if (mediaFile.metadata) {
+      // Look for thumbnail in either field name (for compatibility)
+      const oldThumbnailUrl = mediaFile.metadata.v_thumbnail || mediaFile.metadata.thumbnailUrl;
+      if (oldThumbnailUrl && oldThumbnailUrl.includes('.s3.')) {
+        try {
+          console.log(`Deleting old thumbnail: ${oldThumbnailUrl}`);
+          await deleteFileFromS3(oldThumbnailUrl).catch(err => {
+            console.warn(`Failed to delete old thumbnail (continuing anyway): ${err.message}`);
+          });
+        } catch (error) {
+          console.warn(`Error deleting old thumbnail (continuing anyway): ${error.message}`);
+        }
+      }
+    }
+    
+    // Now upload the new thumbnail to S3
+    console.log('Uploading thumbnail to S3');
+    const thumbnailLocation = await uploadFileToS3({
+      buffer: req.file.buffer,
+      mimetype: req.file.mimetype,
+      originalname: `${mediaFile.id}_thumbnail_${Date.now()}.jpg`
+    });
+    
+    console.log('Successfully uploaded thumbnail to S3:', thumbnailLocation);
+    
+    // MODIFIED: Use direct MongoDB update like in updateThumbnail.js script
+    const collection = mongoose.connection.db.collection('media');
+    
+    // Update operations for MongoDB
+    const updateOperations = {
+      $set: {
+        'metadata.v_thumbnail': thumbnailLocation.Location
+      },
+      $unset: {
+        'metadata.thumbnailUrl': ""
+      }
+    };
+    
+    // Add timestamp if provided
+    if (timestamp) {
+      updateOperations.$set['metadata.v_thumbnailTimestamp'] = timestamp;
+      updateOperations.$unset['metadata.thumbnailTimestamp'] = "";
+    }
+    
+    // Execute direct update
+    const updateResult = await collection.updateOne(
+      { _id: new mongoose.Types.ObjectId(id) },
+      updateOperations
+    );
+    
+    console.log('Direct MongoDB update result:', JSON.stringify(updateResult, null, 2));
+    
+    if (updateResult.matchedCount === 0) {
+      return res.status(404).json({ error: 'Media document not found during update' });
+    }
+    
+    if (updateResult.modifiedCount === 0) {
+      console.warn('Warning: Document found but no changes were made');
+    } else {
+      console.log('Media document updated successfully with direct MongoDB operation');
+    }
+    
+    // Fetch the updated document
+    const updatedMediaFile = await Media.findById(id);
+    
+    // Return success response
+    res.status(200).json({
+      thumbnailUrl: thumbnailLocation.Location,
+      mediaFile: updatedMediaFile
+    });
+  } catch (error) {
+    console.error('Error updating thumbnail:', error);
+    res.status(500).json({ error: 'Failed to update thumbnail', details: error.message });
+  }
+});
+
+// Improve the video-proxy route with better error handling and cleanup
+router.get('/video-proxy/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`Video proxy request for media ID: ${id}`);
+    
+    // Find the media file to get its S3 URL
+    const mediaFile = await Media.findById(id);
+    if (!mediaFile || !mediaFile.location) {
+      console.error(`Media file not found or missing location for ID: ${id}`);
+      return res.status(404).json({ error: 'Media file not found' });
+    }
+
+    console.log(`Found media file: ${mediaFile.title}, location: ${mediaFile.location}`);
+
+    // Set CORS headers to allow video streaming
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
+    
+    // Handle options requests for CORS preflight
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+    
+    try {
+      // Fetch the video stream from S3
+      const videoResponse = await axios({
+        method: 'GET',
+        url: mediaFile.location,
+        responseType: 'stream',
+        // Forward range headers for video seeking
+        headers: req.headers.range ? {
+          'Range': req.headers.range
+        } : {},
+        // Add longer timeout for large videos
+        timeout: 30000
+      });
+      
+      console.log('S3 response status:', videoResponse.status);
+      console.log('S3 response headers:', JSON.stringify(videoResponse.headers));
+      
+      // Copy important headers from S3 response
+      const headersToForward = [
+        'content-type', 
+        'content-length', 
+        'accept-ranges', 
+        'content-range', 
+        'etag',
+        'last-modified'
+      ];
+      
+      headersToForward.forEach(header => {
+        if (videoResponse.headers[header]) {
+          res.setHeader(header.charAt(0).toUpperCase() + header.slice(1), videoResponse.headers[header]);
+        }
+      });
+      
+      // Set proper status code for partial content
+      if (req.headers.range && videoResponse.status === 206) {
+        res.status(206);
+      } else {
+        res.status(200);
+      }
+      
+      // Add error handler for the streaming
+      videoResponse.data.on('error', (err) => {
+        console.error('Stream error from S3:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Video streaming error' });
+        } else {
+          // Make sure the response is properly ended to avoid hanging connections
+          res.end();
+        }
+      });
+      
+      // Add a completion handler
+      videoResponse.data.on('end', () => {
+        console.log(`Video streaming completed for media ID: ${id}`);
+        // Ensure the response is properly ended
+        if (!res.writableFinished) {
+          res.end();
+        }
+      });
+      
+      // Stream the video back to the client
+      videoResponse.data.pipe(res);
+      
+      // Handle client disconnect
+      req.on('close', () => {
+        console.log('Client disconnected from video stream');
+        // Clean up the stream to prevent memory leaks
+        videoResponse.data.destroy();
+      });
+    } catch (streamError) {
+      console.error('Error streaming from S3:', streamError);
+      
+      // Check if headers have already been sent
+      if (!res.headersSent) {
+        if (streamError.code === 'ECONNABORTED') {
+          return res.status(504).json({ 
+            error: 'Gateway timeout', 
+            details: 'Video streaming took too long'
+          });
+        }
+        
+        if (streamError.response) {
+          return res.status(streamError.response.status).json({
+            error: `S3 error: ${streamError.response.status}`,
+            details: streamError.message
+          });
+        }
+        
+        return res.status(500).json({ 
+          error: 'Failed to stream video from S3', 
+          details: streamError.message 
+        });
+      } else {
+        // Ensure the response is properly ended
+        res.end();
+      }
+    }
+  } catch (error) {
+    console.error('Video proxy error:', error);
+    
+    // Only send error response if headers haven't been sent
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to proxy video', details: error.message });
+    } else {
+      // Ensure the response is properly ended
+      res.end();
+    }
+  }
+});
+
+// Add thumbnail generation endpoint based on timestamp
+router.post('/update/timestamp-thumbnail/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { timestamp } = req.body;
+    
+    if (!timestamp) {
+      return res.status(400).json({ error: 'Timestamp is required' });
+    }
+    
+    console.log(`Processing thumbnail generation for media ID ${id} with timestamp ${timestamp}`);
+    
+    // Import the video service
+    const { generateThumbnailFromTimestamp } = await import('../services/videoService.js');
+    
+    // Find the media file to update
+    const mediaFile = await Media.findById(id);
+    if (!mediaFile) {
+      return res.status(404).json({ error: 'Media file not found' });
+    }
+    
+    // Get the video URL
+    const videoUrl = mediaFile.location;
+    if (!videoUrl) {
+      return res.status(400).json({ error: 'Media file does not have a valid video URL' });
+    }
+    
+    // Check if there's an existing thumbnail that needs to be deleted
+    if (mediaFile.metadata) {
+      // Look for thumbnail in either field name (for compatibility)
+      const oldThumbnailUrl = mediaFile.metadata.v_thumbnail || mediaFile.metadata.thumbnailUrl;
+      if (oldThumbnailUrl && oldThumbnailUrl.includes('.s3.')) {
+        try {
+          console.log(`Deleting old thumbnail: ${oldThumbnailUrl}`);
+          await deleteFileFromS3(oldThumbnailUrl).catch(err => {
+            console.warn(`Failed to delete old thumbnail (continuing anyway): ${err.message}`);
+          });
+        } catch (error) {
+          console.warn(`Error deleting old thumbnail (continuing anyway): ${error.message}`);
+        }
+      }
+    }
+    
+    // Generate thumbnail at the specified timestamp
+    const thumbnailResult = await generateThumbnailFromTimestamp(videoUrl, id, timestamp);
+    const thumbnailUrl = thumbnailResult.thumbnailUrl;
+    
+    // MODIFIED: Use direct MongoDB update instead of Mongoose save
+    // This approach uses the same technique that worked in the updateThumbnail.js script
+    const collection = mongoose.connection.db.collection('media');
+    
+    // Update the document directly in MongoDB
+    const updateResult = await collection.updateOne(
+      { _id: new mongoose.Types.ObjectId(id) },
+      { 
+        $set: { 
+          'metadata.v_thumbnail': thumbnailUrl,
+          'metadata.v_thumbnailTimestamp': timestamp 
+        },
+        $unset: { 
+          'metadata.thumbnailUrl': "",
+          'metadata.thumbnailTimestamp': "" 
+        }
+      }
+    );
+    
+    console.log('Direct MongoDB update result:', JSON.stringify(updateResult, null, 2));
+    
+    if (updateResult.matchedCount === 0) {
+      return res.status(404).json({ error: 'Media document not found during update' });
+    }
+    
+    if (updateResult.modifiedCount === 0) {
+      console.warn('Warning: Document found but no changes were made');
+    } else {
+      console.log('Media document updated successfully with direct MongoDB operation');
+    }
+    
+    // Verify the update by fetching the latest document
+    const updatedMediaFile = await Media.findById(id);
+    console.log('Updated document thumbnail URL:', updatedMediaFile.metadata?.v_thumbnail);
+    
+    // Track the update activity if user is authenticated
+    if (req.user) {
+      await ActivityTrackingService.trackMediaUpdate(
+        req.user, 
+        updatedMediaFile,
+        ['metadata.v_thumbnail', 'metadata.v_thumbnailTimestamp']
+      );
+      console.log('Media thumbnail update activity logged');
+    }
+    
+    // Return success response with the thumbnail URL
+    res.status(200).json({
+      success: true,
+      message: 'Thumbnail generated successfully',
+      timestamp: timestamp,
+      thumbnailUrl: thumbnailUrl,
+      mediaFile: updatedMediaFile
+    });
+  } catch (error) {
+    console.error('Error processing timestamp-based thumbnail request:', error);
+    res.status(500).json({ 
+      error: 'Failed to process thumbnail request',
+      details: error.message
+    });
+  }
+});
+
+// Fix the thumbnail-proxy endpoint to prevent infinite loops
+router.get('/thumbnail-proxy/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params;
+    console.log(`Thumbnail proxy request for file: ${filename}`);
+    
+    // Construct the S3 URL using the bucket name and region
+    const s3Bucket = process.env.AWS_S3_BUCKET_NAME;
+    const region = process.env.AWS_REGION || 'us-east-1';
+    const s3Url = `https://${s3Bucket}.s3.${region}.amazonaws.com/${filename}`;
+    
+    // Set CORS headers to allow image loading
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    
+    // Important: Set proper caching headers to discourage browsers from continuous re-fetching
+    // Cache for 1 hour - this helps prevent the infinite loop issue
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Expires', new Date(Date.now() + 3600000).toUTCString());
+    
+    console.log(`Attempting to fetch from S3: ${s3Url}`);
+    
+    try {
+      // Stream the image from S3
+      const response = await axios({
+        method: 'GET',
+        url: s3Url,
+        responseType: 'arraybuffer', // Use arraybuffer instead of stream to handle errors better
+        timeout: 5000
+      });
+      
+      // Set the content type from the S3 response
+      if (response.headers['content-type']) {
+        res.setHeader('Content-Type', response.headers['content-type']);
+      } else {
+        res.setHeader('Content-Type', 'image/jpeg');
+      }
+      
+      // Send the image data directly (not as a stream)
+      return res.send(response.data);
+      
+    } catch (error) {
+      console.error('S3 fetch error:', error.message);
+      
+      // If we get a 403 Forbidden error, return a placeholder image to avoid continuous retries
+      if (error.response && error.response.status === 403) {
+        console.log('Access denied (403) from S3. Returning placeholder SVG image.');
+        
+        // Send a simple SVG as placeholder
+        res.setHeader('Content-Type', 'image/svg+xml');
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+        
+        // Simple placeholder SVG
+        const svg = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">
+            <rect width="300" height="200" fill="#e0e0e0"/>
+            <text x="150" y="100" font-family="Arial" font-size="14" text-anchor="middle" fill="#888">
+              Thumbnail Not Available
+            </text>
+          </svg>
+        `;
+        
+        return res.send(svg);
+      }
+      
+      // For other errors
+      res.setHeader('Content-Type', 'image/svg+xml');
+      res.setHeader('Cache-Control', 'public, max-age=60'); // Cache for 1 minute
+      
+      // Error SVG
+      const errorSvg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">
+          <rect width="300" height="200" fill="#ffe0e0"/>
+          <text x="150" y="100" font-family="Arial" font-size="14" text-anchor="middle" fill="#cc0000">
+            Error Loading Image
+          </text>
+        </svg>
+      `;
+      
+      return res.send(errorSvg);
+    }
+  } catch (error) {
+    console.error('Thumbnail proxy error:', error.message);
+    res.status(500).send('Internal Server Error');
   }
 });
 

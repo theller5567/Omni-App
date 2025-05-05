@@ -377,6 +377,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
               <DataTable
                 rows={rows}
                 onSelectionChange={setSelected}
+                key={`datatable-${rows.length}-${Date.now()}`}
               />
             </Suspense>
           ) : (
@@ -388,7 +389,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
               }}>
                 {rows.map((row) => {
                   return (
-                    <Box key={row.id}>
+                    <Box key={`${row.id}-${row.metadata?.v_thumbnailTimestamp || Date.now()}`}>
                       <Suspense fallback={<LoadingFallback />}>
                         <MediaCard
                           file={row}

@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, PutBucketCorsCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 
@@ -160,5 +160,41 @@ export const deleteFileFromS3 = async (fileUrl) => {
   } catch (error) {
     console.error('Error deleting from S3:', error);
     throw new Error(`Failed to delete from S3: ${error.message}`);
+  }
+};
+
+// Add function to configure CORS on the S3 bucket
+export const configureBucketCors = async () => {
+  try {
+    console.log(`Setting up CORS config for bucket: ${BUCKET_NAME}`);
+    
+    const corsParams = {
+      Bucket: BUCKET_NAME,
+      CORSConfiguration: {
+        CORSRules: [
+          {
+            AllowedHeaders: ["*"],
+            AllowedMethods: ["GET", "HEAD", "PUT", "POST"],
+            AllowedOrigins: [
+              "http://localhost:5173",  // Development frontend
+              "http://localhost:5002",  // Development backend
+              "https://omni-app.com",   // Production domain (adjust this)
+              "*"                       // Allow all origins for testing
+            ],
+            ExposeHeaders: ["ETag"],
+            MaxAgeSeconds: 3000,
+          },
+        ],
+      },
+    };
+    
+    const command = new PutBucketCorsCommand(corsParams);
+    await s3Client.send(command);
+    
+    console.log('CORS configuration applied to S3 bucket successfully');
+    return true;
+  } catch (error) {
+    console.error('Error applying CORS configuration to S3 bucket:', error);
+    return false;
   }
 };
