@@ -809,9 +809,6 @@ const MediaDetail: React.FC = () => {
   const handleThumbnailUpdate = (thumbnailUrl: string) => {
     if (mediaFile && thumbnailUrl) {
       try {
-        // Get the queryClient to invalidate queries
-        const queryClient = useQueryClient();
-        
         // Track which fields are being changed
         const changedFields: string[] = [];
         
@@ -831,7 +828,7 @@ const MediaDetail: React.FC = () => {
         
         // Show success toast notification
         toast.success('Thumbnail updated successfully');
-        
+      
         // Invalidate activity logs query to refresh the Recent Activity component
         queryClient.invalidateQueries({ queryKey: [QueryKeys.activityLogs] });
         

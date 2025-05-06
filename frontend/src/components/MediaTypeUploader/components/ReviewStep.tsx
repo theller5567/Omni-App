@@ -190,7 +190,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ mediaTypeConfig, inputOptions, 
                       Type: {field.type}
                     </Typography>
                     {isSelectField(field) && (
-                      <Box mt={1}>
+                      <Typography component="div" variant="body2" sx={{ mt: 1 }}>
                         {hasTagCategory(field) ? (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                             <FaTags size={12} />
@@ -204,7 +204,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ mediaTypeConfig, inputOptions, 
                             Options: {field.options.join(', ')}
                           </Typography>
                         )}
-                      </Box>
+                      </Typography>
                     )}
                   </>
                 }

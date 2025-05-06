@@ -17,9 +17,7 @@ import {
   Tooltip,
   Backdrop
 } from '@mui/material';
-import { useDispatch, useSelector } from 'react-redux';
-import { addMediaType, initializeMediaTypes } from '../../store/slices/mediaTypeSlice';
-import { fetchTagCategories } from '../../store/slices/tagCategorySlice';
+import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { FaArrowRight, FaArrowLeft, FaSave, FaQuestionCircle } from 'react-icons/fa';
@@ -33,7 +31,7 @@ import {
 } from '../../types/mediaTypes';
 import '../MediaTypeUploader.scss';
 import env from '../../config/env';
-import { RootState, AppDispatch } from '../../store/store';
+import { RootState } from '../../store/store';
 import { 
   ColorPicker, 
   FieldEditor, 
@@ -49,6 +47,12 @@ import {
 } from '../../utils/mediaTypeUploaderUtils';
 import { FaImage, FaVideo, FaFileAudio, FaFileWord } from 'react-icons/fa';
 import debounce from 'lodash/debounce';
+import {
+  useMediaTypesWithUsageCounts,
+  useCreateMediaType,
+  useUpdateMediaType
+} from '../../hooks/query-hooks';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Define available field types
 const inputOptions: FieldType[] = ['Text', 'TextArea', 'Number', 'Date', 'Boolean', 'Select', 'MultiSelect'];
@@ -150,15 +154,15 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
 );
 
 const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, editMediaTypeId }) => {
-  // Hooks must be called unconditionally at the top level
-  const dispatch = useDispatch<AppDispatch>();
-  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
-  // Get the current user role
+  // Set up TanStack Query hooks
+  const queryClient = useQueryClient();
+  const { data: mediaTypes = [] } = useMediaTypesWithUsageCounts();
+  const { mutateAsync: createMediaTypeMutation } = useCreateMediaType();
+  const { mutateAsync: updateMediaTypeMutation } = useUpdateMediaType();
+  
+  // Get the current user role (still using Redux for user info)
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
   const isSuperAdmin = userRole === 'superAdmin';
-  
-  // Get tag categories status for loading
-  const { status: tagCategoriesStatus } = useSelector((state: RootState) => state.tagCategories);
   
   // State for media type configuration
   const [mediaTypeConfig, setMediaTypeConfig] = useState<MediaTypeConfig>(initialMediaTypeConfig);
@@ -233,13 +237,6 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
     }
   }, [open, editMediaTypeId, mediaTypes]);
 
-  // Effect to load tag categories when component opens
-  useEffect(() => {
-    if (open && tagCategoriesStatus === 'idle') {
-      dispatch(fetchTagCategories());
-    }
-  }, [open, dispatch, tagCategoriesStatus]);
-  
   // Add keyboard navigation support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -403,12 +400,8 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       
       if (isEditMode && mediaTypeConfig._id) {
         try {
-          const updateResponse = await axios.put<ApiMediaTypeResponse>(
-            `${env.BASE_URL}/api/media-types/${mediaTypeConfig._id}`,
-            apiData
-          );
-          
-          console.log('API response from update:', updateResponse.data);
+          // Use TanStack Query mutation to update media type
+          await updateMediaTypeMutation({ id: mediaTypeConfig._id, updates: apiData });
           
           // Also make a specific request to update the settings field
           if (mediaTypeConfig.settings) {
@@ -423,42 +416,26 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
             }
           }
           
-          // Refresh all media types to ensure store is updated
-          dispatch(initializeMediaTypes());
-          toast.success(`Media Type '${mediaTypeConfig.name}' updated successfully`);
+          // Success message is already handled by the mutation hook
+          console.log(`Media Type '${mediaTypeConfig.name}' updated successfully`);
+          
+          // Invalidate queries to ensure data is refreshed
+          queryClient.invalidateQueries({ queryKey: ['mediaTypes'] });
         } catch (error: any) {
-          // Handle specific error cases
-          if (error.response) {
-            const statusCode = error.response.status;
-            const errorData = error.response.data;
-            
-            if (statusCode === 400) {
-              toast.error(`Validation error: ${errorData.message || 'Please check your inputs'}`);
-            } else if (statusCode === 404) {
-              toast.error(`Media type not found. It may have been deleted.`);
-            } else {
-              toast.error(`Error (${statusCode}): ${errorData.message || 'Failed to update media type'}`);
-            }
-          } else {
-            toast.error(`Network error: ${error.message || 'Failed to connect to server'}`);
-          }
+          // Error is already handled by the mutation hook
+          console.error('Error updating media type:', error);
           throw error;
         }
       } else {
         try {
-          // Create new media type
-          const response = await axios.post<ApiMediaTypeResponse>(
-            `${env.BASE_URL}/api/media-types`,
-            apiData
-          );
+          // Use TanStack Query mutation to create new media type
+          const createdMediaType = await createMediaTypeMutation(apiData);
           
-          console.log('API response from create:', response.data);
-      
           // Also make a specific request to update the settings field
-          if (mediaTypeConfig.settings && response.data._id) {
+          if (mediaTypeConfig.settings && createdMediaType._id) {
             try {
               await axios.post(
-                `${env.BASE_URL}/api/media-types/update-settings/${response.data._id}`,
+                `${env.BASE_URL}/api/media-types/update-settings/${createdMediaType._id}`,
                 { allowRelatedMedia: mediaTypeConfig.settings.allowRelatedMedia }
               );
               console.log('Successfully added settings separately for new media type');
@@ -466,35 +443,15 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
               console.error('Error adding settings separately for new media type:', settingsError);
             }
           }
-      
-          // Add the media type to the store with type assertion
-          const storeData = {
-            ...response.data,
-            usageCount: 0,
-            replacedBy: null,
-            isDeleting: false,
-            status: response.data.status || 'active',
-            catColor: catColor // Explicitly include catColor
-          } as any; // Using type assertion to avoid complex typing issues
-      
-          dispatch(addMediaType(storeData));
-          toast.success(`Media Type '${mediaTypeConfig.name}' added successfully with color: ${colorName}`);
+          
+          // Success message is already handled by the mutation hook
+          console.log(`Media Type '${mediaTypeConfig.name}' added successfully with color: ${colorName}`);
+          
+          // Invalidate queries to ensure data is refreshed
+          queryClient.invalidateQueries({ queryKey: ['mediaTypes'] });
         } catch (error: any) {
-          // Enhanced error handling with specific messages
-          if (error.response) {
-            const statusCode = error.response.status;
-            const errorData = error.response.data;
-            
-            if (statusCode === 400) {
-              toast.error(`Validation error: ${errorData.message || 'Please check your inputs'}`);
-            } else if (statusCode === 409) {
-              toast.error(`A media type with this name already exists.`);
-            } else {
-              toast.error(`Error (${statusCode}): ${errorData.message || 'Failed to create media type'}`);
-            }
-          } else {
-            toast.error(`Network error: ${error.message || 'Failed to connect to server'}`);
-          }
+          // Error is already handled by the mutation hook
+          console.error('Error creating media type:', error);
           throw error;
         }
       }

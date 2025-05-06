@@ -138,3 +138,23 @@ Tags can be applied:
 ## Theme Toggle
 
 The application supports both light and dark themes. Toggle between themes using the theme switch in the sidebar or header. 
+
+
+SYSTEM SETTINGS
+└── Notification Configuration
+    ├── Email Recipients [Multi-select dropdown of admin users]
+    ├── Notification Frequency [Immediate/Hourly/Daily dropdown]
+    │
+    ├── Notification Rules [Expandable sections]
+    │   ├── Rule 1
+    │   │   ├── Action Type: [Multi-select: UPLOAD, DELETE, etc.]
+    │   │   ├── Resource Type: [Multi-select: media, user, etc.]
+    │   │   ├── Triggered By: [Any user/Specific users/Specific roles]
+    │   │   ├── Priority: [Normal/High selector]
+    │   │   └── [Delete Rule] [Clone Rule]
+    │   │
+    │   ├── Rule 2...
+    │   └── [+ Add New Rule]
+    │
+    ├── Test Configuration [Button that shows what would trigger]
+    └── Save Settings [Button]

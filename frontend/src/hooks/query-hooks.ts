@@ -13,6 +13,7 @@ export const QueryKeys = {
   activityLogs: 'activityLogs',
   userActivities: 'userActivities',
   databaseStats: 'databaseStats',
+  mediaTypeUsage: 'mediaTypeUsage',
 };
 
 // ======================
@@ -99,6 +100,165 @@ export const fetchMediaTypes = async (): Promise<MediaType[]> => {
   if (process.env.NODE_ENV === 'development') {
     console.log(`Fetched ${response.data.length} media types`);
   }
+  
+  return response.data;
+};
+
+// New function to fetch media types with usage counts
+export const fetchMediaTypesWithUsageCounts = async (): Promise<MediaType[]> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  // Add timestamp to prevent caching
+  const timestamp = new Date().getTime();
+  const response = await axios.get<MediaType[]>(
+    `${env.BASE_URL}/api/media-types/with-usage-counts?_t=${timestamp}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    }
+  );
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Fetched ${response.data.length} media types with usage counts`);
+  }
+  
+  // Process the response data to ensure consistent structure
+  return response.data.map(mediaType => ({
+    ...mediaType,
+    usageCount: mediaType.usageCount || 0,
+    status: mediaType.status || 'active',
+    replacedBy: mediaType.replacedBy || null,
+    isDeleting: mediaType.isDeleting || false
+  }));
+};
+
+// Function to check a specific media type's usage
+export const checkMediaTypeUsage = async (id: string): Promise<{ id: string, count: number }> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  // Add timestamp to URL to force fresh response
+  const timestamp = new Date().getTime();
+  const response = await axios.get<{ count: number }>(
+    `${env.BASE_URL}/api/media-types/${id}/usage?_t=${timestamp}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    }
+  );
+  
+  return { id, count: response.data.count };
+};
+
+// Function to create a new media type
+export const createMediaType = async (mediaTypeData: Partial<MediaType>): Promise<MediaType> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  const response = await axios.post<MediaType>(
+    `${env.BASE_URL}/api/media-types`,
+    mediaTypeData,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  
+  return response.data;
+};
+
+// Function to update a media type
+export const updateMediaType = async ({ id, updates }: { id: string, updates: Partial<MediaType> }): Promise<MediaType> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  const response = await axios.put<MediaType>(
+    `${env.BASE_URL}/api/media-types/${id}`,
+    updates,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  
+  return response.data;
+};
+
+// Function to delete a media type
+export const deleteMediaType = async (id: string): Promise<string> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  await axios.delete(`${env.BASE_URL}/api/media-types/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  
+  return id;
+};
+
+// Function to archive a media type
+export const archiveMediaType = async (id: string): Promise<MediaType> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  const response = await axios.put<MediaType>(
+    `${env.BASE_URL}/api/media-types/${id}/archive`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  
+  return response.data;
+};
+
+// Function to deprecate a media type
+export const deprecateMediaType = async (id: string): Promise<MediaType> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  const response = await axios.put<MediaType>(
+    `${env.BASE_URL}/api/media-types/${id}/deprecate`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
   
   return response.data;
 };
@@ -477,6 +637,143 @@ export const useMediaTypes = () => {
     queryKey: [QueryKeys.mediaTypes],
     queryFn: fetchMediaTypes,
     staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
+
+// New hook to get media types with usage counts
+export const useMediaTypesWithUsageCounts = () => {
+  return useQuery({
+    queryKey: [QueryKeys.mediaTypes, 'withUsageCounts'],
+    queryFn: fetchMediaTypesWithUsageCounts,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// Hook to check a specific media type's usage
+export const useCheckMediaTypeUsage = (id: string) => {
+  return useQuery({
+    queryKey: [QueryKeys.mediaTypeUsage, id],
+    queryFn: () => checkMediaTypeUsage(id),
+    staleTime: 1 * 60 * 1000, // 1 minute
+    enabled: !!id // Only run if id is provided
+  });
+};
+
+// Hook to create a new media type
+export const useCreateMediaType = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: createMediaType,
+    onSuccess: () => {
+      // Invalidate all media types queries to trigger refetch
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.mediaTypes] });
+      toast.success('Media type created successfully');
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Error creating media type';
+      toast.error(message);
+    }
+  });
+};
+
+// Hook to update a media type
+export const useUpdateMediaType = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: updateMediaType,
+    onSuccess: (updatedMediaType) => {
+      // Invalidate all media types queries to trigger refetch
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.mediaTypes] });
+      
+      // Optionally update the cache directly
+      queryClient.setQueryData<MediaType[]>([QueryKeys.mediaTypes], (oldData) => {
+        if (!oldData) return [];
+        return oldData.map(item => item._id === updatedMediaType._id ? updatedMediaType : item);
+      });
+      
+      toast.success('Media type updated successfully');
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Error updating media type';
+      toast.error(message);
+    }
+  });
+};
+
+// Hook to delete a media type
+export const useDeleteMediaType = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: deleteMediaType,
+    onSuccess: (id) => {
+      // Invalidate all media types queries to trigger refetch
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.mediaTypes] });
+      
+      // Optionally update the cache directly
+      queryClient.setQueryData<MediaType[]>([QueryKeys.mediaTypes], (oldData) => {
+        if (!oldData) return [];
+        return oldData.filter(item => item._id !== id);
+      });
+      
+      toast.success('Media type deleted successfully');
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Error deleting media type';
+      toast.error(message);
+    }
+  });
+};
+
+// Hook to archive a media type
+export const useArchiveMediaType = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: archiveMediaType,
+    onSuccess: (updatedMediaType) => {
+      // Invalidate all media types queries to trigger refetch
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.mediaTypes] });
+      
+      // Optionally update the cache directly
+      queryClient.setQueryData<MediaType[]>([QueryKeys.mediaTypes], (oldData) => {
+        if (!oldData) return [];
+        return oldData.map(item => item._id === updatedMediaType._id ? updatedMediaType : item);
+      });
+      
+      toast.success('Media type archived successfully');
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Error archiving media type';
+      toast.error(message);
+    }
+  });
+};
+
+// Hook to deprecate a media type
+export const useDeprecateMediaType = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: deprecateMediaType,
+    onSuccess: (updatedMediaType) => {
+      // Invalidate all media types queries to trigger refetch
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.mediaTypes] });
+      
+      // Optionally update the cache directly
+      queryClient.setQueryData<MediaType[]>([QueryKeys.mediaTypes], (oldData) => {
+        if (!oldData) return [];
+        return oldData.map(item => item._id === updatedMediaType._id ? updatedMediaType : item);
+      });
+      
+      toast.success('Media type deprecated successfully');
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Error deprecating media type';
+      toast.error(message);
+    }
   });
 };
 

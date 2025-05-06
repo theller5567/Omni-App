@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, createContext, useContext } from 'react';
+import { useState } from 'react';
 import { 
   Box, 
   Button, 
@@ -15,46 +15,18 @@ import './accountMediaTypes.scss';
 import { motion } from 'framer-motion';
 import { ToastContainer, toast } from 'react-toastify';
 import MediaTypeUploader from '../components/MediaTypeUploader/MediaTypeUploader';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../store/store';
-import { 
-  checkMediaTypeUsage, 
-  archiveMediaType,
-  deleteMediaType,
-  resetOperation,
-  forceRefresh,
-  MediaType,
-  fetchMediaTypesWithUsageCounts
-} from '../store/slices/mediaTypeSlice';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store/store';
 import { FaPlus, FaSync } from 'react-icons/fa';
 import MediaTypeCard from '../components/MediaTypeUploader/components/MediaTypeCard';
-
-// Context type definition
-type MediaTypesContextType = {
-  mediaTypes: MediaType[];
-  status: string;
-  isLoading: boolean;
-  userRole: string | undefined;
-  updateMediaTypeCount: (typeName: string) => Promise<void>;
-  refreshAllCounts: () => Promise<void>;
-  handleEditClick: (mediaTypeId: string) => void;
-  handleDeleteClick: (mediaTypeId: string) => void;
-  handleHardRefresh: () => Promise<void>;
-  handleRefreshCounts: () => Promise<void>;
-  dispatch: AppDispatch;
-};
-
-// Create context
-const MediaTypesContext = createContext<MediaTypesContextType | undefined>(undefined);
-
-// Custom hook to use context
-const useMediaTypesContext = () => {
-  const context = useContext(MediaTypesContext);
-  if (!context) {
-    throw new Error('useMediaTypesContext must be used within a MediaTypesProvider');
-  }
-  return context;
-};
+import { 
+  useMediaTypesWithUsageCounts,
+  useDeleteMediaType,
+  useArchiveMediaType,
+  useCheckMediaTypeUsage,
+  MediaType
+} from '../hooks/query-hooks';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Separate Loading State Component
 const LoadingState = () => (
@@ -86,7 +58,6 @@ const EmptyState = ({ onRefresh }: { onRefresh: () => void }) => (
 
 // Header Component
 const Header = () => {
-  
   return (
     <Typography variant="h1" align="left" sx={{ paddingBottom: "2rem" }}>
       Account Media Types
@@ -95,16 +66,19 @@ const Header = () => {
 };
 
 // Action Bar Component
-const ActionBar = () => {
-  const { 
-    status, 
-    mediaTypes, 
-    userRole, 
-    handleRefreshCounts, 
-    handleHardRefresh, 
-    handleEditClick 
-  } = useMediaTypesContext();
-  
+const ActionBar = ({ 
+  mediaTypes,
+  userRole,
+  refreshCounts,
+  hardRefresh,
+  onCreateNew
+}: { 
+  mediaTypes: MediaType[],
+  userRole: string | undefined,
+  refreshCounts: () => void,
+  hardRefresh: () => void,
+  onCreateNew: () => void
+}) => {
   return (
     <Box
       className="header-component"
@@ -130,7 +104,7 @@ const ActionBar = () => {
           )}
         </Typography>
         <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-          Status: {status} | Count: {mediaTypes.length}
+          Count: {mediaTypes.length}
         </Typography>
       </div>
       
@@ -138,7 +112,7 @@ const ActionBar = () => {
         <Button
           variant="contained"
           color="secondary"
-          onClick={() => handleEditClick('')}
+          onClick={onCreateNew}
           startIcon={<FaPlus />}
         >
           Create New Media Type
@@ -147,7 +121,7 @@ const ActionBar = () => {
         <Button
           variant="outlined"
           color="primary"
-          onClick={handleRefreshCounts}
+          onClick={refreshCounts}
           startIcon={<FaSync />}
         >
           Refresh Counts
@@ -156,7 +130,7 @@ const ActionBar = () => {
         <Button
           variant="contained"
           color="error"
-          onClick={handleHardRefresh}
+          onClick={hardRefresh}
         >
           Hard Refresh
         </Button>
@@ -193,9 +167,15 @@ const MediaTypeItem = ({
 };
 
 // Media Type Grid Component
-const MediaTypeGrid = () => {
-  const { mediaTypes, handleEditClick, handleDeleteClick } = useMediaTypesContext();
-  
+const MediaTypeGrid = ({
+  mediaTypes,
+  onEdit,
+  onDelete
+}: {
+  mediaTypes: MediaType[],
+  onEdit: (id: string) => void,
+  onDelete: (id: string) => void
+}) => {
   return (
     <Box 
       sx={{ 
@@ -209,8 +189,8 @@ const MediaTypeGrid = () => {
         <MediaTypeItem 
           key={mediaType._id}
           mediaType={mediaType}
-          onEdit={handleEditClick}
-          onDelete={handleDeleteClick}
+          onEdit={onEdit}
+          onDelete={onDelete}
         />
       ))}
     </Box>
@@ -261,129 +241,38 @@ const DeleteDialog = ({
   );
 };
 
-// Main component that serves as the provider
+// Main component with TanStack Query
 const AccountMediaTypes = () => {
   // State
   const [open, setOpen] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [editMediaTypeId, setEditMediaTypeId] = useState<string | null>(null);
   const [selectedMediaTypeId, setSelectedMediaTypeId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  // Refs
-  const initialLoadAttemptedRef = useRef(false);
-  const specificChecksRef = useRef(new Set<string>());
   
-  // Redux
-  const dispatch = useDispatch<AppDispatch>();
-  const mediaTypesState = useSelector((state: RootState) => state.mediaTypes);
-  const { mediaTypes, status } = mediaTypesState;
+  // User role from Redux (keep this)
   const userRole = useSelector((state: RootState) => state.user.currentUser?.role);
-
-  // Load media types with usage counts on mount - optimized to fetch all data in one go
-  useEffect(() => {
-    const loadMediaTypes = async () => {
-      if (initialLoadAttemptedRef.current) {
-        return;
-      }
-
-      initialLoadAttemptedRef.current = true;
-      setIsLoading(true);
-      
-      try {
-        // Reset any existing data first
-        await dispatch(forceRefresh());
-        
-        // Use the optimized fetch that gets media types with usage counts in one go
-        await dispatch(fetchMediaTypesWithUsageCounts()).unwrap();
-        
-        console.log('All media types loaded with usage counts');
-      } catch (error) {
-        console.error('Error loading media types:', error);
-        toast.error('Failed to load media types');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadMediaTypes();
-  }, [dispatch, refreshTrigger]);
-
-  // Debug logging
-  useEffect(() => {
-    console.log('Media types state:', {
-      count: mediaTypes.length,
-      status,
-      isLoading: status === 'loading'
-    });
-  }, [mediaTypes.length, status]);
-
-  // Single media type update function - only used for manual refreshes
-  const updateSpecificMediaType = async (typeName: string) => {
-    try {
-      // Skip if already checked
-      if (specificChecksRef.current.has(typeName)) {
-        return;
-      }
-      
-      // Find the media type
-      const mediaType = mediaTypes.find(type => type.name === typeName);
-      if (!mediaType) {
-        console.log(`Media type "${typeName}" not found`);
-        return;
-      }
-      
-      console.log(`Manually refreshing count for media type: ${typeName} (${mediaType._id})`);
-      await dispatch(checkMediaTypeUsage(mediaType._id));
-      
-      // Mark as completed
-      specificChecksRef.current.add(typeName);
-    } catch (error) {
-      console.error(`Error updating "${typeName}" count:`, error);
-    }
-  };
-
-  // Manual refresh of all counts - only when requested by user
-  const refreshAllCounts = async () => {
-    if (mediaTypes.length === 0) return;
-    
-    toast.info('Refreshing media type counts...');
-    
-    try {
-      // Clear specific checks to allow re-checking
-      specificChecksRef.current.clear();
-      
-      // Use the optimized fetch to refresh all media types with usage counts in one go
-      await dispatch(fetchMediaTypesWithUsageCounts()).unwrap();
-      
-      toast.success('All media type counts updated');
-      } catch (error) {
-      console.error('Error refreshing counts:', error);
-      toast.error('Error updating counts');
-    }
-  };
-
-  const handleHardRefresh = async () => {
-    setIsLoading(true);
-    initialLoadAttemptedRef.current = false;
-    specificChecksRef.current.clear();
-    
-    try {
-      await dispatch(forceRefresh());
-      await dispatch(fetchMediaTypesWithUsageCounts()).unwrap();
-      toast.success('Media types reloaded');
-      
-      // Force re-running the effect
-      setRefreshTrigger(prev => prev + 1);
-    } catch (error) {
-      console.error('Error during hard refresh:', error);
-      toast.error('Failed to reload media types');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  
+  // TanStack Query hooks
+  const queryClient = useQueryClient();
+  const { 
+    data: mediaTypes = [], 
+    isLoading, 
+    isError, 
+    error,
+    refetch
+  } = useMediaTypesWithUsageCounts();
+  
+  // Use the query for a specific media type usage (when needed)
+  const { 
+    data: usageData, 
+    refetch: refetchUsage 
+  } = useCheckMediaTypeUsage(selectedMediaTypeId || '');
+  
+  // Mutation hooks
+  const { mutateAsync: deleteMediaTypeMutation } = useDeleteMediaType();
+  const { mutateAsync: archiveMediaTypeMutation } = useArchiveMediaType();
+  
+  // Handlers
   const handleEditClick = (mediaTypeId: string) => {
     setEditMediaTypeId(mediaTypeId);
     setOpen(true);
@@ -397,6 +286,11 @@ const AccountMediaTypes = () => {
   const handleDeleteClick = (mediaTypeId: string) => {
     setSelectedMediaTypeId(mediaTypeId);
     setConfirmDialogOpen(true);
+    
+    // Prefetch the usage count
+    if (mediaTypeId) {
+      refetchUsage();
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -407,34 +301,28 @@ const AccountMediaTypes = () => {
       const mediaType = mediaTypes.find(type => type._id === selectedMediaTypeId);
       if (!mediaType) return;
       
-      // Check if it's in use
-      await dispatch(checkMediaTypeUsage(selectedMediaTypeId));
-      const usageCount = mediaType.usageCount || 0;
+      // Get the usage count
+      const count = usageData?.count || mediaType.usageCount || 0;
       
-      if (usageCount > 0) {
+      if (count > 0) {
         // Archive if in use
-        await dispatch(archiveMediaType(selectedMediaTypeId));
-        toast.success(`Media type "${mediaType.name}" archived (${usageCount} files using it)`);
+        await archiveMediaTypeMutation(selectedMediaTypeId);
+        toast.success(`Media type "${mediaType.name}" archived (${count} files using it)`);
       } else {
         // Delete if not in use
-        await dispatch(deleteMediaType(selectedMediaTypeId));
+        await deleteMediaTypeMutation(selectedMediaTypeId);
         toast.success(`Media type "${mediaType.name}" deleted`);
       }
       
-      // Reset and refresh
+      // Reset dialog state
       setConfirmDialogOpen(false);
       setSelectedMediaTypeId(null);
-      dispatch(resetOperation());
-      
-      // Force refresh
-      initialLoadAttemptedRef.current = false;
       
       // Refresh all media types
-      await dispatch(forceRefresh());
-      await dispatch(fetchMediaTypesWithUsageCounts()).unwrap();
-    } catch (error) {
+      refetch();
+    } catch (error: any) {
       console.error('Error deleting/archiving media type:', error);
-      toast.error('Operation failed');
+      toast.error('Operation failed: ' + (error.message || 'Unknown error'));
       setConfirmDialogOpen(false);
     }
   };
@@ -444,28 +332,59 @@ const AccountMediaTypes = () => {
     setSelectedMediaTypeId(null);
   };
 
-  // Handle manual refresh
+  // Handle manual refresh of counts
   const handleRefreshCounts = async () => {
-    await refreshAllCounts();
+    toast.info('Refreshing media type counts...');
+    
+    try {
+      await refetch();
+      toast.success('All media type counts updated');
+    } catch (error: any) {
+      console.error('Error refreshing counts:', error);
+      toast.error('Error updating counts: ' + (error.message || 'Unknown error'));
+    }
+  };
+  
+  // Handle hard refresh - clear cache and refetch
+  const handleHardRefresh = async () => {
+    try {
+      // Clear all media types from the query cache
+      queryClient.invalidateQueries({ queryKey: ['mediaTypes'] });
+      
+      // Refetch fresh data
+      await refetch();
+      
+      toast.success('Media types reloaded');
+    } catch (error: any) {
+      console.error('Error during hard refresh:', error);
+      toast.error('Failed to reload media types: ' + (error.message || 'Unknown error'));
+    }
   };
 
-  // Prepare context value
-  const contextValue: MediaTypesContextType = {
-    mediaTypes,
-    status,
-    isLoading: isLoading || status === 'loading',
-    userRole,
-    updateMediaTypeCount: updateSpecificMediaType,
-    refreshAllCounts,
-    handleEditClick,
-    handleDeleteClick,
-    handleHardRefresh,
-    handleRefreshCounts,
-    dispatch
-  };
+  // Handle error state
+  if (isError) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '80vh' }}>
+        <Typography variant="h6" color="error" gutterBottom>
+          Error loading media types
+        </Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
+          {error instanceof Error ? error.message : 'An unknown error occurred'}
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => refetch()}
+          startIcon={<FaSync />}
+        >
+          Retry
+        </Button>
+      </Box>
+    );
+  }
 
   // Render loading state
-  if (isLoading || status === 'loading') {
+  if (isLoading) {
     return <LoadingState />;
   }
 
@@ -476,40 +395,49 @@ const AccountMediaTypes = () => {
 
   // Main render
   return (
-    <MediaTypesContext.Provider value={contextValue}>
     <motion.div
       id="account-media-types"
-        initial={{ opacity: 0, y: 50 }}
+      initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -50 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Box className="account-media-types" sx={{ width: "100%", overflow: "hidden" }}>
-          <Header />
+      exit={{ opacity: 0, y: -50 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Box className="account-media-types" sx={{ width: "100%", overflow: "hidden" }}>
+        <Header />
 
-          {/* Media Type Uploader Dialog */}
+        {/* Media Type Uploader Dialog */}
         <MediaTypeUploader 
           open={open} 
           onClose={handleClose} 
           editMediaTypeId={editMediaTypeId} 
         />
-        
-          {/* Main content */}
-          <ActionBar />
-          <MediaTypeGrid />
-        </Box>
-
-        {/* Delete/Archive Confirmation Dialog */}
-        <DeleteDialog
-        open={confirmDialogOpen}
-        onClose={handleCancelDelete}
-          onConfirm={handleConfirmDelete}
-          selectedId={selectedMediaTypeId}
+      
+        {/* Main content */}
+        <ActionBar 
+          mediaTypes={mediaTypes}
+          userRole={userRole}
+          refreshCounts={handleRefreshCounts}
+          hardRefresh={handleHardRefresh}
+          onCreateNew={() => handleEditClick('')}
         />
         
-        <ToastContainer position="top-right" />
+        <MediaTypeGrid 
+          mediaTypes={mediaTypes}
+          onEdit={handleEditClick}
+          onDelete={handleDeleteClick}
+        />
+      </Box>
+
+      {/* Delete/Archive Confirmation Dialog */}
+      <DeleteDialog
+        open={confirmDialogOpen}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        selectedId={selectedMediaTypeId}
+      />
+      
+      <ToastContainer position="top-right" />
     </motion.div>
-    </MediaTypesContext.Provider>
   );
 };
 
