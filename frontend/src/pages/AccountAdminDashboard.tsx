@@ -22,6 +22,7 @@ const StorageUsageChart = lazy(() => import('../components/AdminDashboard/Storag
 const RecentActivity = lazy(() => import('../components/AdminDashboard/RecentActivity'));
 const DatabaseStats = lazy(() => import('../components/AdminDashboard/DatabaseStats'));
 const UserActivity = lazy(() => import('../components/AdminDashboard/UserActivity'));
+const SystemSettings = lazy(() => import('../components/AdminDashboard/SystemSettings'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -188,6 +189,11 @@ const AccountAdminDashboard: React.FC = () => {
             label="Recent Activity" 
             {...a11yProps(4)} 
           />
+          <Tab 
+            key="tab-5"
+            label="System Settings" 
+            {...a11yProps(5)} 
+          />
         </Tabs>
         
         <div className="dashboard-tab-content" style={{ minHeight: '500px' }}>
@@ -218,6 +224,12 @@ const AccountAdminDashboard: React.FC = () => {
           <TabPanel value={activeTab} index={4} key="tab-panel-4">
             <Suspense fallback={<LoadingFallback />}>
               <RecentActivity key="recent-activity" />
+            </Suspense>
+          </TabPanel>
+          
+          <TabPanel value={activeTab} index={5} key="tab-panel-5">
+            <Suspense fallback={<LoadingFallback />}>
+              <SystemSettings key="system-settings" />
             </Suspense>
           </TabPanel>
         </div>

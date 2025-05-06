@@ -6,7 +6,6 @@ import TagCategoryManager from "../components/TagCategoryManager/TagCategoryMana
 import { toast } from "react-toastify";
 import { resetTagCategories } from "../store/slices/tagCategorySlice";
 import { fetchTagCategories } from "../store/slices/tagCategorySlice";
-import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { 
@@ -541,20 +540,6 @@ const AccountTags: React.FC = () => {
           </Box>
         </Paper>
       </Container>
-      
-      {/* Add ToastContainer here to ensure toasts are displayed */}
-      <ToastContainer 
-        position={isMobile ? "bottom-center" : "top-right"}
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={true}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        limit={3}  /* Limit the number of toasts shown at once */
-      />
       
       {/* Edit Dialog */}
       <Dialog 

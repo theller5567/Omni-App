@@ -32,21 +32,6 @@ interface TagCategoryFormData {
   tags: Array<{ id: string; name: string }>;
 }
 
-// Function to ensure toasts show immediately
-const showToastImmediately = (type: 'success' | 'error', message: string) => {
-  // Force toast to appear with high priority
-  toast[type](message, {
-    position: 'top-right',
-    autoClose: 3000,
-    delay: 0,
-    hideProgressBar: false,
-    closeOnClick: true,
-    pauseOnHover: true,
-    draggable: true,
-    progress: undefined,
-  });
-};
-
 // Memoized initial form data
 const initialFormData: TagCategoryFormData = {
   name: '',
@@ -96,8 +81,8 @@ const TagCategoryManager: React.FC = () => {
   // Function to show toast only if not already shown for this operation
   const showToastOnce = useCallback((id: string, type: 'success' | 'error', message: string) => {
     if (!toastShownRef.current.includes(id)) { // Changed from Set.has to array includes
-      // Use the immediate toast function
-      showToastImmediately(type, message);
+      // Use standard toast API
+      toast[type](message);
       
       // Mark this toast as shown
       toastShownRef.current.push(id); // Changed from Set.add to array push

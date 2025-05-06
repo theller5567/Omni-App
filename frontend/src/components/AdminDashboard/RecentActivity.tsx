@@ -107,12 +107,17 @@ const RecentActivity: React.FC = () => {
     // If no media activities, return original list
     if (mediaActivities.length === 0) return activities;
     
-    if (process.env.NODE_ENV === 'development') {
+    // Only log in development mode and limit to summary information
+    const isDev = process.env.NODE_ENV === 'development';
+    if (isDev) {
       console.log(`Enriching ${mediaActivities.length} media activities with slugs from ${allMedia.length} media files`);
     }
     
     // Create a copy of activities to modify
     const enrichedActivities = [...activities];
+    
+    // Count for logging summary
+    let slugsFound = 0;
     
     // Match media activities with media files to get slugs
     for (const activity of enrichedActivities) {
@@ -120,9 +125,7 @@ const RecentActivity: React.FC = () => {
         // If mediaSlug is already available from the API, use it
         if (activity.mediaSlug) {
           activity.slug = activity.mediaSlug;
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`Using mediaSlug from API: ${activity.mediaSlug} for activity ${activity.id}`);
-          }
+          slugsFound++;
           continue;
         }
 
@@ -135,9 +138,7 @@ const RecentActivity: React.FC = () => {
           
           if (mediaFile && mediaFile.slug) {
             activity.slug = mediaFile.slug;
-            if (process.env.NODE_ENV === 'development') {
-              console.log(`Found slug ${mediaFile.slug} for activity ${activity.id}, action: ${activity.action}`);
-            }
+            slugsFound++;
             continue; // Skip to next activity
           }
         }
@@ -174,13 +175,16 @@ const RecentActivity: React.FC = () => {
             
             if (matchingMedia && matchingMedia.slug) {
               activity.slug = matchingMedia.slug;
-              if (process.env.NODE_ENV === 'development') {
-                console.log(`Found slug ${matchingMedia.slug} for activity via title matching: "${potentialTitle}"`);
-              }
+              slugsFound++;
             }
           }
         }
       }
+    }
+    
+    // Log summary in development mode only
+    if (isDev) {
+      console.log(`Enrichment complete: Found slugs for ${slugsFound} out of ${mediaActivities.length} media activities`);
     }
     
     return enrichedActivities;
@@ -764,12 +768,12 @@ const RecentActivity: React.FC = () => {
                     </Box>
                   }
                   secondary={
-                    <React.Fragment>
+                    <Box component="div" sx={{ mt: 1 }}>
                       {renderActivityDetails(activity)}
-                      <Typography component="span" variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                      <Typography component="div" variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                         {formatRelativeTime(activity.timestamp)}
                       </Typography>
-                    </React.Fragment>
+                    </Box>
                   }
                 />
               </ListItem>

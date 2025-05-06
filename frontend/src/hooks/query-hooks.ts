@@ -14,6 +14,8 @@ export const QueryKeys = {
   userActivities: 'userActivities',
   databaseStats: 'databaseStats',
   mediaTypeUsage: 'mediaTypeUsage',
+  notificationSettings: 'notificationSettings',
+  eligibleRecipients: 'eligibleRecipients'
 };
 
 // ======================
@@ -924,5 +926,227 @@ export const useDatabaseStats = () => {
     queryFn: fetchDatabaseStats,
     staleTime: 2 * 60 * 1000, // 2 minutes
     retry: 1
+  });
+};
+
+// =====================
+// === Notification Settings API Functions ===
+// =====================
+
+// Fetch notification settings
+export const fetchNotificationSettings = async (): Promise<any> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+
+  const response = await axios.get<{success: boolean, data: any}>(`${env.BASE_URL}/api/admin/notification-settings`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Fetched notification settings:', response.data);
+  }
+  
+  return response.data.data;
+};
+
+// Update notification settings
+export const updateNotificationSettings = async (settings: any): Promise<any> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  const response = await axios.put<{success: boolean, data: any}>(`${env.BASE_URL}/api/admin/notification-settings`, settings, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  return response.data.data;
+};
+
+// Add a new notification rule
+export const addNotificationRule = async (rule: any): Promise<any> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  const response = await axios.post<{success: boolean, data: any}>(`${env.BASE_URL}/api/admin/notification-settings/rules`, rule, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  return response.data.data;
+};
+
+// Update a notification rule
+export const updateNotificationRule = async ({ ruleId, updates }: { ruleId: string, updates: any }): Promise<any> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  const response = await axios.put<{success: boolean, data: any}>(`${env.BASE_URL}/api/admin/notification-settings/rules/${ruleId}`, updates, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  return response.data.data;
+};
+
+// Delete a notification rule
+export const deleteNotificationRule = async (ruleId: string): Promise<void> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  await axios.delete(`${env.BASE_URL}/api/admin/notification-settings/rules/${ruleId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+};
+
+// Get eligible recipients for notifications
+export const fetchEligibleRecipients = async (): Promise<any[]> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  const response = await axios.get<{success: boolean, data: any[]}>(`${env.BASE_URL}/api/admin/notification-settings/eligible-recipients`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  
+  return response.data.data;
+};
+
+// Send a test notification
+export const sendTestNotification = async (recipients?: string[]): Promise<void> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  await axios.post(`${env.BASE_URL}/api/admin/notification-settings/test`, 
+    { recipients },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+};
+
+// =====================
+// === Notification Settings Query Hooks ===
+// =====================
+
+// Hook to fetch notification settings
+export const useNotificationSettings = () => {
+  return useQuery({
+    queryKey: [QueryKeys.notificationSettings],
+    queryFn: fetchNotificationSettings,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// Hook to update notification settings
+export const useUpdateNotificationSettings = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: updateNotificationSettings,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.notificationSettings] });
+      toast.success('Notification settings updated successfully');
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update notification settings: ${error.message}`);
+    }
+  });
+};
+
+// Hook to add a notification rule
+export const useAddNotificationRule = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: addNotificationRule,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.notificationSettings] });
+      toast.success('Notification rule added successfully');
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to add notification rule: ${error.message}`);
+    }
+  });
+};
+
+// Hook to update a notification rule
+export const useUpdateNotificationRule = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: updateNotificationRule,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.notificationSettings] });
+      toast.success('Notification rule updated successfully');
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update notification rule: ${error.message}`);
+    }
+  });
+};
+
+// Hook to delete a notification rule
+export const useDeleteNotificationRule = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: deleteNotificationRule,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.notificationSettings] });
+      toast.success('Notification rule deleted successfully');
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to delete notification rule: ${error.message}`);
+    }
+  });
+};
+
+// Hook to fetch eligible recipients
+export const useEligibleRecipients = () => {
+  return useQuery({
+    queryKey: [QueryKeys.eligibleRecipients],
+    queryFn: fetchEligibleRecipients,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
+
+// Hook to send a test notification
+export const useSendTestNotification = () => {
+  return useMutation({
+    mutationFn: sendTestNotification,
+    onSuccess: () => {
+      toast.success('Test notification sent successfully');
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to send test notification: ${error.message}`);
+    }
   });
 }; 

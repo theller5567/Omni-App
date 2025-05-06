@@ -1,4 +1,6 @@
 import LoggerService from './loggerService.js';
+import NotificationService from './notificationService.js';
+import User from '../models/User.js';
 
 /**
  * Service for tracking activities throughout the application
@@ -14,7 +16,7 @@ class ActivityTrackingService {
   static async trackMediaUpload(user, media) {
     if (!user || !media) return;
     
-    await LoggerService.logActivity({
+    const activity = await LoggerService.logActivity({
       userId: user.id,
       username: user.username || user.email,
       action: 'UPLOAD',
@@ -23,6 +25,15 @@ class ActivityTrackingService {
       resourceId: media.id || media._id,
       mediaSlug: media.slug
     });
+    
+    // Process notification
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(user.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, user);
+    }
   }
   
   /**
@@ -34,7 +45,7 @@ class ActivityTrackingService {
   static async trackMediaDeletion(user, media) {
     if (!user || !media) return;
     
-    await LoggerService.logActivity({
+    const activity = await LoggerService.logActivity({
       userId: user.id,
       username: user.username || user.email,
       action: 'DELETE',
@@ -43,6 +54,15 @@ class ActivityTrackingService {
       resourceId: media.id || media._id,
       mediaSlug: media.slug
     });
+    
+    // Process notification
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(user.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, user);
+    }
   }
   
   /**
@@ -55,7 +75,7 @@ class ActivityTrackingService {
   static async trackMediaUpdate(user, media, changedFields = []) {
     if (!user || !media) return;
     
-    await LoggerService.logActivity({
+    const activity = await LoggerService.logActivity({
       userId: user.id,
       username: user.username || user.email,
       action: 'EDIT',
@@ -64,6 +84,15 @@ class ActivityTrackingService {
       resourceId: media.id || media._id,
       mediaSlug: media.slug
     });
+    
+    // Process notification
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(user.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, user);
+    }
   }
   
   /**
@@ -75,7 +104,7 @@ class ActivityTrackingService {
   static async trackMediaTypeCreation(user, mediaType) {
     if (!user || !mediaType) return;
     
-    await LoggerService.logActivity({
+    const activity = await LoggerService.logActivity({
       userId: user.id,
       username: user.username || user.email,
       action: 'CREATE',
@@ -83,6 +112,15 @@ class ActivityTrackingService {
       resourceType: 'mediaType',
       resourceId: mediaType._id || mediaType.id
     });
+    
+    // Process notification
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(user.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, user);
+    }
   }
   
   /**
@@ -94,7 +132,7 @@ class ActivityTrackingService {
   static async trackMediaTypeUpdate(user, mediaType) {
     if (!user || !mediaType) return;
     
-    await LoggerService.logActivity({
+    const activity = await LoggerService.logActivity({
       userId: user.id,
       username: user.username || user.email,
       action: 'EDIT',
@@ -102,6 +140,15 @@ class ActivityTrackingService {
       resourceType: 'mediaType',
       resourceId: mediaType._id || mediaType.id
     });
+    
+    // Process notification
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(user.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, user);
+    }
   }
   
   /**
@@ -113,7 +160,7 @@ class ActivityTrackingService {
   static async trackMediaTypeDeletion(user, mediaType) {
     if (!user || !mediaType) return;
     
-    await LoggerService.logActivity({
+    const activity = await LoggerService.logActivity({
       userId: user.id,
       username: user.username || user.email,
       action: 'DELETE',
@@ -121,6 +168,15 @@ class ActivityTrackingService {
       resourceType: 'mediaType',
       resourceId: mediaType._id || mediaType.id
     });
+    
+    // Process notification
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(user.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, user);
+    }
   }
   
   /**
@@ -133,7 +189,7 @@ class ActivityTrackingService {
   static async trackUserUpdate(actor, targetUser, changedFields = []) {
     if (!actor || !targetUser) return;
     
-    await LoggerService.logActivity({
+    const activity = await LoggerService.logActivity({
       userId: actor.id,
       username: actor.username || actor.email,
       action: 'EDIT',
@@ -141,6 +197,15 @@ class ActivityTrackingService {
       resourceType: 'user',
       resourceId: targetUser._id || targetUser.id
     });
+    
+    // Process notification
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(actor.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, actor);
+    }
     
     // If the user is updating their own profile, also log a user activity
     if (actor.id === (targetUser._id || targetUser.id)) {
@@ -170,7 +235,7 @@ class ActivityTrackingService {
   static async trackUserCreation(actor, newUser) {
     if (!actor || !newUser) return;
     
-    await LoggerService.logActivity({
+    const activity = await LoggerService.logActivity({
       userId: actor.id,
       username: actor.username || actor.email,
       action: 'CREATE',
@@ -178,6 +243,15 @@ class ActivityTrackingService {
       resourceType: 'user',
       resourceId: newUser._id || newUser.id
     });
+    
+    // Process notification
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(actor.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, actor);
+    }
   }
   
   /**
@@ -204,7 +278,7 @@ class ActivityTrackingService {
     });
     
     // Also log as a general activity
-    await LoggerService.logActivity({
+    const activity = await LoggerService.logActivity({
       userId: user.id,
       username: user.username || user.email,
       action: 'EDIT',
@@ -212,6 +286,15 @@ class ActivityTrackingService {
       resourceType: 'user',
       resourceId: user.id
     });
+    
+    // Process notification
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(user.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, user);
+    }
   }
   
   /**
@@ -240,6 +323,22 @@ class ActivityTrackingService {
         success: false
       }
     });
+  }
+  
+  /**
+   * Helper to get user role for notification filtering
+   * 
+   * @param {string} userId - The user ID
+   * @returns {Promise<string>} - The user role
+   */
+  static async getUserRole(userId) {
+    try {
+      const user = await User.findById(userId);
+      return user?.role || 'user';
+    } catch (error) {
+      console.error('Error getting user role:', error);
+      return 'user'; // Default to user role
+    }
   }
 }
 

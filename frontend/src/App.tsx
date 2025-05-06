@@ -14,10 +14,13 @@ import { initializeMediaTypes } from './store/slices/mediaTypeSlice';
 import { RootState } from './store/store';
 import { AppDispatch } from './store/store';
 import axios from 'axios';
-import { Box, CircularProgress } from '@mui/material';
+import { Box, CircularProgress, useMediaQuery } from '@mui/material';
 // React Query imports
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+// Import ToastContainer for centralized toast notifications
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -86,6 +89,8 @@ const App: React.FC = () => {
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
   const userState = useSelector((state: RootState) => state.user.currentUser);
   const [isInitialized, setIsInitialized] = useState(false);
+  // Check for mobile view to determine toast position
+  const isMobile = useMediaQuery('(max-width:600px)');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
@@ -248,6 +253,20 @@ const App: React.FC = () => {
             </div>
           </Router>
         </ThemeContext.Provider>
+        
+        {/* Centralized ToastContainer for the entire application */}
+        <ToastContainer
+          position={isMobile ? "bottom-center" : "top-right"}
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={true}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          limit={3}  // Limit concurrent notifications
+        />
       </ThemeProvider>
       {/* Only show React Query Devtools in development */}
       {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
