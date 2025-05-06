@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
 import { 
@@ -15,7 +15,8 @@ import {
   Button,
   Link,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  CircularProgress
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -27,6 +28,7 @@ import FolderIcon from '@mui/icons-material/Folder';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config/config';
+import { useActivityLogs } from '../../hooks/query-hooks';
 
 // Example activity type
 interface ActivityLog {
@@ -65,287 +67,38 @@ interface UserType {
 //   window.location.hostname === '127.0.0.1';
 
 const RecentActivity: React.FC = () => {
-  const [activities, setActivities] = useState<ActivityLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [disableMock, setDisableMock] = useState(false);
-  const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   // Get users from Redux store to ensure we only use MongoDB users
   const userState = useSelector((state: RootState) => state.user);
   const users: UserType[] = userState.users.allUsers || [];
   const media = useSelector((state: RootState) => state.media.allMedia);
   
-  // Function to create mock data for fallback
-  const createMockData = () => {
-    // For demo purposes, create mock data using the actual MongoDB users
-    const mockUsernames = users.length > 0 
-      ? users.map((user: UserType) => user.username || user.name || 'user')
-      : ['admin', 'editor'];
-    
-    const mockUserIds = users.length > 0
-      ? users.map((user: UserType) => user.id || user._id || '1')
-      : ['1', '2'];
-    
-    // Use a counter to ensure unique IDs
-    let counter = 0;
-    
-    // Create realistic activity based on actual media items when possible
-    const mockActivities: ActivityLog[] = [];
-    
-    // Generate a truly unique ID for mock data
-    const generateUniqueId = (prefix: string) => {
-      counter++;
-      return `${prefix}-${Date.now()}-${counter}-${Math.random().toString(36).substring(2, 9)}`;
-    };
-    
-    // Media upload activity
-    mockActivities.push({
-      id: generateUniqueId('mock-upload'),
-      userId: mockUserIds[0] || '1',
-      username: mockUsernames[0] || 'admin',
-      action: 'UPLOAD',
-      details: `Uploaded ${media.length > 0 ? media[0].title || 'a new file' : 'a new image file'}`,
-      resourceType: 'media',
-      resourceId: media.length > 0 ? media[0].id || '123' : '123',
-      timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString()
-    });
-    
-    // Media delete activity
-    mockActivities.push({
-      id: generateUniqueId('mock-delete'),
-      userId: mockUserIds.length > 1 ? mockUserIds[1] : mockUserIds[0] || '1',
-      username: mockUsernames.length > 1 ? mockUsernames[1] : mockUsernames[0] || 'admin',
-      action: 'DELETE',
-      details: 'Deleted a document file',
-      resourceType: 'media',
-      resourceId: '456',
-      timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString()
-    });
-    
-    // Media type creation activity
-    mockActivities.push({
-      id: generateUniqueId('mock-create'),
-      userId: mockUserIds[0] || '1',
-      username: mockUsernames[0] || 'admin',
-      action: 'CREATE',
-      details: 'Created a new media type: Videos',
-      resourceType: 'mediaType',
-      resourceId: '789',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString()
-    });
-    
-    // Media edit activity
-    mockActivities.push({
-      id: generateUniqueId('mock-edit'),
-      userId: mockUserIds.length > 1 ? mockUserIds[1] : mockUserIds[0] || '1',
-      username: mockUsernames.length > 1 ? mockUsernames[1] : mockUsernames[0] || 'admin',
-      action: 'EDIT',
-      details: 'Updated media metadata',
-      resourceType: 'media',
-      resourceId: media.length > 1 ? media[1].id || '456' : '456',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString()
-    });
-    
-    // View activity
-    mockActivities.push({
-      id: generateUniqueId('mock-view'),
-      userId: mockUserIds[0] || '1',
-      username: mockUsernames[0] || 'admin',
-      action: 'VIEW',
-      details: 'Accessed media library',
-      resourceType: 'system',
-      resourceId: 'media-library',
-      timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString()
-    });
-    
-    setActivities(mockActivities);
-    setLoading(false);
-    console.log("Using mock data since real data could not be fetched");
-  };
+  // Use TanStack Query for activity logs
+  const { 
+    data: activitiesData,
+    isLoading,
+    isError,
+    error: queryError,
+    refetch,
+    isRefetching
+  } = useActivityLogs(20);
   
-  const fetchActivities = async (forceFetch = false) => {
-    try {
-      // Check if we should skip fetching due to recent cache
-      const now = Date.now();
-      
-      // Skip if data was fetched recently (within last 30 seconds) and we're not forcing a refresh
-      if (!forceFetch && lastFetchTime && now - lastFetchTime < 30000 && activities.length > 0) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`Skipping activity logs fetch - data is recent (${Math.round((now - lastFetchTime) / 1000)}s old)`);
-        }
-        return;
-      }
-      
-      setLoading(true);
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Starting to fetch activity logs...");
-      }
-      
-      // Always attempt to fetch from API regardless of environment
-      if (API_BASE_URL) {
-        try {
-          // Get token from localStorage
-          const token = localStorage.getItem('authToken');
-          if (process.env.NODE_ENV === 'development') {
-            console.log("API_BASE_URL:", API_BASE_URL);
-            console.log("Auth token present:", !!token);
-          }
-          
-          if (!token) {
-            setError("Authentication token is missing. Please log in again.");
-            if (!disableMock && !forceFetch) {
-              createMockData();
-            } else {
-              setLoading(false);
-            }
-            return;
-          }
-          
-          if (process.env.NODE_ENV === 'development') {
-            console.log("Making API request to:", `${API_BASE_URL}/api/admin/activity-logs`);
-          }
-          const response = await axios.get<ApiResponse>(`${API_BASE_URL}/api/admin/activity-logs`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            },
-            params: {
-              limit: 20
-            }
-          });
-          
-          if (process.env.NODE_ENV === 'development') {
-            console.log("API response status:", response.status);
-            console.log("API response data count:", response.data.data.length);
-            console.log("API response first few items:", response.data.data.slice(0, 2));
-          }
-          
-          // Filter activities to only include MongoDB users
-          const filteredActivities = response.data.data.filter(activity => {
-            return users.some((user: UserType) => user.id === activity.userId || user._id === activity.userId);
-          });
-          
-          if (process.env.NODE_ENV === 'development') {
-            console.log("Filtered activities count:", filteredActivities.length);
-          }
-          
-          // Fetch media slugs for media activities
-          const enrichedActivities = await enrichMediaActivities(filteredActivities, media);
-          
-          if (process.env.NODE_ENV === 'development') {
-            console.log("Enriched activities count:", enrichedActivities.length);
-            console.log("Activities with slugs:", enrichedActivities.filter(a => a.slug || a.mediaSlug).length);
-          }
-          
-          setActivities(enrichedActivities);
-          setLastFetchTime(Date.now()); // Update the last fetch time
-          setLoading(false);
-          setError(null); // Clear any previous errors
-        } catch (err: any) {
-          console.error("Error fetching activity logs:", err);
-          console.log("Error details:", {
-            message: err.message,
-            status: err.response?.status,
-            statusText: err.response?.statusText,
-            data: err.response?.data
-          });
-          
-          // Handle different error types
-          if (err.response) {
-            if (err.response.status === 401) {
-              setError("Authentication failed. Please log in again or ensure you have admin privileges.");
-            } else if (err.response.status === 403) {
-              setError("You don't have permission to view activity logs. Admin privileges required.");
-            } else {
-              setError(`Server error: ${err.response.status}. ${disableMock ? '' : 'Using fallback data.'}`);
-            }
-          } else if (err.request) {
-            setError("No response from server. Check your connection.");
-          } else {
-            setError(`Failed to fetch activity logs. ${disableMock ? '' : 'Using fallback data.'}`);
-          }
-          
-          if (!disableMock && !forceFetch) {
-            createMockData();
-          } else {
-            setLoading(false);
-          }
-        }
-      } else {
-        console.error("API_BASE_URL is not configured");
-        setError("API endpoint not configured. Using fallback data.");
-        if (!disableMock && !forceFetch) {
-          createMockData();
-        } else {
-          setLoading(false);
-        }
-      }
-    } catch (err) {
-      console.error("Error in activity handling:", err);
-      setError("An unexpected error occurred. Using fallback data.");
-      if (!disableMock && !forceFetch) {
-        createMockData();
-      } else {
-        setLoading(false);
-      }
+  // Create a more detailed error message from queryError if available
+  React.useEffect(() => {
+    if (isError && queryError) {
+      const errorMessage = queryError instanceof Error 
+        ? queryError.message 
+        : 'Failed to load activity logs';
+      setError(errorMessage);
+    } else {
+      setError(null);
     }
-  };
-  
-  // Handle manual refresh
-  const handleRefresh = () => {
-    fetchActivities(true);
-  };
-  
-  // Handle toggle mock data
-  const handleToggleMock = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setDisableMock(event.target.checked);
-  };
-  
-  useEffect(() => {
-    fetchActivities();
-    // Note: We don't include lastFetchTime in the dependency array because
-    // it's used within fetchActivities to implement our caching strategy
-  }, [users, media, disableMock]);
-
-  // Add a new effect to monitor the auth token
-  useEffect(() => {
-    // Create a function to check the token and trigger a refresh
-    const checkAuthAndRefresh = () => {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        // Only log in development to reduce console noise
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Auth token detected, fetching activities');
-        }
-        
-        // Don't force fetch if we already have recent data
-        fetchActivities(false);
-      } else {
-        console.log('No auth token found');
-      }
-    };
-
-    // Run once on component mount
-    checkAuthAndRefresh();
-    
-    // Monitor localStorage changes (browser storage event)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'authToken') {
-        console.log('Auth token changed in localStorage');
-        fetchActivities(true); // Force fetch with the new token
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Cleanup listener on unmount
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []); // Empty dependency array to run only once on mount
+  }, [isError, queryError]);
   
   // Function to enrich media activities with slugs
-  const enrichMediaActivities = async (activities: ActivityLog[], allMedia: any[]): Promise<ActivityLog[]> => {
+  const enrichMediaActivities = (activities: ActivityLog[], allMedia: any[]): ActivityLog[] => {
     // Only process activities related to media
     const mediaActivities = activities.filter(activity => 
       activity.resourceType === 'media' && activity.resourceId
@@ -431,6 +184,123 @@ const RecentActivity: React.FC = () => {
     }
     
     return enrichedActivities;
+  };
+  
+  // Function to create mock data for fallback
+  const createMockData = () => {
+    // For demo purposes, create mock data using the actual MongoDB users
+    const mockUsernames = users.length > 0 
+      ? users.map((user: UserType) => user.username || user.name || 'user')
+      : ['admin', 'editor'];
+    
+    const mockUserIds = users.length > 0
+      ? users.map((user: UserType) => user.id || user._id || '1')
+      : ['1', '2'];
+    
+    // Use a counter to ensure unique IDs
+    let counter = 0;
+    
+    // Create realistic activity based on actual media items when possible
+    const mockActivities: ActivityLog[] = [];
+    
+    // Generate a truly unique ID for mock data
+    const generateUniqueId = (prefix: string) => {
+      counter++;
+      return `${prefix}-${Date.now()}-${counter}-${Math.random().toString(36).substring(2, 9)}`;
+    };
+    
+    // Media upload activity
+    mockActivities.push({
+      id: generateUniqueId('mock-upload'),
+      userId: mockUserIds[0] || '1',
+      username: mockUsernames[0] || 'admin',
+      action: 'UPLOAD',
+      details: `Uploaded ${media.length > 0 ? media[0].title || 'a new file' : 'a new image file'}`,
+      resourceType: 'media',
+      resourceId: media.length > 0 ? media[0].id || '123' : '123',
+      timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString()
+    });
+    
+    // Media delete activity
+    mockActivities.push({
+      id: generateUniqueId('mock-delete'),
+      userId: mockUserIds.length > 1 ? mockUserIds[1] : mockUserIds[0] || '1',
+      username: mockUsernames.length > 1 ? mockUsernames[1] : mockUsernames[0] || 'admin',
+      action: 'DELETE',
+      details: 'Deleted a document file',
+      resourceType: 'media',
+      resourceId: '456',
+      timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString()
+    });
+    
+    // Media type creation activity
+    mockActivities.push({
+      id: generateUniqueId('mock-create'),
+      userId: mockUserIds[0] || '1',
+      username: mockUsernames[0] || 'admin',
+      action: 'CREATE',
+      details: 'Created a new media type: Videos',
+      resourceType: 'mediaType',
+      resourceId: '789',
+      timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString()
+    });
+    
+    // Media edit activity
+    mockActivities.push({
+      id: generateUniqueId('mock-edit'),
+      userId: mockUserIds.length > 1 ? mockUserIds[1] : mockUserIds[0] || '1',
+      username: mockUsernames.length > 1 ? mockUsernames[1] : mockUsernames[0] || 'admin',
+      action: 'EDIT',
+      details: 'Updated media metadata',
+      resourceType: 'media',
+      resourceId: media.length > 1 ? media[1].id || '456' : '456',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString()
+    });
+    
+    // View activity
+    mockActivities.push({
+      id: generateUniqueId('mock-view'),
+      userId: mockUserIds[0] || '1',
+      username: mockUsernames[0] || 'admin',
+      action: 'VIEW',
+      details: 'Accessed media library',
+      resourceType: 'system',
+      resourceId: 'media-library',
+      timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString()
+    });
+    
+    return mockActivities;
+  };
+  
+  // Process the activities data
+  const activities = React.useMemo(() => {
+    // If no data or disableMock is true and there's an error, return empty array
+    if (!activitiesData || (isError && disableMock)) {
+      return [];
+    }
+    
+    // If there's an error and disableMock is false, create mock data
+    if (isError && !disableMock) {
+      return createMockData();
+    }
+    
+    // Filter activities to only include MongoDB users
+    const filteredActivities = activitiesData.filter(activity => {
+      return users.some((user: UserType) => user.id === activity.userId || user._id === activity.userId);
+    });
+    
+    // Enrich the activities with media slugs
+    return enrichMediaActivities(filteredActivities, media);
+  }, [activitiesData, isError, disableMock, users, media]);
+  
+  // Handle manual refresh
+  const handleRefresh = () => {
+    refetch();
+  };
+  
+  // Handle toggle mock data
+  const handleToggleMock = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setDisableMock(event.target.checked);
   };
   
   // Function to get icon based on action type
@@ -538,8 +408,8 @@ const RecentActivity: React.FC = () => {
           const enrichedLogs = await enrichMediaActivities(filteredLogs, media);
           console.log("Enriched logs sample:", enrichedLogs[0]);
           
-          // Update the UI with these logs
-          setActivities(enrichedLogs);
+          // Log the enriched logs instead of updating state
+          console.log("Enriched logs:", enrichedLogs);
         }
         
         alert(`Authentication successful! You have admin privileges.\nSuccessfully retrieved ${logsResponse.data.data.length} activity logs.`);
@@ -636,9 +506,20 @@ const RecentActivity: React.FC = () => {
                 'lastModified',
                 'metadata.modifiedBy',
                 'metadata.updatedAt',
-                'metadata.lastModified'
+                'metadata.lastModified',
+                // Additional fields that may be noise
+                'metadata.tagsInput',
+                'metadata.userId',
+                'metadata.fileExtension'
               ];
-              return !unwantedFields.includes(field);
+              
+              // Also filter out if it starts with "metadata." + is in our list above
+              const fieldName = field.startsWith('metadata.') ? field.substring(9) : field;
+              if (unwantedFields.includes(field) || unwantedFields.includes(`metadata.${fieldName}`)) {
+                return false;
+              }
+              
+              return true;
             })
             .map(field => {
               // Clean up metadata prefix
@@ -737,12 +618,15 @@ const RecentActivity: React.FC = () => {
     );
   };
   
-  if (loading) {
+  if (isLoading) {
     return (
       <Paper elevation={2} className="dashboard-card" style={{ minHeight: '450px' }}>
         <Typography variant="h6" gutterBottom>Recent Activity</Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 3, minHeight: '350px' }}>
-          <Typography>Loading...</Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', py: 3, minHeight: '350px' }}>
+          <CircularProgress />
+          <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
+            Loading activity logs...
+          </Typography>
         </Box>
       </Paper>
     );
@@ -752,8 +636,38 @@ const RecentActivity: React.FC = () => {
     return (
       <Paper elevation={2} className="dashboard-card" style={{ minHeight: '450px' }}>
         <Typography variant="h6" gutterBottom>Recent Activity</Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 3, minHeight: '350px' }}>
-          <Typography color="error">{error}</Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', py: 3, minHeight: '350px' }}>
+          <Typography color="error" gutterBottom>{error}</Typography>
+          
+          <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={() => refetch()}
+              startIcon={<RefreshIcon />}
+            >
+              Retry
+            </Button>
+            
+            <Button 
+              variant="outlined" 
+              color="secondary" 
+              onClick={testAuthentication}
+            >
+              Test Auth
+            </Button>
+            
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={disableMock}
+                  onChange={handleToggleMock}
+                  size="small"
+                />
+              }
+              label="Disable Mock Data"
+            />
+          </Box>
         </Box>
       </Paper>
     );
@@ -779,10 +693,10 @@ const RecentActivity: React.FC = () => {
             color="primary" 
             size="small"
             onClick={handleRefresh}
-            disabled={loading}
-            startIcon={<RefreshIcon />}
+            disabled={isLoading || isRefetching}
+            startIcon={isRefetching ? <CircularProgress size={16} /> : <RefreshIcon />}
           >
-            Refresh
+            {isRefetching ? 'Refreshing...' : 'Refresh'}
           </Button>
           {error && (
             <Button 
@@ -799,10 +713,29 @@ const RecentActivity: React.FC = () => {
       
       {activities.length === 0 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 3, minHeight: '350px' }}>
-          <Typography color="textSecondary">No recent activity found</Typography>
+          <Typography color="textSecondary">
+            {isLoading ? 'Loading activity data...' : 'No recent activity found'}
+          </Typography>
         </Box>
       ) : (
-        <List sx={{ width: '100%', bgcolor: 'background.paper', minHeight: '350px' }}>
+        <List sx={{ width: '100%', bgcolor: 'background.paper', minHeight: '350px', position: 'relative' }}>
+          {/* Show a loading overlay when refetching */}
+          {isRefetching && (
+            <Box sx={{ 
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(255, 255, 255, 0.5)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 5
+            }}>
+              <CircularProgress size={30} />
+            </Box>
+          )}
           {activities.map((activity, index) => (
             <React.Fragment key={`activity-${activity.id || index}`}>
               <ListItem alignItems="flex-start">
@@ -840,7 +773,7 @@ const RecentActivity: React.FC = () => {
                   }
                 />
               </ListItem>
-              {index < activities.length - 1 && <Divider key={`divider-${activity.id || index}`} variant="inset" component="li" />}
+              {index < activities.length - 1 && <Divider key={`divider-${activity.id || index}`} />}
             </React.Fragment>
           ))}
         </List>
@@ -849,4 +782,4 @@ const RecentActivity: React.FC = () => {
   );
 };
 
-export default RecentActivity; 
+export default RecentActivity;

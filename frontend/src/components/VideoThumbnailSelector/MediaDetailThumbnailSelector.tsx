@@ -30,7 +30,7 @@ interface MediaDetailThumbnailSelectorProps {
   videoUrl: string;
   mediaId: string;
   currentThumbnail?: string;
-  onThumbnailUpdate: (thumbnailUrl: string, updatedMedia?: any) => void;
+  onThumbnailUpdate: (thumbnailUrl: string) => void;
   mediaData?: any; // Optional complete media data from parent
   onClose?: () => void; // Optional close handler for dialog mode
 }
@@ -261,22 +261,8 @@ const MediaDetailThumbnailSelector: React.FC<MediaDetailThumbnailSelectorProps> 
         
         const updatedMediaFile = response.data.mediaFile;
         
-        if (!updatedMediaFile) {
-          onThumbnailUpdate(originalS3Url, { 
-            metadata: { 
-              v_thumbnail: originalS3Url,
-              v_thumbnailTimestamp: timeValue
-            }
-          });
-        } else {
-          if (updatedMediaFile.metadata?.v_thumbnail !== originalS3Url) {
-            if (!updatedMediaFile.metadata) updatedMediaFile.metadata = {};
-            updatedMediaFile.metadata.v_thumbnail = originalS3Url;
-            updatedMediaFile.metadata.v_thumbnailTimestamp = timeValue;
-          }
-          
-          onThumbnailUpdate(originalS3Url, updatedMediaFile);
-        }
+        // Notify parent component about the update
+        onThumbnailUpdate(originalS3Url);
         
         // Show success indicator
         setShowSuccessIndicator(true);
@@ -297,7 +283,7 @@ const MediaDetailThumbnailSelector: React.FC<MediaDetailThumbnailSelectorProps> 
           setShowOverlay(true);
         }, 300);
         
-        toast.success('Thumbnail updated successfully');
+        // Toast notification is now handled by parent component
       } else {
         setStatusMessage('Failed to update thumbnail. The server did not return a valid thumbnail URL.');
         setStatusType('error');

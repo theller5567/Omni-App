@@ -54,7 +54,11 @@ const FieldInput: React.FC<FieldInputProps> = ({
           multiline
           rows={4}
           value={metadata[keyName] || ""}
-          onChange={(e) => handleMetadataChange(keyName, e.target.value)}
+          onChange={(e) => {
+            // Use undefined for empty strings in non-required fields
+            const value = e.target.value.trim() === '' && !field.required ? undefined : e.target.value;
+            handleMetadataChange(keyName, value);
+          }}
           margin="none"
           variant="outlined"
           size="small"
@@ -79,7 +83,11 @@ const FieldInput: React.FC<FieldInputProps> = ({
           <Select
             name={keyName}
             value={metadata[keyName] || ''}
-            onChange={(e) => handleMetadataChange(keyName, e.target.value)}
+            onChange={(e) => {
+              // Use undefined for empty values in non-required fields
+              const value = e.target.value === '' && !field.required ? undefined : e.target.value;
+              handleMetadataChange(keyName, value);
+            }}
             sx={{ bgcolor: 'background.paper', borderRadius: 1 }}
           >
             {selectOptions.map((option) => (
@@ -108,7 +116,12 @@ const FieldInput: React.FC<FieldInputProps> = ({
             name={keyName}
             multiple
             value={Array.isArray(metadata[keyName]) ? metadata[keyName] : []}
-            onChange={(e) => handleMetadataChange(keyName, e.target.value)}
+            onChange={(e) => {
+              const selectedValues = e.target.value as string[];
+              // Use undefined for empty arrays in non-required fields
+              const value = selectedValues.length === 0 && !field.required ? undefined : selectedValues;
+              handleMetadataChange(keyName, value);
+            }}
             renderValue={(selected) => (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                 {(selected as string[]).map((value) => (
@@ -153,7 +166,11 @@ const FieldInput: React.FC<FieldInputProps> = ({
           type="number"
           fullWidth
           value={metadata[keyName] || ""}
-          onChange={(e) => handleMetadataChange(keyName, e.target.value)}
+          onChange={(e) => {
+            // Use undefined for empty values in non-required fields
+            const value = e.target.value === '' && !field.required ? undefined : e.target.value;
+            handleMetadataChange(keyName, value);
+          }}
           margin="none"
           variant="outlined"
           size="small"
@@ -169,7 +186,11 @@ const FieldInput: React.FC<FieldInputProps> = ({
           type="date"
           fullWidth
           value={metadata[keyName] || ""}
-          onChange={(e) => handleMetadataChange(keyName, e.target.value)}
+          onChange={(e) => {
+            // Use undefined for empty values in non-required fields
+            const value = e.target.value === '' && !field.required ? undefined : e.target.value;
+            handleMetadataChange(keyName, value);
+          }}
           margin="none"
           variant="outlined"
           size="small"
@@ -184,7 +205,11 @@ const FieldInput: React.FC<FieldInputProps> = ({
         <FormControl fullWidth size="small">
           <Select
             value={metadata[keyName] !== undefined ? metadata[keyName] : "false"}
-            onChange={(e) => handleMetadataChange(keyName, e.target.value)}
+            onChange={(e) => {
+              // For Boolean fields, we always want to store a value
+              // so we don't use undefined here
+              handleMetadataChange(keyName, e.target.value);
+            }}
             sx={{ bgcolor: 'background.paper', borderRadius: 1 }}
           >
             <MenuItem value="true">Yes</MenuItem>
@@ -199,7 +224,11 @@ const FieldInput: React.FC<FieldInputProps> = ({
         <TextField
           fullWidth
           value={metadata[keyName] || ""}
-          onChange={(e) => handleMetadataChange(keyName, e.target.value)}
+          onChange={(e) => {
+            // Use undefined for empty strings in non-required fields
+            const value = e.target.value.trim() === '' && !field.required ? undefined : e.target.value;
+            handleMetadataChange(keyName, value);
+          }}
           margin="none"
           variant="outlined"
           size="small"

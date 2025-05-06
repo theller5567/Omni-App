@@ -23,7 +23,12 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
   
   // Handle row click to navigate to detail view
   const handleRowClick = (params: GridRowParams) => {
-    navigate(`/media/slug/${params.row.slug}`);
+    if (params.row.slug) {
+      navigate(`/media/slug/${params.row.slug}`);
+    } else if (params.row.id) {
+      // Fallback to ID if slug is not available
+      navigate(`/media/id/${params.row.id}`);
+    }
   };
   
   const columns: GridColDef[] = [
@@ -138,7 +143,9 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
       );
     }},
     { field: 'fileName', headerName: 'Title', flex: 0.5, renderCell: (params) => (
-      <Link to={`/media/slug/${params.row.slug}`} >{params.row.metadata.fileName}</Link>
+      <Link to={params.row.slug ? `/media/slug/${params.row.slug}` : `/media/id/${params.row.id}`}>
+        {params.row.metadata.fileName || params.row.title || 'Untitled'}
+      </Link>
     )},
     { field: 'mediaType', headerName: 'Media Type', flex: 0.5, renderCell: (params) => {
       // Get media type and its color

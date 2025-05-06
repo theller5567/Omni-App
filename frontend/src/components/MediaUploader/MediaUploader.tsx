@@ -159,9 +159,13 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
 
   // Handle metadata field changes
   const handleMetadataChange = (field: string, value: any) => {
+    // For non-required fields, if the value is an empty string, 
+    // set it to undefined so it won't be sent to the database
+    const finalValue = value === '' ? undefined : value;
+    
     setMetadata((prev) => ({
       ...prev,
-      [field]: value,
+      [field]: finalValue,
     }));
   };
 

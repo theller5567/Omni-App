@@ -57,16 +57,16 @@ const generateVideoThumbnail = async (videoPath, timestamp = '00:00:01') => {
     }
     
     // Generate thumbnail from the video file
-    return new Promise((resolve, reject) => {
-      ffmpeg(videoPath)
-        .screenshots({
-          timestamps: [timestamp],
-          filename: thumbnailPath,
-          size: '320x240'
-        })
-        .on('end', async () => {
-          try {
-            // Read the generated thumbnail
+  return new Promise((resolve, reject) => {
+    ffmpeg(videoPath)
+      .screenshots({
+        timestamps: [timestamp],
+        filename: thumbnailPath,
+        size: '320x240'
+      })
+      .on('end', async () => {
+        try {
+          // Read the generated thumbnail
             const thumbnailBuffer = await fsPromises.readFile(thumbnailPath);
             
             // Clean up the temporary files
@@ -75,11 +75,11 @@ const generateVideoThumbnail = async (videoPath, timestamp = '00:00:01') => {
               await fsPromises.unlink(tempVideoPath).catch(err => console.warn('Error deleting temp video:', err));
             }
             
-            resolve(thumbnailBuffer);
-          } catch (error) {
-            reject(error);
-          }
-        })
+          resolve(thumbnailBuffer);
+        } catch (error) {
+          reject(error);
+        }
+      })
         .on('error', (err) => {
           console.error('FFmpeg error:', err);
           // Clean up temp files on error too
@@ -89,7 +89,7 @@ const generateVideoThumbnail = async (videoPath, timestamp = '00:00:01') => {
           }
           reject(err);
         });
-    });
+  });
   } catch (error) {
     // Clean up temporary files if there was an error
     try {
@@ -598,9 +598,6 @@ export const updateMedia = async (req, res) => {
   const { slug } = req.params;
   console.log('Received update request for slug:', slug);
   console.log('Request body:', JSON.stringify(req.body, null, 2));
-  console.log('Request URL:', req.originalUrl);
-  console.log('Request method:', req.method);
-  console.log('Request headers:', req.headers);
 
   try {
     // Fetch the document using the Media model
@@ -612,60 +609,110 @@ export const updateMedia = async (req, res) => {
       return res.status(404).json({ error: 'Media file not found' });
     }
     
-    console.log('Found document:', JSON.stringify(documentBeforeUpdate, null, 2));
-    
     // Get the specific model for this document
     const modelName = documentBeforeUpdate.constructor.modelName;
     console.log(`Document model name: ${modelName}`);
     
+    // Use changedFields from the client if provided, otherwise initialize empty array
+    let changedFields = req.body.changedFields || [];
+    
     // Update the fields
     if (req.body.title) {
       documentBeforeUpdate.title = req.body.title;
+      if (!changedFields.includes('title')) {
+        changedFields.push('title');
+      }
     }
     
-    // Update metadata if it's provided
+    // Update only the metadata fields specified in changedFields
     if (req.body.metadata) {
       // Ensure there is a metadata object
       if (!documentBeforeUpdate.metadata) {
         documentBeforeUpdate.metadata = {};
       }
       
-      // Update specified metadata fields
-      for (const [key, value] of Object.entries(req.body.metadata)) {
-        // Skip undefined values
-        if (value !== undefined) {
-          documentBeforeUpdate.metadata[key] = value;
+      // Extract metadata field names from changedFields
+      const metadataFieldsToUpdate = changedFields
+        .filter(field => field.startsWith('metadata.'))
+        .map(field => field.replace('metadata.', ''));
+      
+      // If client explicitly sent changedFields, use only those fields
+      if (req.body.changedFields && req.body.changedFields.length > 0) {
+        console.log('Using client-provided changedFields:', req.body.changedFields);
+        
+        // Only update metadata fields that are in changedFields
+        metadataFieldsToUpdate.forEach(key => {
+          if (req.body.metadata[key] !== undefined) {
+            console.log(`Updating metadata field "${key}" from ${JSON.stringify(documentBeforeUpdate.metadata[key])} to ${JSON.stringify(req.body.metadata[key])}`);
+            documentBeforeUpdate.metadata[key] = req.body.metadata[key];
+          }
+        });
+      } 
+      // If no changedFields provided, update all fields and track changes
+      else {
+        console.log('No changedFields provided, updating all metadata fields');
+        changedFields = []; // Reset since we'll rebuild from scratch
+        
+        if (req.body.title && req.body.title !== documentBeforeUpdate.title) {
+          changedFields.push('title');
+        }
+        
+        // Update all metadata fields and track which ones changed
+        for (const [key, value] of Object.entries(req.body.metadata)) {
+          if (value === undefined) continue;
+          
+          const origValue = documentBeforeUpdate.metadata[key];
+          
+          // Check if the value actually changed
+          let hasChanged = false;
+          
+          // Handle comparison for different types
+          if (origValue === undefined && value !== undefined) {
+            // Special case: undefined to empty string shouldn't be considered a change
+            if (value === '' || value === null) {
+              console.log(`Field "${key}" changed from undefined to empty string/null, not considered a change`);
+              hasChanged = false;
+            } else {
+              hasChanged = true;
+            }
+          } else if (typeof value === 'object' && value !== null) {
+            // For arrays and objects, compare stringified versions
+            hasChanged = JSON.stringify(origValue) !== JSON.stringify(value);
+          } else {
+            // For primitive values, direct comparison
+            hasChanged = origValue !== value;
+          }
+          
+          if (hasChanged) {
+            console.log(`Field "${key}" changed from ${JSON.stringify(origValue)} to ${JSON.stringify(value)}`);
+            documentBeforeUpdate.metadata[key] = value;
+            changedFields.push(`metadata.${key}`);
+          }
         }
       }
     }
     
-    // Save the updated document
-    console.log('Saving updated document...');
-    const updatedMediaFile = await documentBeforeUpdate.save();
-
-    // Log the media update activity
-    if (req.user) {
-      // Determine which fields were changed
-      const changedFields = [];
-      if (req.body.title !== documentBeforeUpdate.title) changedFields.push('title');
-      if (req.body.metadata) {
-        Object.keys(req.body.metadata).forEach(key => {
-          if (JSON.stringify(req.body.metadata[key]) !== JSON.stringify(documentBeforeUpdate.metadata?.[key])) {
-            changedFields.push(`metadata.${key}`);
-          }
-        });
+    // Only proceed with save if there are actual changes
+    if (changedFields.length > 0) {
+      console.log('Saving updated document with changed fields:', changedFields);
+      const updatedMediaFile = await documentBeforeUpdate.save();
+      
+      // Log the media update activity with the accurate changedFields
+      if (req.user) {
+        await ActivityTrackingService.trackMediaUpdate(req.user, updatedMediaFile, changedFields);
+        console.log('Media update activity logged with changes:', changedFields);
       }
       
-      await ActivityTrackingService.trackMediaUpdate(req.user, updatedMediaFile, changedFields);
-      console.log('Media update activity logged with changes:', changedFields);
+      // Send response with proper content type
+      res.setHeader('Content-Type', 'application/json');
+      return res.status(200).json(updatedMediaFile);
+    } else {
+      console.log('No changes detected, skipping update');
+      return res.status(200).json({
+        message: 'No changes detected',
+        data: documentBeforeUpdate
+      });
     }
-
-    // Log the document after update
-    console.log('Updated media file:', JSON.stringify(updatedMediaFile, null, 2));
-
-    // Send response with proper content type
-    res.setHeader('Content-Type', 'application/json');
-    return res.status(200).json(updatedMediaFile);
   } catch (error) {
     console.error('Error updating media file:', error);
 

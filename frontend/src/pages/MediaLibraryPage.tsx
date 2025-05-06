@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../store/store';
-import { deleteMedia, initializeMedia, addMedia, deleteMediaThunk } from '../store/slices/mediaSlice';
-import { initializeMediaTypes } from '../store/slices/mediaTypeSlice';
+import { useDispatch } from 'react-redux';
+import { AppDispatch } from '../store/store';
+import { addMedia } from '../store/slices/mediaSlice';
 import { CircularProgress, Box, Typography } from '@mui/material';
 import '../components/MediaLibrary/MediaContainer.scss';
-import axios from 'axios';
-import env from '../config/env';
 import { toast } from 'react-toastify';
+// Import React Query hooks
+import { useMedia, useMediaTypes, useDeleteMedia } from '../hooks/query-hooks';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Lazy load components
 const MediaUploader = lazy(() => import('../components/MediaUploader/MediaUploader'));
@@ -24,43 +24,27 @@ const MediaContainer: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMediaType, setSelectedMediaType] = useState<string>('All');
-  const mediaState = useSelector((state: RootState) => state.media);
-  const mediaTypesState = useSelector((state: RootState) => state.mediaTypes);
   const dispatch = useDispatch<AppDispatch>();
+  const queryClient = useQueryClient();
   
   // Add refs to track upload completion
   const processingUploadRef = useRef(false);
   const uploadCallTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Initialize media and media types
-  useEffect(() => {
-    // Define data loading function to load both media and types
-    const loadMediaData = async () => {
-      const loadingPromises = [];
-      
-      // Check if we need to load media
-      if (mediaState.status === 'idle' && mediaState.allMedia.length === 0) {
-        loadingPromises.push(dispatch(initializeMedia()));
-      }
-      
-      // Check if we need to load media types
-      if (mediaTypesState.status === 'idle' && mediaTypesState.mediaTypes.length === 0) {
-        loadingPromises.push(dispatch(initializeMediaTypes()));
-      }
-      
-      // If any data needs loading, show a single loading indicator and execute in parallel
-      if (loadingPromises.length > 0) {
-        try {
-          await Promise.all(loadingPromises);
-        } catch (error) {
-          console.error('Error loading media library data:', error);
-        }
-      }
-    };
-    
-    // Call the loading function
-    loadMediaData();
-  }, [dispatch, mediaState.status, mediaState.allMedia.length, mediaTypesState.status, mediaTypesState.mediaTypes.length]);
+  // Use React Query hooks
+  const { 
+    data: mediaData = [], 
+    isLoading: isLoadingMedia, 
+    isError: isMediaError,
+    error: mediaError
+  } = useMedia();
+  
+  const { 
+    data: mediaTypes = [], 
+    isLoading: isLoadingMediaTypes
+  } = useMediaTypes();
+
+  const { mutateAsync: deleteMediaMutation } = useDeleteMedia();
 
   // Add effect to handle refresh after upload - with debounce
   useEffect(() => {
@@ -72,31 +56,15 @@ const MediaContainer: React.FC = () => {
     };
   }, []);
 
-  // Track meaningful state changes
-  const prevStateRef = React.useRef({
-    status: mediaState.status,
-    count: mediaState.allMedia.length
-  });
-
+  // Track meaningful state changes - logging only in development
   useEffect(() => {
-    const prevState = prevStateRef.current;
-    const currentState = {
-      status: mediaState.status,
-      count: mediaState.allMedia.length
-    };
-
-    // Only log meaningful transitions
-    if (prevState.status !== currentState.status || prevState.count !== currentState.count) {
-      if (currentState.status === 'succeeded' && currentState.count > 0) {
-        console.log('MediaLibraryPage - Ready:', {
-          status: currentState.status,
-          items: currentState.count
-        });
-      }
+    if (process.env.NODE_ENV === 'development' && mediaData.length > 0) {
+      console.log('MediaLibraryPage - Ready:', {
+        items: mediaData.length,
+        mediaTypes: mediaTypes.length
+      });
     }
-
-    prevStateRef.current = currentState;
-  }, [mediaState.status, mediaState.allMedia.length]);
+  }, [mediaData.length, mediaTypes.length]);
 
   const handleOpen = useCallback(() => {
     setIsModalOpen(true);
@@ -116,9 +84,14 @@ const MediaContainer: React.FC = () => {
       // Set processing flag to prevent multiple refreshes
       processingUploadRef.current = true;
       
-      // Add the new file into Redux store so the data-table updates
-      // This is sufficient to update the UI without a full refresh
+      // Add the new file to Redux store for now (this will be migrated to React Query in a future refactoring)
       dispatch(addMedia(newFile));
+      
+      // Update the React Query cache with the new item
+      queryClient.setQueryData<any[]>(['media'], (oldData) => {
+        if (!oldData) return [newFile];
+        return [...oldData, newFile];
+      });
       
       // Automatically reset the processing flag after a timeout
       setTimeout(() => {
@@ -126,34 +99,23 @@ const MediaContainer: React.FC = () => {
       }, 1000);
     }
     // Do not automatically close the modal - let the user choose when to close it
-  }, [dispatch]);
+  }, [dispatch, queryClient]);
 
   const handleDeleteMedia = useCallback(async (id: string): Promise<boolean> => {
     try {
-      console.log('Deleting media with ID:', id);
-      
-      // Use the thunk action with authorization instead of direct axios call
-      const resultAction = await dispatch(deleteMediaThunk(id));
-      
-      if (deleteMediaThunk.fulfilled.match(resultAction)) {
-        // If the API call was successful, update the local state
-        dispatch(deleteMedia(id));
-        // Success toast is shown in MediaLibrary component
-        return true;
-      } else {
-        // Handle rejected action
-        const errorMessage = typeof resultAction.payload === 'string' 
-          ? resultAction.payload 
-          : 'Error deleting media';
-        toast.error(errorMessage);
-        return false;
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Deleting media with ID:', id);
       }
+      
+      // Use React Query mutation
+      await deleteMediaMutation(id);
+      return true;
     } catch (error) {
       console.error('Error deleting media file:', error);
       toast.error('Failed to delete media');
       return false;
     }
-  }, [dispatch]);
+  }, [deleteMediaMutation]);
 
   const handleMediaTypeChange = useCallback((type: string) => {
     setSelectedMediaType(type);
@@ -161,7 +123,7 @@ const MediaContainer: React.FC = () => {
 
   // Filter media files based on search query
   const filteredMediaFiles = useMemo(() => {
-    return mediaState.allMedia
+    return mediaData
       .filter(file => {
         // Basic field validation - ensure required fields exist
         if (!file || !file._id) {
@@ -179,13 +141,16 @@ const MediaContainer: React.FC = () => {
         _id: file._id || file.id || `media-${Date.now()}`, // Ensure _id exists
         mediaType: file.mediaType || 'Unknown',
         fileExtension: file.fileExtension || '',
+        modifiedDate: file.modifiedDate || new Date().toISOString(), // Add missing modifiedDate field
+        location: file.location || '', // Ensure location has a default value
+        slug: file.slug || `media-${file._id || Date.now()}`, // Ensure slug has a default value
         metadata: {
           ...(file.metadata || {}),
           fileName: file.metadata?.fileName || file.title || 'Untitled',
           tags: file.metadata?.tags || []
         }
       }));
-  }, [mediaState.allMedia, searchQuery]);
+  }, [mediaData, searchQuery]);
 
   // Only log in development and limit frequency
   const prevFilterCountRef = useRef(0);
@@ -193,14 +158,15 @@ const MediaContainer: React.FC = () => {
     if (process.env.NODE_ENV === 'development' && 
         Math.abs(prevFilterCountRef.current - filteredMediaFiles.length) > 10) {
       console.log('MediaLibraryPage - Filter updated:', {
-        total: mediaState.allMedia.length,
+        total: mediaData.length,
         filtered: filteredMediaFiles.length
       });
       prevFilterCountRef.current = filteredMediaFiles.length;
     }
-  }, [filteredMediaFiles.length, mediaState.allMedia.length]);
+  }, [filteredMediaFiles.length, mediaData.length]);
 
-  if (mediaState.status === 'loading') {
+  // Show loading state if either media or media types are loading
+  if (isLoadingMedia || isLoadingMediaTypes) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
         <CircularProgress />
@@ -208,10 +174,11 @@ const MediaContainer: React.FC = () => {
     );
   }
 
-  if (mediaState.status === 'failed') {
+  // Show error state if there's an error loading media
+  if (isMediaError) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-        <Typography color="error">Error loading media: {mediaState.error}</Typography>
+        <Typography color="error">Error loading media: {mediaError instanceof Error ? mediaError.message : 'Unknown error'}</Typography>
       </Box>
     );
   }

@@ -160,7 +160,12 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
   };
 
   const handleFileClick = (file: BaseMediaFile) => {
-    navigate(`/media/slug/${file.slug}`);
+    if (file.slug) {
+      navigate(`/media/slug/${file.slug}`);
+    } else if (file._id || file.id) {
+      // Fallback to ID if slug is not available
+      navigate(`/media/id/${file._id || file.id}`);
+    }
   };
 
   const handleDeleteClick = (id: string) => {

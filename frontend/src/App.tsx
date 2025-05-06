@@ -15,6 +15,20 @@ import { RootState } from './store/store';
 import { AppDispatch } from './store/store';
 import axios from 'axios';
 import { Box, CircularProgress } from '@mui/material';
+// React Query imports
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+
+// Create React Query client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // Disable refetching when window regains focus
+      staleTime: 1000 * 60 * 5, // Data is considered fresh for 5 minutes
+      retry: 1, // Only retry failed requests once
+    },
+  },
+});
 
 // Lazy load components
 const MediaDetail = lazy(() => import('./components/MediaDetail/MediaDetail'));
@@ -108,9 +122,11 @@ const App: React.FC = () => {
           // PERFORMANCE IMPROVEMENT: Only load media data if we're viewing the media library
           // For other pages, we'll lazy load these when needed
           const currentPath = window.location.pathname;
-          if (currentPath.includes('/media-library') || currentPath.includes('/media/slug/')) {
+          if (currentPath.includes('/media-library') || 
+              currentPath.includes('/media/slug/') || 
+              currentPath.includes('/admin-dashboard')) {
             if (process.env.NODE_ENV === 'development') {
-              console.log('Detected media page, initializing media data...');
+              console.log('Detected media page or admin dashboard, initializing media data...');
             }
             
             try {
@@ -192,46 +208,50 @@ const App: React.FC = () => {
   }
 
   return (
-    <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
-      <CssBaseline />
-      <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
-        <Router>
-          <div id="app-container" style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-            {userState.email && <Sidebar />}
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                bottom: 0,
-                width: '100vw',
-                overflow: 'auto',
-              }}
-            >
-              <Suspense fallback={<LoadingFallback />}>
-                <Routes>
-                  <Route path="/media/slug/:slug" element={<ProtectedRoute element={<MediaDetail />} />} />
-                  <Route path="/media-library" element={<ProtectedRoute element={<MediaLibraryPage />} />} />
-                  <Route path="/account" element={<ProtectedRoute element={<Account />} />} />
-                  <Route path="/admin-users" element={<ProtectedRoute element={<AccountUsers />} />} />
-                  <Route path="/admin-tags" element={<ProtectedRoute element={<AccountTags />} />} />
-                  <Route path="/admin-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} />} />
-                  {userRole === 'superAdmin' && (
-                    <Route path="/manage-media-types" element={<AccountMediaTypes />} />
-                  )}
-                  <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} />} />
-                  <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
-                  <Route path="/password-setup" element={<PasswordSetupPage />} />
-                  <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} />} />
-                  <Route path="/login" element={<AuthPage />} />
-                  <Route path="/" element={<AuthPage />} />
-                </Routes>
-              </Suspense>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
+        <CssBaseline />
+        <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
+          <Router>
+            <div id="app-container" style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+              {userState.email && <Sidebar />}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  width: '100vw',
+                  overflow: 'auto',
+                }}
+              >
+                <Suspense fallback={<LoadingFallback />}>
+                  <Routes>
+                    <Route path="/media/slug/:slug" element={<ProtectedRoute element={<MediaDetail />} />} />
+                    <Route path="/media-library" element={<ProtectedRoute element={<MediaLibraryPage />} />} />
+                    <Route path="/account" element={<ProtectedRoute element={<Account />} />} />
+                    <Route path="/admin-users" element={<ProtectedRoute element={<AccountUsers />} />} />
+                    <Route path="/admin-tags" element={<ProtectedRoute element={<AccountTags />} />} />
+                    <Route path="/admin-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} />} />
+                    {userRole === 'superAdmin' && (
+                      <Route path="/manage-media-types" element={<AccountMediaTypes />} />
+                    )}
+                    <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} />} />
+                    <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
+                    <Route path="/password-setup" element={<PasswordSetupPage />} />
+                    <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} />} />
+                    <Route path="/login" element={<AuthPage />} />
+                    <Route path="/" element={<AuthPage />} />
+                  </Routes>
+                </Suspense>
+              </div>
             </div>
-          </div>
-        </Router>
-      </ThemeContext.Provider>
-    </ThemeProvider>
+          </Router>
+        </ThemeContext.Provider>
+      </ThemeProvider>
+      {/* Only show React Query Devtools in development */}
+      {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
+    </QueryClientProvider>
   );
 };
 

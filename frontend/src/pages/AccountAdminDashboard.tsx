@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -9,8 +9,11 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
+import { AppDispatch } from '../store/store';
+import { initializeMedia } from '../store/slices/mediaSlice';
+import { initializeMediaTypes } from '../store/slices/mediaTypeSlice';
 import '../components/AdminDashboard/dashboard.scss';
 
 // Lazy-loaded dashboard components
@@ -64,11 +67,33 @@ const AccountAdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const dispatch = useDispatch<AppDispatch>();
   
   // Get media data from Redux store
   const allMedia = useSelector((state: RootState) => state.media.allMedia);
   const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  const mediaStatus = useSelector((state: RootState) => state.media.status);
+  const mediaTypesStatus = useSelector((state: RootState) => state.mediaTypes.status);
   
+  // Initialize data when component mounts if not already loaded
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      // Only load media data if it hasn't been loaded yet
+      if (mediaStatus === 'idle' || allMedia.length === 0) {
+        console.log('Initializing media data for Admin Dashboard');
+        dispatch(initializeMedia());
+      }
+      
+      // Only load media types data if it hasn't been loaded yet
+      if (mediaTypesStatus === 'idle' || mediaTypes.length === 0) {
+        console.log('Initializing media types data for Admin Dashboard');
+        dispatch(initializeMediaTypes());
+      }
+    };
+    
+    loadDashboardData();
+  }, [dispatch, mediaStatus, mediaTypesStatus, allMedia.length, mediaTypes.length]);
+
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
@@ -119,7 +144,7 @@ const AccountAdminDashboard: React.FC = () => {
           {/* Latest Upload Card */}
           <Paper elevation={2} className="dashboard-card stat-card">
             <Typography variant="h6" className="stat-title">Latest Upload</Typography>
-            <Typography variant="h3" className="stat-value" sx={{ color: 'info.main' }}>
+            <Typography display="block" variant="h3" className="stat-value" sx={{ color: 'info.main' }}>
               {formatLatestUploadDate()}
             </Typography>
             <Typography variant="body2" className="stat-subtitle">Most recent upload date</Typography>
@@ -166,31 +191,31 @@ const AccountAdminDashboard: React.FC = () => {
         </Tabs>
         
         <div className="dashboard-tab-content" style={{ minHeight: '500px' }}>
-          <TabPanel value={activeTab} index={0}>
+          <TabPanel value={activeTab} index={0} key="tab-panel-0">
             <Suspense fallback={<LoadingFallback />}>
               <MediaTypeDistribution key="media-type-distribution" />
             </Suspense>
           </TabPanel>
           
-          <TabPanel value={activeTab} index={1}>
+          <TabPanel value={activeTab} index={1} key="tab-panel-1">
             <Suspense fallback={<LoadingFallback />}>
               <StorageUsageChart key="storage-usage-chart" />
             </Suspense>
           </TabPanel>
           
-          <TabPanel value={activeTab} index={2}>
+          <TabPanel value={activeTab} index={2} key="tab-panel-2">
             <Suspense fallback={<LoadingFallback />}>
               <UserActivity key="user-activity" />
             </Suspense>
           </TabPanel>
           
-          <TabPanel value={activeTab} index={3}>
+          <TabPanel value={activeTab} index={3} key="tab-panel-3">
             <Suspense fallback={<LoadingFallback />}>
               <DatabaseStats key="database-stats" />
             </Suspense>
           </TabPanel>
           
-          <TabPanel value={activeTab} index={4}>
+          <TabPanel value={activeTab} index={4} key="tab-panel-4">
             <Suspense fallback={<LoadingFallback />}>
               <RecentActivity key="recent-activity" />
             </Suspense>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, lazy, Suspense, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { 
   Box, 
   Button, 
@@ -10,20 +10,20 @@ import {
   Theme,
   Tabs,
   Tab,
-  Tooltip
+  Tooltip,
+  TextField
 } from "@mui/material";
 import axios from "axios";
 import { BaseMediaFile } from "../../interfaces/MediaFile";
-import { MediaFile, MediaType } from "../../types/media";
+import { MediaFile } from "../../types/media";
 import { motion } from 'framer-motion';
 import { formatFileSize } from "../../utils/formatFileSize";
 import "./mediaDetail.scss";
-import { useSelector, useDispatch } from "react-redux";
-import { RootState, AppDispatch } from "../../store/store";
+import { useSelector } from "react-redux";
+import { RootState } from "../../store/store";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useUsername } from '../../hooks/useUsername';
-import env from '../../config/env';
 import { 
   FaFileAudio, 
   FaFileWord, 
@@ -35,8 +35,10 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import PhotoIcon from '@mui/icons-material/Photo';
-import { updateMedia } from '../../store/slices/mediaSlice';
 import RelatedMediaItem from "./RelatedMediaItem";
+// Import React Query hooks
+import { useMediaDetail, useUpdateMedia, useApiHealth, QueryKeys } from '../../hooks/query-hooks';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Lazy load subcomponents
 const MediaInformation = lazy(() => import('./MediaInformation'));
@@ -45,14 +47,8 @@ const EditMediaDialog = lazy(() => import('./EditMediaDialog').then(module => ({
 })));
 const ThumbnailUpdateDialog = lazy(() => import('./ThumbnailUpdateDialog'));
 
-// Loading fallback component
-const LoadingFallback = () => (
-  <Box display="flex" justifyContent="center" alignItems="center" p={2}>
-    <CircularProgress size={24} />
-  </Box>
-);
 
-// Add a helper function to safely get metadata fields from either root or metadata object
+// Helper function to safely get metadata fields from either root or metadata object
 const getMetadataField = (mediaFile: any, fieldName: string, defaultValue: any = undefined) => {
   if (!mediaFile) return defaultValue;
   
@@ -70,20 +66,7 @@ const getMetadataField = (mediaFile: any, fieldName: string, defaultValue: any =
   return defaultValue;
 };
 
-// Add this type definition near the top of the file, after your imports
-interface MediaMetadata {
-  fileName?: string;
-  altText?: string;
-  description?: string;
-  visibility?: string;
-  tags?: string[];
-  v_thumbnail?: string;
-  v_thumbnailTimestamp?: string;
-  [key: string]: any; // Allow for additional properties
-}
-
 // Extract subcomponents for better organization and code splitting
-
 interface MediaDetailTagsProps {
   tags?: string[];
   isMobile?: boolean;
@@ -603,492 +586,347 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
 };
 
 const MediaDetail: React.FC = () => {
-  // All state hooks first
-  const { slug } = useParams();
-  const [mediaFile, setMediaFile] = useState<BaseMediaFile | null>(null);
-  const [mediaTypeConfig, setMediaTypeConfig] = useState<MediaType | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  // Get uploadedBy from either direct property or metadata
-  const userId = mediaFile ? getMetadataField(mediaFile, 'uploadedBy', '') : '';
-  const { username: uploaderUsername, loading: uploaderLoading } = useUsername(userId);
-  const userRole = useSelector((state: RootState) => state.user.currentUser.role);
-  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
-  const dispatch = useDispatch<AppDispatch>();
-
-  // Add state for thumbnail dialog
-  const [thumbnailDialogOpen, setThumbnailDialogOpen] = useState(false);
-
+  const location = useLocation();
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isThumbnailDialogOpen, setIsThumbnailDialogOpen] = useState(false);
+  
+  // Get queryClient for cache invalidation
+  const queryClient = useQueryClient();
+  
+  // Debug state variables
+  const [showAdvancedDebug, setShowAdvancedDebug] = useState(false);
+  const [customEndpoint, setCustomEndpoint] = useState('');
+  const [isTestingEndpoint, setIsTestingEndpoint] = useState(false);
+  const [testResult, setTestResult] = useState<{success: boolean, message: string} | null>(null);
+  
+  // Get media types from Redux store for now (we can migrate these to React Query later)
+  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  
+  // Use React Query hook instead of direct API call
+  const { 
+    data: mediaFile, 
+    isLoading, 
+    isError, 
+    error,
+    refetch 
+  } = useMediaDetail(slug);
+  
+  // Use mutation hook for updates
+  const { mutateAsync: updateMediaMutation } = useUpdateMedia();
+  
+  // Add API health check
+  const { 
+    isLoading: isCheckingHealth, 
+    isError: isHealthError, 
+    error: healthError,
+    refetch: recheckHealth 
+  } = useApiHealth();
+  
+  // Redirect back to media library if slug is missing
   useEffect(() => {
-    const fetchFile = async () => {
       if (!slug) {
-        setLoading(false);
-        return;
+      navigate('/media-library');
+    }
+  }, [slug, navigate]);
+  
+  // Get current user role from Redux store
+  const userRole = useSelector((state: RootState) => state.user.currentUser.role);
+  const isEditingEnabled = userRole === 'admin' || userRole === 'superAdmin';
+
+  // Get user info - moved to top level to ensure consistent hook order
+  const userId = mediaFile ? (getMetadataField(mediaFile, 'uploadedBy', '') || '') : '';
+  const { username: uploadedBy } = useUsername(userId);
+
+  // Effect to update the URL if the slug in the URL doesn't match the actual slug
+  useEffect(() => {
+    if (mediaFile && slug && mediaFile.slug && slug !== mediaFile.slug) {
+      // We found media but the URL slug doesn't match the actual slug
+      // Update the URL without triggering a new page load
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Correcting URL: changing ${slug} to ${mediaFile.slug}`);
       }
+      const newPath = location.pathname.replace(slug, mediaFile.slug);
+      navigate(newPath, { replace: true });
+    }
+  }, [mediaFile, slug, navigate, location.pathname]);
 
-      try {
-        setLoading(true);
-        const response = await axios.get<BaseMediaFile>(`${env.BASE_URL}/media/slug/${slug}`);
-        console.log("Media file:", response.data);
-        setMediaFile(response.data);
-
-        // Find the corresponding media type
-        if (response.data.mediaType) {
-          const mediaType = mediaTypes.find(
-            (type) => type.name === response.data.mediaType
-          );
-          
-          if (mediaType) {
-            console.log("Media type found:", mediaType);
-            // Create a properly typed MediaType object from our store type
-            setMediaTypeConfig({
-              id: mediaType._id || '',
-              name: mediaType.name,
-              // Explicitly set optional properties
-              description: '',
-              fields: mediaType.fields || [],
-              acceptedFileTypes: mediaType.acceptedFileTypes || [],
-              defaultTags: mediaType.defaultTags || []
-            });
-          } else {
-            console.warn(
-              `Media type "${response.data.mediaType}" not found in available types.`
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching file details:", error);
-        toast.error("Failed to load file details. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFile();
-  }, [slug, mediaTypes]);
+  // Motion animation adjusted for mobile
+  const motionProps = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.3 }
+  };
 
   const handleDownload = async () => {
-    if (!mediaFile) return;
-
+    if (!mediaFile || !mediaFile.location) return;
+    
     try {
-      // For direct downloads of files with known URLs
-      if (mediaFile.location) {
-        // Create a temporary anchor element
-        const link = document.createElement('a');
-        link.href = mediaFile.location;
-        
-        // Set the download attribute with the file name
-        const fileName = mediaFile.metadata?.fileName || mediaFile.title || `file.${mediaFile.fileExtension}`;
-        link.setAttribute('download', fileName);
-        
-        // Append to the document, click it, and remove it
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        // Use the API for downloads that require server-side processing
-        const response = await axios.get(`${env.BASE_URL}/media/download/${mediaFile.id || mediaFile._id}`, {
+      // Fetch file with responseType: 'blob' to get binary data
+      const response = await axios.get(mediaFile.location, {
           responseType: 'blob'
         });
         
-        // Create a blob URL for the downloaded file
+      // Create a blob URL for the file
         const blob = new Blob([response.data as BlobPart]);
         const url = window.URL.createObjectURL(blob);
         
-        // Set up and trigger download
+      // Create a temporary link element and click it to download
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', mediaFile.metadata?.fileName || mediaFile.title || 'download');
+      link.download = mediaFile.metadata?.fileName || mediaFile.title || 'download';
         document.body.appendChild(link);
         link.click();
         
         // Clean up
         window.URL.revokeObjectURL(url);
         document.body.removeChild(link);
-      }
       
-      toast.success('Download started');
+      toast.success('File download started');
     } catch (error) {
       console.error('Error downloading file:', error);
-      toast.error('Failed to download file. Please try again.');
+      toast.error('Failed to download file');
     }
   };
 
   const handleEdit = () => {
-    console.log('handleEdit function called');
-    setIsEditing(true);
-    console.log('isEditing set to true');
+    setIsEditDialogOpen(true);
   };
-
-  const handleSave = async (updatedMediaFile: Partial<MediaFile> & { metadata?: Record<string, any> }) => {
-    if (!mediaFile) return;
+  
+  const handleSave = async (updatedMediaFile: Partial<MediaFile> & { metadata?: Record<string, any> }): Promise<boolean> => {
+    try {
+      if (!mediaFile) {
+        throw new Error('No media file data available to update');
+      }
+      
+      // Track which fields are actually changed
+      const changedFields: string[] = [];
+      
+      // Check if title changed
+      if (updatedMediaFile.title && updatedMediaFile.title !== mediaFile.title) {
+        changedFields.push('title');
+      }
+      
+      // Check which metadata fields changed
+      if (updatedMediaFile.metadata && mediaFile.metadata) {
+        Object.keys(updatedMediaFile.metadata).forEach(key => {
+          const oldValue = mediaFile.metadata?.[key];
+          const newValue = updatedMediaFile.metadata?.[key];
+          
+          // Special handling for undefined to empty string conversion
+          // This prevents registering a non-meaningful change when a field goes from undefined to empty string
+          if (oldValue === undefined && (newValue === '' || newValue === null)) {
+            // Skip adding this to changedFields since undefined to empty string is not a real change
+            console.log(`Field ${key} changed from undefined to empty string, ignoring as non-meaningful change`);
+            return;
+          }
+          
+          // Only add to changedFields if the value actually changed
+          if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+            changedFields.push(`metadata.${key}`);
+          }
+        });
+      }
+      
+      // Build the update payload - only include changed metadata fields
+      const updatePayload: Partial<BaseMediaFile> & { 
+        metadata?: Record<string, any>;
+        changedFields?: string[];
+      } = {
+        _id: mediaFile._id,
+        id: mediaFile.id,
+        slug: mediaFile.slug || '',
+        modifiedDate: mediaFile.modifiedDate || new Date().toISOString(),
+        // Only include title if it changed
+        ...(changedFields.includes('title') ? { title: updatedMediaFile.title } : {})
+      };
+      
+      // Only include changed metadata fields
+      if (updatedMediaFile.metadata && changedFields.some(f => f.startsWith('metadata.'))) {
+        updatePayload.metadata = { ...(mediaFile.metadata || {}) };
+        
+        // Only update fields that actually changed
+        changedFields
+          .filter(field => field.startsWith('metadata.'))
+          .forEach(field => {
+            const metadataKey = field.replace('metadata.', '');
+            updatePayload.metadata![metadataKey] = updatedMediaFile.metadata![metadataKey];
+          });
+      }
+      
+      // Add changedFields to the payload so the backend knows which fields were updated
+      updatePayload.changedFields = changedFields;
+      
+      // Don't proceed if there are no changes to make
+      if (changedFields.length === 0) {
+        console.log('No changes detected, skipping update');
+        return true;
+      }
+      
+      // Use the mutation function
+      await updateMediaMutation(updatePayload as any);
+      
+      // Handle successful update
+      handleSuccessfulUpdate(updatePayload);
+      
+      return true;
+    } catch (error: any) {
+      handleFailedUpdate(error);
+      return false;
+    }
+  };
+  
+  const handleSuccessfulUpdate = (updatedMediaFile: Partial<BaseMediaFile> & { metadata?: Record<string, any> }) => {
+    // Close the edit dialog 
+    setIsEditDialogOpen(false);
+    
+    // Show success message
+    if (updatedMediaFile.title !== mediaFile?.title) {
+      toast.success(`Title updated successfully`);
+    } else {
+      toast.success(`Media details updated successfully`);
+    }
+    
+    // Invalidate activity logs query to refresh the Recent Activity component
+    queryClient.invalidateQueries({ queryKey: [QueryKeys.activityLogs] });
+    
+    // Refetch data to ensure we have the most up-to-date version
+    refetch();
+  };
+  
+  const handleFailedUpdate = (payload: unknown) => {
+    console.error('Error updating media:', payload);
+    
+    if (typeof payload === 'object' && payload !== null && 'message' in payload) {
+      toast.error(`Update failed: ${String((payload as any).message)}`);
+    } else {
+      toast.error('Failed to update media');
+    }
+  };
+  
+  const handleThumbnailUpdate = (thumbnailUrl: string) => {
+    if (mediaFile && thumbnailUrl) {
+      try {
+        // Get the queryClient to invalidate queries
+        const queryClient = useQueryClient();
+        
+        // Track which fields are being changed
+        const changedFields: string[] = [];
+        
+        // Check if thumbnail is actually changing
+        if (mediaFile.metadata?.v_thumbnail !== thumbnailUrl) {
+          changedFields.push('metadata.v_thumbnail');
+        }
+        
+        // Add timestamp field
+        changedFields.push('metadata.v_thumbnailTimestamp');
+        
+        // The thumbnail has already been updated by the API endpoint call
+        // No need to call updateMediaMutation again which is causing duplicate logs
+        
+        // Close dialog
+        setIsThumbnailDialogOpen(false);
+        
+        // Show success toast notification
+        toast.success('Thumbnail updated successfully');
+        
+        // Invalidate activity logs query to refresh the Recent Activity component
+        queryClient.invalidateQueries({ queryKey: [QueryKeys.activityLogs] });
+        
+        // Refetch to get latest data
+        refetch();
+        return Promise.resolve(true);
+    } catch (error) {
+        console.error('Error processing thumbnail update:', error);
+        toast.error('Failed to update thumbnail');
+        return Promise.resolve(false);
+      }
+    }
+    return Promise.resolve(false);
+  };
+  
+  // Function to test a custom endpoint
+  const testCustomEndpoint = async () => {
+    if (!customEndpoint || !slug) return;
+    
+    setIsTestingEndpoint(true);
+    setTestResult(null);
     
     try {
-      // Get required identifiers from the media file
-      const mediaId = mediaFile._id || mediaFile.id || '';
-      const mediaSlug = mediaFile.slug || '';
+      const token = localStorage.getItem('authToken');
+      // Extract ID if present in the slug
+      const idMatch = slug.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+      const id = idMatch ? idMatch[1] : slug;
       
-      console.log('Received data for update:', updatedMediaFile);
-      
-      // Log MediaType specific fields from updatedMediaFile.customFields
-      if (updatedMediaFile.customFields && mediaTypeConfig?.fields) {
-        console.log('MediaType specific fields to update:');
-        mediaTypeConfig.fields.forEach(field => {
-          const fieldValue = updatedMediaFile.customFields?.[field.name];
-          console.log(`Field "${field.name}" (${field.type}):`, fieldValue, 
-            `(type: ${typeof fieldValue})`);
-          
-          // Check for undefined or null values that might be causing issues
-          if (fieldValue === undefined) {
-            console.warn(`Field "${field.name}" is undefined`);
-          } else if (fieldValue === null) {
-            console.warn(`Field "${field.name}" is null`);
-          } else if (fieldValue === '') {
-            console.warn(`Field "${field.name}" is empty string`);
-          }
-        });
-      }
-      
-      // If the updated data already has a metadata property, that means the EditDialog
-      // has already prepared the changed-only fields for us
-      if (updatedMediaFile.metadata) {
-        console.log('Received pre-filtered changed fields:', updatedMediaFile);
+      // Replace :id or :slug placeholders with actual values
+      const endpoint = customEndpoint
+        .replace(':id', id)
+        .replace(':slug', slug);
         
-        // Make sure we have the required identifiers
-        const updatePayload = {
-          ...updatedMediaFile,
-          _id: mediaId,
-          id: mediaId,
-          slug: mediaSlug
-        };
-        
-        // Important: Do not add any other fields to the metadata
-        // The EditDialog has already filtered for only changed fields
-        
-        console.log('Using pre-filtered update payload:', JSON.stringify(updatePayload, null, 2));
-        const resultAction = await dispatch(updateMedia(updatePayload));
-        
-        // Process the result
-        if (updateMedia.fulfilled.match(resultAction)) {
-          handleSuccessfulUpdate(resultAction.payload, updatedMediaFile);
-        } else if (updateMedia.rejected.match(resultAction)) {
-          handleFailedUpdate(resultAction.payload);
+      const response = await axios.get(endpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-        
-        return;
-      }
-      
-      // Legacy format handling for backward compatibility
-      // Extract only the properties we need to update
-      const updatePayload: {
-        _id: string;
-        id: string;
-        slug: string;
-        title?: string;
-        metadata?: Record<string, any>;
-      } = {
-        _id: mediaId,
-        id: mediaId, // Include both ID formats
-        slug: mediaSlug, // Include the slug for the API endpoint
-        title: updatedMediaFile.title
-      };
-      
-      // Only add metadata if needed
-      if (updatedMediaFile.fileName || 
-          updatedMediaFile.altText || 
-          updatedMediaFile.description || 
-          updatedMediaFile.visibility || 
-          updatedMediaFile.tags ||
-          (updatedMediaFile.customFields && Object.keys(updatedMediaFile.customFields).length > 0)) {
-        
-        updatePayload.metadata = {};
-        
-        // Only add fields that were provided in the update
-        if (updatedMediaFile.fileName) updatePayload.metadata.fileName = updatedMediaFile.fileName;
-        if (updatedMediaFile.altText) updatePayload.metadata.altText = updatedMediaFile.altText;
-        if (updatedMediaFile.description) updatePayload.metadata.description = updatedMediaFile.description;
-        if (updatedMediaFile.visibility) updatePayload.metadata.visibility = updatedMediaFile.visibility;
-        if (updatedMediaFile.tags) updatePayload.metadata.tags = updatedMediaFile.tags;
-        
-        // Only add custom fields that were explicitly provided
-        if (updatedMediaFile.customFields && Object.keys(updatedMediaFile.customFields).length > 0) {
-          Object.entries(updatedMediaFile.customFields).forEach(([key, value]) => {
-            if (key && value !== undefined) {
-              // Check if it's a MediaType field
-              const isMediaTypeField = mediaTypeConfig?.fields.some(field => field.name === key);
-              if (isMediaTypeField) {
-                console.log(`Adding changed MediaType field "${key}" with value:`, value);
-                updatePayload.metadata![key] = value;
-              }
-            }
-          });
-        }
-      }
-      
-      // ALWAYS include thumbnail URLs if they exist in data, even if unchanged
-      // This ensures changes are saved properly and prevents caching issues
-      if (updatedMediaFile.metadata && 'v_thumbnail' in updatedMediaFile.metadata) {
-        // Ensure metadata exists
-        if (!updatePayload.metadata) {
-          updatePayload.metadata = {};
-        }
-        // Type assertion and null check
-        const thumbnailUrl = (updatedMediaFile.metadata as MediaMetadata).v_thumbnail;
-        if (thumbnailUrl) {
-          (updatePayload.metadata as MediaMetadata).v_thumbnail = thumbnailUrl.split('?')[0];
-        }
-      }
-      
-      if (updatedMediaFile.metadata && 'v_thumbnailTimestamp' in updatedMediaFile.metadata) {
-        // Ensure metadata exists
-        if (!updatePayload.metadata) {
-          updatePayload.metadata = {};
-        }
-        // Type assertion with non-null assertion
-        const timestamp = (updatedMediaFile.metadata as MediaMetadata).v_thumbnailTimestamp;
-        if (timestamp) {
-          (updatePayload.metadata as MediaMetadata).v_thumbnailTimestamp = timestamp;
-        }
-      }
-      
-      console.log('Final update payload:', JSON.stringify(updatePayload, null, 2));
-      
-      // Call the Redux action to update the media file
-      const resultAction = await dispatch(updateMedia(updatePayload));
-      
-      if (updateMedia.fulfilled.match(resultAction)) {
-        handleSuccessfulUpdate(resultAction.payload, updatedMediaFile);
-      } else if (updateMedia.rejected.match(resultAction)) {
-        handleFailedUpdate(resultAction.payload);
-      }
-    } catch (error) {
-      console.error('Error updating media:', error);
-      toast.error('Failed to update media: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
-  };
-
-  // Helper function to handle successful updates
-  const handleSuccessfulUpdate = (updatedData: any, updatedMediaFile: Partial<MediaFile> & { metadata?: Record<string, any> }) => {
-    console.log('Update successful, server returned:', updatedData);
-    
-    // Inspect metadata from server response
-    console.log('Server returned metadata:', updatedData.metadata);
-    
-    // Track if we had mediaType-specific fields to update
-    let hadMediaTypeFields = false;
-    
-    // Examine specific custom fields in server response
-    if (mediaTypeConfig && updatedMediaFile.metadata) {
-      hadMediaTypeFields = true;
-      
-      // Log comparison of what was submitted vs what the server returned
-      console.log('Checking server response against our submitted changes:');
-      
-      // Get the fields that should have been updated
-      Object.keys(updatedMediaFile.metadata).forEach(fieldName => {
-        const serverValue = updatedData.metadata?.[fieldName];
-        const submittedValue = updatedMediaFile.metadata?.[fieldName];
-        
-        console.log(`Field "${fieldName}":`, {
-          serverReturned: serverValue,
-          formSubmitted: submittedValue,
-          serverType: typeof serverValue,
-          submittedType: typeof submittedValue,
-          valueMatch: serverValue === submittedValue
-        });
       });
+      
+      setTestResult({
+        success: true,
+        message: `Success! Endpoint returned ${response.status} with data: ${JSON.stringify(response.data).substring(0, 100)}...`
+      });
+    } catch (error: any) {
+      setTestResult({
+        success: false,
+        message: `Error: ${error.message}${error.response ? ` (Status: ${error.response.status})` : ''}`
+      });
+    } finally {
+      setIsTestingEndpoint(false);
     }
-    
-    // Create a new mediaFile object that properly preserves the custom fields
-    setMediaFile(prevState => {
-      if (!prevState) return null;
-      
-      // Create a new metadata object that combines existing and updated values
-      const combinedMetadata = {
-        ...(prevState.metadata || {}),
-        ...(updatedData.metadata || {})
-      };
-      
-      // Ensure the submitted metadata changes take precedence over what the server returned
-      // This handles cases where the server might not have correctly updated all fields
-      if (hadMediaTypeFields && updatedMediaFile.metadata) {
-        console.log('Adding submitted form changes to final metadata');
-        Object.entries(updatedMediaFile.metadata).forEach(([key, value]) => {
-          if (value !== undefined) {
-            console.log(`Ensuring field "${key}" uses submitted value:`, value);
-            combinedMetadata[key] = value;
-          }
-        });
-      }
-      
-      // Special handling for thumbnails
-      if (updatedMediaFile.metadata && 'v_thumbnail' in updatedMediaFile.metadata) {
-        const thumbnailUrl = (updatedMediaFile.metadata as MediaMetadata).v_thumbnail;
-        if (thumbnailUrl) {
-          (combinedMetadata as MediaMetadata).v_thumbnail = thumbnailUrl.split('?')[0];
-        }
-      }
-      
-      if (updatedMediaFile.metadata && 'v_thumbnailTimestamp' in updatedMediaFile.metadata) {
-        const timestamp = (updatedMediaFile.metadata as MediaMetadata).v_thumbnailTimestamp;
-        if (timestamp) {
-          (combinedMetadata as MediaMetadata).v_thumbnailTimestamp = timestamp;
-        }
-      }
-      
-      // Log the combined metadata for debugging
-      console.log('Combined metadata after update:', combinedMetadata);
-      
-      // Return a new media file object with the updated data
-      return {
-        ...prevState,
-        ...updatedData,
-        // Ensure metadata is properly updated
-        metadata: combinedMetadata,
-        // Update customFields with the combined metadata for future edits
-        customFields: { ...combinedMetadata }
-      };
-    });
-    
-    toast.success('Media updated successfully');
   };
 
-  // Helper function to handle failed updates
-  const handleFailedUpdate = (payload: unknown) => {
-    // Handle specific error if available
-    const errorMsg = payload ? String(payload) : 'Update failed';
-    throw new Error(errorMsg);
-  };
+  // Find media type details
+  const mediaTypeInfo = mediaTypes.find(
+    (type) => type.name === mediaFile?.mediaType
+  );
+  
+  // Get the media's accent color from its media type
+  const accentColor = mediaTypeInfo?.catColor || '#4dabf5';
+  
+  // Get metadata description (from either root or metadata object)
+  const description = mediaFile ? getMetadataField(mediaFile, 'description', '') : '';
+  
+  // Ensure modifiedDate exists - required by BaseMediaFile interface
+  const modifiedDate = mediaFile ? (mediaFile.modifiedDate || new Date().toISOString()) : new Date().toISOString();
+  
+  // Set CSS variables for theming
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--accent-color', accentColor);
+    
+    return () => {
+      // Reset to default when component unmounts
+      root.style.setProperty('--accent-color', '#4dabf5');
+    };
+  }, [accentColor]);
+  
+  const isVideo = mediaFile && mediaFile.fileExtension && 
+    ['mp4', 'webm', 'ogg', 'mov'].includes(mediaFile.fileExtension.toLowerCase());
 
-  // Define base fields for the details component
-  const baseFields = [
-    { name: 'File Name', value: getMetadataField(mediaFile, 'fileName', mediaFile?.title) },
-    { name: 'Media Type', value: mediaFile?.mediaType },
-    { name: 'File Size', value: formatFileSize(mediaFile?.fileSize || 0) },
-    { name: 'File Extension', value: mediaFile?.fileExtension?.toUpperCase() },
-    { name: 'Upload Date', value: mediaFile?.modifiedDate ? new Date(mediaFile.modifiedDate).toLocaleDateString() : 'Unknown' },
-    { name: 'Uploaded By', value: uploaderLoading ? 'Loading...' : (uploaderUsername || userId || 'Unknown') },
-    { name: 'Description', value: getMetadataField(mediaFile, 'description', '') },
+  // Prepare data for MediaInformation component according to its expected props
+  const baseFields = mediaFile ? [
+    { name: 'File Name', value: getMetadataField(mediaFile, 'fileName', mediaFile.title) },
+    { name: 'Media Type', value: mediaFile.mediaType },
+    { name: 'File Size', value: formatFileSize(mediaFile.fileSize || 0) },
+    { name: 'File Extension', value: mediaFile.fileExtension?.toUpperCase() },
+    { name: 'Upload Date', value: new Date(modifiedDate).toLocaleDateString() },
+    { name: 'Uploaded By', value: uploadedBy || userId || 'Unknown' },
+    { name: 'Description', value: description },
     { name: 'Alt Text', value: getMetadataField(mediaFile, 'altText', '') },
     { name: 'Visibility', value: getMetadataField(mediaFile, 'visibility', 'private')?.toUpperCase() },
-  ];
+  ] : [];
 
-  // Update mediaTypeForEdit when mediaFile or mediaTypeConfig changes
-  useEffect(() => {
-    console.log("mediaFile or mediaTypeConfig changed, updating mediaTypeForEdit");
-    
-    // If fields are modified and saved, ensure they're reflected when reopening the dialog
-    if (mediaFile && isEditing) {
-      console.log("Dialog is open, refreshing values");
-      console.log("Current mediaFile metadata:", mediaFile.metadata);
-    }
-  }, [mediaFile, mediaTypeConfig, isEditing]);
-
-  // Prepare the media file for the edit dialog
-  const mediaFileForEdit = mediaFile ? {
-    id: mediaFile._id || mediaFile.id || '',
-    title: mediaFile.title || '',
-    fileName: getMetadataField(mediaFile, 'fileName', mediaFile.title),
-    altText: getMetadataField(mediaFile, 'altText', ''),
-    description: getMetadataField(mediaFile, 'description', ''),
-    visibility: getMetadataField(mediaFile, 'visibility', 'private'),
-    tags: getMetadataField(mediaFile, 'tags', []),
-    // Include both metadata and customFields for maximum compatibility
-    customFields: {
-      // First include all metadata fields
-      ...(mediaFile.metadata || {}),
-      // Ensure each MediaType specific field is explicitly included from metadata
-      ...(mediaTypeConfig?.fields.reduce((fields, field) => {
-        if (mediaFile.metadata && mediaFile.metadata[field.name] !== undefined) {
-          fields[field.name] = mediaFile.metadata[field.name];
-        }
-        return fields;
-      }, {} as Record<string, any>))
-    },
-    fileType: mediaFile.fileExtension || '',
-    url: mediaFile.location || ''
-  } : null;
-
-  // Find the media type based on the mediaFile
-  const mediaTypeForEdit = mediaTypeConfig ? {
-    ...mediaTypeConfig,
-    // Ensure each field has a label property
-    fields: mediaTypeConfig.fields.map(field => ({
-      ...field,
-      // Use label if exists, otherwise use name as the label
-      label: field.label || field.name
-    }))
-  } : null;
-
-  // Function to handle thumbnail update
-  const handleThumbnailUpdate = (thumbnailUrl: string, updatedMedia?: any) => {
-    console.log('Thumbnail updated:', thumbnailUrl);
-    
-    if (updatedMedia) {
-      console.log('Updated media file:', updatedMedia);
-      // Use our existing handleSuccessfulUpdate function to update the state
-      handleSuccessfulUpdate({
-        success: true,
-        message: 'Thumbnail updated successfully',
-        data: updatedMedia
-      }, updatedMedia);
-      
-      // Update the Redux store with the complete media object
-      if ('_id' in updatedMedia) {
-        dispatch(updateMedia(updatedMedia));
-      }
-    } else if (mediaFile && thumbnailUrl) {
-      // Create updated media file object with new thumbnail
-      const updatedMediaFile = {
-        ...mediaFile,
-        metadata: {
-          ...mediaFile.metadata,
-          v_thumbnail: thumbnailUrl,
-          v_thumbnailTimestamp: Date.now()
-        }
-      };
-      
-      // Update the state
-      handleSuccessfulUpdate({
-        success: true,
-        message: 'Thumbnail updated successfully',
-        data: updatedMediaFile
-      }, updatedMediaFile);
-      
-      // Update the Redux store with the complete media object
-      dispatch(updateMedia(updatedMediaFile));
-    }
-  };
-
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (!mediaFile) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-        <Typography>Media not found</Typography>
-      </Box>
-    );
-  }
-
-  // Is the current user allowed to edit this media?
-  const isEditingEnabled = userRole === 'superAdmin' || userRole === 'admin';
-
-  // Motion animation adjusted for mobile
-  const motionProps = {
-    initial: { opacity: 0 },
-    animate: { opacity: 1 },
-    exit: { opacity: 0 },
-    transition: { duration: isMobile ? 0.3 : 0.5 }
-  };
-
+  // Render the successful state with the media file
   return (
     <motion.div className="media-detail-container" {...motionProps}>
       <Button
@@ -1099,70 +937,247 @@ const MediaDetail: React.FC = () => {
       >
         <ArrowBackIcon fontSize={isMobile ? "small" : "medium"} />
       </Button>
-      <Box className="media-detail">
+
+      {isLoading ? (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "400px",
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      ) : isError || !mediaFile ? (
+        <Box
+          sx={{
+            p: 3,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          <Typography variant="h5" color="error">
+            Error Loading Media
+          </Typography>
+          <Typography variant="body1" sx={{ maxWidth: '600px', textAlign: 'center', mb: 2 }}>
+            {error instanceof Error ? error.message : 'Failed to load media file'}
+          </Typography>
+          
+          {/* Show API Health Status */}
+          <Box sx={{ 
+            p: 2, 
+            bgcolor: isHealthError ? 'rgba(255,0,0,0.05)' : 'rgba(0,255,0,0.05)', 
+            borderRadius: 1,
+            mb: 2,
+            width: '100%',
+            maxWidth: '500px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center'
+          }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              API Server Status: {isCheckingHealth ? 'Checking...' : (isHealthError ? 'Error' : 'Online')}
+            </Typography>
+            
+            {isHealthError && (
+              <Typography variant="body2" color="error">
+                {healthError instanceof Error ? healthError.message : 'Cannot connect to API server'}
+              </Typography>
+            )}
+            
+            {!isCheckingHealth && (
+              <Button 
+                size="small" 
+                variant="outlined" 
+                onClick={() => recheckHealth()}
+                sx={{ mt: 1 }}
+              >
+                Check API Status
+              </Button>
+            )}
+      </Box>
+          
+          {process.env.NODE_ENV === 'development' && (
+            <>
+              <Box sx={{ 
+                p: 2, 
+                bgcolor: 'rgba(0,0,0,0.05)', 
+                borderRadius: 1, 
+                width: '100%',
+                maxWidth: '600px',
+                overflow: 'auto',
+                mb: showAdvancedDebug ? 0 : 2
+              }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>Debug Information:</Typography>
+                <Typography variant="caption" component="pre" sx={{ whiteSpace: 'pre-wrap' }}>
+                  Slug: {slug}
+                  {error instanceof Error ? 
+                    `\n\nError: ${error.message}\n\nStack: ${error.stack || 'No stack trace'}` : 
+                    `\n\nError: ${JSON.stringify(error, null, 2)}`}
+                </Typography>
+                
+                <Button 
+                  size="small" 
+                  variant="text" 
+                  onClick={() => setShowAdvancedDebug(!showAdvancedDebug)}
+                  sx={{ mt: 2 }}
+                >
+                  {showAdvancedDebug ? 'Hide Advanced Debug' : 'Show Advanced Debug'}
+                </Button>
+      </Box>
+              
+              {showAdvancedDebug && (
+                <Box sx={{ 
+                  p: 2, 
+                  bgcolor: 'rgba(0,0,255,0.05)', 
+                  borderRadius: 1, 
+                  width: '100%',
+                  maxWidth: '600px',
+                  mb: 2
+                }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>Test Custom Endpoint:</Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Typography variant="caption">
+                      Enter a custom API endpoint to test. Use :id or :slug for dynamic values.
+                    </Typography>
+                    
+                    <TextField 
+                      size="small"
+                      fullWidth
+                      value={customEndpoint}
+                      onChange={(e) => setCustomEndpoint(e.target.value)}
+                      placeholder="e.g., http://localhost:5002/api/media/:id"
+                      disabled={isTestingEndpoint}
+                    />
+                    
+      <Button
+                      variant="contained" 
+                      size="small"
+                      onClick={testCustomEndpoint}
+                      disabled={!customEndpoint || isTestingEndpoint}
+                    >
+                      {isTestingEndpoint ? 'Testing...' : 'Test Endpoint'}
+                    </Button>
+                    
+                    {testResult && (
+                      <Box sx={{ 
+                        mt: 1, 
+                        p: 1, 
+                        bgcolor: testResult.success ? 'rgba(0,255,0,0.1)' : 'rgba(255,0,0,0.1)', 
+                        borderRadius: 1 
+                      }}>
+                        <Typography variant="caption">
+                          {testResult.message}
+                        </Typography>
+                      </Box>
+                    )}
+                    
+                    <Typography variant="caption" sx={{ mt: 1 }}>
+                      Suggested endpoints to try:
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {[
+                        'http://localhost:5002/media/slug/:slug',
+                        'http://localhost:5002/media/:slug',
+                        'http://localhost:5002/api/media/id/:id',
+                        'http://localhost:5002/media/id/:id',
+                        'http://localhost:5002/api/media/:id',
+                        'http://localhost:5002/media/by-id/:id'
+                      ].map((endpoint) => (
+                        <Chip 
+                          key={endpoint}
+                          label={endpoint} 
+                          size="small" 
+                          onClick={() => setCustomEndpoint(endpoint)}
+                          clickable
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                </Box>
+              )}
+            </>
+          )}
+          
+          <Button
+        variant="outlined"
+            onClick={() => refetch()}
+      >
+            Retry
+      </Button>
+        </Box>
+      ) : (
+        <>
+          <Box
+            className="media-detail"
+            sx={{
+              p: isMobile ? 2 : 3,
+              maxWidth: '100%',
+              margin: '0 auto'
+            }}
+          >
         <MediaDetailPreview 
-          mediaFile={mediaFile} 
+              mediaFile={mediaFile as BaseMediaFile}
           onEdit={handleEdit}
           onDownload={handleDownload}
           isEditingEnabled={isEditingEnabled}
-          onThumbnailUpdate={() => setThumbnailDialogOpen(true)}
-        />
-
-        <Box className="media-detail-info">
-         
-
-          {mediaFile && (
-            <div className="media-information-container">
-              <Suspense fallback={<LoadingFallback />}>
+              onThumbnailUpdate={isVideo && isEditingEnabled ? () => setIsThumbnailDialogOpen(true) : undefined}
+            />
+          
+            <Box className="media-detail-content">
+              <Suspense fallback={<CircularProgress size={24} />}>
                 <MediaInformation
                   mediaFile={mediaFile}
-                  mediaTypeConfig={mediaTypeConfig}
+                  mediaTypeConfig={null}
                   baseFields={baseFields}
                   getMetadataField={getMetadataField}
                 />
               </Suspense>
-            </div>
-          )}
+            </Box>
+          </Box>
 
-          {mediaTypeConfig && isEditing && mediaFileForEdit && mediaTypeForEdit && (
-            <Suspense fallback={<LoadingFallback />}>
+          {isEditDialogOpen && (
+            <Suspense fallback={<CircularProgress size={24} />}>
               <EditMediaDialog
-                key={`edit-dialog-${mediaFile._id}-${isEditing}-${new Date().getTime()}`}
-                open={isEditing}
-                onClose={() => setIsEditing(false)}
-                mediaFile={mediaFileForEdit}
-                mediaType={mediaTypeForEdit}
-                onSave={handleSave}
+                open={isEditDialogOpen}
+                onClose={() => setIsEditDialogOpen(false)}
+                mediaFile={mediaFile as any}
+                mediaType={mediaTypeInfo as any}
+                onSave={async (data) => {
+                  await handleSave(data);
+                  return;
+                }}
               />
             </Suspense>
           )}
-
-          {/* Add the thumbnail dialog */}
-          <Suspense fallback={<LoadingFallback />}>
-            {mediaFile && (
+          
+          {isThumbnailDialogOpen && (
+            <Suspense fallback={<CircularProgress size={24} />}>
               <ThumbnailUpdateDialog
-                open={thumbnailDialogOpen}
-                onClose={() => setThumbnailDialogOpen(false)}
+                open={isThumbnailDialogOpen}
+                onClose={() => setIsThumbnailDialogOpen(false)}
                 mediaData={mediaFile}
                 onThumbnailUpdate={handleThumbnailUpdate}
               />
-            )}
-          </Suspense>
-        </Box>
-      </Box>
-
-      <ToastContainer position="top-center" />
-
-      {process.env.NODE_ENV !== 'production' && (
-        <Box sx={{ position: 'fixed', bottom: 10, right: 10, p: 2, bgcolor: 'rgba(0,0,0,0.7)', color: 'white', zIndex: 9999, borderRadius: 1 }}>
-          <Typography variant="caption">
-            isEditing: {isEditing ? 'true' : 'false'}<br />
-            hasMediaType: {!!mediaTypeConfig ? 'true' : 'false'}<br />
-            hasMediaFile: {!!mediaFileForEdit ? 'true' : 'false'}<br />
-            isAdmin: {isEditingEnabled ? 'true' : 'false'}
-          </Typography>
-        </Box>
+            </Suspense>
+          )}
+        </>
       )}
+      
+      <ToastContainer
+        position={isMobile ? "bottom-center" : "top-right"}
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </motion.div>
   );
 };

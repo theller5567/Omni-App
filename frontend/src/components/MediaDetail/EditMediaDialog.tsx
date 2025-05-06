@@ -29,10 +29,45 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
 import { normalizeTag } from '../../utils/mediaTypeUploaderUtils';
 
+// Extended MediaFile interface to include metadata
+interface ExtendedMediaFile extends MediaFile {
+  metadata?: {
+    fileName?: string;
+    altText?: string;
+    description?: string;
+    visibility?: 'public' | 'private';
+    tags?: string[];
+    [key: string]: any;
+  };
+}
+
+// Helper function to check if custom fields have changed
+const hasCustomFieldChanges = (
+  newFields: Record<string, any>, 
+  originalFields: Record<string, any>
+): boolean => {
+  // Check if keys are different
+  const newKeys = Object.keys(newFields);
+  const origKeys = Object.keys(originalFields);
+  
+  if (newKeys.length !== origKeys.length) {
+    return true;
+  }
+  
+  // Check if any value has changed
+  for (const key of newKeys) {
+    if (JSON.stringify(newFields[key]) !== JSON.stringify(originalFields[key])) {
+      return true;
+    }
+  }
+  
+  return false;
+};
+
 interface EditMediaDialogProps {
   open: boolean;
   onClose: () => void;
-  mediaFile: MediaFile;
+  mediaFile: ExtendedMediaFile;
   mediaType: MediaType;
   onSave: (data: Partial<MediaFile>) => Promise<void>;
 }
@@ -78,11 +113,11 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   const { control, handleSubmit, watch, setValue, reset, formState } = useForm<FormValues>({
     defaultValues: {
       title: mediaFile.title || '',
-      fileName: mediaFile.fileName || '',
-      altText: mediaFile.altText || '',
-      description: mediaFile.description || '',
-      visibility: mediaFile.visibility || 'private',
-      tags: mediaFile.tags || [],
+      fileName: mediaFile.metadata?.fileName || mediaFile.fileName || '',
+      altText: mediaFile.metadata?.altText || mediaFile.altText || '',
+      description: mediaFile.metadata?.description || mediaFile.description || '',
+      visibility: (mediaFile.metadata?.visibility || mediaFile.visibility || 'private') as 'public' | 'private',
+      tags: mediaFile.metadata?.tags || mediaFile.tags || [],
       customFields: mediaFile.customFields || {} // Pass all custom fields
     }
   });
@@ -95,11 +130,11 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
       // Create initial values object
       const initialValues = {
         title: mediaFile.title || '',
-        fileName: mediaFile.fileName || '',
-        altText: mediaFile.altText || '',
-        description: mediaFile.description || '',
-        visibility: mediaFile.visibility || 'private',
-        tags: mediaFile.tags || [],
+        fileName: mediaFile.metadata?.fileName || mediaFile.fileName || '',
+        altText: mediaFile.metadata?.altText || mediaFile.altText || '',
+        description: mediaFile.metadata?.description || mediaFile.description || '',
+        visibility: (mediaFile.metadata?.visibility || mediaFile.visibility || 'private') as 'public' | 'private',
+        tags: mediaFile.metadata?.tags || mediaFile.tags || [],
         customFields: mediaFile.customFields || {}
       };
       
@@ -256,22 +291,79 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
 
   // Modified to debug custom fields on form submission
   const onSubmit = async (data: FormValues) => {
-    if (!mediaFile) return;
-    
-    // Log all form data for debugging
-    console.log('Form submitted with data:', data);
-    console.log('Custom fields at submission:', data.customFields);
-    
     // Check if there's an unpressed tag in the input
     if (newTag.trim()) {
       setUnsavedTag(newTag.trim());
       return; // Stop submission flow until user decides
     }
-
-    // Proceed with normal async save, showing spinner
+    
     setIsSaving(true);
-    await handleFormSubmission(data);
-    setIsSaving(false);
+    // Check for changes before submitting
+    let hasChanges = false;
+    const changes: Record<string, any> = {
+      title: data.title
+    };
+    
+    // Add metadata properties to a metadata object
+    const metadata: Record<string, any> = {};
+    
+    // Map form values to metadata object
+    if (data.fileName !== (originalValues?.fileName || '')) {
+      metadata.fileName = data.fileName;
+      hasChanges = true;
+    }
+    
+    if (data.altText !== (originalValues?.altText || '')) {
+      metadata.altText = data.altText;
+      hasChanges = true;
+    }
+    
+    if (data.description !== (originalValues?.description || '')) {
+      metadata.description = data.description;
+      hasChanges = true;
+    }
+    
+    if (data.visibility !== (originalValues?.visibility || 'private')) {
+      metadata.visibility = data.visibility;
+      hasChanges = true;
+    }
+    
+    // Process tags
+    if (JSON.stringify(data.tags) !== JSON.stringify(originalValues?.tags || [])) {
+      metadata.tags = data.tags;
+      hasChanges = true;
+    }
+    
+    // Process custom fields
+    if (hasCustomFieldChanges(data.customFields, originalValues?.customFields || {})) {
+      // Add custom fields to the metadata object
+      Object.entries(data.customFields).forEach(([key, value]) => {
+        metadata[key] = value;
+      });
+      hasChanges = true;
+    }
+    
+    // Only assign metadata to changes if there are any metadata changes
+    if (Object.keys(metadata).length > 0) {
+      changes.metadata = metadata;
+    }
+    
+    if (!hasChanges) {
+      console.log('No changes detected, not submitting');
+      setIsSaving(false);
+      handleDialogClose();
+      return;
+    }
+    
+    try {
+      console.log('Submitting changes:', changes);
+      await onSave(changes);
+      handleDialogClose();
+    } catch (error) {
+      console.error('Error saving media:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Add these handlers for the inline alert buttons
@@ -422,16 +514,22 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
             changedFieldsCount++;
             console.log(`Field "${field.name}" changed from "${originalValue}" to "${newValue}"`);
             
-            // Handle specific types correctly
-            if (typeof newValue === 'boolean') {
-              changedData.metadata[field.name] = newValue;
-            }
-            else if (typeof newValue === 'number' || !isNaN(Number(newValue))) {
-              const numValue = typeof newValue === 'number' ? newValue : Number(newValue);
-              changedData.metadata[field.name] = numValue;
-            }
-            else if (newValue !== undefined) {
-              changedData.metadata[field.name] = newValue;
+            // Skip adding empty strings when the original value was undefined
+            // This prevents triggering changes for non-required fields that weren't filled out
+            if (originalValue === undefined && (newValue === '' || newValue === null)) {
+              console.log(`Skipping field "${field.name}" as it changed from undefined to empty string`);
+            } else {
+              // Handle specific types correctly
+              if (typeof newValue === 'boolean') {
+                changedData.metadata[field.name] = newValue;
+              }
+              else if (typeof newValue === 'number' || !isNaN(Number(newValue))) {
+                const numValue = typeof newValue === 'number' ? newValue : Number(newValue);
+                changedData.metadata[field.name] = numValue;
+              }
+              else if (newValue !== undefined) {
+                changedData.metadata[field.name] = newValue;
+              }
             }
           } else {
             // Log that this field didn't change

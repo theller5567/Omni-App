@@ -40,9 +40,9 @@ export const prepareMetadataForUpload = (
   metadata: any,
   userId: string
 ): any => {
-  return {
-    ...metadata,
-    // Set default values if not present
+  // Start with required fields and defaults
+  const preparedMetadata: any = {
+    // Set default values for required fields
     userId,
     visibility: metadata.visibility || 'public',
     recordedDate: metadata.recordedDate || new Date().toISOString(),
@@ -57,6 +57,21 @@ export const prepareMetadataForUpload = (
       note: item.note
     }))
   };
+  
+  // Copy other metadata fields, but only if they have actual values
+  Object.entries(metadata).forEach(([key, value]) => {
+    // Skip fields we've already handled
+    if (['userId', 'visibility', 'recordedDate', 'uploadedBy', 'modifiedBy', 'tags', 'relatedMedia'].includes(key)) {
+      return;
+    }
+    
+    // Only include fields with actual values (not empty strings, null, or undefined)
+    if (value !== undefined && value !== null && value !== '') {
+      preparedMetadata[key] = value;
+    }
+  });
+  
+  return preparedMetadata;
 };
 
 /**
@@ -93,7 +108,16 @@ export const uploadMedia = async ({
       v_thumbnailTimestamp: videoThumbnailTimestamp || ''
     };
     
-    formData.append('metadata', JSON.stringify(metadataWithType));
+    // Filter out empty/null/undefined values before sending to the server
+    const cleanedMetadata = Object.entries(metadataWithType).reduce((acc, [key, value]) => {
+      // Only include fields with actual values
+      if (value !== undefined && value !== null && value !== '') {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as any);
+    
+    formData.append('metadata', JSON.stringify(cleanedMetadata));
     
     // Add video thumbnail if available
     if (videoThumbnail) {

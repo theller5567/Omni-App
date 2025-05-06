@@ -16,7 +16,7 @@ interface ThumbnailUpdateDialogProps {
   open: boolean;
   onClose: () => void;
   mediaData: any;
-  onThumbnailUpdate: (thumbnailUrl: string, updatedMedia?: any) => void;
+  onThumbnailUpdate: (thumbnailUrl: string) => void;
 }
 
 const ThumbnailUpdateDialog: React.FC<ThumbnailUpdateDialogProps> = ({
@@ -32,9 +32,9 @@ const ThumbnailUpdateDialog: React.FC<ThumbnailUpdateDialogProps> = ({
   // Get the current thumbnail from media data
   const currentThumbnail = mediaData?.metadata?.v_thumbnail || '';
 
-  const handleThumbnailUpdate = (thumbnailUrl: string, updatedMedia?: any) => {
+  const handleThumbnailUpdate = (thumbnailUrl: string) => {
     // Pass the update to the parent component
-    onThumbnailUpdate(thumbnailUrl, updatedMedia);
+    onThumbnailUpdate(thumbnailUrl);
     
     // Don't close dialog automatically - let the user decide when to close
     // so they can make multiple updates if needed
