@@ -77,10 +77,13 @@ const TagCategoryManager: React.FC = () => {
   
   // Use a separate state for form data to prevent re-renders of the entire component
   const [formData, setFormData] = useState<TagCategoryFormData>(initialFormData);
+  // Add a flag to disable component-level toasts
+  const [disableComponentToasts, setDisableComponentToasts] = useState(true);
   
   // Function to show toast only if not already shown for this operation
   const showToastOnce = useCallback((id: string, type: 'success' | 'error', message: string) => {
-    if (!toastShownRef.current.includes(id)) { // Changed from Set.has to array includes
+    // Only show component toast if not disabled
+    if (!disableComponentToasts && !toastShownRef.current.includes(id)) { // Changed from Set.has to array includes
       // Use standard toast API
       toast[type](message);
       
@@ -92,7 +95,7 @@ const TagCategoryManager: React.FC = () => {
         toastShownRef.current = [id];
       }
     }
-  }, []);
+  }, [disableComponentToasts]);
   
   // Optimized fetch function with debounce and caching
   const fetchCategories = useCallback(async (force = false) => {

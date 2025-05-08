@@ -1,5 +1,5 @@
 import Tags from '../models/Tags.js';
-import { v4 as uuidv4 } from 'uuid'; // Import UUID library
+import ActivityTrackingService from '../services/activityTrackingService.js';
 
 // Helper function for case-insensitive tag existence check
 const tagExistsIgnoreCase = async (name, excludeId = null) => {
@@ -45,6 +45,12 @@ export const addTag = async (req, res) => {
         name,
       });
       await newTag.save();
+      
+      // Track tag creation activity
+      if (req.user) {
+        await ActivityTrackingService.trackTagCreation(req.user, newTag);
+      }
+      
       res.status(201).json(newTag);
     } catch (error) {
       res.status(400).json({ message: 'Error adding tag', error });
@@ -65,7 +71,25 @@ export const updateTag = async (req, res) => {
       });
     }
     
+    // Get the original tag for tracking changes
+    const originalTag = await Tags.findById(id);
+    if (!originalTag) {
+      return res.status(404).json({ message: 'Tag not found' });
+    }
+    
+    // Track what fields were changed
+    const changedFields = [];
+    if (originalTag.name !== name) {
+      changedFields.push('name');
+    }
+    
     const updatedTag = await Tags.findByIdAndUpdate(id, { name }, { new: true });
+    
+    // Track tag update activity
+    if (req.user && changedFields.length > 0) {
+      await ActivityTrackingService.trackTagUpdate(req.user, updatedTag, changedFields);
+    }
+    
     res.json(updatedTag);
   } catch (error) {
     res.status(400).json({ message: 'Error updating tag' });
@@ -77,7 +101,20 @@ export const deleteTag = async (req, res) => {
   console.log('Deleting tag');
   try {
     const { id } = req.params;
+    
+    // Find the tag before deleting for activity tracking
+    const tagToDelete = await Tags.findById(id);
+    if (!tagToDelete) {
+      return res.status(404).json({ message: 'Tag not found' });
+    }
+    
     await Tags.findByIdAndDelete(id);
+    
+    // Track tag deletion activity
+    if (req.user) {
+      await ActivityTrackingService.trackTagDeletion(req.user, tagToDelete);
+    }
+    
     res.status(204).send();
   } catch (error) {
     res.status(400).json({ message: 'Error deleting tag' });

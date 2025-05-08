@@ -38,7 +38,11 @@ class LoggerService {
         resourceType: data.resourceType,
         resourceId: data.resourceId,
         mediaSlug: data.mediaSlug || null,
-        timestamp: data.timestamp || new Date()
+        timestamp: data.timestamp || new Date(),
+        tagId: data.tagId || null,
+        tagName: data.tagName || null,
+        tagCategoryId: data.tagCategoryId || null,
+        tagCategoryName: data.tagCategoryName || null
       });
       
       // Save to database

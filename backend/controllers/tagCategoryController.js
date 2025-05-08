@@ -1,6 +1,7 @@
 import { Schema, model } from 'mongoose';
 import TagCategory from '../models/TagCategory.js';
 import mongoose from 'mongoose';
+import ActivityTrackingService from '../services/activityTrackingService.js';
 
 
 // Get all tag categories
@@ -93,6 +94,16 @@ export const createTagCategory = async (req, res) => {
         existingCategory.isActive = true;
         const reactivatedCategory = await existingCategory.save();
         
+        // Track the reactivation of the tag category
+        if (req.user) {
+          await ActivityTrackingService.trackTagCategoryUpdate(
+            req.user, 
+            reactivatedCategory, 
+            ['isActive'], 
+            reactivatedCategory.tags || []
+          );
+        }
+        
         return res.status(200).json({ 
           ...reactivatedCategory.toObject(), 
           message: 'Existing category reactivated' 
@@ -129,6 +140,15 @@ export const createTagCategory = async (req, res) => {
       const savedCategory = await newTagCategory.save();
       console.log('CREATING TAG CATEGORY - Saved successfully:', savedCategory);
       
+      // Track the creation of the tag category with associated tags
+      if (req.user) {
+        await ActivityTrackingService.trackTagCategoryCreation(
+          req.user, 
+          savedCategory, 
+          savedCategory.tags || []
+        );
+      }
+      
       // Double-check that we can retrieve the category after saving
       const retrievedCategory = await TagCategory.findById(savedCategory._id);
       console.log('CREATING TAG CATEGORY - Retrieved saved category:', retrievedCategory);
@@ -155,6 +175,47 @@ export const updateTagCategory = async (req, res) => {
       return res.status(404).json({ message: 'Tag category not found' });
     }
     
+    // Track what fields are changing
+    const changedFields = [];
+    if (name && name !== tagCategory.name) changedFields.push('name');
+    if (description !== undefined && description !== tagCategory.description) changedFields.push('description');
+    if (isActive !== undefined && isActive !== tagCategory.isActive) changedFields.push('isActive');
+    
+    // Special handling for tags
+    let tagsChanged = false;
+    if (tags && Array.isArray(tags)) {
+      // Simple check - if lengths differ, tags changed
+      if (tags.length !== (tagCategory.tags || []).length) {
+        tagsChanged = true;
+      } else {
+        // Compare each tag
+        const currentTagIds = new Set((tagCategory.tags || []).map(t => t.id.toString()));
+        const newTagIds = new Set(tags.map(t => t.id.toString()));
+        
+        // Check if any ids were added or removed
+        for (const id of currentTagIds) {
+          if (!newTagIds.has(id)) {
+            tagsChanged = true;
+            break;
+          }
+        }
+        
+        if (!tagsChanged) {
+          for (const id of newTagIds) {
+            if (!currentTagIds.has(id)) {
+              tagsChanged = true;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (tagsChanged) {
+        changedFields.push('tags');
+      }
+    }
+    
+    // Update the tag category
     if (name) tagCategory.name = name;
     if (description !== undefined) tagCategory.description = description;
     
@@ -182,6 +243,17 @@ export const updateTagCategory = async (req, res) => {
     
     const updatedCategory = await tagCategory.save();
     console.log('UPDATING TAG CATEGORY - Successfully saved');
+    
+    // Track the update of the tag category if fields were changed
+    if (req.user && changedFields.length > 0) {
+      await ActivityTrackingService.trackTagCategoryUpdate(
+        req.user, 
+        updatedCategory, 
+        changedFields, 
+        updatedCategory.tags || []
+      );
+    }
+    
     res.json(updatedCategory);
   } catch (error) {
     console.error('UPDATING TAG CATEGORY - Error:', error);
@@ -205,11 +277,25 @@ export const deleteTagCategory = async (req, res) => {
       return res.status(404).json({ message: 'Tag category not found' });
     }
     
+    // Save the category data and its tags for activity tracking
+    const categoryName = tagCategory.name;
+    const categoryTags = [...(tagCategory.tags || [])];
+    
     if (hardDelete) {
       // Hard delete - completely remove from database
       console.log('DELETE TAG CATEGORY - Performing hard delete');
       await TagCategory.deleteOne({ _id: req.params.id });
       console.log('DELETE TAG CATEGORY - Hard delete successful');
+      
+      // Track the hard deletion
+      if (req.user) {
+        await ActivityTrackingService.trackTagCategoryDeletion(
+          req.user, 
+          { _id: req.params.id, id: req.params.id, name: categoryName }, 
+          categoryTags
+        );
+      }
+      
       return res.json({ message: 'Tag category permanently deleted', hardDelete: true });
     } else {
       // Soft delete - just mark as inactive
@@ -217,6 +303,17 @@ export const deleteTagCategory = async (req, res) => {
       tagCategory.isActive = false;
       await tagCategory.save();
       console.log('DELETE TAG CATEGORY - Soft delete successful');
+      
+      // Track the soft deletion (deactivation)
+      if (req.user) {
+        await ActivityTrackingService.trackTagCategoryUpdate(
+          req.user, 
+          tagCategory, 
+          ['isActive'], 
+          categoryTags
+        );
+      }
+      
       return res.json({ message: 'Tag category deleted successfully', hardDelete: false });
     }
   } catch (error) {

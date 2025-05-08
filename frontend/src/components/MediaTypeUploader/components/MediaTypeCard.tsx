@@ -269,7 +269,7 @@ const MediaTypeCard: React.FC<MediaTypeCardProps> = ({
           color="error" 
           startIcon={<FaTrash style={{ fontSize: '0.8rem' }} />}
           onClick={() => onDelete(mediaType._id)}
-          disabled={mediaType.status === 'archived'}
+          disabled={mediaType.status === 'archived' && mediaType.usageCount != 0}
           sx={{ 
             fontSize: '0.75rem', 
             py: 0.75,

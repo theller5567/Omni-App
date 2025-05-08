@@ -36,9 +36,33 @@ const activityLogSchema = new mongoose.Schema({
     type: String,
     required: false
   },
+  // Add fields for tag activities
+  tagId: {
+    type: String,
+    required: false
+  },
+  tagName: {
+    type: String,
+    required: false
+  },
+  // Add fields for tag category activities
+  tagCategoryId: {
+    type: String,
+    required: false
+  },
+  tagCategoryName: {
+    type: String,
+    required: false
+  },
   timestamp: {
     type: Date,
     default: Date.now
+  },
+  // Add userRole field for notification filtering
+  userRole: {
+    type: String,
+    enum: ['user', 'admin', 'superAdmin'],
+    default: 'user'
   }
 }, { timestamps: true });
 
@@ -48,6 +72,9 @@ activityLogSchema.index({ action: 1 });
 activityLogSchema.index({ resourceType: 1 });
 activityLogSchema.index({ timestamp: -1 });
 activityLogSchema.index({ mediaSlug: 1 });
+activityLogSchema.index({ tagId: 1 });
+activityLogSchema.index({ tagCategoryId: 1 });
+activityLogSchema.index({ userRole: 1 });
 
 const ActivityLog = mongoose.model('ActivityLog', activityLogSchema);
 

@@ -311,7 +311,7 @@ const AccountMediaTypes = () => {
       } else {
         // Delete if not in use
         await deleteMediaTypeMutation(selectedMediaTypeId);
-        toast.success(`Media type "${mediaType.name}" deleted`);
+        // Toast handled by the mutation hook
       }
       
       // Reset dialog state

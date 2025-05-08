@@ -154,14 +154,6 @@ const MediaTypeDistribution: React.FC = () => {
     );
   }
   
-  // Create legend data from our data
-  const legendPayload = data.map(item => ({
-    value: `${item.name} (${item.value})`,
-    type: 'circle',
-    color: item.color,
-    id: item.name,
-  }));
-  
   return (
     <div className="dashboard-grid" style={{ 
       display: 'grid',

@@ -178,6 +178,206 @@ class ActivityTrackingService {
       await NotificationService.processActivityNotification(activity, user);
     }
   }
+
+  /**
+   * Track a tag creation
+   * 
+   * @param {Object} user - The user who created the tag
+   * @param {Object} tag - The created tag
+   */
+  static async trackTagCreation(user, tag) {
+    if (!user || !tag) return;
+    
+    const activity = await LoggerService.logActivity({
+      userId: user.id,
+      username: user.username || user.email,
+      action: 'CREATE',
+      details: `Created tag: ${tag.name}`,
+      resourceType: 'tag',
+      resourceId: tag._id || tag.id,
+      tagId: tag._id || tag.id,
+      tagName: tag.name
+    }); 
+
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(user.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, user);
+    }
+  }
+
+  /**
+   * Track a tag deletion
+   * 
+   * @param {Object} user - The user who deleted the tag
+   * @param {Object} tag - The deleted tag
+   */
+  static async trackTagDeletion(user, tag) {
+    if (!user || !tag) return;
+    
+    const activity = await LoggerService.logActivity({
+      userId: user.id,
+      username: user.username || user.email,
+      action: 'DELETE', 
+      details: `Deleted tag: ${tag.name}`,
+      resourceType: 'tag',
+      resourceId: tag._id || tag.id,
+      tagId: tag._id || tag.id,
+      tagName: tag.name
+    });
+    
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(user.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, user);
+    }
+  }
+  
+  /**
+   * Track a tag update
+   * 
+   * @param {Object} user - The user who updated the tag
+   * @param {Object} tag - The updated tag
+   * @param {Array} changedFields - Fields that were changed
+   */
+  static async trackTagUpdate(user, tag, changedFields = []) {
+    if (!user || !tag) return;
+    
+    const activity = await LoggerService.logActivity({
+      userId: user.id,
+      username: user.username || user.email,
+      action: 'EDIT',
+      details: `Updated tag: ${tag.name} (${changedFields.join(', ')})`,
+      resourceType: 'tag',
+      resourceId: tag._id || tag.id,
+      tagId: tag._id || tag.id,
+      tagName: tag.name
+    });
+    
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(user.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, user);
+    }
+  }
+
+  /**
+   * Track a tag category creation
+   * 
+   * @param {Object} user - The user who created the tag category
+   * @param {Object} tagCategory - The created tag category
+   * @param {Array} tags - Associated tags, if available
+   */
+  static async trackTagCategoryCreation(user, tagCategory, tags = []) {
+    if (!user || !tagCategory) return;
+    
+    // Format tags information if available
+    let detailsText = `Created tag category: ${tagCategory.name}`;
+    if (tags && tags.length > 0) {
+      const tagNames = tags.map(tag => tag.name || 'Unnamed tag').join(', ');
+      detailsText += ` containing tags: ${tagNames}`;
+    }
+    
+    const activity = await LoggerService.logActivity({
+      userId: user.id,
+      username: user.username || user.email,
+      action: 'CREATE',
+      details: detailsText,
+      resourceType: 'tagCategory',
+      resourceId: tagCategory._id || tagCategory.id,
+      tagCategoryId: tagCategory._id || tagCategory.id,
+      tagCategoryName: tagCategory.name
+    });
+    
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(user.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, user);
+    }
+  }
+  
+  /**
+   * Track a tag category update
+   * 
+   * @param {Object} user - The user who updated the tag category
+   * @param {Object} tagCategory - The updated tag category
+   * @param {Array} changedFields - Fields that were changed
+   * @param {Array} tags - Associated tags, if available
+   */
+  static async trackTagCategoryUpdate(user, tagCategory, changedFields = [], tags = []) {
+    if (!user || !tagCategory) return;
+    
+    // Format tags information if available
+    let detailsText = `Updated tag category: ${tagCategory.name} (${changedFields.join(', ')})`;
+    if (tags && tags.length > 0) {
+      const tagNames = tags.map(tag => tag.name || 'Unnamed tag').join(', ');
+      detailsText += ` - Contains tags: ${tagNames}`;
+    }
+    
+    const activity = await LoggerService.logActivity({
+      userId: user.id,
+      username: user.username || user.email,
+      action: 'EDIT',
+      details: detailsText,
+      resourceType: 'tagCategory',
+      resourceId: tagCategory._id || tagCategory.id,
+      tagCategoryId: tagCategory._id || tagCategory.id,
+      tagCategoryName: tagCategory.name
+    });
+    
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(user.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, user);
+    }
+  }
+  
+  /**
+   * Track a tag category deletion
+   * 
+   * @param {Object} user - The user who deleted the tag category
+   * @param {Object} tagCategory - The deleted tag category
+   * @param {Array} tags - The tags that were in the category, if available
+   */
+  static async trackTagCategoryDeletion(user, tagCategory, tags = []) {
+    if (!user || !tagCategory) return;
+    
+    // Format tags information if available
+    let detailsText = `Deleted tag category: ${tagCategory.name}`;
+    if (tags && tags.length > 0) {
+      const tagNames = tags.map(tag => tag.name || 'Unnamed tag').join(', ');
+      detailsText += ` containing tags: ${tagNames}`;
+    }
+    
+    const activity = await LoggerService.logActivity({
+      userId: user.id,
+      username: user.username || user.email,
+      action: 'DELETE',
+      details: detailsText,
+      resourceType: 'tagCategory',
+      resourceId: tagCategory._id || tagCategory.id,
+      tagCategoryId: tagCategory._id || tagCategory.id,
+      tagCategoryName: tagCategory.name
+    });
+    
+    if (activity) {
+      // Add user role
+      const userRole = await this.getUserRole(user.id);
+      activity.userRole = userRole;
+      
+      await NotificationService.processActivityNotification(activity, user);
+    }
+  }
   
   /**
    * Track a user profile update

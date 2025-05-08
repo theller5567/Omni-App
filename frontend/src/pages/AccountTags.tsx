@@ -58,6 +58,7 @@ const AccountTags: React.FC = () => {
   const [page, setPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState(0);
+  const [showLocalToasts, setShowLocalToasts] = useState(false);
 
   // Combine loading states from tag and category slices
   const isLoading = useMemo(() => 
@@ -171,12 +172,15 @@ const AccountTags: React.FC = () => {
       .unwrap()
       .then(() => {
         setNewTagName("");
-        toast.success('Tag created successfully');
+        if (showLocalToasts) {
+          toast.success('Tag created successfully');
+        }
       })
       .catch(error => {
+        // Always show error toasts, even if success toasts are disabled
         toast.error(`Failed to create tag: ${error || 'Unknown error'}`);
       });
-  }, [dispatch, newTagName, tagError, tags]);
+  }, [dispatch, newTagName, tagError, tags, showLocalToasts]);
 
   const handleKeyPress = useCallback((event: React.KeyboardEvent) => {
     if (event.key === 'Enter') {
@@ -191,7 +195,9 @@ const AccountTags: React.FC = () => {
     dispatch(deleteTag(tagToDelete))
       .unwrap()
       .then(() => {
-        toast.success('Tag deleted successfully');
+        if (showLocalToasts) {
+          toast.success('Tag deleted successfully');
+        }
         setTagToDelete(null);
       })
       .catch((error) => {
@@ -199,7 +205,7 @@ const AccountTags: React.FC = () => {
         toast.error(`Failed to delete tag: ${error || 'Unknown error'}`);
         setTagToDelete(null);
       });
-  }, [dispatch, tagToDelete]);
+  }, [dispatch, tagToDelete, showLocalToasts]);
 
   const handleUpdateTag = useCallback(() => {
     if (!editingTag || !editingTag.name.trim()) return;
@@ -234,13 +240,15 @@ const AccountTags: React.FC = () => {
     }))
       .unwrap()
       .then(() => {
-        toast.success('Tag updated successfully');
+        if (showLocalToasts) {
+          toast.success('Tag updated successfully');
+        }
         setEditingTag(null);
       })
       .catch(error => {
         toast.error(`Failed to update tag: ${error || 'Unknown error'}`);
       });
-  }, [dispatch, editingTag, tags]);
+  }, [dispatch, editingTag, tags, showLocalToasts]);
 
   // Memoized filtered tags to prevent recalculation on each render
   const filteredTags = useMemo(() => {

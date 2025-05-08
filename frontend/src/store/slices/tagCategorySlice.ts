@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import apiClient from '../../api/apiClient';
 import env from '../../config/env';
 import { RootState } from '../store';
 import { toast } from 'react-toastify';
@@ -46,87 +47,54 @@ const initialState: TagCategoryState = {
   }
 };
 
-// Add error handling for all async thunks
-const handleAsyncError = (error: any) => {
-  console.error('Tag category API error:', error);
-  
-  // Detailed error information
-  let errorMessage = 'An unknown error occurred';
-  
-  if (error.response) {
-    // The request was made and the server responded with an error
-    console.error('Response data:', error.response.data);
-    console.error('Response status:', error.response.status);
-    
-    errorMessage = error.response.data?.message || 
-                  `Server error: ${error.response.status}`;
-  } else if (error.request) {
-    // The request was made but no response was received
-    console.error('No response received:', error.request);
-    errorMessage = 'No response received from server';
-  } else {
-    // Something happened in setting up the request
-    console.error('Request setup error:', error.message);
-    errorMessage = error.message || 'Request failed';
+// Function to handle common API error formatting
+const handleAsyncError = (error: any): string => {
+  console.error('API Error:', error);
+  if (error.response?.data?.message) {
+    return error.response.data.message;
   }
-  
-  return errorMessage;
+  return error.message || 'An unexpected error occurred';
 };
 
-// Define a type for request params
-interface RequestParams {
-  _t: string;
-  [key: string]: string;  // Allow any string key with string value
-}
-
-// Helper function to add timestamp and cache-busting headers
-const getRequestConfig = (additionalParams: Record<string, string> = {}) => {
-  const timestamp = new Date().getTime();
-  const params: RequestParams = {
-    _t: timestamp.toString(),
-    ...additionalParams
-  };
-  
-  const token = localStorage.getItem('authToken');
-  
-  return {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    },
-    params
-  };
-};
-
+// Helper to generate operation IDs for tracking async operations
 const generateOperationId = (type: string, id?: string) => {
   return `${type}-${id || 'all'}-${Date.now()}`;
 };
 
+// Helper function for immediate toast display
+const showToastDirectly = (type: 'success' | 'error', message: string) => {
+  toast[type](message, {
+    position: 'top-right',
+    autoClose: 3000,
+    delay: 0,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+    progress: undefined,
+  });
+};
+
 export const fetchTagCategories = createAsyncThunk<TagCategory[], { includeInactive?: boolean } | undefined>(
-  'tagCategories/fetchAll',
+  'tagCategories/fetchTagCategories',
   async (options, { rejectWithValue, dispatch, getState }) => {
     // Get current state to check for in-progress operations and last fetch time
-    const state = getState() as { tagCategories: TagCategoryState };
-    const now = Date.now();
+    const state = getState() as RootState;
     
     // Skip if a fetch operation is already in progress
     const hasPendingFetch = state.tagCategories.pendingOperations.some(id => id.startsWith('fetch-'));
     if (hasPendingFetch) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Skipping fetch tag categories - already in progress');
-      }
+      console.log('Skipping tag categories fetch - already in progress');
       return state.tagCategories.tagCategories;
     }
     
-    // Skip if data was fetched recently (within last 10 seconds)
-    if (state.tagCategories.lastFetchTime && 
-        now - state.tagCategories.lastFetchTime < 10000 && 
-        state.tagCategories.tagCategories.length > 0) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Skipping fetch tag categories - fetched recently');
-      }
+    // Skip fetching if data is already loaded and recent
+    const now = Date.now();
+    if (state.tagCategories.status === 'succeeded' && 
+        state.tagCategories.tagCategories.length > 0 && 
+        state.tagCategories.lastFetchTime && 
+        now - state.tagCategories.lastFetchTime < 3000) {
+      console.log('Skipping tag categories fetch - already loaded recently (less than 3 seconds ago)');
       return state.tagCategories.tagCategories;
     }
     
@@ -142,13 +110,12 @@ export const fetchTagCategories = createAsyncThunk<TagCategory[], { includeInact
       }
       
       // Add optional query params
-      const additionalParams: Record<string, string> = {};
+      const params: Record<string, string> = {};
       if (options?.includeInactive) {
-        additionalParams.includeInactive = 'true';
+        params.includeInactive = 'true';
       }
       
-      const config = getRequestConfig(additionalParams);
-      const response = await axios.get<TagCategory[]>(`${env.BASE_URL}/api/tag-categories`, config);
+      const response = await apiClient.get<TagCategory[]>('/tag-categories', { params });
       
       if (process.env.NODE_ENV === 'development') {
         console.log('Tag categories fetched:', response.data.length);
@@ -189,20 +156,6 @@ export const forceRefreshAllCategories = createAsyncThunk<TagCategory[]>(
   }
 );
 
-// Helper function for immediate toast display
-const showToastDirectly = (type: 'success' | 'error', message: string) => {
-  toast[type](message, {
-    position: 'top-right',
-    autoClose: 3000,
-    delay: 0,
-    hideProgressBar: false,
-    closeOnClick: true,
-    pauseOnHover: true,
-    draggable: true,
-    progress: undefined,
-  });
-};
-
 export const createTagCategory = createAsyncThunk(
   'tagCategories/create',
   async (data: { 
@@ -229,8 +182,6 @@ export const createTagCategory = createAsyncThunk(
       // Proceed with creation
       console.log('Creating tag category:', data);
       
-      const config = getRequestConfig();
-      
       // Only send tags array, no tagIds
       const payload = {
         name: data.name,
@@ -238,7 +189,7 @@ export const createTagCategory = createAsyncThunk(
         tags: data.tags
       };
       
-      const response = await axios.post<TagCategory>(`${env.BASE_URL}/api/tag-categories`, payload, config);
+      const response = await apiClient.post<TagCategory>('/tag-categories', payload);
       
       console.log('Tag category created:', response.data);
       
@@ -293,10 +244,8 @@ export const updateTagCategory = createAsyncThunk(
     try {
       console.log('Updating tag category:', id, data);
       
-      const config = getRequestConfig();
-      
       // Only use the data as provided, no tagIds derivation
-      const response = await axios.put<TagCategory>(`${env.BASE_URL}/api/tag-categories/${id}`, data, config);
+      const response = await apiClient.put<TagCategory>(`/tag-categories/${id}`, data);
       
       console.log('Tag category updated:', response.data);
       
@@ -318,19 +267,6 @@ export const updateTagCategory = createAsyncThunk(
       }));
       
       console.error('Error updating tag category:', error.response?.status, error.response?.data);
-      
-      // Handle common errors
-      if (error.response?.status === 404) {
-        const errorMessage = 'Tag category not found. It may have been deleted.';
-        showToastDirectly('error', errorMessage);
-        return rejectWithValue(errorMessage);
-      }
-      if (error.response?.status === 400 && error.response?.data?.message?.includes('already exists')) {
-        const errorMessage = `Category name already exists. Please use a different name.`;
-        showToastDirectly('error', errorMessage);
-        return rejectWithValue(errorMessage);
-      }
-      
       const errorMessage = handleAsyncError(error);
       showToastDirectly('error', errorMessage);
       return rejectWithValue(errorMessage);
@@ -362,18 +298,13 @@ export const deleteTagCategory = createAsyncThunk(
     try {
       console.log(`Deleting tag category ${id}${hardDelete ? ' (hard delete)' : ''}`);
       
-      // Get base request config
-      const config = getRequestConfig();
-      
       // Add query parameter for hard delete if requested
+      const params: Record<string, string> = {};
       if (hardDelete) {
-        config.params = {
-          ...config.params,
-          hard: 'true'
-        };
+        params.hard = 'true';
       }
       
-      await axios.delete(`${env.BASE_URL}/api/tag-categories/${id}`, config);
+      await apiClient.delete(`/tag-categories/${id}`, { params });
       
       console.log('Tag category deleted successfully:', id);
       
@@ -398,14 +329,7 @@ export const deleteTagCategory = createAsyncThunk(
         status: 'error'
       }));
       
-      console.error('Error deleting tag category:', error);
-      
-      // Special case for 404 errors, which might mean the tag category was already deleted
-      if (error.response && error.response.status === 404) {
-        console.log('Tag category not found (may have been already deleted)');
-        return id; // Return ID to remove from state
-      }
-      
+      console.error('Error deleting tag category:', error.response?.status, error.response?.data);
       const errorMessage = handleAsyncError(error);
       showToastDirectly('error', errorMessage);
       return rejectWithValue(errorMessage);

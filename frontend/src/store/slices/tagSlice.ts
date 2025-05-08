@@ -1,9 +1,8 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import apiClient from '../../api/apiClient';
 import env from '../../config/env';
 import { toast } from 'react-toastify';
-
-axios.defaults.baseURL = `${env.BASE_URL}/api`;
 
 // Helper function for immediate toast display
 const showToastDirectly = (type: 'success' | 'error', message: string) => {
@@ -94,7 +93,7 @@ export const fetchTags = createAsyncThunk<Tags[], void>(
     
     try {
       console.log('Fetching tags');
-      const response = await axios.get<Tags[]>(`${env.BASE_URL}/api/tags`);
+      const response = await apiClient.get<Tags[]>('/tags');
       console.log('Tags fetched:', response.data);
       
       dispatch(tagSlice.actions.operationCompleted({
@@ -129,7 +128,7 @@ export const addTag = createAsyncThunk<Tags, string>(
     
     try {
       console.log('Adding tag:', name);
-      const response = await axios.post<Tags>(`${axios.defaults.baseURL}/tags`, { name });
+      const response = await apiClient.post<Tags>('/tags', { name });
       
       dispatch(tagSlice.actions.operationCompleted({
         type: 'add',
@@ -169,7 +168,7 @@ export const updateTag = createAsyncThunk<Tags, { id: string; name: string }>(
     
     try {
       console.log('Updating tag:', id, name);
-      const response = await axios.put<Tags>(`${axios.defaults.baseURL}/tags/${id}`, { name });
+      const response = await apiClient.put<Tags>(`/tags/${id}`, { name });
       
       dispatch(tagSlice.actions.operationCompleted({
         type: 'update',
@@ -214,7 +213,7 @@ export const deleteTag = createAsyncThunk<string, string>(
     
     try {
       console.log('Deleting tag with ID:', id);
-      await axios.delete(`${axios.defaults.baseURL}/tags/${id}`);
+      await apiClient.delete(`/tags/${id}`);
       
       dispatch(tagSlice.actions.operationCompleted({
         type: 'delete',

@@ -13,19 +13,17 @@ import {
   Box, 
   Chip,
   Button,
-  Link,
   FormControlLabel,
   Checkbox,
   CircularProgress
 } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
-import FolderIcon from '@mui/icons-material/Folder';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import { FaTag } from 'react-icons/fa';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config/config';
 import { useActivityLogs } from '../../hooks/query-hooks';
@@ -99,33 +97,23 @@ const RecentActivity: React.FC = () => {
   
   // Function to enrich media activities with slugs
   const enrichMediaActivities = (activities: ActivityLog[], allMedia: any[]): ActivityLog[] => {
-    // Only process activities related to media
-    const mediaActivities = activities.filter(activity => 
-      activity.resourceType === 'media' && activity.resourceId
-    );
-    
-    // If no media activities, return original list
-    if (mediaActivities.length === 0) return activities;
-    
-    // Only log in development mode and limit to summary information
-    const isDev = process.env.NODE_ENV === 'development';
-    if (isDev) {
-      console.log(`Enriching ${mediaActivities.length} media activities with slugs from ${allMedia.length} media files`);
-    }
-    
     // Create a copy of activities to modify
     const enrichedActivities = [...activities];
     
-    // Count for logging summary
-    let slugsFound = 0;
+    // Only log in development mode and limit to summary information
+    const isDev = process.env.NODE_ENV === 'development';
     
-    // Match media activities with media files to get slugs
+    // Count for logging summary
+    let mediaActivitiesEnriched = 0;
+    
+    // Process each activity
     for (const activity of enrichedActivities) {
+      // Handle media type activities
       if (activity.resourceType === 'media') {
         // If mediaSlug is already available from the API, use it
         if (activity.mediaSlug) {
           activity.slug = activity.mediaSlug;
-          slugsFound++;
+          mediaActivitiesEnriched++;
           continue;
         }
 
@@ -138,7 +126,7 @@ const RecentActivity: React.FC = () => {
           
           if (mediaFile && mediaFile.slug) {
             activity.slug = mediaFile.slug;
-            slugsFound++;
+            mediaActivitiesEnriched++;
             continue; // Skip to next activity
           }
         }
@@ -175,7 +163,7 @@ const RecentActivity: React.FC = () => {
             
             if (matchingMedia && matchingMedia.slug) {
               activity.slug = matchingMedia.slug;
-              slugsFound++;
+              mediaActivitiesEnriched++;
             }
           }
         }
@@ -184,7 +172,10 @@ const RecentActivity: React.FC = () => {
     
     // Log summary in development mode only
     if (isDev) {
-      console.log(`Enrichment complete: Found slugs for ${slugsFound} out of ${mediaActivities.length} media activities`);
+      const mediaActivities = enrichedActivities.filter(a => a.resourceType === 'media');
+      if (mediaActivities.length > 0) {
+        console.log(`Enrichment complete: Found slugs for ${mediaActivitiesEnriched} out of ${mediaActivities.length} media activities`);
+      }
     }
     
     return enrichedActivities;
@@ -317,7 +308,7 @@ const RecentActivity: React.FC = () => {
       case 'EDIT':
         return <EditIcon />;
       case 'CREATE':
-        return <FolderIcon />;
+        return <FaTag />;
       case 'VIEW':
         return <PersonIcon />;
       default:
@@ -340,6 +331,54 @@ const RecentActivity: React.FC = () => {
         return 'info.main';
       default:
         return 'text.secondary';
+    }
+  };
+  
+  // Function to render activity details with links for media files
+  const renderActivityDetails = (activity: ActivityLog) => {
+    // If it's a media activity and we have a slug, make it a link
+    if (activity.resourceType === 'media' && (activity.slug || activity.mediaSlug)) {
+      // Use either assigned slug or the mediaSlug from the API
+      const slug = activity.slug || activity.mediaSlug;
+      
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+          <Box sx={{ color: 'text.secondary', mt: 0.5 }}>
+            {getActionIcon(activity.action)}
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Typography component="div" variant="body2" color="text.primary">
+              {slug}
+            </Typography>
+          </Box>
+        </Box>
+      );
+    } else if (activity.resourceType === 'tag' || activity.resourceType === 'tagCategory') {
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+          <Box sx={{ color: 'text.secondary', mt: 0.5 }}>
+            {getActionIcon(activity.action)}
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Typography component="div" variant="body2" color="text.primary">
+              {activity.details}
+            </Typography>
+          </Box>
+        </Box>
+      );
+    } else {
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+          <Box sx={{ color: 'text.secondary', mt: 0.5 }}>
+            {getActionIcon(activity.action)}
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Typography component="div" variant="body2" color="text.primary">
+              {activity.details}
+            </Typography>
+          </Box>
+        </Box>
+      );
     }
   };
   
@@ -442,184 +481,6 @@ const RecentActivity: React.FC = () => {
         setError(`Request error: ${err.message}`);
       }
     }
-  };
-  
-  // Function to render activity details with links for media files
-  const renderActivityDetails = (activity: ActivityLog) => {
-    // If it's a media activity and we have a slug, make it a link
-    if (activity.resourceType === 'media' && (activity.slug || activity.mediaSlug)) {
-      // Use either assigned slug or the mediaSlug from the API
-      const slug = activity.slug || activity.mediaSlug;
-      
-      // Extract the media file name from the details
-      const detailsText = activity.details;
-      
-      // Find where the file name starts in the details text based on action type
-      const getFileNameStartIndex = () => {
-        if (activity.action === 'UPLOAD' && detailsText.includes('Uploaded media file: ')) {
-          return detailsText.indexOf('Uploaded media file: ') + 'Uploaded media file: '.length;
-        }
-        if (activity.action === 'UPLOAD' && detailsText.includes('Uploaded ')) {
-          return detailsText.indexOf('Uploaded ') + 'Uploaded '.length;
-        }
-        if (activity.action === 'DELETE' && detailsText.includes('Deleted media file: ')) {
-          return detailsText.indexOf('Deleted media file: ') + 'Deleted media file: '.length;
-        }
-        if (activity.action === 'DELETE' && detailsText.includes('Deleted ')) {
-          return detailsText.indexOf('Deleted ') + 'Deleted '.length;
-        }
-        if (activity.action === 'EDIT' && detailsText.includes('Updated media file: ')) {
-          return detailsText.indexOf('Updated media file: ') + 'Updated media file: '.length;
-        }
-        if (activity.action === 'EDIT' && detailsText.includes('Updated ')) {
-          return detailsText.indexOf('Updated ') + 'Updated '.length;
-        }
-        return -1;
-      };
-      
-      const fileNameStartIndex = getFileNameStartIndex();
-      
-      if (fileNameStartIndex > 0) {
-        // Find where the file name ends (might be end of string or before parenthesis)
-        const endPattern = / \(/;
-        const fileNameEndIndex = detailsText.search(endPattern);
-        const fileName = fileNameEndIndex > 0 
-          ? detailsText.substring(fileNameStartIndex, fileNameEndIndex)
-          : detailsText.substring(fileNameStartIndex);
-        
-        const prefix = detailsText.substring(0, fileNameStartIndex);
-        const suffix = fileNameEndIndex > 0 ? detailsText.substring(fileNameEndIndex) : '';
-        
-        // For EDIT actions, parse and format the changed fields
-        if (activity.action === 'EDIT' && suffix && suffix.includes('(') && suffix.includes(')')) {
-          // Extract the changed fields from the parentheses
-          const changedFieldsMatch = suffix.match(/\((.*?)\)/);
-          let changedFields: string[] = [];
-          
-          if (changedFieldsMatch && changedFieldsMatch[1]) {
-            changedFields = changedFieldsMatch[1].split(', ');
-          }
-          
-          // Format the changed fields more clearly
-          const formattedFields = changedFields
-            .filter(field => {
-              // Filter out fields we don't want to display or that are technical/internal
-              const unwantedFields = [
-                'modifiedBy',
-                'updatedAt',
-                'lastModified',
-                'metadata.modifiedBy',
-                'metadata.updatedAt',
-                'metadata.lastModified',
-                // Additional fields that may be noise
-                'metadata.tagsInput',
-                'metadata.userId',
-                'metadata.fileExtension'
-              ];
-              
-              // Also filter out if it starts with "metadata." + is in our list above
-              const fieldName = field.startsWith('metadata.') ? field.substring(9) : field;
-              if (unwantedFields.includes(field) || unwantedFields.includes(`metadata.${fieldName}`)) {
-                return false;
-              }
-              
-              return true;
-            })
-            .map(field => {
-              // Clean up metadata prefix
-              if (field.startsWith('metadata.')) {
-                // Make field names more user-friendly
-                const fieldName = field.replace('metadata.', '');
-                
-                // More readable field names (camelCase to Title Case)
-                return fieldName
-                  .replace(/([A-Z])/g, ' $1') // Add space before capital letters
-                  .replace(/^./, str => str.toUpperCase()); // Capitalize first letter
-              }
-              
-              // Format other fields with proper capitalization
-              return field
-                .replace(/([A-Z])/g, ' $1') // Add space before capital letters
-                .replace(/^./, str => str.toUpperCase()); // Capitalize first letter
-            });
-          
-          // Create formatted chips for each changed field
-          const fieldChips = formattedFields.length > 0 ? (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5, ml: 0.5 }}>
-              {formattedFields.map((field, i) => (
-                <Chip
-                  key={`field-${i}`}
-                  label={field}
-                  size="small"
-                  variant="outlined"
-                  sx={{ 
-                    height: '18px', 
-                    fontSize: '0.65rem',
-                    borderColor: 'warning.light',
-                    color: 'text.secondary'
-                  }}
-                />
-              ))}
-            </Box>
-          ) : null;
-          
-          return (
-            <React.Fragment>
-              <Typography component="div" variant="body2" color="text.primary">
-                {prefix}
-                <Link 
-                  component={RouterLink} 
-                  to={`/media/slug/${slug}`}
-                  sx={{ 
-                    fontWeight: 'medium',
-                    textDecoration: 'none',
-                    '&:hover': { textDecoration: 'underline' },
-                    color: 'primary.main'
-                  }}
-                >
-                  {fileName}
-                </Link>
-              </Typography>
-              {formattedFields.length > 0 && (
-                <Typography component="div" variant="caption" sx={{ mt: 0.5, display: 'block', color: 'text.secondary' }}>
-                  Modified fields:
-                </Typography>
-              )}
-              {fieldChips}
-            </React.Fragment>
-          );
-        }
-        
-        // For non-EDIT actions or if no fields are found
-        return (
-          <React.Fragment>
-            <Typography component="div" variant="body2" color="text.primary">
-              {prefix}
-              <Link 
-                component={RouterLink} 
-                to={`/media/slug/${slug}`}
-                sx={{ 
-                  fontWeight: 'medium',
-                  textDecoration: 'none',
-                  '&:hover': { textDecoration: 'underline' },
-                  color: 'primary.main'
-                }}
-              >
-                {fileName}
-              </Link>
-              {suffix}
-            </Typography>
-          </React.Fragment>
-        );
-      }
-    }
-    
-    // Default rendering for non-media activities or when slug isn't available
-    return (
-      <Typography component="div" variant="body2" color="text.primary">
-        {activity.details}
-      </Typography>
-    );
   };
   
   if (isLoading) {
