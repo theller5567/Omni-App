@@ -9,8 +9,8 @@ import {
   Tooltip
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import MediaDetailThumbnailSelector from '../VideoThumbnailSelector/MediaDetailThumbnailSelector';
-import { getProxiedVideoUrl } from '../../utils/videoUtils';
+import MediaDetailThumbnailSelector from '../../VideoThumbnailSelector/MediaDetailThumbnailSelector';
+import { getProxiedVideoUrl } from '../../../utils/videoUtils';
 
 interface ThumbnailUpdateDialogProps {
   open: boolean;

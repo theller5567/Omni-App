@@ -1,13 +1,13 @@
 import React from 'react';
 import { Box, Typography, Chip, List, ListItem, ListItemText } from '@mui/material';
 import { FaExclamationCircle, FaTag, FaTags } from 'react-icons/fa';
-import { MediaTypeConfig, SelectField } from '../../../types/mediaTypes';
+import { MediaTypeConfig, SelectField, MediaTypeField } from '../../../types/mediaTypes';
 import { isSelectField, predefinedColors } from '../../../utils/mediaTypeUploaderUtils';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../store/store';
 
 // Helper function to check if a field has tag category support
-const hasTagCategory = (field: any): field is SelectField & { useTagCategory: boolean; tagCategoryId: string } => {
+const hasTagCategory = (field: MediaTypeField): field is SelectField & { useTagCategory: boolean; tagCategoryId: string } => {
   return isSelectField(field) && 
          field.useTagCategory === true && 
          typeof field.tagCategoryId === 'string' && 

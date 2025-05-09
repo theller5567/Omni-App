@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -26,7 +26,6 @@ import {
   MediaTypeConfig, 
   MediaTypeField, 
   FieldType, 
-  ApiMediaTypeResponse,
   createField,
 } from '../../types/mediaTypes';
 import '../MediaTypeUploader.scss';
@@ -199,8 +198,16 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       setIsLoading(true);
       const mediaTypeToEdit = mediaTypes.find(type => type._id === editMediaTypeId);
       if (mediaTypeToEdit) {
+        // Define interface for the field structure from backend
+        interface ApiField {
+          name: string;
+          type: string;
+          options?: string[];
+          required?: boolean;
+        }
+        
         // Convert field types to ensure compatibility
-        const convertedFields = mediaTypeToEdit.fields?.map(field => ({
+        const convertedFields = mediaTypeToEdit.fields?.map((field: ApiField) => ({
           name: field.name,
           type: field.type as FieldType,
           options: field.options || [],

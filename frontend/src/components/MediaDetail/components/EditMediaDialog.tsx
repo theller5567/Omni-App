@@ -23,14 +23,39 @@ import {
   CircularProgress
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { MediaFile, MediaType } from '../../types/media';
-import './EditMediaDialog.scss';
+import { MediaFile, MediaType } from '../../../types/media';
+import '../styles/EditMediaDialog.scss';
 import { useSelector } from 'react-redux';
-import { RootState } from '../../store/store';
-import { normalizeTag } from '../../utils/mediaTypeUploaderUtils';
+import { RootState } from '../../../store/store';
+import { normalizeTag } from '../../../utils/mediaTypeUploaderUtils';
 
-// Extended MediaFile interface to include metadata
-interface ExtendedMediaFile extends MediaFile {
+// Define interface for MediaTypeField if it's missing from imports
+interface MediaTypeField {
+  name: string;
+  type: string;
+  required?: boolean;
+  options?: string[];
+  label?: string;
+  [key: string]: any;
+}
+
+// Don't extend MediaFile if there are compatibility issues, define directly
+interface ExtendedMediaFile {
+  _id?: string;
+  id?: string;
+  title?: string;
+  slug?: string;
+  fileName?: string;
+  altText?: string;
+  description?: string;
+  visibility?: 'public' | 'private';
+  tags?: string[];
+  customFields?: Record<string, any>;
+  fileExtension?: string;
+  fileSize?: number;
+  mediaType?: string;
+  location?: string;
+  modifiedDate?: string;
   metadata?: {
     fileName?: string;
     altText?: string;
@@ -40,6 +65,65 @@ interface ExtendedMediaFile extends MediaFile {
     [key: string]: any;
   };
 }
+
+// Helper function to compare arrays (for tags)
+const compareArrays = (arr1: any[], arr2: any[]): boolean => {
+  if (arr1.length !== arr2.length) return false;
+  
+  // Sort and normalize tags for comparison
+  const sorted1 = [...arr1].map(tag => normalizeTag(tag)).sort();
+  const sorted2 = [...arr2].map(tag => normalizeTag(tag)).sort();
+  
+  return sorted1.every((val, i) => val === sorted2[i]);
+};
+
+// Helper function to compare objects (for customFields)
+const compareObjects = (obj1: Record<string, any>, obj2: Record<string, any>): boolean => {
+  // Get non-empty keys from both objects
+  const keys1 = Object.keys(obj1).filter(key => obj1[key] !== undefined && obj1[key] !== '');
+  const keys2 = Object.keys(obj2).filter(key => obj2[key] !== undefined && obj2[key] !== '');
+  
+  // Log comparison details for debugging
+  console.log('Comparing custom fields:', {
+    obj1Count: keys1.length,
+    obj2Count: keys2.length,
+    keys1,
+    keys2
+  });
+  
+  // If key counts don't match, objects are different
+  if (keys1.length !== keys2.length) {
+    console.log('Key count mismatch, fields have changed');
+    return false;
+  }
+  
+  // Compare each field value 
+  let allMatch = true;
+  keys1.forEach(key => {
+    // Skip special fields that are managed differently
+    if (['thumbnailUrl'].includes(key)) return;
+    
+    const val1 = obj1[key];
+    const val2 = obj2[key];
+    
+    // For non-primitive types (objects, arrays), use JSON comparison
+    const isEqual = typeof val1 === 'object' || typeof val2 === 'object' 
+      ? JSON.stringify(val1) === JSON.stringify(val2)
+      : val1 === val2;
+    
+    if (!isEqual) {
+      console.log(`Field "${key}" changed:`, {
+        from: val2,
+        to: val1,
+        type1: typeof val1,
+        type2: typeof val2
+      });
+      allMatch = false;
+    }
+  });
+  
+  return allMatch;
+};
 
 // Helper function to check if custom fields have changed
 const hasCustomFieldChanges = (
@@ -81,7 +165,6 @@ interface FormValues {
   tags: string[];
   customFields: Record<string, any>;
 }
-
 
 export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   open,
@@ -162,12 +245,12 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
         const defaultTags = mediaType.defaultTags;
         
         // Check if all default tags are included
-        const allDefaultTagsIncluded = defaultTags.every(tag => currentTags.includes(tag));
+        const allDefaultTagsIncluded = defaultTags.every((tag: string) => currentTags.includes(tag));
         
         if (!allDefaultTagsIncluded) {
           // Add any missing default tags
           const updatedTags = [...currentTags];
-          defaultTags.forEach(tag => {
+          defaultTags.forEach((tag: string) => {
             if (!updatedTags.includes(tag)) {
               updatedTags.push(tag);
             }
@@ -190,7 +273,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
           console.log('Available metadata from mediaFile:', (mediaFile as any).metadata);
         }
         
-        mediaType.fields.forEach(field => {
+        mediaType.fields.forEach((field: MediaTypeField) => {
           // Try finding value in either customFields or metadata
           const fieldValueFromCustomFields = mediaFile.customFields?.[field.name];
           const fieldValueFromMetadata = (mediaFile as any).metadata?.[field.name];
@@ -232,7 +315,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
       const normalizedTag = normalizeTag(newTag.trim());
       
       // Check if user is a superAdmin for default tags
-      const isDefaultTag = mediaType.defaultTags?.map(t => normalizeTag(t)).includes(normalizedTag);
+      const isDefaultTag = mediaType.defaultTags?.map((t: string) => normalizeTag(t)).includes(normalizedTag);
       
       // Only allow adding tags if not a default tag, or if user is a superAdmin
       if (isDefaultTag && !isSuperAdmin) {
@@ -252,7 +335,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
     const normalizedTagToDelete = normalizeTag(tagToDelete);
     
     // Check if the tag is a default tag (using normalized comparison)
-    const isDefaultTag = mediaType.defaultTags?.some(tag => 
+    const isDefaultTag = mediaType.defaultTags?.some((tag: string) => 
       normalizeTag(tag) === normalizedTagToDelete
     );
     
@@ -411,7 +494,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
       let tagsChanged = false;
       
       // Add any missing default tags
-      mediaType.defaultTags.forEach(tag => {
+      mediaType.defaultTags.forEach((tag: string) => {
         const normalizedDefaultTag = normalizeTag(tag);
         // Check if this default tag is missing (using normalized comparison)
         if (!finalTags.some(t => normalizeTag(t) === normalizedDefaultTag)) {
@@ -483,7 +566,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
         
         let changedFieldsCount = 0;
         
-        mediaType.fields.forEach(field => {
+        mediaType.fields.forEach((field: MediaTypeField) => {
           const newValue = data.customFields[field.name];
           const originalValue = originalValues.customFields?.[field.name];
           
@@ -563,65 +646,6 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
     handleDialogClose();
   };
 
-  // Helper function to compare arrays (for tags)
-  const compareArrays = (arr1: any[], arr2: any[]): boolean => {
-    if (arr1.length !== arr2.length) return false;
-    
-    // Sort and normalize tags for comparison
-    const sorted1 = [...arr1].map(tag => normalizeTag(tag)).sort();
-    const sorted2 = [...arr2].map(tag => normalizeTag(tag)).sort();
-    
-    return sorted1.every((val, i) => val === sorted2[i]);
-  };
-
-  // Helper function to compare objects (for customFields)
-  const compareObjects = (obj1: Record<string, any>, obj2: Record<string, any>): boolean => {
-    // Get non-empty keys from both objects
-    const keys1 = Object.keys(obj1).filter(key => obj1[key] !== undefined && obj1[key] !== '');
-    const keys2 = Object.keys(obj2).filter(key => obj2[key] !== undefined && obj2[key] !== '');
-    
-    // Log comparison details for debugging
-    console.log('Comparing custom fields:', {
-      obj1Count: keys1.length,
-      obj2Count: keys2.length,
-      keys1,
-      keys2
-    });
-    
-    // If key counts don't match, objects are different
-    if (keys1.length !== keys2.length) {
-      console.log('Key count mismatch, fields have changed');
-      return false;
-    }
-    
-    // Compare each field value 
-    let allMatch = true;
-    keys1.forEach(key => {
-      // Skip special fields that are managed differently
-      if (['thumbnailUrl'].includes(key)) return;
-      
-      const val1 = obj1[key];
-      const val2 = obj2[key];
-      
-      // For non-primitive types (objects, arrays), use JSON comparison
-      const isEqual = typeof val1 === 'object' || typeof val2 === 'object' 
-        ? JSON.stringify(val1) === JSON.stringify(val2)
-        : val1 === val2;
-      
-      if (!isEqual) {
-        console.log(`Field "${key}" changed:`, {
-          from: val2,
-          to: val1,
-          type1: typeof val1,
-          type2: typeof val2
-        });
-        allMatch = false;
-      }
-    });
-    
-    return allMatch;
-  };
-
   const renderCustomField = (field: MediaType['fields'][0], value: any, onChange: (value: any) => void) => {
     // Use field.label if available, otherwise use field.name
     const displayLabel = field.label || field.name;
@@ -673,7 +697,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
               onChange={(e) => onChange(e.target.value)}
               label={displayLabel}
             >
-              {field.options?.map((option) => (
+              {field.options?.map((option: string) => (
                 <MenuItem key={option} value={option}>
                   {option}
                 </MenuItem>

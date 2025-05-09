@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, CircularProgress, Paper } from '@mui/material';
-import { RelatedMedia } from '../MediaUploader/types';
+import { RelatedMedia } from '../../MediaUploader/types';
 import axios from 'axios';
-import { BaseMediaFile } from '../../interfaces/MediaFile';
-import env from '../../config/env';
+import { BaseMediaFile } from '../../../interfaces/MediaFile';
+import env from '../../../config/env';
 import { useNavigate } from 'react-router-dom';
 
 interface RelatedMediaItemProps {

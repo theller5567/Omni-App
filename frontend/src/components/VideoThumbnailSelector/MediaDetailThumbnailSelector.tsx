@@ -48,8 +48,6 @@ const MediaDetailThumbnailSelector: React.FC<MediaDetailThumbnailSelectorProps> 
   mediaId,
   currentThumbnail,
   onThumbnailUpdate,
-  mediaData,
-  onClose
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -62,9 +60,6 @@ const MediaDetailThumbnailSelector: React.FC<MediaDetailThumbnailSelectorProps> 
   const [isVideoLoading, setIsVideoLoading] = useState(true);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [thumbnailUpdated, setThumbnailUpdated] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('');
-  const [statusType, setStatusType] = useState<'success' | 'error' | ''>('');
-  const [showStatusMessage, setShowStatusMessage] = useState(false);
   const [showSuccessIndicator, setShowSuccessIndicator] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [oldThumbnail, setOldThumbnail] = useState<string | null>(null);
@@ -225,10 +220,6 @@ const MediaDetailThumbnailSelector: React.FC<MediaDetailThumbnailSelectorProps> 
       
       setIsProcessing(true);
       setThumbnailUpdated(false);
-      setStatusMessage('Processing thumbnail...');
-      setStatusType('');
-      setShowStatusMessage(true);
-      setProcessingProgress(0);
       setShowOverlay(false);
       
       // Start progress simulation
@@ -259,23 +250,12 @@ const MediaDetailThumbnailSelector: React.FC<MediaDetailThumbnailSelectorProps> 
         setRefreshKey(uniqueId);
         setThumbnailUpdated(true);
         
-        const updatedMediaFile = response.data.mediaFile;
-        
         // Notify parent component about the update
         onThumbnailUpdate(originalS3Url);
         
         // Show success indicator
         setShowSuccessIndicator(true);
         setTimeout(() => setShowSuccessIndicator(false), 3000);
-        
-        // Update status message
-        setStatusMessage('Thumbnail updated successfully! Old thumbnail has been deleted.');
-        setStatusType('success');
-        
-        // Auto-hide status after a delay
-        setTimeout(() => {
-          setShowStatusMessage(false);
-        }, 5000);
         
         // Reset video to beginning and show overlay
         resetToStart();
@@ -285,15 +265,9 @@ const MediaDetailThumbnailSelector: React.FC<MediaDetailThumbnailSelectorProps> 
         
         // Toast notification is now handled by parent component
       } else {
-        setStatusMessage('Failed to update thumbnail. The server did not return a valid thumbnail URL.');
-        setStatusType('error');
-        setShowStatusMessage(true);
         toast.error('Failed to update thumbnail: No URL returned');
       }
     } catch (error) {
-      setStatusMessage(`Error updating thumbnail: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setStatusType('error');
-      setShowStatusMessage(true);
       toast.error('Error updating thumbnail');
     } finally {
       setIsProcessing(false);

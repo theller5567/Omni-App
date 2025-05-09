@@ -18,7 +18,7 @@ import { BaseMediaFile } from "../../interfaces/MediaFile";
 import { MediaFile } from "../../types/media";
 import { motion } from 'framer-motion';
 import { formatFileSize } from "../../utils/formatFileSize";
-import "./mediaDetail.scss";
+import "./styles/mediaDetail.scss";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/store";
 import { toast, ToastContainer } from 'react-toastify';
@@ -35,18 +35,15 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import PhotoIcon from '@mui/icons-material/Photo';
-import RelatedMediaItem from "./RelatedMediaItem";
+import RelatedMediaItem from "./components/RelatedMediaItem";
 // Import React Query hooks
 import { useMediaDetail, useUpdateMedia, useApiHealth, QueryKeys } from '../../hooks/query-hooks';
 import { useQueryClient } from '@tanstack/react-query';
+import ThumbnailUpdateDialog from './components/ThumbnailUpdateDialog';
 
 // Lazy load subcomponents
-const MediaInformation = lazy(() => import('./MediaInformation'));
-const EditMediaDialog = lazy(() => import('./EditMediaDialog').then(module => ({ 
-  default: module.default || module.EditMediaDialog 
-})));
-const ThumbnailUpdateDialog = lazy(() => import('./ThumbnailUpdateDialog'));
-
+const MediaInformation = lazy(() => import('./components/MediaInformation'));
+const EditMediaDialog = lazy(() => import('./components/EditMediaDialog'));
 
 // Helper function to safely get metadata fields from either root or metadata object
 const getMetadataField = (mediaFile: any, fieldName: string, defaultValue: any = undefined) => {
@@ -832,6 +829,10 @@ const MediaDetail: React.FC = () => {
         // Invalidate activity logs query to refresh the Recent Activity component
         queryClient.invalidateQueries({ queryKey: [QueryKeys.activityLogs] });
         
+        // Invalidate media queries to refresh the media library and media detail views
+        queryClient.invalidateQueries({ queryKey: [QueryKeys.media] });
+        queryClient.invalidateQueries({ queryKey: [QueryKeys.mediaDetail] });
+        
         // Refetch to get latest data
         refetch();
         return Promise.resolve(true);
@@ -1153,14 +1154,12 @@ const MediaDetail: React.FC = () => {
           )}
           
           {isThumbnailDialogOpen && (
-            <Suspense fallback={<CircularProgress size={24} />}>
-              <ThumbnailUpdateDialog
-                open={isThumbnailDialogOpen}
-                onClose={() => setIsThumbnailDialogOpen(false)}
-                mediaData={mediaFile}
-                onThumbnailUpdate={handleThumbnailUpdate}
-              />
-            </Suspense>
+            <ThumbnailUpdateDialog
+              open={isThumbnailDialogOpen}
+              onClose={() => setIsThumbnailDialogOpen(false)}
+              mediaData={mediaFile}
+              onThumbnailUpdate={handleThumbnailUpdate}
+            />
           )}
         </>
       )}

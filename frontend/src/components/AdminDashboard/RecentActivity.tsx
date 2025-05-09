@@ -336,50 +336,55 @@ const RecentActivity: React.FC = () => {
   
   // Function to render activity details with links for media files
   const renderActivityDetails = (activity: ActivityLog) => {
-    // If it's a media activity and we have a slug, make it a link
-    if (activity.resourceType === 'media' && (activity.slug || activity.mediaSlug)) {
-      // Use either assigned slug or the mediaSlug from the API
-      const slug = activity.slug || activity.mediaSlug;
-      
-      return (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-          <Box sx={{ color: 'text.secondary', mt: 0.5 }}>
-            {getActionIcon(activity.action)}
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <Typography component="div" variant="body2" color="text.primary">
-              {slug}
-            </Typography>
-          </Box>
-        </Box>
-      );
-    } else if (activity.resourceType === 'tag' || activity.resourceType === 'tagCategory') {
-      return (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-          <Box sx={{ color: 'text.secondary', mt: 0.5 }}>
-            {getActionIcon(activity.action)}
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <Typography component="div" variant="body2" color="text.primary">
-              {activity.details}
-            </Typography>
-          </Box>
-        </Box>
-      );
-    } else {
-      return (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-          <Box sx={{ color: 'text.secondary', mt: 0.5 }}>
-            {getActionIcon(activity.action)}
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <Typography component="div" variant="body2" color="text.primary">
-              {activity.details}
-            </Typography>
-          </Box>
-        </Box>
-      );
+    // Extract main details and changed fields if present
+    let mainDetails = activity.details;
+    let changedFields: string[] = [];
+    
+    // Extract changed fields for EDIT actions with parentheses pattern
+    if (activity.action === 'EDIT' && activity.details.includes('(')) {
+      const fieldsMatch = activity.details.match(/\(([^)]+)\)/);
+      if (fieldsMatch && fieldsMatch[1]) {
+        // Split by comma and clean up each field
+        changedFields = fieldsMatch[1].split(',').map(field => field.trim());
+        // Remove the fields portion from the main details
+        mainDetails = activity.details.replace(/\s*\([^)]+\)/, '');
+      }
     }
+    
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+        <Box sx={{ color: 'text.secondary', mt: 0.5 }}>
+          {getActionIcon(activity.action)}
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <Typography component="div" variant="body2" color="text.primary">
+            {mainDetails}
+          </Typography>
+          
+          {/* If there are changed fields, display them as chips */}
+          {changedFields.length > 0 && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+              {changedFields.map((field, idx) => (
+                <Chip
+                  key={`field-${idx}`}
+                  label={field}
+                  size="small"
+                  variant="outlined"
+                  sx={{ height: '20px', fontSize: '0.7rem', borderColor: 'warning.main', color: 'warning.main' }}
+                />
+              ))}
+            </Box>
+          )}
+          
+          {/* If it's a media activity and we have a slug, add a link below */}
+          {activity.resourceType === 'media' && (activity.slug || activity.mediaSlug) && (
+            <Typography component="div" variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              Media: {activity.slug || activity.mediaSlug}
+            </Typography>
+          )}
+        </Box>
+      </Box>
+    );
   };
   
   // Format timestamp to relative time

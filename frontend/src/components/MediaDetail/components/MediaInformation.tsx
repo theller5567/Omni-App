@@ -9,11 +9,11 @@ import {
   Theme,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { formatFileSize } from '../../utils/formatFileSize';
-import { shouldHideField } from '../../config/mediaInfoConfig';
-import './MediaInformation.scss';
-import { MediaDetailTags } from './MediaDetail';
-import { useUsername } from '../../hooks/useUsername';
+import { formatFileSize } from '../../../utils/formatFileSize';
+import { shouldHideField } from '../../../config/mediaInfoConfig';
+import '../styles/MediaInformation.scss';
+import { MediaDetailTags } from '../MediaDetail';
+import { useUsername } from '../../../hooks/useUsername';
 
 interface MediaTypeField {
   name: string;

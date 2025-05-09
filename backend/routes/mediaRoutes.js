@@ -21,6 +21,7 @@ import {
   debugMediaFile
 } from '../controllers/mediaController.js';
 import mongoose from 'mongoose';
+import LoggerService from '../services/loggerService.js';
 
 const router = express.Router();
 
@@ -675,12 +676,24 @@ router.post('/update/timestamp-thumbnail/:id', authenticate, async (req, res) =>
     
     // Track the update activity if user is authenticated
     if (req.user) {
-      await ActivityTrackingService.trackMediaUpdate(
-        req.user, 
-        updatedMediaFile,
-        ['metadata.v_thumbnail', 'metadata.v_thumbnailTimestamp']
-      );
-      console.log('Media thumbnail update activity logged');
+      // Create more descriptive detail message for the activity log
+      const changedFields = ['metadata.v_thumbnail', 'metadata.v_thumbnailTimestamp'];
+      
+      // Format a more descriptive details message that will show up in the activity log
+      const details = `Updated video thumbnail at timestamp ${timestamp} for ${updatedMediaFile.title || updatedMediaFile.metadata?.fileName || 'Untitled'} (${changedFields.join(', ')})`;
+      
+      // Use custom details with the tracking service
+      await LoggerService.logActivity({
+        userId: req.user.id,
+        username: req.user.username || req.user.email,
+        action: 'EDIT',
+        details: details,
+        resourceType: 'media',
+        resourceId: updatedMediaFile.id || updatedMediaFile._id,
+        mediaSlug: updatedMediaFile.slug
+      });
+      
+      console.log('Media thumbnail update activity logged with details:', details);
     }
     
     // Return success response with the thumbnail URL
