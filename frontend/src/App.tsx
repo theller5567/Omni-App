@@ -45,6 +45,7 @@ const AccountTags = lazy(() => import('./pages/AccountTags'));
 const AccountMediaTypes = lazy(() => import('./pages/AccountMediaTypes'));
 const AccountAdminDashboard = lazy(() => import('./pages/AccountAdminDashboard'));
 const StyleGuidePage = lazy(() => import('./pages/StyleGuidePage'));
+const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -242,6 +243,7 @@ const App: React.FC = () => {
                       <Route path="/manage-media-types" element={<AccountMediaTypes />} />
                     )}
                     <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} />} />
+                    <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
                     <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
                     <Route path="/password-setup" element={<PasswordSetupPage />} />
                     <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} />} />

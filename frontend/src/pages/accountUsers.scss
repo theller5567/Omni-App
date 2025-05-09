@@ -1,14 +1,15 @@
 #account-users {
-    width: calc(100% - 250px);
-    height: 100%;
-    overflow: hidden;
-    margin-left: 250px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
     padding: 1rem;
+    margin-left: 250px;
+    max-width: calc(100% - 250px);
     
     @media (max-width: 768px) {
-      width: 100%;
       margin-left: 0;
-      padding: 0.5rem;
+      max-width: 100%;
     }
 }
 
@@ -25,15 +26,11 @@
       padding: 0.5rem;
     }
     
-    h2 {
-      margin-bottom: 2rem;
-      font-size: 2rem;
-      color: var(--text-color);
-      
-      @media (max-width: 768px) {
-        margin-bottom: 1rem;
-        font-size: 1.75rem;
-      }
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 24px;
+      color: var(--text-color, #fff);
     }
     
     .toolbar {
@@ -117,11 +114,10 @@
         font-size: 0.9rem;
         display: flex;
         align-items: center;
-        justify-content: left;
         
         &[data-field="email"],
         &[data-field="fullName"] {
-          justify-content: center;
+          justify-content: left;
           
           span {
             display: block;
@@ -142,7 +138,7 @@
         display: flex;
         align-items: center;
         width: 100%;
-        justify-content: center;
+        justify-content: flex-start;
         padding: 4px;
         
         .MuiAvatar-root {
@@ -279,8 +275,8 @@
     }
     
     .MuiButton-contained {
-      background-color: var(--accent-color, #f50057);
-      color: white;
+      background-color: var(--primary-color, #4dabf5);
+      color: var(--color-text-invert, #000);
       font-weight: 500;
       
       &:hover {
@@ -317,6 +313,144 @@
       
       .MuiSelect-icon {
         color: var(--text-color, #fff);
+      }
+    }
+
+    // Edit user grid
+    .edit-user-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-gap: 16px;
+      margin-top: 8px;
+      
+      .email-field {
+        grid-column: 1 / -1; // span all columns
+      }
+      
+      .first-name-field,
+      .last-name-field,
+      .username-field,
+      .role-field {
+        margin-top: 0;
+      }
+      
+      @media (max-width: 600px) {
+        grid-template-columns: 1fr;
+        
+        .first-name-field,
+        .last-name-field,
+        .username-field,
+        .role-field,
+        .email-field {
+          grid-column: 1;
+        }
+      }
+    }
+}
+
+.user-management-container {
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--bg-secondary, #222);
+    margin-bottom: 2rem;
+    
+    .tab-header {
+      background-color: var(--bg-secondary-dark, #1a1a1a);
+      border-bottom: 1px solid var(--border-color, #333);
+      
+      .user-tabs {
+        .MuiTabs-indicator {
+          background-color: var(--primary-color, #4dabf5);
+        }
+        
+        .user-tab {
+          color: var(--text-color, #fff);
+          text-transform: none;
+          font-weight: 500;
+          font-size: 16px;
+          
+          &.Mui-selected {
+            color: var(--primary-color, #4dabf5);
+          }
+        }
+      }
+    }
+    
+    .tab-panel {
+      .tab-content {
+        padding-top: 0;
+        text-align: left;
+        
+        h6, p {
+          text-align: left;
+        }
+      }
+    }
+    
+    .invitation-button {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      background-color: var(--primary-color, #90caf9);
+      padding: 10px 16px;
+      border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      
+      .MuiButton-startIcon {
+        margin-right: 8px;
+      }
+      
+      svg {
+        font-size: 20px;
+      }
+      
+      &:hover {
+        background-color: var(--primary-color-dark, #42a5f5);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+      }
+    }
+    
+    // Invitation section styling
+    .invitation-section {
+      margin-top: 1rem;
+      
+      .section-header {
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        
+        div {
+          flex: 1;
+          text-align: left;
+          
+          h6, p {
+            text-align: left;
+          }
+        }
+        
+        @media (max-width: 768px) {
+          flex-direction: column;
+          
+          .invitation-button {
+            margin-top: 1rem;
+            align-self: flex-start;
+          }
+        }
+      }
+      
+      .invitation-table-container {
+        background-color: var(--bg-secondary, #222);
+        border-radius: 4px;
+        border: 1px solid var(--border-color, #333);
+        overflow: hidden;
+        
+        // Override table cell alignment to be left-aligned
+        .MuiTableCell-root {
+          text-align: left;
+        }
       }
     }
 }

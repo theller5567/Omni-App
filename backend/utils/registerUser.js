@@ -16,10 +16,16 @@ export const registerUser = async (req, res) => {
     const verificationToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: "2d" });
     const verificationLink = `http://localhost:5002/api/auth/verify-email/${verificationToken}`;
 
+    // Create properly encoded avatar URL with lowercase initials
+    const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toLowerCase();
+    const encodedInitials = encodeURIComponent(initials);
+    const avatarUrl = `https://api.dicebear.com/9.x/initials/svg?seed=${encodedInitials}&radius=50&backgroundType=gradientLinear&fontSize=26&backgroundRotation=-205`;
+    
     user = new User({
       firstName,
       lastName,
       username,
+      avatar: avatarUrl,
       email,
       isVerified: false,
       role: 'user',

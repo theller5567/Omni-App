@@ -1,0 +1,177 @@
+#user-invitation {
+    display: flex;
+    flex-direction: column;
+    margin: 0 0 0 250px;
+    max-width: 100%;
+    padding: 2rem;
+    
+    .invitation-header {
+        margin-bottom: 2rem;
+        text-align: left;
+        
+        .page-title {
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: var(--text-color, #fff);
+        }
+        
+        .page-description {
+            font-size: 1rem;
+            color: var(--text-secondary, #aaa);
+            max-width: 800px;
+        }
+    }
+
+    .invitation-button {
+        display: flex;
+        align-items: center;
+        width: fit-content;
+    }
+    
+    .invitation-content {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+        
+        .invitation-form-section {
+            background-color: var(--bg-secondary, #222);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section-divider {
+            background-color: var(--border-color, #333);
+            margin: 1rem 0;
+        }
+        
+        .invitation-list-section {
+            background-color: var(--bg-secondary, #222);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+    }
+}
+
+#invitation-accept-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: var(--bg-color, #121212);
+    
+    .invitation-container {
+        width: 100%;
+        max-width: 500px;
+        padding: 2rem 1rem;
+    }
+    
+    .invitation-paper {
+        padding: 2rem;
+        border-radius: 8px;
+        background-color: var(--bg-secondary, #222);
+        color: var(--text-color, #fff);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+    
+    .page-title {
+        text-align: center;
+        margin-bottom: 2rem;
+        font-weight: 600;
+        color: var(--primary-color, #4dabf5);
+    }
+    
+    .invitation-stepper {
+        margin-bottom: 2rem;
+        
+        .MuiStepLabel-label {
+            color: var(--text-color, #fff);
+            
+            &.Mui-completed {
+                color: var(--primary-color, #4dabf5);
+            }
+            
+            &.Mui-active {
+                color: var(--accent-color, #f48fb1);
+            }
+        }
+    }
+    
+    .validation-container, 
+    .password-form-container, 
+    .success-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 2rem 0;
+    }
+    
+    .progress-indicator {
+        margin-bottom: 1.5rem;
+    }
+    
+    .validation-text {
+        color: var(--text-color, #fff);
+    }
+    
+    .validation-alert,
+    .invitation-info,
+    .error-alert {
+        margin-bottom: 1.5rem;
+        width: 100%;
+    }
+    
+    .login-button,
+    .submit-button {
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+        background-color: var(--primary-color, #4dabf5);
+        
+        &:hover {
+            background-color: var(--primary-dark, #2196f3);
+        }
+    }
+    
+    .password-field {
+        margin: 0.75rem 0;
+        width: 100%;
+        
+        .MuiInputBase-root {
+            color: var(--text-color, #fff);
+        }
+        
+        .MuiInputLabel-root {
+            color: var(--text-secondary, #aaa);
+        }
+        
+        .MuiOutlinedInput-notchedOutline {
+            border-color: var(--border-color, #555);
+        }
+        
+        &:hover .MuiOutlinedInput-notchedOutline {
+            border-color: var(--primary-color, #4dabf5);
+        }
+    }
+    
+    .form-title {
+        margin-bottom: 1rem;
+        color: var(--text-color, #fff);
+    }
+    
+    .success-icon {
+        font-size: 80px;
+        margin-bottom: 1.5rem;
+        color: var(--success-color, #4caf50);
+    }
+    
+    .success-title {
+        margin-bottom: 1rem;
+        color: var(--success-color, #4caf50);
+    }
+    
+    .success-message {
+        color: var(--text-color, #fff);
+    }
+}

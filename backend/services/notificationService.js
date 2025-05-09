@@ -433,7 +433,7 @@ Details: ${activity.details}
     if (activity.resourceType === 'media' && activity.mediaSlug) {
       content += `
       <div class="field" style="margin-top: 20px;">
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/media/slug/${activity.mediaSlug}" 
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/media/slug/${activity.mediaSlug}" 
            style="background-color: #4dabf5; color: white; padding: 8px 15px; text-decoration: none; border-radius: 3px;">
           View in App
         </a>
@@ -497,7 +497,7 @@ This is a summary of activities performed in the last ${period.toLowerCase()}:
       }
     });
     
-    content += `\n\nView all activity in the Admin Dashboard: ${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/activity`;
+    content += `\n\nView all activity in the Admin Dashboard: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/admin/activity`;
     
     return content;
   }
@@ -580,7 +580,7 @@ This is a summary of activities performed in the last ${period.toLowerCase()}:
     
     content += `
       <div class="view-all">
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/activity" class="view-btn">
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/admin/activity" class="view-btn">
           View All Activity
         </a>
       </div>

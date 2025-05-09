@@ -273,33 +273,6 @@ const UserActivity: React.FC = () => {
     }
   };
   
-  // Get user initials for avatar
-  const getUserInitials = (username: string) => {
-    return username
-      .split(' ')
-      .map(name => name[0]?.toUpperCase() || '')
-      .join('')
-      .slice(0, 2);
-  };
-  
-  // Generate unique color based on user ID
-  const getUserColor = (userId: string) => {
-    const colors = [
-      '#f44336', '#e91e63', '#9c27b0', '#673ab7', 
-      '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4',
-      '#009688', '#4caf50', '#8bc34a', '#cddc39',
-      '#ffeb3b', '#ffc107', '#ff9800', '#ff5722'
-    ];
-    
-    // Simple hash function for user ID
-    const hash = userId.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    const index = Math.abs(hash) % colors.length;
-    return colors[index];
-  };
   
   if (loading && activities.length === 0) {
     return (
@@ -352,12 +325,12 @@ const UserActivity: React.FC = () => {
                       sx={{ 
                         width: 30, 
                         height: 30, 
-                        bgcolor: getUserColor(activity.userId),
                         fontSize: '0.8rem'
                       }}
-                    >
-                      {getUserInitials(activity.username)}
-                    </Avatar>
+                      className="sidebar-avatar" 
+                      src={userState.users.allUsers.find(user => user._id === activity.userId)?.avatar} 
+                      alt={`${userState.users.allUsers.find(user => user._id === activity.userId)?.firstName} ${userState.users.allUsers.find(user => user._id === activity.userId)?.lastName}`}
+                    />
                     <Box>
                       <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
                         {activity.username}

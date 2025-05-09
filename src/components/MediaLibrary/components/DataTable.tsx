@@ -1,5 +1,0 @@
-const DataTable = ({ 
-  rows,
-  onSelectionChange,
-}) => {
-} 

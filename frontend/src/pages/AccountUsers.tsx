@@ -14,12 +14,13 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
-  Grid, 
   IconButton, 
   InputLabel,
   MenuItem,
   Paper,
   Select,
+  Tab,
+  Tabs,
   TextField,
   Toolbar, 
   Tooltip, 
@@ -28,12 +29,51 @@ import {
   Theme
 } from '@mui/material';
 import { toast } from 'react-toastify';
-import { FaTrash, FaEdit, FaUser, FaEnvelope, FaIdCard, FaUserTag } from 'react-icons/fa';
+import { FaTrash, FaEdit, FaUser, FaEnvelope, FaIdCard, FaUserTag, FaUserPlus, FaTimes } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import './accountUsers.scss';
 import { AppDispatch } from '../store/store';
 import type { User } from '../types/userTypes';
 import { SelectChangeEvent } from '@mui/material';
+import InvitationForm from '../components/UserInvitation/InvitationForm';
+import InvitationList from '../components/UserInvitation/InvitationList';
+
+// Interface for tab panel props
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+// Tab Panel component
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`user-management-tabpanel-${index}`}
+      aria-labelledby={`user-management-tab-${index}`}
+      className="tab-panel"
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
+// Tab access props
+function a11yProps(index: number) {
+  return {
+    id: `user-management-tab-${index}`,
+    'aria-controls': `user-management-tabpanel-${index}`,
+  };
+}
 
 const AccountUsers = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -51,6 +91,11 @@ const AccountUsers = () => {
     role: ''
   });
   
+  // Tab state
+  const [tabValue, setTabValue] = useState(0);
+  const [newUserDialog, setNewUserDialog] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
 
   useEffect(() => {
@@ -67,6 +112,17 @@ const AccountUsers = () => {
       dispatch(fetchAllUsers());
     }
   }, [dispatch, currentUser?.role, users.status, users.allUsers]);
+
+  // Handle tab change
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+  
+  // Handle invitation sent
+  const handleInvitationSent = () => {
+    setNewUserDialog(false);
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   const handleEdit = (id: string) => {
     const user = users.allUsers.find(u => u._id === id);
@@ -332,154 +388,234 @@ const AccountUsers = () => {
           Manage Users
         </Typography>
         
-        <Paper elevation={2} sx={{ p: 3, borderRadius: 2, mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            User Management
-          </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            Manage user accounts, edit user details, and control access permissions. 
-            {currentUser?.role === 'superAdmin' && ' As a super admin, you can also delete user accounts.'}
-          </Typography>
-          
-          {selectedUser && (
-            <EnhancedTableToolbar numSelected={1} />
-          )}
-          
-          <Box sx={{ height: 500, width: '100%', mt: 2 }}>
-            <DataGrid
-              className="users-data-grid"
-              rows={users.allUsers}
-              columns={columns}
-              getRowId={(row) => row._id}
-              pageSizeOptions={[5, 10, 20, 50]}
-              initialState={{
-                pagination: {
-                  paginationModel: { pageSize: 10 },
-                },
-                sorting: {
-                  sortModel: [{ field: 'username', sort: 'asc' }],
-                },
-              }}
-              checkboxSelection={currentUser?.role === 'superAdmin'}
-              disableRowSelectionOnClick
-              onRowSelectionModelChange={(newSelection) => {
-                const selectedId = newSelection[0];
-                const foundUser = users.allUsers.find(u => u._id === selectedId);
-                setSelectedUser(foundUser || null);
-              }}
-              slots={{ toolbar: GridToolbar }}
-              slotProps={{
-                toolbar: {
-                  showQuickFilter: true,
-                  quickFilterProps: { debounceMs: 500 },
-                },
-              }}
-              sx={{
-                border: 'none',
-                fontFamily: 'inherit',
-                '& .MuiDataGrid-columnHeader': {
-                  backgroundColor: 'var(--bg-secondary, #222)',
-                  color: 'var(--text-color, #fff)',
-                },
-                '& .MuiDataGrid-columnHeaderTitle': {
-                  fontWeight: 600,
-                  fontSize: '14px',
-                  color: 'var(--text-color, #fff)',
-                  fontFamily: 'inherit',
-                },
-                '& .MuiDataGrid-columnHeaderTitleContainer': {
-                  justifyContent: 'left',
-                },
-                '& .MuiDataGrid-cell': {
-                  borderBottom: '1px solid var(--border-color, #333)',
-                  color: 'var(--text-color, #fff)',
-                  fontSize: '14px',
-                  fontFamily: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'left',
-                },
-                '& .MuiDataGrid-cell:focus': {
-                  outline: 'none',
-                },
-                '& .MuiDataGrid-row': {
-                  height: '52px',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  },
-                },
-                '& .MuiCheckbox-root': {
-                  color: 'var(--text-color, #fff)',
-                  padding: '4px',
-                  '&.Mui-checked': {
-                    color: 'var(--primary-color, #4dabf5)',
-                  },
-                  '& .MuiSvgIcon-root': {
-                    fontSize: '1.25rem',
-                    width: '1.25rem',
-                    height: '1.25rem',
-                  }
-                },
-                '& .MuiDataGrid-cellCheckbox, & .MuiDataGrid-columnHeaderCheckbox': {
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'left',
-                  padding: '0 6px',
-                  '& .MuiCheckbox-root': {
-                    padding: 0,
-                  }
-                },
-                '& .MuiDataGrid-footerContainer': {
-                  borderTop: '1px solid var(--border-color, #333)',
-                  backgroundColor: 'var(--bg-secondary, #222)',
-                  fontFamily: 'inherit',
-                },
-                '& .MuiTablePagination-root': {
-                  color: 'var(--text-color, #fff)',
-                  fontFamily: 'inherit',
-                },
-                '& .MuiIconButton-root': {
-                  color: 'var(--text-color, #fff)',
-                },
-                '& .MuiDataGrid-virtualScroller': {
-                  backgroundColor: 'var(--bg-secondary, #222)',
-                },
-                '& .MuiDataGrid-main': {
-                  backgroundColor: 'var(--bg-secondary, #222)',
-                  color: 'var(--text-color, #fff)',
-                  fontFamily: 'inherit',
-                },
-                '& .MuiDataGrid-toolbarContainer': {
-                  backgroundColor: 'var(--bg-secondary, #222)',
-                  padding: '8px 16px',
-                  borderBottom: '1px solid var(--border-color, #333)',
-                  fontFamily: 'inherit',
-                },
-                '& .MuiInputBase-root': {
-                  color: 'var(--text-color, #fff)',
-                  backgroundColor: 'var(--background-color, #121212)',
-                  borderRadius: '4px',
-                  padding: '2px 8px',
-                  fontFamily: 'inherit',
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'var(--border-color, #333)',
-                  },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'var(--border-color, #555)',
-                  }
-                },
-                '& .MuiInputLabel-root': {
-                  color: 'var(--text-secondary, #aaa)',
-                  fontFamily: 'inherit',
-                },
-                '& .MuiDataGrid-columnSeparator': {
-                  color: 'var(--border-color, #333)',
-                },
-              }}
-            />
+        <Paper elevation={2} className="user-management-container">
+          <Box className="tab-header">
+            <Tabs 
+              value={tabValue} 
+              onChange={handleTabChange} 
+              className="user-tabs"
+              variant="fullWidth"
+            >
+              <Tab label="Users" {...a11yProps(0)} className="user-tab" />
+              <Tab label="Invitations" {...a11yProps(1)} className="user-tab" />
+            </Tabs>
           </Box>
+          
+          {/* Users Tab */}
+          <TabPanel value={tabValue} index={0}>
+            <Box className="tab-content">
+              <Typography variant="h6" gutterBottom>
+                User Management
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Manage user accounts, edit user details, and control access permissions. 
+                {currentUser?.role === 'superAdmin' && ' As a super admin, you can also delete user accounts.'}
+              </Typography>
+              
+              {selectedUser && (
+                <EnhancedTableToolbar numSelected={1} />
+              )}
+              
+              <Box sx={{ height: 500, width: '100%', mt: 2 }}>
+                <DataGrid
+                  className="users-data-grid"
+                  rows={users.allUsers}
+                  columns={columns}
+                  getRowId={(row) => row._id}
+                  pageSizeOptions={[5, 10, 20, 50]}
+                  initialState={{
+                    pagination: {
+                      paginationModel: { pageSize: 10 },
+                    },
+                    sorting: {
+                      sortModel: [{ field: 'username', sort: 'asc' }],
+                    },
+                  }}
+                  checkboxSelection={currentUser?.role === 'superAdmin'}
+                  disableRowSelectionOnClick
+                  onRowSelectionModelChange={(newSelection) => {
+                    const selectedId = newSelection[0];
+                    const foundUser = users.allUsers.find(u => u._id === selectedId);
+                    setSelectedUser(foundUser || null);
+                  }}
+                  slots={{ toolbar: GridToolbar }}
+                  slotProps={{
+                    toolbar: {
+                      showQuickFilter: true,
+                      quickFilterProps: { debounceMs: 500 },
+                    },
+                  }}
+                  sx={{
+                    border: 'none',
+                    fontFamily: 'inherit',
+                    '& .MuiDataGrid-columnHeader': {
+                      backgroundColor: 'var(--bg-secondary, #222)',
+                      color: 'var(--text-color, #fff)',
+                    },
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                      fontWeight: 600,
+                      fontSize: '14px',
+                      color: 'var(--text-color, #fff)',
+                      fontFamily: 'inherit',
+                    },
+                    '& .MuiDataGrid-columnHeaderTitleContainer': {
+                      justifyContent: 'left',
+                    },
+                    '& .MuiDataGrid-cell': {
+                      borderBottom: '1px solid var(--border-color, #333)',
+                      color: 'var(--text-color, #fff)',
+                      fontSize: '14px',
+                      fontFamily: 'inherit',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'left',
+                    },
+                    '& .MuiDataGrid-cell:focus': {
+                      outline: 'none',
+                    },
+                    '& .MuiDataGrid-row': {
+                      height: '52px',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      },
+                    },
+                    '& .MuiCheckbox-root': {
+                      color: 'var(--text-color, #fff)',
+                      padding: '4px',
+                      '&.Mui-checked': {
+                        color: 'var(--primary-color, #4dabf5)',
+                      },
+                      '& .MuiSvgIcon-root': {
+                        fontSize: '1.25rem',
+                        width: '1.25rem',
+                        height: '1.25rem',
+                      }
+                    },
+                    '& .MuiDataGrid-cellCheckbox, & .MuiDataGrid-columnHeaderCheckbox': {
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'left',
+                      padding: '0 6px',
+                      '& .MuiCheckbox-root': {
+                        padding: 0,
+                      }
+                    },
+                    '& .MuiDataGrid-footerContainer': {
+                      borderTop: '1px solid var(--border-color, #333)',
+                      backgroundColor: 'var(--bg-secondary, #222)',
+                      fontFamily: 'inherit',
+                    },
+                    '& .MuiTablePagination-root': {
+                      color: 'var(--text-color, #fff)',
+                      fontFamily: 'inherit',
+                    },
+                    '& .MuiIconButton-root': {
+                      color: 'var(--text-color, #fff)',
+                    },
+                    '& .MuiDataGrid-virtualScroller': {
+                      backgroundColor: 'var(--bg-secondary, #222)',
+                    },
+                    '& .MuiDataGrid-main': {
+                      backgroundColor: 'var(--bg-secondary, #222)',
+                      color: 'var(--text-color, #fff)',
+                      fontFamily: 'inherit',
+                    },
+                    '& .MuiDataGrid-toolbarContainer': {
+                      backgroundColor: 'var(--bg-secondary, #222)',
+                      padding: '8px 16px',
+                      borderBottom: '1px solid var(--border-color, #333)',
+                      fontFamily: 'inherit',
+                    },
+                    '& .MuiInputBase-root': {
+                      color: 'var(--text-color, #fff)',
+                      backgroundColor: 'var(--background-color, #121212)',
+                      borderRadius: '4px',
+                      padding: '2px 8px',
+                      fontFamily: 'inherit',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'var(--border-color, #333)',
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'var(--border-color, #555)',
+                      }
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: 'var(--text-secondary, #aaa)',
+                      fontFamily: 'inherit',
+                    },
+                    '& .MuiDataGrid-columnSeparator': {
+                      color: 'var(--border-color, #333)',
+                    },
+                  }}
+                />
+              </Box>
+            </Box>
+          </TabPanel>
+          
+          {/* Invitations Tab */}
+          <TabPanel value={tabValue} index={1}>
+            <Box className="tab-content">
+              <Box className="invitation-section">
+                <Box className="section-header">
+                  <div>
+                    <Typography variant="h6" gutterBottom>
+                      User Invitations
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Invite new users to join Omni's Media Library. Invited users will receive an email with instructions to create their account.
+                    </Typography>
+                  </div>
+                
+                  <Button 
+                    variant="contained" 
+                    color="primary" 
+                    size="large" 
+                    className="invitation-button" 
+                    startIcon={<FaUserPlus />}
+                    onClick={() => setNewUserDialog(true)}
+                  >
+                    Invite New User
+                  </Button>
+                </Box>
+                
+                <Box className="invitation-table-container">
+                  <InvitationList refreshTrigger={refreshTrigger} />
+                </Box>
+              </Box>
+            </Box>
+          </TabPanel>
         </Paper>
       </Box>
+      
+      {/* New User Invitation Dialog */}
+      <Dialog 
+        open={newUserDialog} 
+        onClose={() => setNewUserDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center">
+            <FaUserPlus style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
+            Invite New User
+          </Box>
+          <IconButton
+            aria-label="close"
+            onClick={() => setNewUserDialog(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: 'var(--text-color, #fff)'
+            }}
+          >
+            <FaTimes />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <InvitationForm onInvitationSent={handleInvitationSent} />
+        </DialogContent>
+      </Dialog>
       
       {/* Edit User Dialog */}
       <Dialog 
@@ -493,102 +629,96 @@ const AccountUsers = () => {
         </DialogTitle>
         <DialogContent dividers>
           <Box sx={{ p: 1 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  name="firstName"
-                  label="First Name"
-                  value={editFormData.firstName}
+            <div className="edit-user-grid">
+              <TextField
+                name="firstName"
+                label="First Name"
+                value={editFormData.firstName}
+                onChange={handleFieldChange}
+                fullWidth
+                margin="normal"
+                variant="outlined"
+                className="first-name-field"
+                InputProps={{
+                  startAdornment: (
+                    <FaUser style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
+                  ),
+                }}
+              />
+              <TextField
+                name="lastName"
+                label="Last Name"
+                value={editFormData.lastName}
+                onChange={handleFieldChange}
+                fullWidth
+                margin="normal"
+                variant="outlined"
+                className="last-name-field"
+                InputProps={{
+                  startAdornment: (
+                    <FaIdCard style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
+                  ),
+                }}
+              />
+              <TextField
+                name="email"
+                label="Email"
+                type="email"
+                value={editFormData.email}
+                onChange={handleFieldChange}
+                fullWidth
+                margin="normal"
+                variant="outlined"
+                className="email-field"
+                InputProps={{
+                  startAdornment: (
+                    <FaEnvelope style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
+                  ),
+                }}
+              />
+              <TextField
+                name="username"
+                label="Username"
+                value={editFormData.username}
+                onChange={handleFieldChange}
+                fullWidth
+                margin="normal"
+                variant="outlined"
+                className="username-field"
+                InputProps={{
+                  startAdornment: (
+                    <FaUser style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
+                  ),
+                }}
+              />
+              <FormControl fullWidth margin="normal" variant="outlined" className="role-field">
+                <InputLabel id="role-label">Role</InputLabel>
+                <Select
+                  labelId="role-label"
+                  name="role"
+                  value={editFormData.role}
                   onChange={handleFieldChange}
-                  fullWidth
-                  margin="normal"
-                  variant="outlined"
-                  InputProps={{
-                    startAdornment: (
-                      <FaUser style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  name="lastName"
-                  label="Last Name"
-                  value={editFormData.lastName}
-                  onChange={handleFieldChange}
-                  fullWidth
-                  margin="normal"
-                  variant="outlined"
-                  InputProps={{
-                    startAdornment: (
-                      <FaIdCard style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  name="email"
-                  label="Email"
-                  type="email"
-                  value={editFormData.email}
-                  onChange={handleFieldChange}
-                  fullWidth
-                  margin="normal"
-                  variant="outlined"
-                  InputProps={{
-                    startAdornment: (
-                      <FaEnvelope style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  name="username"
-                  label="Username"
-                  value={editFormData.username}
-                  onChange={handleFieldChange}
-                  fullWidth
-                  margin="normal"
-                  variant="outlined"
-                  InputProps={{
-                    startAdornment: (
-                      <FaUser style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth margin="normal" variant="outlined">
-                  <InputLabel id="role-label">Role</InputLabel>
-                  <Select
-                    labelId="role-label"
-                    name="role"
-                    value={editFormData.role}
-                    onChange={handleFieldChange}
-                    label="Role"
-                    disabled={userToEdit?._id === currentUser?._id}
-                    sx={{
-                      '& .MuiSelect-select': {
-                        display: 'flex',
-                        alignItems: 'center',
-                      }
-                    }}
-                    startAdornment={
-                      <FaUserTag style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
+                  label="Role"
+                  disabled={userToEdit?._id === currentUser?._id}
+                  sx={{
+                    '& .MuiSelect-select': {
+                      display: 'flex',
+                      alignItems: 'center',
                     }
-                  >
-                    <MenuItem value="user">User</MenuItem>
-                    <MenuItem value="distributor">Distributor</MenuItem>
-                    <MenuItem value="admin">Admin</MenuItem>
-                    {currentUser?.role === 'superAdmin' && (
-                      <MenuItem value="superAdmin">Super Admin</MenuItem>
-                    )}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
+                  }}
+                  startAdornment={
+                    <FaUserTag style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
+                  }
+                >
+                  <MenuItem value="user">User</MenuItem>
+                  <MenuItem value="distributor">Distributor</MenuItem>
+                  <MenuItem value="admin">Admin</MenuItem>
+                  {currentUser?.role === 'superAdmin' && (
+                    <MenuItem value="superAdmin">Super Admin</MenuItem>
+                  )}
+                </Select>
+              </FormControl>
+            </div>
             
             {userToEdit?._id === currentUser?._id && (
               <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 2 }}>

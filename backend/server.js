@@ -12,6 +12,7 @@ import mediaTypeRoutes from './routes/mediaTypeRoutes.js';
 import utilityRoutes from './routes/utilityRoutes.js';
 import tagCategoryRoutes from './routes/tagCategoryRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import invitationRoutes from './routes/invitationRoutes.js';
 import { configureBucketCors } from './services/awsService.js';
 // Load environment variables from .env file
 dotenv.config();
@@ -131,6 +132,7 @@ app.use('/api/media-types', mediaTypeRoutes);
 app.use('/api/utility', utilityRoutes);
 app.use('/api/tag-categories', tagCategoryRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/invitations', invitationRoutes);
 
 // Root route
 app.get('/', (req, res) => {
