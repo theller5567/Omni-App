@@ -9,7 +9,7 @@ import {
   Divider
 } from '@mui/material';
 import { FaEdit, FaTrash, FaTag } from 'react-icons/fa';
-import { TagCategory } from '../../store/slices/tagCategorySlice';
+import { TagCategory } from '../../hooks/query-hooks';
 
 interface TagCategoryItemProps {
   category: TagCategory;

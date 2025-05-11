@@ -3,8 +3,7 @@ import { DataGrid, GridColDef, GridToolbar, GridRowSelectionModel, GridRowParams
 import { Link, useNavigate } from 'react-router-dom';
 import { Box, Chip, Stack } from '@mui/material';
 import { formatFileSize } from '../../../utils/formatFileSize';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../../store/store';
+import { useMediaTypes } from '../../../hooks/query-hooks';
 import { isImageFile, isVideoFile, getFileIcon } from '../utils';
 
 interface VirtualizedDataTableProps {
@@ -18,8 +17,8 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
 }) => {
   const navigate = useNavigate();
   
-  // Get media types for color mapping
-  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  // Get media types using TanStack Query instead of Redux
+  const { data: mediaTypes = [] } = useMediaTypes();
   
   // Handle row click to navigate to detail view
   const handleRowClick = (params: GridRowParams) => {
@@ -183,7 +182,21 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
       flex: 0.5,
       valueFormatter: (value: string) => {
         if (!value) return 'N/A';
-        return new Date(value).toLocaleDateString();
+        try {
+          // Parse the date - handle both ISO strings and Date objects
+          const date = new Date(value);
+          // Check if date is valid before formatting
+          if (isNaN(date.getTime())) return 'Invalid date';
+          // Format using browser locale for consistent display
+          return date.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric'
+          });
+        } catch (err) {
+          console.error('Date parsing error:', err);
+          return 'Error';
+        }
       }
     },
     { field: 'tags', headerName: 'Tags', flex: 1, renderCell: (params) => {

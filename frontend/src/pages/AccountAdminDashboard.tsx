@@ -13,8 +13,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 import { AppDispatch } from '../store/store';
 import { initializeMedia } from '../store/slices/mediaSlice';
-import { initializeMediaTypes } from '../store/slices/mediaTypeSlice';
 import '../components/AdminDashboard/dashboard.scss';
+import { useMediaTypesWithUsageCounts } from '../hooks/query-hooks';
 
 // Lazy-loaded dashboard components
 const MediaTypeDistribution = lazy(() => import('../components/AdminDashboard/MediaTypeDistribution'));
@@ -72,9 +72,14 @@ const AccountAdminDashboard: React.FC = () => {
   
   // Get media data from Redux store
   const allMedia = useSelector((state: RootState) => state.media.allMedia);
-  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
   const mediaStatus = useSelector((state: RootState) => state.media.status);
-  const mediaTypesStatus = useSelector((state: RootState) => state.mediaTypes.status);
+  
+  // Get media types using TanStack Query instead of Redux
+  const { 
+    data: mediaTypes = [], 
+    isLoading: mediaTypesLoading,
+    isError: mediaTypesError
+  } = useMediaTypesWithUsageCounts();
   
   // Initialize data when component mounts if not already loaded
   useEffect(() => {
@@ -85,15 +90,12 @@ const AccountAdminDashboard: React.FC = () => {
         dispatch(initializeMedia());
       }
       
-      // Only load media types data if it hasn't been loaded yet
-      if (mediaTypesStatus === 'idle' || mediaTypes.length === 0) {
-        console.log('Initializing media types data for Admin Dashboard');
-        dispatch(initializeMediaTypes());
-      }
+      // Media types are now loaded automatically by TanStack Query
+      // No need to dispatch initializeMediaTypes
     };
     
     loadDashboardData();
-  }, [dispatch, mediaStatus, mediaTypesStatus, allMedia.length, mediaTypes.length]);
+  }, [dispatch, mediaStatus, allMedia.length]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -129,7 +131,9 @@ const AccountAdminDashboard: React.FC = () => {
           {/* Media Types Card */}
           <Paper elevation={2} className="dashboard-card stat-card">
             <Typography variant="h6" className="stat-title">Media Types</Typography>
-            <Typography variant="h3" className="stat-value" sx={{ color: 'success.main' }}>{mediaTypes.length}</Typography>
+            <Typography variant="h3" className="stat-value" sx={{ color: 'success.main' }}>
+              {mediaTypesLoading ? <CircularProgress size={24} /> : mediaTypes.length}
+            </Typography>
             <Typography variant="body2" className="stat-subtitle">Configured media types</Typography>
           </Paper>
           

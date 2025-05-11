@@ -494,7 +494,7 @@ const RecentActivity: React.FC = () => {
         <Typography variant="h6" gutterBottom>Recent Activity</Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', py: 3, minHeight: '350px' }}>
           <CircularProgress />
-          <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
+          <Typography component="div" variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
             Loading activity logs...
           </Typography>
         </Box>
@@ -507,7 +507,7 @@ const RecentActivity: React.FC = () => {
       <Paper elevation={2} className="dashboard-card" style={{ minHeight: '450px' }}>
         <Typography variant="h6" gutterBottom>Recent Activity</Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', py: 3, minHeight: '350px' }}>
-          <Typography color="error" gutterBottom>{error}</Typography>
+          <Typography component="div" color="error" gutterBottom>{error}</Typography>
           
           <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
             <Button 
@@ -583,7 +583,7 @@ const RecentActivity: React.FC = () => {
       
       {activities.length === 0 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 3, minHeight: '350px' }}>
-          <Typography color="textSecondary">
+          <Typography component="div" color="textSecondary">
             {isLoading ? 'Loading activity data...' : 'No recent activity found'}
           </Typography>
         </Box>
@@ -641,6 +641,7 @@ const RecentActivity: React.FC = () => {
                       </Typography>
                     </Box>
                   }
+                  secondaryTypographyProps={{ component: 'div' }}
                 />
               </ListItem>
               {index < activities.length - 1 && <Divider key={`divider-${activity.id || index}`} />}

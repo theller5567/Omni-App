@@ -8,17 +8,15 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../../store/store';
-import {
-  fetchTagCategories,
-  createTagCategory,
-  updateTagCategory,
-  deleteTagCategory,
-  TagCategory as StoreTagCategory,
-} from '../../store/slices/tagCategorySlice';
 import { FaPlus } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import { 
+  useTagCategories, 
+  useCreateTagCategory, 
+  useUpdateTagCategory, 
+  useDeleteTagCategory,
+  TagCategory as QueryTagCategory
+} from '../../hooks/query-hooks';
 
 // Lazy load subcomponents
 const TagCategoryForm = lazy(() => import('./TagCategoryForm'));
@@ -47,18 +45,18 @@ const LoadingFallback = () => (
 );
 
 const TagCategoryManager: React.FC = () => {
-  const dispatch = useDispatch<AppDispatch>();
+  // Use TanStack Query hooks instead of Redux
+  const { 
+    data: tagCategories = [],
+    isLoading,
+    isError,
+    error,
+    refetch
+  } = useTagCategories();
   
-  // Use selector with strict equality comparison to prevent unnecessary re-renders
-  const { tagCategories, status, error: storeError } = useSelector((state: RootState) => ({
-    tagCategories: state.tagCategories.tagCategories,
-    status: state.tagCategories.status,
-    error: state.tagCategories.error
-  }), (prev, next) => 
-    prev.tagCategories === next.tagCategories && 
-    prev.status === next.status &&
-    prev.error === next.error
-  );
+  const { mutateAsync: createTagCategoryMutation } = useCreateTagCategory();
+  const { mutateAsync: updateTagCategoryMutation } = useUpdateTagCategory();
+  const { mutateAsync: deleteTagCategoryMutation } = useDeleteTagCategory();
   
   // State management with useRef for values that don't affect rendering
   const operationInProgressRef = useRef<boolean>(false);
@@ -71,7 +69,7 @@ const TagCategoryManager: React.FC = () => {
     deleteDialogOpen: false,
     deleteTarget: null as string | null,
     hardDelete: false,
-    editingCategory: null as StoreTagCategory | null,
+    editingCategory: null as QueryTagCategory | null,
     creationAttempted: false
   });
   
@@ -97,53 +95,15 @@ const TagCategoryManager: React.FC = () => {
     }
   }, [disableComponentToasts]);
   
-  // Optimized fetch function with debounce and caching
-  const fetchCategories = useCallback(async (force = false) => {
-    if (operationInProgressRef.current) return;
-    
-    // Skip if categories already exist and we're not forcing a refresh
-    if (!force && tagCategories.length > 0) {
-      return;
-    }
-    
-    // Get the current lastFetchTime from the Redux store
-    const state = (dispatch as any).getState?.();
-    const lastFetchTime = state?.tagCategories?.lastFetchTime || 0;
-    const now = Date.now();
-    
-    // Skip if data was fetched recently (within last 3 seconds) and we're not forcing
-    if (!force && lastFetchTime && now - lastFetchTime < 3000) {
-      console.log('TagCategoryManager: Skipping fetch - data was fetched recently');
-      return;
-    }
-    
-    try {
-      operationInProgressRef.current = true;
-      await dispatch(fetchTagCategories()).unwrap();
-    } catch (error: any) {
-      console.error('Error fetching tag categories:', error);
-      if (isMountedRef.current) {
-        const errorId = `fetch-error-${Date.now()}`;
-        showToastOnce(errorId, 'error', `Failed to load categories: ${error.message || 'Unknown error'}`);
-      }
-    } finally {
-      if (isMountedRef.current) {
-        operationInProgressRef.current = false;
-      }
-    }
-  }, [dispatch, showToastOnce, tagCategories.length]);
-  
-  
-  // Fetch categories on mount
+  // Component cleanup on unmount
   useEffect(() => {
-    fetchCategories();
     return () => {
       isMountedRef.current = false;
     };
-  }, [fetchCategories]);
+  }, []);
   
   // Dialog handlers with optimized state updates
-  const handleOpen = useCallback((category: StoreTagCategory | null = null) => {
+  const handleOpen = useCallback((category: QueryTagCategory | null = null) => {
     setDialogState(prev => ({
       ...prev,
       open: true,
@@ -205,10 +165,8 @@ const TagCategoryManager: React.FC = () => {
       const categoryToDelete = tagCategories.find(c => c._id === deleteTarget);
       const categoryName = categoryToDelete?.name || 'Category';
       
-      await dispatch(deleteTagCategory({ 
-        id: deleteTarget,
-        hardDelete
-      })).unwrap();
+      // Delete using the TanStack Query mutation
+      await deleteTagCategoryMutation(deleteTarget);
       
       // Generate unique ID for this toast
       const toastId = `delete-${deleteTarget}-${Date.now()}`;
@@ -227,9 +185,6 @@ const TagCategoryManager: React.FC = () => {
         deleteTarget: null,
         hardDelete: false
       }));
-      
-      // Refresh categories
-      await dispatch(fetchTagCategories());
     } catch (error: any) {
       console.error('Error deleting tag category:', error);
       const errorId = `delete-error-${dialogState.deleteTarget}-${Date.now()}`;
@@ -237,7 +192,7 @@ const TagCategoryManager: React.FC = () => {
     } finally {
       operationInProgressRef.current = false;
     }
-  }, [dialogState, dispatch, tagCategories, showToastOnce]);
+  }, [dialogState, tagCategories, showToastOnce, deleteTagCategoryMutation]);
   
   // Check if category name exists
   const categoryNameExists = useCallback((name: string): boolean => {
@@ -289,14 +244,16 @@ const TagCategoryManager: React.FC = () => {
       
       let result;
       if (editingCategory) {
-        result = await dispatch(updateTagCategory({ 
+        // Update using TanStack Query mutation
+        result = await updateTagCategoryMutation({ 
           id: editingCategory._id, 
-          data: transformedData 
-        })).unwrap();
+          updates: transformedData 
+        });
         const successId = `update-${editingCategory._id}-${Date.now()}`;
         showToastOnce(successId, 'success', `Category "${submittedFormData.name}" updated successfully`);
       } else {
-        result = await dispatch(createTagCategory(transformedData)).unwrap();
+        // Create using TanStack Query mutation
+        result = await createTagCategoryMutation(transformedData);
         const successId = `create-${result._id}-${Date.now()}`;
         showToastOnce(successId, 'success', `Category "${submittedFormData.name}" created successfully`);
       }
@@ -309,9 +266,6 @@ const TagCategoryManager: React.FC = () => {
       }));
       
       setFormData(initialFormData);
-      
-      // Refresh categories
-      await dispatch(fetchTagCategories());
     } catch (error: any) {
       console.error('Error submitting tag category:', error);
       
@@ -334,19 +288,9 @@ const TagCategoryManager: React.FC = () => {
     } finally {
       operationInProgressRef.current = false;
     }
-  }, [dialogState, dispatch, categoryNameExists, showToastOnce]);
+  }, [dialogState, categoryNameExists, showToastOnce, createTagCategoryMutation, updateTagCategoryMutation]);
   
   // Memoized derived state
-  const isLoading = useMemo(() => 
-    status === 'loading' && tagCategories.length === 0, 
-    [status, tagCategories.length]
-  );
-  
-  const hasError = useMemo(() => 
-    status === 'failed' && !!storeError, 
-    [status, storeError]
-  );
-  
   const isEmpty = useMemo(() => 
     tagCategories.length === 0, 
     [tagCategories.length]
@@ -369,13 +313,13 @@ const TagCategoryManager: React.FC = () => {
   }
   
   // Render error state
-  if (hasError) {
+  if (isError) {
     return (
       <Box sx={{ mt: 2, mb: 2 }}>
         <Alert severity="error" sx={{ mb: 2 }}>
-          {storeError}
+          {error instanceof Error ? error.message : 'Failed to load tag categories'}
         </Alert>
-        <Button variant="outlined" onClick={() => fetchCategories()}>
+        <Button variant="outlined" onClick={() => refetch()}>
           Try Again
         </Button>
       </Box>

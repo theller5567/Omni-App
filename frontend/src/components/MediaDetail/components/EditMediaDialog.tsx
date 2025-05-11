@@ -189,6 +189,33 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   // Add state to track original values for change detection
   const [originalValues, setOriginalValues] = useState<FormValues | null>(null);
   
+  // Check if mediaType is undefined
+  if (!mediaType) {
+    return (
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth className="edit-media-dialog">
+        <DialogTitle>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6">Edit Media</Typography>
+            <IconButton onClick={onClose} size="large">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box display="flex" justifyContent="center" alignItems="center" p={4}>
+            <CircularProgress size={40} />
+            <Typography variant="body1" sx={{ ml: 2 }}>
+              Loading media type information...
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
+  
   // Debug: Log media file custom fields
   console.log('MediaFile customFields:', mediaFile.customFields);
   console.log('MediaType fields:', mediaType.fields);

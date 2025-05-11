@@ -1,8 +1,7 @@
 import React from 'react';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store/store';
-import { Paper, Typography, Box } from '@mui/material';
+import { Paper, Typography, Box, CircularProgress } from '@mui/material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { useTransformedMedia, useMediaTypesWithUsageCounts } from '../../hooks/query-hooks';
 
 const COLORS: Record<string, string> = {
   'Product Image': '#3f8cff',
@@ -110,9 +109,54 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
 };
 
 const MediaTypeDistribution: React.FC = () => {
-  // Get media and media types from Redux store
-  const allMedia = useSelector((state: RootState) => state.media.allMedia);
-  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  // Use TanStack Query hooks instead of Redux
+  const { 
+    formattedData: allMedia = [], 
+    isLoading: isLoadingMedia, 
+    isError: isMediaError 
+  } = useTransformedMedia();
+  
+  const { 
+    data: mediaTypes = [], 
+    isLoading: isLoadingMediaTypes, 
+    isError: isMediaTypesError 
+  } = useMediaTypesWithUsageCounts();
+  
+  // Loading state
+  if (isLoadingMedia || isLoadingMediaTypes) {
+    return (
+      <Paper elevation={2} className="dashboard-card media-types-chart">
+        <Typography variant="h6" gutterBottom>Media Type Distribution</Typography>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '300px' 
+        }}>
+          <CircularProgress />
+        </Box>
+      </Paper>
+    );
+  }
+  
+  // Error state
+  if (isMediaError || isMediaTypesError) {
+    return (
+      <Paper elevation={2} className="dashboard-card media-types-chart">
+        <Typography variant="h6" gutterBottom>Media Type Distribution</Typography>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '300px' 
+        }}>
+          <Typography variant="body1" color="error">
+            Error loading data. Please try refreshing the page.
+          </Typography>
+        </Box>
+      </Paper>
+    );
+  }
   
   // Calculate distribution data
   const getDistributionData = () => {

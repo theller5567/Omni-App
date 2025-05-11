@@ -1,12 +1,14 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState, AppDispatch } from "../store/store";
-import { fetchTags, addTag, updateTag, deleteTag } from "../store/slices/tagSlice";
+import React, { useState, useMemo, useCallback } from "react";
 import TagCategoryManager from "../components/TagCategoryManager/TagCategoryManager";
 import { toast } from "react-toastify";
-import { resetTagCategories } from "../store/slices/tagCategorySlice";
-import { fetchTagCategories } from "../store/slices/tagCategorySlice";
 import 'react-toastify/dist/ReactToastify.css';
+import { 
+  useTags, 
+  useCreateTag, 
+  useUpdateTag, 
+  useDeleteTag, 
+  useTagCategories
+} from "../hooks/query-hooks";
 
 import { 
   Box, 
@@ -44,89 +46,84 @@ import "./accountTags.scss";
 const TAGS_PER_PAGE = 30;
 
 const AccountTags: React.FC = () => {
-  const dispatch = useDispatch<AppDispatch>();
+  // Replace Redux with TanStack Query
+  const { 
+    data: tags = [], 
+    isLoading: isTagsLoading,
+    isError: isTagsError,
+    refetch: refetchTags
+  } = useTags();
+  
+  const {
+    data: tagCategories = [],
+    isLoading: isCategoriesLoading,
+    refetch: refetchCategories
+  } = useTagCategories();
+  
+  const { mutateAsync: createTag } = useCreateTag();
+  const { mutateAsync: updateTagMutation } = useUpdateTag();
+  const { mutateAsync: deleteTagMutation } = useDeleteTag();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [newTagName, setNewTagName] = useState("");
   const [editingTag, setEditingTag] = useState<{ id: string; name: string } | null>(null);
   const [tagToDelete, setTagToDelete] = useState<string | null>(null);
-  const { tags, status: tagStatus } = useSelector((state: RootState) => state.tags);
-  const { tagCategories, status: categoryStatus } = useSelector((state: RootState) => state.tagCategories);
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   const [tagError, setTagError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [page, setPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastFetchTime, setLastFetchTime] = useState(0);
   const [showLocalToasts, setShowLocalToasts] = useState(false);
 
-  // Combine loading states from tag and category slices
+  // Combine loading states
   const isLoading = useMemo(() => 
-    tagStatus === 'loading' || 
-    categoryStatus === 'loading' || 
+    isTagsLoading || 
+    isCategoriesLoading || 
     isResetting || 
     isRefreshing, 
-  [tagStatus, categoryStatus, isResetting, isRefreshing]);
+  [isTagsLoading, isCategoriesLoading, isResetting, isRefreshing]);
 
   // Memoized value for total tag count
   const totalTagCount = useMemo(() => tags.length, [tags]);
 
-  // Fetch data function with sequential fetching to avoid parallel requests
+  // Fetch data function to refresh both tags and categories
   const fetchData = useCallback(async (force = false) => {
     if (isLoading && !force) return;
     
-    const currentTime = Date.now();
-    // Don't fetch again if we fetched recently (within 3 seconds)
-    if (!force && 
-        lastFetchTime && 
-        currentTime - lastFetchTime < 3000) {
-      console.log('Skipping data fetch - fetched recently');
-      return;
-    }
-    
     try {
       setIsRefreshing(true);
-      setLastFetchTime(currentTime);
-      
-      // Fetch tags first, then categories - sequential to avoid parallel requests
-      await dispatch(fetchTags()).unwrap();
-      await dispatch(fetchTagCategories()).unwrap();
+      await Promise.all([
+        refetchTags(),
+        refetchCategories()
+      ]);
     } catch (error) {
       console.error('Error fetching tag data:', error);
     } finally {
       setIsRefreshing(false);
     }
-  }, [dispatch, isLoading, lastFetchTime]);
-
-  // Initial data fetch only if empty - using a single useEffect
-  useEffect(() => {
-    // Only fetch if we don't have data yet
-    const needsTagsFetch = tags.length === 0 && tagStatus !== 'loading';
-    const needsCategoriesFetch = tagCategories.length === 0 && categoryStatus !== 'loading';
-    
-    if (needsTagsFetch || needsCategoriesFetch) {
-      console.log('Initial data fetch for AccountTags');
-      fetchData();
-    }
-  }, [fetchData, tags.length, tagCategories.length, tagStatus, categoryStatus]);
+  }, [isLoading, refetchTags, refetchCategories]);
 
   // Tag validation logic
-  useEffect(() => {
-    if (newTagName) {
-      const validation = validateTag(newTagName);
-      
-      // Check for duplicate tags (case-insensitive)
-      if (validation.valid && tags.some(tag => 
-        areTagsEquivalent(tag.name, newTagName)
-      )) {
-        setTagError(`Tag "${newTagName}" already exists`);
-      } else {
-        setTagError(validation.valid ? null : validation.message || null);
-      }
-    } else {
-      setTagError(null);
-    }
-  }, [newTagName, tags]);
+  const validateNewTag = useCallback((tagName: string) => {
+    if (!tagName) return null;
+    
+    const validation = validateTag(tagName);
+    
+    // Check for duplicate tags (case-insensitive)
+    if (validation.valid && tags.some(tag => 
+      areTagsEquivalent(tag.name, tagName)
+    )) {
+      return `Tag "${tagName}" already exists`;
+    } 
+    
+    return validation.valid ? null : validation.message || null;
+  }, [tags]);
+
+  // Update tag error when tag name changes
+  React.useEffect(() => {
+    setTagError(validateNewTag(newTagName));
+  }, [newTagName, validateNewTag]);
 
   // Reset tag data function
   const handleResetData = async () => {
@@ -135,23 +132,20 @@ const AccountTags: React.FC = () => {
     try {
       setIsResetting(true);
       
-      // Dispatch reset without unwrap since it's not a thunk
-      dispatch(resetTagCategories());
-      
-      // Refresh data silently after reset
+      // Refresh data with force flag
       await fetchData(true);
       
-      toast.success('Tag data reset successfully');
+      toast.success('Tag data refreshed successfully');
     } catch (err) {
-      console.error('Failed to reset data:', err);
-      toast.error('Failed to reset tag data');
+      console.error('Failed to refresh data:', err);
+      toast.error('Failed to refresh tag data');
     } finally {
       setIsResetting(false);
     }
   };
 
   // Create tag handler - using memoized validation
-  const handleCreateTag = useCallback((e: React.FormEvent) => {
+  const handleCreateTag = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTagName.trim() || tagError) return;
     
@@ -168,19 +162,17 @@ const AccountTags: React.FC = () => {
       return;
     }
     
-    dispatch(addTag(normalizeTag(newTagName)))
-      .unwrap()
-      .then(() => {
-        setNewTagName("");
-        if (showLocalToasts) {
-          toast.success('Tag created successfully');
-        }
-      })
-      .catch(error => {
-        // Always show error toasts, even if success toasts are disabled
-        toast.error(`Failed to create tag: ${error || 'Unknown error'}`);
-      });
-  }, [dispatch, newTagName, tagError, tags, showLocalToasts]);
+    try {
+      await createTag(normalizeTag(newTagName));
+      setNewTagName("");
+      if (showLocalToasts) {
+        toast.success('Tag created successfully');
+      }
+    } catch (error: any) {
+      // Always show error toasts, even if success toasts are disabled
+      toast.error(`Failed to create tag: ${error?.message || 'Unknown error'}`);
+    }
+  }, [createTag, newTagName, tagError, tags, showLocalToasts]);
 
   const handleKeyPress = useCallback((event: React.KeyboardEvent) => {
     if (event.key === 'Enter') {
@@ -189,25 +181,23 @@ const AccountTags: React.FC = () => {
     }
   }, [handleCreateTag]);
 
-  const handleDeleteTag = useCallback(() => {
+  const handleDeleteTag = useCallback(async () => {
     if (!tagToDelete) return;
     
-    dispatch(deleteTag(tagToDelete))
-      .unwrap()
-      .then(() => {
-        if (showLocalToasts) {
-          toast.success('Tag deleted successfully');
-        }
-        setTagToDelete(null);
-      })
-      .catch((error) => {
-        console.error('Failed to delete tag:', error);
-        toast.error(`Failed to delete tag: ${error || 'Unknown error'}`);
-        setTagToDelete(null);
-      });
-  }, [dispatch, tagToDelete, showLocalToasts]);
+    try {
+      await deleteTagMutation(tagToDelete);
+      if (showLocalToasts) {
+        toast.success('Tag deleted successfully');
+      }
+      setTagToDelete(null);
+    } catch (error: any) {
+      console.error('Failed to delete tag:', error);
+      toast.error(`Failed to delete tag: ${error?.message || 'Unknown error'}`);
+      setTagToDelete(null);
+    }
+  }, [deleteTagMutation, tagToDelete, showLocalToasts]);
 
-  const handleUpdateTag = useCallback(() => {
+  const handleUpdateTag = useCallback(async () => {
     if (!editingTag || !editingTag.name.trim()) return;
     
     const validation = validateTag(editingTag.name);
@@ -234,21 +224,20 @@ const AccountTags: React.FC = () => {
       return;
     }
     
-    dispatch(updateTag({
-      id: editingTag.id,
-      name: normalizeTag(editingTag.name)
-    }))
-      .unwrap()
-      .then(() => {
-        if (showLocalToasts) {
-          toast.success('Tag updated successfully');
-        }
-        setEditingTag(null);
-      })
-      .catch(error => {
-        toast.error(`Failed to update tag: ${error || 'Unknown error'}`);
+    try {
+      await updateTagMutation({
+        id: editingTag.id,
+        name: normalizeTag(editingTag.name)
       });
-  }, [dispatch, editingTag, tags, showLocalToasts]);
+      
+      if (showLocalToasts) {
+        toast.success('Tag updated successfully');
+      }
+      setEditingTag(null);
+    } catch (error: any) {
+      toast.error(`Failed to update tag: ${error?.message || 'Unknown error'}`);
+    }
+  }, [updateTagMutation, editingTag, tags, showLocalToasts]);
 
   // Memoized filtered tags to prevent recalculation on each render
   const filteredTags = useMemo(() => {
@@ -306,7 +295,7 @@ const AccountTags: React.FC = () => {
             size="small"
             sx={{ height: '36px' }}
           >
-            {isResetting ? 'Resetting...' : 'Reset Tag Data'}
+            {isResetting ? 'Refreshing...' : 'Refresh Tags'}
           </Button>
         </Box>
         
@@ -499,45 +488,36 @@ const AccountTags: React.FC = () => {
                             >
                               {tag.name}
                             </Typography>
-                            <Stack direction="row" spacing={0.5}>
-                              <IconButton
-                                size="small"
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <IconButton 
+                                size="small" 
                                 onClick={() => setEditingTag({ id: tag._id, name: tag.name })}
-                                sx={{ 
-                                  color: 'primary.main', 
-                                  p: 0.5,
-                                  '&:hover': { bgcolor: alpha('#1976d2', 0.1) }
-                                }}
+                                sx={{ fontSize: '0.75rem' }}
                               >
                                 <FaEdit size={14} />
                               </IconButton>
-                              <IconButton
-                                size="small"
+                              <IconButton 
+                                size="small" 
+                                color="error" 
                                 onClick={() => setTagToDelete(tag._id)}
-                                sx={{ 
-                                  color: 'error.main', 
-                                  p: 0.5,
-                                  '&:hover': { bgcolor: alpha('#d32f2f', 0.1) }
-                                }}
+                                sx={{ fontSize: '0.75rem' }}
                               >
                                 <FaTrash size={14} />
                               </IconButton>
-                            </Stack>
+                            </Box>
                           </Paper>
                         </motion.div>
                       ))}
                     </Box>
                     
                     {totalPages > 1 && (
-                      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
                         <Pagination 
                           count={totalPages} 
                           page={page} 
                           onChange={handleChangePage} 
                           color="primary" 
-                          showFirstButton 
-                          showLastButton
-                          siblingCount={isMobile ? 0 : 1}
+                          size={isMobile ? "small" : "medium"}
                         />
                       </Box>
                     )}
@@ -549,84 +529,47 @@ const AccountTags: React.FC = () => {
         </Paper>
       </Container>
       
-      {/* Edit Dialog */}
-      <Dialog 
-        open={!!editingTag} 
-        onClose={() => setEditingTag(null)}
-        PaperProps={{
-          sx: { borderRadius: '12px', maxWidth: '500px', width: '100%' }
-        }}
-      >
+      {/* Edit Tag Dialog */}
+      <Dialog open={!!editingTag} onClose={() => setEditingTag(null)}>
         <DialogTitle>Edit Tag</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
+        <DialogContent>
           <TextField
             autoFocus
             margin="dense"
-            fullWidth
             label="Tag Name"
+            type="text"
+            fullWidth
             variant="outlined"
-            value={editingTag?.name || ""}
+            value={editingTag?.name || ''}
             onChange={(e) => setEditingTag(prev => prev ? { ...prev, name: e.target.value } : null)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <FaTag size={16} />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ mb: 2 }}
           />
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            Updating a tag will affect all media files that use this tag.
-          </Typography>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setEditingTag(null)} color="inherit" variant="outlined">
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleUpdateTag} 
-            color="primary" 
-            variant="contained"
-            disabled={
-              !editingTag?.name.trim() || 
-              isLoading ||
-              (editingTag && tags.find(t => t._id === editingTag.id)?.name === editingTag.name)
-            }
-          >
+        <DialogActions>
+          <Button onClick={() => setEditingTag(null)}>Cancel</Button>
+          <Button onClick={handleUpdateTag} variant="contained" color="primary">
             Update
           </Button>
         </DialogActions>
       </Dialog>
       
       {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={!!tagToDelete}
-        onClose={() => setTagToDelete(null)}
-        PaperProps={{
-          sx: { borderRadius: '12px', maxWidth: '500px', width: '100%' }
-        }}
-      >
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          <Typography variant="body1">
-            Are you sure you want to delete this tag? This action cannot be undone.
+      <Dialog open={!!tagToDelete} onClose={() => setTagToDelete(null)}>
+        <DialogTitle>Delete Tag</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this tag?
+            This action cannot be undone.
           </Typography>
-          <Typography variant="body2" color="error" sx={{ mt: 2 }}>
-            Any media files using this tag will have it removed.
-          </Typography>
+          {tagToDelete && (
+            <Typography variant="subtitle1" sx={{ mt: 2, fontWeight: 'bold' }}>
+              {tags.find(tag => tag._id === tagToDelete)?.name || 'Unknown Tag'}
+            </Typography>
+          )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setTagToDelete(null)} color="inherit" variant="outlined">
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleDeleteTag} 
-            color="error" 
-            variant="contained"
-            disabled={isLoading}
-          >
-            Delete Tag
+        <DialogActions>
+          <Button onClick={() => setTagToDelete(null)}>Cancel</Button>
+          <Button onClick={handleDeleteTag} color="error" variant="contained">
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

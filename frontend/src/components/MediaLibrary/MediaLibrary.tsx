@@ -10,11 +10,11 @@ import { toast } from 'react-toastify';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { GridRowSelectionModel } from '@mui/x-data-grid';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../../store/store';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store/store';
 import axios from 'axios';
 import env from '../../config/env';
-import { fetchTagCategories } from '../../store/slices/tagCategorySlice';
+import { useTagCategories } from '../../hooks/query-hooks';
 
 // Lazy load subcomponents
 const HeaderComponent = lazy(() => import('./components/HeaderComponent'));
@@ -67,11 +67,13 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
   // Get user role from Redux store
   const userRole = useSelector((state: RootState) => state.user.currentUser.role);
   const [downloading, setDownloading] = useState<boolean>(false);
-  const dispatch = useDispatch<AppDispatch>();
   const [toastSettings] = useState({
     disableTagNotifications: true,
     initialLoadComplete: false
   });
+  
+  // Use TanStack Query for tag categories
+  const { refetch: refetchTagCategories } = useTagCategories();
   
   // Handle initial data loading silently - with debounce
   const tagsFetchedRef = useRef(false);
@@ -83,12 +85,12 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
     const tagLoadTimer = setTimeout(() => {
       if (!tagsFetchedRef.current) {
         tagsFetchedRef.current = true;
-        dispatch(fetchTagCategories());
+        refetchTagCategories();
       }
     }, 2000); // 2 second delay
     
     return () => clearTimeout(tagLoadTimer);
-  }, [dispatch, viewMode]);
+  }, [refetchTagCategories, viewMode]);
   
   // Clean up references on unmount
   useEffect(() => {
@@ -393,7 +395,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
               <DataTable
                 rows={rows}
                 onSelectionChange={setSelected}
-                key={`datatable-${rows.length}-${Date.now()}`}
+                key={`datatable-${rows.length}`}
               />
             </Suspense>
           ) : (
@@ -405,7 +407,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
               }}>
                 {rows.map((row) => {
                   return (
-                    <Box key={`${row.id}-${row.metadata?.v_thumbnailTimestamp || Date.now()}`}>
+                    <Box key={`${row.id}-${row.metadata?.v_thumbnailTimestamp || ''}`}>
                       <Suspense fallback={<LoadingFallback />}>
                         <MediaCard
                           file={row}

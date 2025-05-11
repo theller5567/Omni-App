@@ -1,7 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import axios from 'axios';
 import env from '../config/env';
 import { toast } from 'react-toastify';
+import { useMemo } from 'react';
 
 // ======================
 // === Query Keys ===
@@ -15,7 +16,16 @@ export const QueryKeys = {
   databaseStats: 'databaseStats',
   mediaTypeUsage: 'mediaTypeUsage',
   notificationSettings: 'notificationSettings',
-  eligibleRecipients: 'eligibleRecipients'
+  eligibleRecipients: 'eligibleRecipients',
+  // Tags and Tag Categories
+  tags: 'tags',
+  tagCategories: 'tagCategories',
+  tagCategoryById: (id: string) => ['tagCategories', 'id', id],
+  // New more specific query keys for better caching control
+  allMedia: ['media', 'all'],
+  mediaById: (id: string) => ['media', 'id', id],
+  mediaBySlug: (slug: string) => ['media', 'slug', slug],
+  mediaByType: (typeId: string) => ['media', 'type', typeId]
 };
 
 // ======================
@@ -29,6 +39,8 @@ export interface MediaFile {
   location?: string;
   fileExtension?: string;
   mediaType?: string;
+  modifiedDate: string;
+  fileSize: number;
   metadata?: {
     fileName?: string;
     tags?: any[];
@@ -43,6 +55,25 @@ export interface MediaType {
   description: string;
   catColor: string;
   [key: string]: any;
+}
+
+// Tags and Tag Categories interfaces
+export interface Tag {
+  _id: string;
+  name: string;
+}
+
+export interface TagCategory {
+  _id: string;
+  name: string;
+  description?: string;
+  tags?: Array<{
+    id: string;
+    name: string;
+  }>;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // ======================
@@ -65,9 +96,79 @@ export const fetchMedia = async (): Promise<MediaFile[]> => {
   // Log in development only
   if (process.env.NODE_ENV === 'development') {
     console.log(`Fetched ${response.data.length} media items`);
+    if (response.data.length > 0) {
+      console.log('%%%%% RAW MEDIA ITEM SAMPLE (fetchMedia) %%%%%', JSON.stringify(response.data[0], null, 2));
+      console.log('%%%%% TYPEOF RAW fileSize (fetchMedia) %%%%%', typeof response.data[0].fileSize);
+    }
   }
   
-  return response.data;
+  // Process the data to ensure consistent formatting
+  return response.data.map(media => {
+    const processedMedia: MediaFile = {
+      ...media, // Spread first to get all existing fields
+      _id: media._id, // Ensure _id is present
+      // Explicitly use the fileSize from the API, fallback to 0 if not a number or missing
+      fileSize: typeof media.fileSize === 'number' ? media.fileSize : 0,
+      // Use the original modifiedDate if it's a valid string, otherwise fallback
+      modifiedDate: typeof media.modifiedDate === 'string' && media.modifiedDate.length > 0 
+                      ? media.modifiedDate 
+                      : new Date().toISOString(),
+      // Ensure metadata exists
+      metadata: media.metadata || {},
+    };
+    
+    // Add cache parameter to video thumbnails to prevent browser caching
+    if (processedMedia.metadata?.v_thumbnail) {
+      const uniqueId = processedMedia._id || processedMedia.id || '';
+      const separator = processedMedia.metadata.v_thumbnail.includes('?') ? '&' : '?';
+      processedMedia.metadata.v_thumbnail = `${processedMedia.metadata.v_thumbnail}${separator}mediaId=${uniqueId}`;
+    }
+    
+    return processedMedia;
+  });
+};
+
+// Enhanced function to fetch media by type
+export const fetchMediaByType = async (typeId: string): Promise<MediaFile[]> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  if (typeId === 'All') {
+    return fetchMedia(); // This will use the updated fetchMedia logic
+  }
+  
+  const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/media/byType/${typeId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Fetched ${response.data.length} media items for type ${typeId}`);
+    if (response.data.length > 0) {
+      console.log('%%%%% RAW MEDIA ITEM SAMPLE (fetchMediaByType) %%%%%', JSON.stringify(response.data[0], null, 2));
+      console.log('%%%%% TYPEOF RAW fileSize (fetchMediaByType) %%%%%', typeof response.data[0].fileSize);
+    }
+  }
+  
+  // Process the data like in fetchMedia
+  return response.data.map(media => {
+    const processedMedia: MediaFile = {
+      ...media, // Spread first
+      _id: media._id,
+      fileSize: typeof media.fileSize === 'number' ? media.fileSize : 0,
+      modifiedDate: typeof media.modifiedDate === 'string' && media.modifiedDate.length > 0 
+                      ? media.modifiedDate 
+                      : new Date().toISOString(),
+      metadata: media.metadata?.v_thumbnail ? {
+        ...(media.metadata || {}),
+        v_thumbnail: `${media.metadata.v_thumbnail}${media.metadata.v_thumbnail.includes('?') ? '&' : '?'}mediaId=${media._id || media.id || ''}`
+      } : (media.metadata || {}),
+    };
+    return processedMedia;
+  });
 };
 
 export const deleteMediaItem = async (id: string): Promise<{ id: string }> => {
@@ -566,7 +667,7 @@ export const updateMediaItem = async (mediaData: Partial<MediaFile> & { changedF
 export const checkApiHealth = async (): Promise<{ status: string }> => {
   try {
     // Try using the media-types endpoint which is more likely to exist
-    const response = await axios.get<any>(`${env.BASE_URL}/api/media-types`, {
+    await axios.get<any>(`${env.BASE_URL}/api/media-types`, {
       timeout: 5000, // 5 second timeout for health check
       headers: {
         Authorization: `Bearer ${localStorage.getItem('authToken') || ''}`
@@ -600,13 +701,48 @@ export const checkApiHealth = async (): Promise<{ status: string }> => {
 // === React Query Hooks ===
 // ======================
 
+// Define a custom options type that includes onSuccess
+type CustomQueryOptions<TData, TError> = Omit<UseQueryOptions<TData, TError, TData, any>, 'queryKey' | 'queryFn'> & {
+  onSuccess?: (data: TData) => void;
+};
+
 // -- Media --
-export const useMedia = () => {
-  return useQuery({
-    queryKey: [QueryKeys.media],
+export const useMedia = (options?: CustomQueryOptions<MediaFile[], Error>) => {
+  const queryClient = useQueryClient();
+  
+  // Use custom onSuccess callback outside the options
+  const onSuccessCallback = (data: MediaFile[]) => {
+    // Cache individual media items for faster detail page loading
+    data.forEach((media: MediaFile) => {
+      queryClient.setQueryData(
+        QueryKeys.mediaById(media._id),
+        media
+      );
+      if (media.slug) {
+        queryClient.setQueryData(
+          QueryKeys.mediaBySlug(media.slug),
+          media
+        );
+      }
+    });
+    
+    // Call original onSuccess if it exists
+    if (options?.onSuccess) {
+      options.onSuccess(data);
+    }
+  };
+  
+  // Create a new options object with our custom callbacks
+  const queryOptions = {
+    queryKey: QueryKeys.allMedia,
     queryFn: fetchMedia,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+    ...options,
+    onSuccess: onSuccessCallback
+  };
+  
+  return useQuery<MediaFile[], Error, MediaFile[]>(queryOptions);
 };
 
 export const useDeleteMedia = () => {
@@ -781,11 +917,17 @@ export const useDeprecateMediaType = () => {
 
 // -- Media Detail --
 export const useMediaDetail = (slug: string | undefined) => {
-  return useQuery({
-    queryKey: [QueryKeys.mediaDetail, slug],
+  return useQuery<MediaFile>({
+    queryKey: slug ? (slug.includes('-') ? QueryKeys.mediaBySlug(slug) : QueryKeys.mediaById(slug)) : ['media', 'unknown'],
     queryFn: () => fetchMediaBySlug(slug),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!slug, // Only run if slug is provided
+    enabled: !!slug,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    retry: (failureCount, error: any) => {
+      // Don't retry if we get a 404 (not found)
+      if (error.response?.status === 404) return false;
+      // Only retry other errors a limited number of times
+      return failureCount < 2;
+    }
   });
 };
 
@@ -794,19 +936,89 @@ export const useUpdateMedia = () => {
   
   return useMutation({
     mutationFn: updateMediaItem,
-    onSuccess: (data) => {
-      // Invalidate both the detail query and the media list query
-      queryClient.invalidateQueries({ queryKey: [QueryKeys.mediaDetail, data.slug] });
-      queryClient.invalidateQueries({ queryKey: [QueryKeys.media] });
+    onMutate: async (updatedMedia) => {
+      const mediaId = updatedMedia._id;
+      if (!mediaId) return { previousMedia: null };
       
-      // Optionally, directly update the cache
-      queryClient.setQueryData([QueryKeys.mediaDetail, data.slug], data);
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: QueryKeys.mediaById(mediaId) });
       
-      // Remove toast notification - it's handled in the component
+      // Snapshot the previous media
+      const previousMedia = queryClient.getQueryData<MediaFile>(QueryKeys.mediaById(mediaId));
+      
+      // Optimistically update the cache
+      queryClient.setQueryData<MediaFile>(QueryKeys.mediaById(mediaId), old => {
+        if (!old) return updatedMedia as MediaFile;
+        
+        // Create a merged version with old and new data
+        return {
+          ...old,
+          ...updatedMedia,
+          // For nested metadata, merge properly
+          metadata: {
+            ...old.metadata,
+            ...(updatedMedia.metadata || {})
+          }
+        };
+      });
+      
+      // If we have the media in the all media list, update it there too
+      queryClient.setQueryData<MediaFile[]>(QueryKeys.allMedia, old => {
+        if (!old) return [];
+        
+        // Make sure we're returning a properly typed array
+        return old.map(item => {
+          if (item._id === mediaId) {
+            const updated = {
+              ...item,
+              ...updatedMedia,
+              metadata: {
+                ...item.metadata,
+                ...(updatedMedia.metadata || {})
+              }
+            };
+            // Ensure the item is properly typed as MediaFile
+            return updated as MediaFile;
+          }
+          return item;
+        });
+      });
+      
+      return { previousMedia };
     },
-    onError: (error: any) => {
-      const message = error.response?.data?.message || 'Error updating media';
-      // Remove toast notification - it's handled in the component
+    onError: (_err, variables, context) => {
+      // If the mutation fails, revert the optimistic update
+      if (context?.previousMedia && variables._id) {
+        queryClient.setQueryData(QueryKeys.mediaById(variables._id), context.previousMedia);
+        
+        // Also revert in the all media list
+        queryClient.setQueryData<MediaFile[]>(QueryKeys.allMedia, old => {
+          if (!old) return [];
+          
+          // Ensure we're returning a properly typed array
+          return old.map(item => {
+            if (item._id === variables._id && context.previousMedia) {
+              return context.previousMedia as MediaFile;
+            }
+            return item;
+          });
+        });
+      }
+      
+      toast.error('Failed to update media');
+    },
+    onSuccess: (data) => {
+      // Update all relevant queries
+      queryClient.setQueryData(QueryKeys.mediaById(data._id), data);
+      if (data.slug) {
+        queryClient.setQueryData(QueryKeys.mediaBySlug(data.slug), data);
+      }
+      
+      // Invalidate affected queries to ensure consistency
+      queryClient.invalidateQueries({ queryKey: QueryKeys.allMedia });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.mediaByType(data.mediaType || '') });
+      
+      toast.success('Media updated successfully');
     }
   });
 };
@@ -1071,7 +1283,7 @@ export const useUpdateNotificationSettings = () => {
   
   return useMutation({
     mutationFn: updateNotificationSettings,
-    onSuccess: (data) => {
+    onSuccess: (_data) => {
       queryClient.invalidateQueries({ queryKey: [QueryKeys.notificationSettings] });
       toast.success('Notification settings updated successfully');
     },
@@ -1147,6 +1359,524 @@ export const useSendTestNotification = () => {
     },
     onError: (error: any) => {
       toast.error(`Failed to send test notification: ${error.message}`);
+    }
+  });
+};
+
+// Add Media hook for newly uploaded media
+export const useAddMedia = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (mediaFile: Partial<MediaFile>): Promise<MediaFile> => {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Authentication token missing');
+      }
+      
+      // Handle file upload if needed
+      // This would need to be implemented based on your API
+      
+      // Return the created media
+      return mediaFile as MediaFile; // Replace with actual API call
+    },
+    onMutate: async (newMedia) => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: QueryKeys.allMedia });
+      
+      // Snapshot the previous value
+      const previousMedia = queryClient.getQueryData<MediaFile[]>(QueryKeys.allMedia) || [];
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData<MediaFile[]>(QueryKeys.allMedia, (old) => {
+        const optimisticMedia = {
+          ...newMedia,
+          _id: newMedia._id || `temp-${Date.now()}`, // Temporary ID for new items
+          createdAt: new Date().toISOString(),
+          modifiedDate: new Date().toISOString()
+        } as MediaFile;
+        
+        return old ? [optimisticMedia, ...old] : [optimisticMedia];
+      });
+      
+      // Return a context object with the snapshot
+      return { previousMedia };
+    },
+    onError: (_err, _newMedia, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      queryClient.setQueryData(QueryKeys.allMedia, context?.previousMedia);
+      toast.error('Failed to add media');
+    },
+    onSuccess: (_data) => {
+      // Force a refetch of the media list to ensure consistency
+      queryClient.invalidateQueries({ queryKey: QueryKeys.allMedia });
+      
+      // Update the individual media cache
+      queryClient.setQueryData(QueryKeys.mediaById(_data._id), _data);
+      if (_data.slug) {
+        queryClient.setQueryData(QueryKeys.mediaBySlug(_data.slug), _data);
+      }
+      
+      toast.success('Media added successfully');
+    }
+  });
+};
+
+// New hook for transformed media (reduces component-level transformations)
+export const useTransformedMedia = (selectedMediaType: string = 'All') => {
+  // Use the appropriate hook based on whether we want all media or filtered by type
+  const query = selectedMediaType === 'All' 
+    ? useMedia() 
+    : useMediaByType(selectedMediaType);
+  
+  // Extract the formatted data using useMemo to prevent unnecessary recalculations
+  const formattedData = useMemo(() => {
+    if (!query.data) return [];
+    
+    const transformed = query.data.map((media: MediaFile) => ({
+      ...media,
+      // Format display values for common fields
+      displayTitle: media.title || media.metadata?.fileName || 'Untitled',
+      displayDate: media.modifiedDate 
+        ? new Date(media.modifiedDate).toLocaleDateString() 
+        : 'Unknown date',
+      thumbnailUrl: media.metadata?.v_thumbnail || media.location,
+      // Add other commonly needed transformations here
+    }));
+
+    if (process.env.NODE_ENV === 'development' && transformed.length > 0) {
+      console.log('%%%%% TRANSFORMED MEDIA DATA (useTransformedMedia) - First Item %%%%%', JSON.stringify(transformed[0], null, 2));
+      console.log('%%%%% TRANSFORMED MEDIA DATA (useTransformedMedia) - First Item fileSize type %%%%%', typeof transformed[0].fileSize);
+      console.log('%%%%% TRANSFORMED MEDIA DATA (useTransformedMedia) - First Item modifiedDate type %%%%%', typeof transformed[0].modifiedDate);
+      console.log('%%%%% TRANSFORMED MEDIA DATA (useTransformedMedia) - First Item displayDate %%%%%', transformed[0].displayDate);
+    }
+    
+    return transformed;
+  }, [query.data]);
+  
+  return {
+    ...query,
+    formattedData
+  };
+};
+
+// New prefetching function to use in navigation components
+export const prefetchMediaDetail = (slug: string) => {
+  const queryClient = useQueryClient();
+  
+  // Don't prefetch if already in cache
+  if (queryClient.getQueryData(QueryKeys.mediaBySlug(slug))) {
+    return;
+  }
+  
+  // Prefetch with lower priority
+  queryClient.prefetchQuery({
+    queryKey: QueryKeys.mediaBySlug(slug),
+    queryFn: () => fetchMediaBySlug(slug),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+};
+
+// Fix for line 1368: Define useMediaByType and add proper types
+export const useMediaByType = (typeId: string, options?: Omit<UseQueryOptions<MediaFile[], Error, MediaFile[], readonly unknown[]>, 'queryKey' | 'queryFn' | 'enabled'>) => {
+  return useQuery<MediaFile[], Error, MediaFile[]>({
+    queryKey: QueryKeys.mediaByType(typeId),
+    queryFn: () => fetchMediaByType(typeId),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: !!typeId,
+    ...options
+  });
+};
+
+// Add the migrateMediaFiles API function
+export const migrateMediaFiles = async (
+  { sourceId, targetId }: { sourceId: string; targetId: string }
+): Promise<{ source: MediaType; target: MediaType }> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+
+  const response = await axios.post<{ source: MediaType; target: MediaType }>(
+    `${env.BASE_URL}/api/media-types/migrate`,
+    { sourceId, targetId },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+
+  return response.data;
+};
+
+// Add useMigrateMediaFiles hook
+export const useMigrateMediaFiles = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: migrateMediaFiles,
+    onSuccess: (data) => {
+      // Update both the source and target media types in the cache
+      if (data.source && data.target) {
+        // Update source media type
+        queryClient.setQueryData<MediaType[]>([QueryKeys.mediaTypes], (oldData) => {
+          if (!oldData) return [];
+          
+          return oldData.map(item => 
+            item._id === data.source._id ? data.source : 
+            item._id === data.target._id ? data.target : 
+            item
+          );
+        });
+        
+        // Also update the withUsageCounts query
+        queryClient.setQueryData<MediaType[]>([QueryKeys.mediaTypes, 'withUsageCounts'], (oldData) => {
+          if (!oldData) return [];
+          
+          return oldData.map(item => 
+            item._id === data.source._id ? data.source : 
+            item._id === data.target._id ? data.target : 
+            item
+          );
+        });
+      }
+      
+      // Invalidate media queries to ensure consistent data
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.mediaTypes] });
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.media] });
+      
+      toast.success('Media files migrated successfully');
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Failed to migrate media files';
+      toast.error(message);
+    }
+  });
+};
+
+// ======================
+// === Tags API Functions ===
+// ======================
+
+// Fetch all tags
+export const fetchTags = async (): Promise<Tag[]> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  const response = await axios.get<Tag[]>(`${env.BASE_URL}/api/tags`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Fetched ${response.data.length} tags`);
+  }
+  
+  return response.data;
+};
+
+// Create a new tag
+export const createTag = async (name: string): Promise<Tag> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  const response = await axios.post<Tag>(`${env.BASE_URL}/api/tags`, { name }, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  return response.data;
+};
+
+// Update an existing tag
+export const updateTag = async ({ id, name }: { id: string; name: string }): Promise<Tag> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  const response = await axios.put<Tag>(`${env.BASE_URL}/api/tags/${id}`, { name }, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  return response.data;
+};
+
+// Delete a tag
+export const deleteTag = async (id: string): Promise<string> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  await axios.delete(`${env.BASE_URL}/api/tags/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  
+  return id;
+};
+
+// ======================
+// === Tag Categories API Functions ===
+// ======================
+
+// Fetch all tag categories
+export const fetchTagCategories = async (includeInactive = false): Promise<TagCategory[]> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  const response = await axios.get<TagCategory[]>(`${env.BASE_URL}/api/tag-categories`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    },
+    params: {
+      includeInactive
+    }
+  });
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Fetched ${response.data.length} tag categories`);
+  }
+  
+  return response.data;
+};
+
+// Create a new tag category
+export const createTagCategory = async (categoryData: Partial<TagCategory>): Promise<TagCategory> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  const response = await axios.post<TagCategory>(`${env.BASE_URL}/api/tag-categories`, categoryData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  return response.data;
+};
+
+// Update an existing tag category
+export const updateTagCategory = async (id: string, updates: Partial<TagCategory>): Promise<TagCategory> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  const response = await axios.put<TagCategory>(`${env.BASE_URL}/api/tag-categories/${id}`, updates, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  return response.data;
+};
+
+// Delete a tag category
+export const deleteTagCategory = async (id: string): Promise<string> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  await axios.delete(`${env.BASE_URL}/api/tag-categories/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  
+  return id;
+};
+
+// ======================
+// === Tags Query Hooks ===
+// ======================
+
+// Hook to fetch all tags
+export const useTags = () => {
+  return useQuery({
+    queryKey: [QueryKeys.tags],
+    queryFn: fetchTags,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// Hook to create a new tag
+export const useCreateTag = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: createTag,
+    onSuccess: (newTag) => {
+      // Update the cache
+      queryClient.setQueryData<Tag[]>([QueryKeys.tags], (oldTags = []) => {
+        return [...oldTags, newTag];
+      });
+      
+      toast.success(`Tag "${newTag.name}" added successfully`);
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to add tag';
+      toast.error(errorMessage);
+    }
+  });
+};
+
+// Hook to update a tag
+export const useUpdateTag = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: updateTag,
+    onSuccess: (updatedTag) => {
+      // Update the cache
+      queryClient.setQueryData<Tag[]>([QueryKeys.tags], (oldTags = []) => {
+        return oldTags.map(tag => tag._id === updatedTag._id ? updatedTag : tag);
+      });
+      
+      toast.success(`Tag updated to "${updatedTag.name}" successfully`);
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to update tag';
+      toast.error(errorMessage);
+    }
+  });
+};
+
+// Hook to delete a tag
+export const useDeleteTag = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: deleteTag,
+    onSuccess: (deletedId) => {
+      // Update the cache
+      queryClient.setQueryData<Tag[]>([QueryKeys.tags], (oldTags = []) => {
+        return oldTags.filter(tag => tag._id !== deletedId);
+      });
+      
+      toast.success('Tag deleted successfully');
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to delete tag';
+      toast.error(errorMessage);
+    }
+  });
+};
+
+// ======================
+// === Tag Categories Query Hooks ===
+// ======================
+
+// Hook to fetch tag categories
+export const useTagCategories = (includeInactive = false) => {
+  return useQuery({
+    queryKey: [QueryKeys.tagCategories, { includeInactive }],
+    queryFn: () => fetchTagCategories(includeInactive),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// Hook to create a tag category
+export const useCreateTagCategory = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: createTagCategory,
+    onSuccess: (newCategory) => {
+      // Update the cache
+      queryClient.setQueryData<TagCategory[]>([QueryKeys.tagCategories, { includeInactive: false }], (oldCategories = []) => {
+        return [...oldCategories, newCategory];
+      });
+      
+      queryClient.setQueryData<TagCategory[]>([QueryKeys.tagCategories, { includeInactive: true }], (oldCategories = []) => {
+        return [...oldCategories, newCategory];
+      });
+      
+      toast.success(`Tag category "${newCategory.name}" created successfully`);
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to create tag category';
+      toast.error(errorMessage);
+    }
+  });
+};
+
+// Hook to update a tag category
+export const useUpdateTagCategory = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<TagCategory> }) => updateTagCategory(id, updates),
+    onSuccess: (updatedCategory) => {
+      // Update the cache
+      queryClient.setQueryData<TagCategory[]>([QueryKeys.tagCategories, { includeInactive: false }], (oldCategories = []) => {
+        return oldCategories.map(category => 
+          category._id === updatedCategory._id ? updatedCategory : category
+        );
+      });
+      
+      queryClient.setQueryData<TagCategory[]>([QueryKeys.tagCategories, { includeInactive: true }], (oldCategories = []) => {
+        return oldCategories.map(category => 
+          category._id === updatedCategory._id ? updatedCategory : category
+        );
+      });
+      
+      // Also update the specific category in the cache
+      queryClient.setQueryData(QueryKeys.tagCategoryById(updatedCategory._id), updatedCategory);
+      
+      toast.success(`Tag category "${updatedCategory.name}" updated successfully`);
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to update tag category';
+      toast.error(errorMessage);
+    }
+  });
+};
+
+// Hook to delete a tag category
+export const useDeleteTagCategory = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: deleteTagCategory,
+    onSuccess: (deletedId) => {
+      // Update the cache
+      queryClient.setQueryData<TagCategory[]>([QueryKeys.tagCategories, { includeInactive: false }], (oldCategories = []) => {
+        return oldCategories.filter(category => category._id !== deletedId);
+      });
+      
+      queryClient.setQueryData<TagCategory[]>([QueryKeys.tagCategories, { includeInactive: true }], (oldCategories = []) => {
+        return oldCategories.filter(category => category._id !== deletedId);
+      });
+      
+      // Remove the individual query
+      queryClient.removeQueries({ queryKey: QueryKeys.tagCategoryById(deletedId) });
+      
+      toast.success('Tag category deleted successfully');
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to delete tag category';
+      toast.error(errorMessage);
     }
   });
 }; 

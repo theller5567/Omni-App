@@ -47,9 +47,9 @@ import {
 import { FaImage, FaVideo, FaFileAudio, FaFileWord } from 'react-icons/fa';
 import debounce from 'lodash/debounce';
 import {
-  useMediaTypesWithUsageCounts,
-  useCreateMediaType,
-  useUpdateMediaType
+  useMediaTypes,
+  useUpdateMediaType,
+  useCreateMediaType
 } from '../../hooks/query-hooks';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -155,7 +155,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
 const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, editMediaTypeId }) => {
   // Set up TanStack Query hooks
   const queryClient = useQueryClient();
-  const { data: mediaTypes = [] } = useMediaTypesWithUsageCounts();
+  const { data: mediaTypes = [] } = useMediaTypes();
   const { mutateAsync: createMediaTypeMutation } = useCreateMediaType();
   const { mutateAsync: updateMediaTypeMutation } = useUpdateMediaType();
   
@@ -408,7 +408,10 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       if (isEditMode && mediaTypeConfig._id) {
         try {
           // Use TanStack Query mutation to update media type
-          await updateMediaTypeMutation({ id: mediaTypeConfig._id, updates: apiData });
+          await updateMediaTypeMutation({ 
+            id: mediaTypeConfig._id as string, 
+            updates: apiData 
+          });
           
           // Also make a specific request to update the settings field
           if (mediaTypeConfig.settings) {

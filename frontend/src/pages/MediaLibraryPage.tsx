@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from '../store/store';
-import { addMedia } from '../store/slices/mediaSlice';
 import { CircularProgress, Box, Typography } from '@mui/material';
 import '../components/MediaLibrary/MediaContainer.scss';
 import { toast } from 'react-toastify';
 // Import React Query hooks
-import { useMedia, useMediaTypes, useDeleteMedia } from '../hooks/query-hooks';
+import { useTransformedMedia, useMediaTypes, useDeleteMedia, useAddMedia } from '../hooks/query-hooks';
 import { useQueryClient } from '@tanstack/react-query';
+// Import the correct BaseMediaFile interface
+// We'll also use the MediaFile type from query-hooks to represent the enriched data from useTransformedMedia
+import { BaseMediaFile } from '../interfaces/MediaFile'; 
+import type { MediaFile as QueryHooksMediaFile } from '../hooks/query-hooks';
 
 // Lazy load components
 const MediaUploader = lazy(() => import('../components/MediaUploader/MediaUploader'));
@@ -24,27 +25,28 @@ const MediaContainer: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMediaType, setSelectedMediaType] = useState<string>('All');
-  const dispatch = useDispatch<AppDispatch>();
   const queryClient = useQueryClient();
   
   // Add refs to track upload completion
   const processingUploadRef = useRef(false);
   const uploadCallTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Use React Query hooks
+  // Use enhanced React Query hooks
   const { 
-    data: mediaData = [], 
+    formattedData: mediaData = [], 
     isLoading: isLoadingMedia, 
     isError: isMediaError,
     error: mediaError
-  } = useMedia();
+  } = useTransformedMedia(selectedMediaType); // mediaData is Array<QueryHooksMediaFile>
   
   const { 
     data: mediaTypes = [], 
     isLoading: isLoadingMediaTypes
   } = useMediaTypes();
 
+  // Use enhanced mutation hooks
   const { mutateAsync: deleteMediaMutation } = useDeleteMedia();
+  const { mutateAsync: addMediaMutation } = useAddMedia();
 
   // Add effect to handle refresh after upload - with debounce
   useEffect(() => {
@@ -84,13 +86,10 @@ const MediaContainer: React.FC = () => {
       // Set processing flag to prevent multiple refreshes
       processingUploadRef.current = true;
       
-      // Add the new file to Redux store for now (this will be migrated to React Query in a future refactoring)
-      dispatch(addMedia(newFile));
-      
-      // Update the React Query cache with the new item
-      queryClient.setQueryData<any[]>(['media'], (oldData) => {
-        if (!oldData) return [newFile];
-        return [...oldData, newFile];
+      // Use React Query mutation instead of Redux action
+      addMediaMutation(newFile).catch(error => {
+        console.error('Error adding media:', error);
+        toast.error('Failed to add media to the library');
       });
       
       // Automatically reset the processing flag after a timeout
@@ -99,7 +98,7 @@ const MediaContainer: React.FC = () => {
       }, 1000);
     }
     // Do not automatically close the modal - let the user choose when to close it
-  }, [dispatch, queryClient]);
+  }, [addMediaMutation]);
 
   const handleDeleteMedia = useCallback(async (id: string): Promise<boolean> => {
     try {
@@ -107,7 +106,7 @@ const MediaContainer: React.FC = () => {
         console.log('Deleting media with ID:', id);
       }
       
-      // Use React Query mutation
+      // Use React Query mutation - pass the ID directly as a string
       await deleteMediaMutation(id);
       return true;
     } catch (error) {
@@ -121,35 +120,51 @@ const MediaContainer: React.FC = () => {
     setSelectedMediaType(type);
   }, []);
 
-  // Filter media files based on search query
+  // Filter media files based on search query and ensure it conforms to BaseMediaFile
   const filteredMediaFiles = useMemo(() => {
-    return mediaData
-      .filter(file => {
-        // Basic field validation - ensure required fields exist
-        if (!file || !file._id) {
-          console.warn('MediaLibraryPage - Found media item without required fields:', file);
-          return false;
-        }
+    return mediaData // mediaData is already Array<QueryHooksMediaFile> from useTransformedMedia
+      .filter(file => { // 'file' here is an item from useTransformedMedia.formattedData
+        // Filter by search query - check various fields that might contain searchable content
+        const searchableText = [
+          file.displayTitle, // This is from useTransformedMedia
+          file.metadata?.fileName,
+          file.metadata?.description,
+          file.title,
+          // Handle tags which might be an array of strings or objects with a 'name' property
+          ...(file.metadata?.tags?.map(tag => typeof tag === 'string' ? tag : tag.name) || []) 
+        ].filter(Boolean).join(' ').toLowerCase();
         
-        // Filter by search query
-        return file.metadata?.fileName?.toLowerCase().includes(searchQuery.toLowerCase());
+        return searchableText.includes(searchQuery.toLowerCase());
       })
-      .map(file => ({
-        // Ensure all required fields have default values for rendering
-        ...file,
-        id: file._id || file.id || `media-${Date.now()}`, // Ensure id exists
-        _id: file._id || file.id || `media-${Date.now()}`, // Ensure _id exists
-        mediaType: file.mediaType || 'Unknown',
-        fileExtension: file.fileExtension || '',
-        modifiedDate: file.modifiedDate || new Date().toISOString(), // Add missing modifiedDate field
-        location: file.location || '', // Ensure location has a default value
-        slug: file.slug || `media-${file._id || Date.now()}`, // Ensure slug has a default value
-        metadata: {
-          ...(file.metadata || {}),
-          fileName: file.metadata?.fileName || file.title || 'Untitled',
-          tags: file.metadata?.tags || []
-        }
-      }));
+      .map(file => { // 'file' is an item from useTransformedMedia.formattedData (QueryHooksMediaFile)
+        // Construct the object for the MediaLibrary component, ensuring it matches BaseMediaFile + any extras MediaLibrary needs
+        // The 'file' object already has most of what we need from useTransformedMedia.
+        // We just need to ensure the final structure aligns with what MediaLibrary expects (BaseMediaFile)
+        // and that critical fields like fileSize and modifiedDate are correctly passed.
+        const libraryEntry: BaseMediaFile & { fileSize: number; modifiedDate: string; thumbnailUrl?: string; displayTitle?: string; } = {
+          _id: file._id,
+          id: file.id || file._id, // VirtualizedDataTable uses 'id' for getRowId
+          title: file.displayTitle || file.title || 'Untitled', // Prefer displayTitle
+          location: file.thumbnailUrl || file.location || '', 
+          slug: file.slug || `media-${file._id}`, 
+          fileExtension: file.fileExtension,
+          mediaType: file.mediaType,
+          
+          // --- CORRECTED FIELDS ---
+          fileSize: file.fileSize, // Directly use the fileSize from 'file' (output of useTransformedMedia)
+          modifiedDate: file.modifiedDate, // Directly use the original modifiedDate (ISO string) from 'file'
+          // --- END CORRECTIONS ---
+          
+          metadata: { // Pass through metadata, ensuring fileName is present
+            ...(file.metadata || {}), // Spread existing metadata first
+            fileName: file.metadata?.fileName || file.displayTitle || file.title || 'Untitled',
+          },
+          // Pass through any other fields from useTransformedMedia that MediaLibrary might use
+          thumbnailUrl: file.thumbnailUrl,
+          displayTitle: file.displayTitle,
+        };
+        return libraryEntry;
+      });
   }, [mediaData, searchQuery]);
 
   // Only log in development and limit frequency
@@ -196,15 +211,14 @@ const MediaContainer: React.FC = () => {
         />
       </Suspense>
       
-      {isModalOpen && (
-        <Suspense fallback={<LoadingFallback />}>
-          <MediaUploader
-            open={isModalOpen}
-            onClose={handleClose}
-            onUploadComplete={handleUploadComplete}
-          />
-        </Suspense>
-      )}
+      {/* Always render the MediaUploader component but control visibility with open prop */}
+      <Suspense fallback={<LoadingFallback />}>
+        <MediaUploader
+          open={isModalOpen}
+          onClose={handleClose}
+          onUploadComplete={handleUploadComplete}
+        />
+      </Suspense>
     </div>
   );
 };

@@ -37,7 +37,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import PhotoIcon from '@mui/icons-material/Photo';
 import RelatedMediaItem from "./components/RelatedMediaItem";
 // Import React Query hooks
-import { useMediaDetail, useUpdateMedia, useApiHealth, QueryKeys } from '../../hooks/query-hooks';
+import { useMediaDetail, useUpdateMedia, useApiHealth, QueryKeys, useMediaTypes } from '../../hooks/query-hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import ThumbnailUpdateDialog from './components/ThumbnailUpdateDialog';
 
@@ -599,8 +599,8 @@ const MediaDetail: React.FC = () => {
   const [isTestingEndpoint, setIsTestingEndpoint] = useState(false);
   const [testResult, setTestResult] = useState<{success: boolean, message: string} | null>(null);
   
-  // Get media types from Redux store for now (we can migrate these to React Query later)
-  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  // Get media types from TanStack Query instead of Redux
+  const { data: mediaTypes = [] } = useMediaTypes();
   
   // Use React Query hook instead of direct API call
   const { 
@@ -883,11 +883,17 @@ const MediaDetail: React.FC = () => {
     }
   };
 
-  // Find media type details
+  // Find media type details and convert to MediaTypeConfig format
   const mediaTypeInfo = mediaTypes.find(
     (type) => type.name === mediaFile?.mediaType
   );
   
+  // Convert mediaTypeInfo to MediaTypeConfig format
+  const mediaTypeConfig = mediaTypeInfo ? {
+    ...mediaTypeInfo,
+    fields: mediaTypeInfo.fields || []
+  } : null;
+
   // Get the media's accent color from its media type
   const accentColor = mediaTypeInfo?.catColor || '#4dabf5';
   
@@ -1130,7 +1136,7 @@ const MediaDetail: React.FC = () => {
               <Suspense fallback={<CircularProgress size={24} />}>
                 <MediaInformation
                   mediaFile={mediaFile}
-                  mediaTypeConfig={null}
+                  mediaTypeConfig={mediaTypeConfig}
                   baseFields={baseFields}
                   getMetadataField={getMetadataField}
                 />
@@ -1144,7 +1150,7 @@ const MediaDetail: React.FC = () => {
                 open={isEditDialogOpen}
                 onClose={() => setIsEditDialogOpen(false)}
                 mediaFile={mediaFile as any}
-                mediaType={mediaTypeInfo as any}
+                mediaType={mediaTypeConfig as any}
                 onSave={async (data) => {
                   await handleSave(data);
                   return;

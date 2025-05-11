@@ -26,17 +26,18 @@ import { FaFileImage, FaFileVideo, FaUpload, FaImage, FaVideo, FaFileAudio, FaFi
 import "./MediaUploader.scss";
 import { useNavigate } from "react-router-dom";
 import { BaseMediaFile } from "../../interfaces/MediaFile";
-import { useSelector, useDispatch } from "react-redux";
-import { RootState, AppDispatch } from "../../store/store";
+import { useSelector } from "react-redux";
+import { RootState } from "../../store/store";
 import { toast } from "react-toastify";
-import type { MediaType } from "../../store/slices/mediaTypeSlice";
+// Import TanStack Query hooks and types
+import { useMediaTypes, useTagCategories } from "../../hooks/query-hooks";
+// Keep the import for Field and specific MediaType shape from Redux
+import type { MediaType as ReduxMediaType } from "../../store/slices/mediaTypeSlice";
 import { motion, AnimatePresence } from "framer-motion";
-import { fetchTagCategories } from "../../store/slices/tagCategorySlice";
 
 // Import our utilities
 import {
   normalizeTag,
-  findMediaType,
   uploadMedia,
   prepareMetadataForUpload,
 } from './utils';
@@ -46,16 +47,75 @@ import { MediaTypeUploaderProps, MetadataState } from "./types";
 import UploadThumbnailSelector from '../VideoThumbnailSelector/UploadThumbnailSelector';
 import MetadataForm from "./components/MetadataForm";
 
+// Helper to adapt MediaType from TanStack Query to the shape expected by the MediaUploader
+const adaptMediaType = (mediaType: any): ReduxMediaType => {
+  return {
+    _id: mediaType._id,
+    name: mediaType.name,
+    fields: mediaType.fields || [],
+    status: mediaType.status || 'active',
+    usageCount: mediaType.usageCount || 0,
+    replacedBy: mediaType.replacedBy || null,
+    isDeleting: mediaType.isDeleting || false,
+    acceptedFileTypes: mediaType.acceptedFileTypes || [],
+    createdAt: mediaType.createdAt,
+    updatedAt: mediaType.updatedAt,
+    baseType: mediaType.baseType,
+    includeBaseFields: mediaType.includeBaseFields,
+    catColor: mediaType.catColor,
+    defaultTags: mediaType.defaultTags || [],
+    settings: mediaType.settings || {}
+  };
+};
+
+// Adapter for findMediaType to use ReduxMediaType
+const findReduxMediaType = (
+  mediaTypes: ReduxMediaType[],
+  mediaTypeId: string | null
+): ReduxMediaType | null => {
+  if (!mediaTypeId || !mediaTypes.length) return null;
+  
+  // First try to find by ID
+  let matchingType = mediaTypes.find(type => type._id === mediaTypeId);
+  
+  // If not found, try by name (for backward compatibility)
+  if (!matchingType) {
+    matchingType = mediaTypes.find(type => type.name === mediaTypeId);
+  }
+  
+  return matchingType || null;
+};
+
 const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   open,
   onClose,
   onUploadComplete,
 }) => {
-  const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const user = useSelector((state: RootState) => state.user);
-  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
-  const tagCategories = useSelector((state: RootState) => state.tagCategories.tagCategories);
+  
+  // Replace Redux selector with TanStack Query hook
+  const { data: mediaTypesData = [], isLoading: isLoadingMediaTypes } = useMediaTypes();
+  
+  // Adapt the TanStack MediaType to the Redux MediaType shape
+  const mediaTypes: ReduxMediaType[] = useMemo(() => {
+    const adaptedTypes = mediaTypesData.map(adaptMediaType);
+    
+    // Add debugging output in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.log('MediaUploader - Media types from TanStack Query:', {
+        raw: mediaTypesData.length,
+        adapted: adaptedTypes.length,
+        isLoading: isLoadingMediaTypes,
+        sample: adaptedTypes.length > 0 ? adaptedTypes[0] : null
+      });
+    }
+    
+    return adaptedTypes;
+  }, [mediaTypesData, isLoadingMediaTypes]);
+  
+  // Use TanStack Query for tag categories instead of Redux
+  const { data: tagCategories = [], refetch: refetchTagCategories } = useTagCategories();
   
   // =============== CONSTANTS ===============
   const maxFileSizeMB = 200;
@@ -388,9 +448,9 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     if (open && tagCategories.length === 0 && !tagCategoriesFetchedRef.current) {
       console.log('Fetching tag categories on first open');
       tagCategoriesFetchedRef.current = true;
-      dispatch(fetchTagCategories());
+      refetchTagCategories();
     }
-  }, [dispatch, open, tagCategories.length]);
+  }, [open, tagCategories.length, refetchTagCategories]);
 
   // Set user ID in metadata when user changes
   useEffect(() => {
@@ -749,7 +809,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     
     try {
       // Find the matching media type
-      const mediaType = findMediaType(mediaTypes, selectedMediaType);
+      const mediaType = findReduxMediaType(mediaTypes, selectedMediaType);
       
       if (!mediaType) {
         setUploadError('Selected media type not found');
@@ -1235,7 +1295,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
 
   const renderMediaTypeSelector = () => {
     // Helper function to get an appropriate icon based on accepted file types
-    const getFileTypeIcons = (mediaType: MediaType) => {
+    const getFileTypeIcons = (mediaType: ReduxMediaType) => {
       if (!mediaType.acceptedFileTypes || mediaType.acceptedFileTypes.length === 0) {
         return null;
       }
@@ -1270,42 +1330,56 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
             value={selectedMediaType}
             onChange={handleChange}
             label="Media Type"
+            disabled={isLoadingMediaTypes} // Disable while loading
           >
-            {activeMediaTypes.map((type) => (
-              <MenuItem 
-                key={type._id} 
-                value={type._id}
-                sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  py: 1
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  {type.name}
-                  {type.status === 'deprecated' && (
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
-                        ml: 1, 
-                        color: 'warning.main', 
-                        fontSize: '0.7rem',
-                        fontStyle: 'italic'
-                      }}
-                    >
-                      (deprecated)
-                    </Typography>
-                  )}
-                  {type.acceptedFileTypes && type.acceptedFileTypes.length > 0 && (
-                    <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary', fontSize: '0.7rem' }}>
-                      ({type.acceptedFileTypes.length} file types)
-                    </Typography>
-                  )}
+            {isLoadingMediaTypes ? (
+              <MenuItem disabled>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={16} />
+                  <Typography>Loading media types...</Typography>
                 </Box>
-                {getFileTypeIcons(type)}
               </MenuItem>
-            ))}
+            ) : activeMediaTypes.length === 0 ? (
+              <MenuItem disabled>
+                <Typography>No media types available</Typography>
+              </MenuItem>
+            ) : (
+              activeMediaTypes.map((type) => (
+                <MenuItem 
+                  key={type._id} 
+                  value={type._id}
+                  sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    py: 1
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {type.name}
+                    {type.status === 'deprecated' && (
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          ml: 1, 
+                          color: 'warning.main', 
+                          fontSize: '0.7rem',
+                          fontStyle: 'italic'
+                        }}
+                      >
+                        (deprecated)
+                      </Typography>
+                    )}
+                    {type.acceptedFileTypes && type.acceptedFileTypes.length > 0 && (
+                      <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary', fontSize: '0.7rem' }}>
+                        ({type.acceptedFileTypes.length} file types)
+                      </Typography>
+                    )}
+                  </Box>
+                  {getFileTypeIcons(type)}
+                </MenuItem>
+              ))
+            )}
           </Select>
         </FormControl>
         

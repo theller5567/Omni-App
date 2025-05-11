@@ -16,16 +16,8 @@ import {
   IconButton
 } from '@mui/material';
 import { FaTag, FaSearch, FaPlus, FaTimes, FaArrowRight } from 'react-icons/fa';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../../store/store';
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DraggableProvided } from '@hello-pangea/dnd';
-import { addTag } from '../../store/slices/tagSlice';
-
-// Define the Tags interface to match the one in tagSlice.ts
-interface Tags {
-  _id: string;
-  name: string;
-}
+import { useTags, useCreateTag, Tag } from '../../hooks/query-hooks';
 
 interface TagCategoryFormData {
   name: string;
@@ -50,8 +42,10 @@ export const TagCategoryForm: React.FC<TagCategoryFormProps> = ({
   onSubmit,
   isEditing
 }) => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { tags } = useSelector((state: RootState) => state.tags);
+  // Use TanStack Query hooks instead of Redux
+  const { data: tags = [] } = useTags();
+  const { mutateAsync: createTag } = useCreateTag();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [newTagName, setNewTagName] = useState('');
   const [showCreateTag, setShowCreateTag] = useState(false);
@@ -108,9 +102,8 @@ export const TagCategoryForm: React.FC<TagCategoryFormProps> = ({
   const handleCreateNewTag = async () => {
     if (newTagName.trim()) {
       try {
-        const resultAction = await dispatch(addTag(newTagName.trim()));
-        // Properly handle the action payload
-        const newTag = resultAction.payload as Tags;
+        // Use TanStack Query mutation instead of Redux action
+        const newTag = await createTag(newTagName.trim());
         
         // Add the newly created tag to the selected tags
         if (newTag && newTag._id) {

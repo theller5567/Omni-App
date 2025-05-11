@@ -290,7 +290,7 @@ const UserActivity: React.FC = () => {
       <Paper elevation={2} className="dashboard-card" style={{ minHeight: '450px' }}>
         <Typography variant="h6" gutterBottom>User Activity</Typography>
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-          <Typography color="error">{error}</Typography>
+          <Typography component="span" color="error">{error}</Typography>
         </Box>
       </Paper>
     );
@@ -317,8 +317,8 @@ const UserActivity: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {activities.map((activity) => (
-              <TableRow key={activity.id} hover>
+            {activities.map((activity, index) => (
+              <TableRow key={`${activity.id}-${index}`} hover>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Avatar 
