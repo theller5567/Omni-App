@@ -4,8 +4,7 @@
     align-items: flex-start;
     width: 100%;
     padding: 1rem;
-    margin-left: 250px;
-    max-width: calc(100% - 250px);
+    max-width: 100%;
     
     @media (max-width: 768px) {
       margin-left: 0;
@@ -13,444 +12,120 @@
     }
 }
 
-.account-users {
-    width: 100%;
-    flex-grow: 1;
-    padding: 1rem;
-    margin: 0;
-    box-sizing: border-box;
-    overflow: hidden;
-    background-color: var(--background-color);
-    
-    @media (max-width: 768px) {
-      padding: 0.5rem;
-    }
-    
-    h1 {
-      font-size: 28px;
-      font-weight: 600;
-      margin-bottom: 24px;
-      color: var(--text-color, #fff);
-    }
-    
-    .toolbar {
-      padding: 0.5rem 1rem;
-      margin: 0;
-      max-width: calc(100% - 16px);
-    }
-    
-    .MuiPaper-root {
-      background-color: var(--bg-secondary, #222);
-      border: 1px solid var(--border-color, #333);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-      border-radius: 8px;
-      overflow: hidden;
-      
-      @media (max-width: 768px) {
-        padding: 1rem !important;
-      }
-    }
-    
-    .users-data-grid {
-      border: none !important;
-      font-family: inherit;
-      color: var(--text-color, #fff);
-      
-      .MuiDataGrid-main {
-        color: var(--text-color, #fff);
-        font-family: inherit;
-      }
-      
-      .MuiDataGrid-columnHeaders {
-        background-color: var(--bg-secondary, #222);
-        border-bottom: 1px solid var(--border-color, #333);
-      }
-      
-      .MuiDataGrid-columnHeader {
-        height: 56px;
-        
-        .MuiDataGrid-columnHeaderTitleContainer {
-          justify-content: left;
-        }
-      }
-      
-      .MuiDataGrid-columnHeaderTitle,
-      .MuiDataGrid-cell,
-      .MuiDataGrid-footerContainer,
-      .MuiTablePagination-root,
-      .MuiDataGrid-selectedRowCount,
-      .MuiDataGrid-columnHeaderTitleContainer {
-        font-family: inherit;
-      }
-      
-      .MuiDataGrid-columnHeaderTitle {
-        color: var(--text-color, #fff);
-        font-weight: 600;
-        font-size: 0.9rem;
-        text-transform: none;
-        letter-spacing: normal;
-      }
-      
-      .MuiDataGrid-columnHeader--sortable {
-        color: var(--text-color, #fff);
-      }
-      
-      .MuiDataGrid-columnSeparator {
-        color: var(--border-color, #333);
-      }
-      
-      .MuiDataGrid-virtualScroller {
-        background-color: var(--bg-secondary, #1e1e1e);
-      }
-      
-      .MuiDataGrid-footerContainer {
-        background-color: var(--bg-secondary, #222);
-        border-top: 1px solid var(--border-color, #333);
-      }
-      
-      .MuiDataGrid-cell {
-        border-bottom: 1px solid var(--border-color-light, #333);
-        padding: 8px 16px;
-        font-size: 0.9rem;
-        display: flex;
-        align-items: center;
-        
-        &[data-field="email"],
-        &[data-field="fullName"] {
-          justify-content: left;
-          
-          span {
-            display: block;
-            width: 100%;
-            text-align: left;
-          }
-        }
-        
-        &[data-field="actions"] {
-          .MuiBox-root {
-            justify-content: left;
-            width: 100%;
-          }
-        }
-      }
-      
-      .user-cell {
-        display: flex;
-        align-items: center;
-        width: 100%;
-        justify-content: flex-start;
-        padding: 4px;
-        
-        .MuiAvatar-root {
-          margin-right: 8px;
-        }
-        
-        .MuiTypography-root {
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          text-align: left;
-        }
-      }
-      
-      .MuiDataGrid-cell:focus {
-        outline: none;
-      }
-      
-      .MuiDataGrid-row {
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-        
-        &:hover {
-          background-color: rgba(255, 255, 255, 0.05);
-        }
-      }
-      
-      .MuiButtonBase-root {
-        color: var(--text-color, #fff);
-      }
-      
-      .MuiTablePagination-root {
-        color: var(--text-color, #fff);
-      }
-      
-      .MuiTablePagination-selectIcon {
-        color: var(--text-color, #fff);
-      }
-      
-      .MuiCheckbox-root {
-        color: var(--text-color, #fff);
-        padding: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        
-        &.Mui-checked {
-          color: var(--primary-color, #4dabf5);
-        }
-        
-        svg {
-          font-size: 1.25rem;
-          width: 1.25rem;
-          height: 1.25rem;
-        }
-      }
-      
-      .MuiDataGrid-cellCheckbox,
-      .MuiDataGrid-columnHeaderCheckbox {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 6px;
-        
-        .MuiCheckbox-root {
-          padding: 0;
-        }
-      }
-      
-      .action-button {
-        &.edit {
-          &:hover {
-            color: var(--primary-color, #4dabf5);
-            background-color: rgba(77, 171, 245, 0.08);
-          }
-        }
-        
-        &.delete {
-          &:hover {
-            color: var(--error-color, #f44336);
-            background-color: rgba(244, 67, 54, 0.08);
-          }
-        }
-      }
-    }
-    
-    .MuiDialog-paper {
-      background-color: var(--bg-secondary, #222);
-      color: var(--text-color, #fff);
-      border-radius: 8px;
-      overflow: hidden;
-      
-      .MuiDialogTitle-root {
-        background-color: var(--bg-secondary, #222);
-        border-bottom: 1px solid var(--border-color, #333);
-        padding: 16px 24px;
-      }
-      
-      .MuiDialogContent-root {
-        padding: 24px;
-        background-color: var(--bg-secondary, #222);
-      }
-      
-      .MuiDialogActions-root {
-        padding: 16px 24px;
-        background-color: var(--bg-secondary, #222);
-        border-top: 1px solid var(--border-color, #333);
-      }
-    }
-    
-    .MuiTextField-root {
-      margin-bottom: 1rem;
-      
-      .MuiInputBase-root {
-        background-color: var(--background-color, #121212);
-        color: var(--text-color, #fff);
-      }
-      
-      .MuiInputLabel-root {
-        color: var(--text-secondary, #aaa);
-      }
-      
-      .MuiOutlinedInput-notchedOutline {
-        border-color: var(--border-color, #333);
-      }
-      
-      &:hover .MuiOutlinedInput-notchedOutline {
-        border-color: var(--border-color, #555);
-      }
-      
-      &.Mui-focused .MuiOutlinedInput-notchedOutline {
-        border-color: var(--primary-color, #4dabf5);
-      }
-    }
-    
-    .MuiButton-contained {
-      background-color: var(--primary-color, #4dabf5);
-      color: var(--color-text-invert, #000);
-      font-weight: 500;
-      
-      &:hover {
-        background-color: var(--accent-color-dark, #c51162);
-      }
-      
-      &:disabled {
-        background-color: rgba(255, 255, 255, 0.1);
-        color: rgba(255, 255, 255, 0.3);
-      }
-    }
-    
-    .MuiFormControl-root {
-      .MuiInputLabel-root {
-        color: var(--text-secondary, #aaa);
-      }
-      
-      .MuiOutlinedInput-root {
-        background-color: var(--background-color, #121212);
-        color: var(--text-color, #fff);
-        
-        .MuiOutlinedInput-notchedOutline {
-          border-color: var(--border-color, #333);
-        }
-        
-        &:hover .MuiOutlinedInput-notchedOutline {
-          border-color: var(--border-color, #555);
-        }
-        
-        &.Mui-focused .MuiOutlinedInput-notchedOutline {
-          border-color: var(--primary-color, #4dabf5);
-        }
-      }
-      
-      .MuiSelect-icon {
-        color: var(--text-color, #fff);
-      }
-    }
-
-    // Edit user grid
-    .edit-user-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      grid-gap: 16px;
-      margin-top: 8px;
-      
-      .email-field {
-        grid-column: 1 / -1; // span all columns
-      }
-      
-      .first-name-field,
-      .last-name-field,
-      .username-field,
-      .role-field {
-        margin-top: 0;
-      }
-      
-      @media (max-width: 600px) {
-        grid-template-columns: 1fr;
-        
-        .first-name-field,
-        .last-name-field,
-        .username-field,
-        .role-field,
-        .email-field {
-          grid-column: 1;
-        }
-      }
-    }
+.invitation-list-container {
+  padding: 1rem;
+  max-width: 100%;
 }
 
-.user-management-container {
-    border-radius: 8px;
-    overflow: hidden;
-    background-color: var(--bg-secondary, #222);
-    margin-bottom: 2rem;
-    
-    .tab-header {
-      background-color: var(--bg-secondary-dark, #1a1a1a);
-      border-bottom: 1px solid var(--border-color, #333);
-      
-      .user-tabs {
-        .MuiTabs-indicator {
-          background-color: var(--primary-color, #4dabf5);
-        }
-        
-        .user-tab {
-          color: var(--text-color, #fff);
-          text-transform: none;
-          font-weight: 500;
-          font-size: 16px;
-          
-          &.Mui-selected {
-            color: var(--primary-color, #4dabf5);
-          }
-        }
-      }
-    }
-    
-    .tab-panel {
-      .tab-content {
-        padding-top: 0;
-        text-align: left;
-        
-        h6, p {
-          text-align: left;
-        }
-      }
-    }
-    
-    .invitation-button {
-      display: flex;
-      align-items: center;
-      margin-bottom: 1.5rem;
-      background-color: var(--primary-color, #90caf9);
-      padding: 10px 16px;
-      border-radius: 4px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-      font-weight: 500;
-      letter-spacing: 0.5px;
-      
-      .MuiButton-startIcon {
-        margin-right: 8px;
-      }
-      
-      svg {
-        font-size: 20px;
-      }
-      
-      &:hover {
-        background-color: var(--primary-color-dark, #42a5f5);
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
-      }
-    }
-    
-    // Invitation section styling
-    .invitation-section {
-      margin-top: 1rem;
-      
-      .section-header {
-        margin-bottom: 1.5rem;
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        
-        div {
-          flex: 1;
-          text-align: left;
-          
-          h6, p {
-            text-align: left;
-          }
-        }
-        
-        @media (max-width: 768px) {
-          flex-direction: column;
-          
-          .invitation-button {
-            margin-top: 1rem;
-            align-self: flex-start;
-          }
-        }
-      }
-      
-      .invitation-table-container {
-        background-color: var(--bg-secondary, #222);
-        border-radius: 4px;
-        border: 1px solid var(--border-color, #333);
-        overflow: hidden;
-        
-        // Override table cell alignment to be left-aligned
-        .MuiTableCell-root {
-          text-align: left;
-        }
-      }
-    }
+.invitation-list-table-container {
+  max-width: 100%;
+  .invitation-list-table-head {
+    background-color: var(--bg-secondary-light);
+  }
+  .invitation-list-table-body {
+    background-color: var(--bg-secondary-light);
+  }
+  .invitation-list-table-row {
+    background-color: var(--bg-secondary-light);
+    padding: 1rem;
+  }
+  .invitation-list-table-cell {
+    background-color: var(--bg-secondary-light);
+  }
+}
+
+a.user-link {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+  width: 100%;
+  &:hover {
+    text-decoration: underline;
+    color: var(--color-text);
+  }
+}
+
+.datagrid-row--even {
+  background-color: rgba(45, 45, 45, 0.4);
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+// Styles for the main page container (previously inline style on motion.div)
+.account-users-page-container {
+  padding: 1rem; // Default padding
+  width: 100%;
+  margin: auto;
+
+  @media (min-width: 600px) { // sm breakpoint and up
+    padding: 2rem;
+  }
+}
+
+// Styles for the page title (previously sx prop on Typography)
+.account-users-title {
+  text-align: left;
+  margin-bottom: 1.5rem; // Default theme.spacing(3)
+
+  @media (min-width: 600px) { // sm breakpoint and up
+    margin-bottom: 2rem; // Default theme.spacing(4)
+  }
+}
+
+// Styles for the Box wrapping Tabs (previously had inline sx and was a Paper)
+.account-users-tabs-container {
+  display: flex;
+  justify-content: space-between; // As per user's recent change to the Box
+  width: 100%;
+  background-color: var(--color-surface-light);
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 0.5rem; // As per user's recent change to the Box
+  margin-bottom: 1.5rem; // Default theme.spacing(3)
+}
+
+// Styles for the Paper wrapping the DataGrid (previously sx prop)
+.account-users-datagrid-paper {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+// Styles for the container of the "Invite User" button within the tabs header
+.account-users-invite-button-container {
+  display: flex;
+  justify-content: flex-end;
+}
+
+// For the content Box inside TabPanel
+.custom-tab-panel-content {
+  padding: 24px; // Equivalent to p: 3 if theme.spacing(1) = 8px
+}
+
+// For loading states
+.loading-indicator-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px; // Or a suitable height
+}
+
+.loading-indicator-text {
+  margin-left: 16px; // Equivalent to ml: 2
+}
+
+// For error alert messages
+.error-alert-message {
+  margin: 16px; // Equivalent to m: 2
+}
+
+// For access denied message
+.access-denied-container {
+  padding: 1rem;
+  text-align: center;
+  margin-top: 40px; // Equivalent to mt: 5
+
+  @media (min-width: 600px) { // sm breakpoint and up
+    padding: 2rem;
+  }
 }

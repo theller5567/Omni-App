@@ -12,364 +12,173 @@ import {
   TablePagination,
   Avatar,
   Chip,
-  LinearProgress
+  LinearProgress,
+  CircularProgress
 } from '@mui/material';
-import axios from 'axios';
-import { API_BASE_URL } from '../../config/config';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store/store';
+import { useUserActivities, useAllUsers, User as UserType } from '../../hooks/query-hooks';
 
-// User activity interface
-interface UserActivity {
-  id: string;
+// User activity interface - ensure this matches the data from fetchUserActivities
+interface UserActivityEntry {
+  _id: string; // Assuming API returns _id
   userId: string;
-  username: string;
-  email: string;
+  username?: string; // Make optional if not always present
+  email?: string;    // Make optional
   action: string;
-  ip: string;
-  userAgent: string;
+  ip?: string;
+  userAgent?: string;
   timestamp: string;
+  // Add other fields as returned by your API
+  details?: string | { message?: string; [key: string]: any }; // Allow details to be string or object
+  targetId?: string;
+  targetType?: string;
 }
-
-interface ApiResponse {
-  data: UserActivity[];
-  success: boolean;
-  message?: string;
-  total: number;
-}
-
-interface UserType {
-  _id?: string;
-  id?: string;
-  username?: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-}
-
-// Determine if we're running on localhost
-// const isLocalhost = 
-//   window.location.hostname === 'localhost' || 
-//   window.location.hostname === '127.0.0.1';
 
 const UserActivity: React.FC = () => {
-  const [activities, setActivities] = useState<UserActivity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(0); // API is 1-indexed, UI is 0-indexed for MUI TablePagination
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [total, setTotal] = useState(0);
-  
-  // Get MongoDB users from Redux store
-  const userState = useSelector((state: RootState) => state.user);
-  const mongoUsers: UserType[] = userState.users.allUsers || [];
-  
-  const fetchUserActivities = async () => {
-    try {
-      setLoading(true);
-      
-      // Always attempt to fetch from API regardless of environment
-      if (API_BASE_URL) {
-        try {
-          // Get token from localStorage
-          const token = localStorage.getItem('authToken');
-          
-          if (!token) {
-            setError("Authentication token is missing. Please log in again.");
-            createMockData();
-            return;
-          }
-          
-          const response = await axios.get<ApiResponse>(`${API_BASE_URL}/api/admin/user-activities`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            },
-            params: {
-              page: page + 1,
-              limit: rowsPerPage
-            }
-          });
-          
-          // Filter to only include MongoDB users
-          const filteredActivities = response.data.data.filter(activity => {
-            return mongoUsers.some(user => 
-              user._id === activity.userId || 
-              user.id === activity.userId
-            );
-          });
-          
-          setActivities(filteredActivities);
-          setTotal(response.data.total || filteredActivities.length);
-          setLoading(false);
-        } catch (err: any) {
-          console.error("Error fetching user activities:", err);
-          
-          // Handle different error types
-          if (err.response) {
-            if (err.response.status === 401) {
-              setError("Authentication failed. Please log in again or ensure you have admin privileges.");
-            } else if (err.response.status === 403) {
-              setError("You don't have permission to view user activities. Admin privileges required.");
-            } else {
-              setError(`Server error: ${err.response.status}. Using fallback data.`);
-            }
-          } else if (err.request) {
-            setError("No response from server. Check your connection.");
-          } else {
-            setError("Failed to fetch user activities. Using fallback data.");
-          }
-          
-          createMockData();
-        }
-      } else {
-        setError("API endpoint not configured. Using fallback data.");
-        createMockData();
-      }
-    } catch (err) {
-      console.error("Error in user activity handling:", err);
-      setError("An unexpected error occurred. Using fallback data.");
-      createMockData();
-    }
-  };
-  
-  const createMockData = () => {
-    // Create mock data based on actual MongoDB users
-    const mockActivities: UserActivity[] = [];
-    // Use a counter to ensure unique IDs
-    let counter = 0;
-    
-    // If we have MongoDB users, use their information
-    if (mongoUsers.length > 0) {
-      mongoUsers.forEach((user, index) => {
-        const username = user.username || `${user.firstName} ${user.lastName}`.trim() || `user${index}`;
-        const email = user.email || `user${index}@example.com`;
-        const userId = user._id || user.id || `user-${index}`;
-        
-        // Add different activity types for each user
-        const actions = ['LOGIN', 'LOGOUT', 'PASSWORD_CHANGE', 'PROFILE_UPDATE'];
-        const timestamps = [
-          new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-          new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-          new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-          new Date(Date.now() - 1000 * 60 * 120).toISOString()
-        ];
-        
-        // Add 1-2 activities per user
-        for (let i = 0; i < Math.min(2, actions.length); i++) {
-          counter++;
-          mockActivities.push({
-            id: `mock-${userId}-${i}-${counter}-${Math.random().toString(36).substring(2, 9)}`,
-            userId,
-            username,
-            email,
-            action: actions[i % actions.length],
-            ip: `192.168.1.${index + 1}`,
-            userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-            timestamp: timestamps[i % timestamps.length]
-          });
-        }
-      });
-    } else {
-      // Fallback mock data if no MongoDB users found
-      counter++;
-      const mockActivity1 = {
-        id: `mock-1-${counter}-${Math.random().toString(36).substring(2, 9)}`,
-        userId: '1',
-        username: 'admin',
-        email: 'admin@example.com',
-        action: 'LOGIN',
-        ip: '192.168.1.1',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        timestamp: new Date(Date.now() - 1000 * 60 * 10).toISOString()
-      };
-      
-      counter++;
-      const mockActivity2 = {
-        id: `mock-2-${counter}-${Math.random().toString(36).substring(2, 9)}`,
-        userId: '2',
-        username: 'editor',
-        email: 'editor@example.com',
-        action: 'LOGIN',
-        ip: '192.168.1.2',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString()
-      };
-      
-      mockActivities.push(mockActivity1, mockActivity2);
-    }
-    
-    setActivities(mockActivities);
-    setTotal(mockActivities.length);
-    setLoading(false);
-    setError(null);
-  };
-  
-  useEffect(() => {
-    fetchUserActivities();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, rowsPerPage, mongoUsers.length]);
-  
-  // Add a new effect to monitor the auth token
-  useEffect(() => {
-    // Create a function to check the token and trigger a refresh
-    const checkAuthAndRefresh = () => {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        console.log('Auth token detected, fetching user activities');
-        fetchUserActivities(); // Fetch with the new token
-      } else {
-        console.log('No auth token found for user activities');
-      }
-    };
 
-    // Run once on component mount
-    checkAuthAndRefresh();
-    
-    // Monitor localStorage changes (browser storage event)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'authToken') {
-        console.log('Auth token changed in localStorage, refreshing user activities');
-        checkAuthAndRefresh();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Cleanup listener on unmount
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []); // Empty dependency array to run only once on mount
-  
+  // Use TanStack Query hooks
+  const { 
+    data: activityData, // Contains { data: UserActivityEntry[], total: number }
+    isLoading,
+    isError,
+    error,
+    // refetch // Can be used for manual refetching if needed
+  } = useUserActivities(page + 1, rowsPerPage); // Pass 1-indexed page
+
+  const { data: allUsers = [], isLoading: isLoadingUsers } = useAllUsers();
+
+  // Extracted activities and total count
+  const activities = activityData?.data || [];
+  const total = activityData?.total || 0;
+
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };
-  
+
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
+    setPage(0); // Reset to first page when rows per page changes
   };
-  
-  // Format timestamp to locale string
+
   const formatTimestamp = (timestamp: string) => {
     return new Date(timestamp).toLocaleString();
   };
-  
-  // Get color for action type
+
   const getActionColor = (action: string) => {
-    switch (action) {
-      case 'LOGIN':
-        return 'success';
-      case 'LOGOUT':
-        return 'info';
-      case 'PASSWORD_CHANGE':
-        return 'warning';
-      case 'PROFILE_UPDATE':
-        return 'primary';
-      case 'FAILED_LOGIN':
-        return 'error';
-      default:
-        return 'default';
+    switch (action.toUpperCase()) {
+      case 'LOGIN': return 'success';
+      case 'LOGOUT': return 'default';
+      case 'CREATE':
+      case 'UPLOAD': return 'primary';
+      case 'UPDATE': return 'info';
+      case 'DELETE': return 'error';
+      case 'PASSWORD_CHANGE': return 'warning';
+      case 'PROFILE_UPDATE': return 'secondary';
+      default: return 'default';
     }
   };
-  
-  
-  if (loading && activities.length === 0) {
+
+  // Find user details for a given activity
+  const getUserForActivity = (userId: string): UserType | undefined => {
+    return allUsers.find(user => user._id === userId || user.id === userId);
+  };
+
+  // Helper to render activity.details safely
+  const renderActivityDetailsString = (details: string | { message?: string;[key: string]: any } | undefined): string => {
+    if (typeof details === 'string') {
+      return details;
+    }
+    if (typeof details === 'object' && details !== null) {
+      if (details.message && typeof details.message === 'string') {
+        return details.message;
+      }
+      return JSON.stringify(details);
+    }
+    return 'N/A';
+  };
+
+  if (isLoading || isLoadingUsers) {
     return (
-      <Paper elevation={2} className="dashboard-card" style={{ minHeight: '450px' }}>
-        <Typography variant="h6" gutterBottom>User Activity</Typography>
-        <Box sx={{ width: '100%', mt: 2 }}>
-          <LinearProgress />
-        </Box>
+      <Paper sx={{ padding: 2, textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography sx={{ mt: 1 }}>Loading user activities...</Typography>
       </Paper>
     );
   }
-  
-  if (error && activities.length === 0) {
+
+  if (isError) {
     return (
-      <Paper elevation={2} className="dashboard-card" style={{ minHeight: '450px' }}>
-        <Typography variant="h6" gutterBottom>User Activity</Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-          <Typography component="span" color="error">{error}</Typography>
-        </Box>
+      <Paper sx={{ padding: 2, textAlign: 'center' }}>
+        <Typography color="error">
+          Error loading user activities: {error instanceof Error ? error.message : 'Unknown error'}
+        </Typography>
       </Paper>
     );
   }
-  
+
   return (
-    <Paper elevation={2} className="dashboard-card" style={{ width: '100%', maxWidth: '100%', minHeight: '450px' }}>
-      <Typography variant="h6" gutterBottom>User Activity</Typography>
-      
-      {loading && (
-        <Box sx={{ width: '100%', mt: 1, mb: 2 }}>
-          <LinearProgress />
-        </Box>
-      )}
-      
-      <TableContainer sx={{ minHeight: '350px' }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>User</TableCell>
-              <TableCell>Action</TableCell>
-              <TableCell>IP Address</TableCell>
-              <TableCell>Time</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {activities.map((activity, index) => (
-              <TableRow key={`${activity.id}-${index}`} hover>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Avatar 
-                      sx={{ 
-                        width: 30, 
-                        height: 30, 
-                        fontSize: '0.8rem'
-                      }}
-                      className="sidebar-avatar" 
-                      src={userState.users.allUsers.find(user => user._id === activity.userId)?.avatar} 
-                      alt={`${userState.users.allUsers.find(user => user._id === activity.userId)?.firstName} ${userState.users.allUsers.find(user => user._id === activity.userId)?.lastName}`}
-                    />
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                        {activity.username}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {activity.email}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={activity.action.replace('_', ' ')}
-                    size="small"
-                    color={getActionColor(activity.action) as any}
-                    sx={{ height: '20px', fontSize: '0.7rem' }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">{activity.ip}</Typography>
-                  <Typography display="block" variant="caption" color="text.secondary">
-                    {activity.userAgent.split(' ')[0]}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  {formatTimestamp(activity.timestamp)}
-                </TableCell>
+    <Paper sx={{ padding: 2, marginTop: 2 }}>
+      <Typography variant="h6" gutterBottom>User Activity Logs</Typography>
+      {activities.length === 0 && !isLoading ? (
+        <Typography sx={{ textAlign: 'center', p: 2 }}>No user activities found.</Typography>
+      ) : (
+        <TableContainer>
+          <Table stickyHeader size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>User</TableCell><TableCell>Action</TableCell><TableCell>Details</TableCell><TableCell>Timestamp</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      
+            </TableHead>
+            <TableBody>
+              {activities.map((activity: UserActivityEntry) => {
+                const user = getUserForActivity(activity.userId);
+                const userDisplayName = user?.username || user?.email || activity.username || activity.userId;
+                const avatarText = user?.firstName && user?.lastName 
+                                  ? `${user.firstName[0]}${user.lastName[0]}` 
+                                  : userDisplayName.substring(0, 2).toUpperCase();
+                return (
+                  <TableRow hover key={activity._id}>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Avatar sx={{ width: 30, height: 30, mr: 1, fontSize: '0.8rem' }} src={user?.avatar}>
+                          {avatarText}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>{userDisplayName}</Typography>
+                          {user?.email && <Typography variant="caption" color="textSecondary">{user.email}</Typography>}
+                          {!user && activity.email && <Typography variant="caption" color="textSecondary">{activity.email}</Typography>}
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={activity.action}
+                        size="small"
+                        color={getActionColor(activity.action) as any} // Cast needed if getActionColor returns string not matching ChipProps color
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="caption" display="block">IP: {activity.ip || 'N/A'}</Typography>
+                      <Typography variant="caption" display="block">Agent: {activity.userAgent ? activity.userAgent.substring(0, 50) + '...' : 'N/A'}</Typography>
+                      {activity.targetType && activity.targetId && 
+                        <Typography variant="caption" display="block">Target: {activity.targetType} ({activity.targetId.substring(0,8)}...)</Typography>}
+                      {activity.details && <Typography variant="caption" display="block">{renderActivityDetailsString(activity.details)}</Typography>}
+                    </TableCell>
+                    <TableCell>{formatTimestamp(activity.timestamp)}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
       <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[5, 10, 25, 50]}
         component="div"
-        count={total}
+        count={total} // Use total count from API response
         rowsPerPage={rowsPerPage}
-        page={page}
+        page={page} // UI page is 0-indexed
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
       />

@@ -19,8 +19,6 @@ import { MediaFile } from "../../types/media";
 import { motion } from 'framer-motion';
 import { formatFileSize } from "../../utils/formatFileSize";
 import "./styles/mediaDetail.scss";
-import { useSelector } from "react-redux";
-import { RootState } from "../../store/store";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useUsername } from '../../hooks/useUsername';
@@ -37,7 +35,14 @@ import EditIcon from '@mui/icons-material/Edit';
 import PhotoIcon from '@mui/icons-material/Photo';
 import RelatedMediaItem from "./components/RelatedMediaItem";
 // Import React Query hooks
-import { useMediaDetail, useUpdateMedia, useApiHealth, QueryKeys, useMediaTypes } from '../../hooks/query-hooks';
+import { 
+  useMediaDetail, 
+  useUpdateMedia, 
+  useApiHealth, 
+  QueryKeys, 
+  useMediaTypes,
+  useUserProfile
+} from '../../hooks/query-hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import ThumbnailUpdateDialog from './components/ThumbnailUpdateDialog';
 
@@ -590,50 +595,41 @@ const MediaDetail: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isThumbnailDialogOpen, setIsThumbnailDialogOpen] = useState(false);
   
-  // Get queryClient for cache invalidation
   const queryClient = useQueryClient();
   
-  // Debug state variables
   const [showAdvancedDebug, setShowAdvancedDebug] = useState(false);
   const [customEndpoint, setCustomEndpoint] = useState('');
   const [isTestingEndpoint, setIsTestingEndpoint] = useState(false);
   const [testResult, setTestResult] = useState<{success: boolean, message: string} | null>(null);
   
-  // Get media types from TanStack Query instead of Redux
   const { data: mediaTypes = [] } = useMediaTypes();
-  
-  // Use React Query hook instead of direct API call
   const { 
     data: mediaFile, 
-    isLoading, 
-    isError, 
-    error,
+    isLoading: isLoadingMedia,
+    isError: isMediaError,
+    error: mediaError,
     refetch 
   } = useMediaDetail(slug);
-  
-  // Use mutation hook for updates
   const { mutateAsync: updateMediaMutation } = useUpdateMedia();
-  
-  // Add API health check
   const { 
     isLoading: isCheckingHealth, 
     isError: isHealthError, 
     error: healthError,
     refetch: recheckHealth 
   } = useApiHealth();
-  
-  // Redirect back to media library if slug is missing
+
+  // Get current user profile using TanStack Query
+  const { data: userProfile, isLoading: isUserLoading } = useUserProfile(); 
+
   useEffect(() => {
       if (!slug) {
       navigate('/media-library');
     }
   }, [slug, navigate]);
   
-  // Get current user role from Redux store
-  const userRole = useSelector((state: RootState) => state.user.currentUser.role);
-  const isEditingEnabled = userRole === 'admin' || userRole === 'superAdmin';
+  // Determine if editing is enabled based on userProfile role
+  const isEditingEnabled = !isUserLoading && userProfile && (userProfile.role === 'admin' || userProfile.role === 'superAdmin');
 
-  // Get user info - moved to top level to ensure consistent hook order
   const userId = mediaFile ? (getMetadataField(mediaFile, 'uploadedBy', '') || '') : '';
   const { username: uploadedBy } = useUsername(userId);
 
@@ -942,7 +938,7 @@ const MediaDetail: React.FC = () => {
         <ArrowBackIcon fontSize={isMobile ? "small" : "medium"} />
       </Button>
 
-      {isLoading ? (
+      {isLoadingMedia || isUserLoading ? (
         <Box
           sx={{
             display: "flex",
@@ -953,7 +949,7 @@ const MediaDetail: React.FC = () => {
         >
           <CircularProgress />
         </Box>
-      ) : isError || !mediaFile ? (
+      ) : isMediaError || !mediaFile ? (
         <Box
           sx={{
             p: 3,
@@ -967,7 +963,7 @@ const MediaDetail: React.FC = () => {
             Error Loading Media
           </Typography>
           <Typography variant="body1" sx={{ maxWidth: '600px', textAlign: 'center', mb: 2 }}>
-            {error instanceof Error ? error.message : 'Failed to load media file'}
+            {mediaError instanceof Error ? mediaError.message : 'Failed to load media file'}
           </Typography>
           
           {/* Show API Health Status */}
@@ -1018,9 +1014,9 @@ const MediaDetail: React.FC = () => {
                 <Typography variant="subtitle2" sx={{ mb: 1 }}>Debug Information:</Typography>
                 <Typography variant="caption" component="pre" sx={{ whiteSpace: 'pre-wrap' }}>
                   Slug: {slug}
-                  {error instanceof Error ? 
-                    `\n\nError: ${error.message}\n\nStack: ${error.stack || 'No stack trace'}` : 
-                    `\n\nError: ${JSON.stringify(error, null, 2)}`}
+                  {mediaError instanceof Error ? 
+                    `\n\nError: ${mediaError.message}\n\nStack: ${mediaError.stack || 'No stack trace'}` : 
+                    `\n\nError: ${JSON.stringify(mediaError, null, 2)}`}
                 </Typography>
                 
                 <Button 
@@ -1128,7 +1124,7 @@ const MediaDetail: React.FC = () => {
               mediaFile={mediaFile as BaseMediaFile}
           onEdit={handleEdit}
           onDownload={handleDownload}
-          isEditingEnabled={isEditingEnabled}
+          isEditingEnabled={isEditingEnabled ?? false}
               onThumbnailUpdate={isVideo && isEditingEnabled ? () => setIsThumbnailDialogOpen(true) : undefined}
             />
           

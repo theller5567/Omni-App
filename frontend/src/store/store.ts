@@ -1,6 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { enableMapSet } from "immer";
-import authReducer from "./slices/authSlice";
 import userReducer from './slices/userSlice';
 import tagReducer from './slices/tagSlice';
 import mediaTypeReducer from './slices/mediaTypeSlice';
@@ -12,7 +11,6 @@ enableMapSet();
 
 const store = configureStore({
   reducer: {
-    auth: authReducer,
     user: userReducer,
     tags: tagReducer,
     mediaTypes: mediaTypeReducer,

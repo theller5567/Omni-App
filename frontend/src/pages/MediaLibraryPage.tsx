@@ -33,11 +33,11 @@ const MediaContainer: React.FC = () => {
 
   // Use enhanced React Query hooks
   const { 
-    formattedData: mediaData = [], 
+    data: mediaData = [], 
     isLoading: isLoadingMedia, 
     isError: isMediaError,
     error: mediaError
-  } = useTransformedMedia(selectedMediaType); // mediaData is Array<QueryHooksMediaFile>
+  } = useTransformedMedia(selectedMediaType);
   
   const { 
     data: mediaTypes = [], 
@@ -87,7 +87,7 @@ const MediaContainer: React.FC = () => {
       processingUploadRef.current = true;
       
       // Use React Query mutation instead of Redux action
-      addMediaMutation(newFile).catch(error => {
+      addMediaMutation(newFile).catch((error: any) => {
         console.error('Error adding media:', error);
         toast.error('Failed to add media to the library');
       });
@@ -123,7 +123,7 @@ const MediaContainer: React.FC = () => {
   // Filter media files based on search query and ensure it conforms to BaseMediaFile
   const filteredMediaFiles = useMemo(() => {
     return mediaData // mediaData is already Array<QueryHooksMediaFile> from useTransformedMedia
-      .filter(file => { // 'file' here is an item from useTransformedMedia.formattedData
+      .filter((file: QueryHooksMediaFile) => { // 'file' here is an item from useTransformedMedia.formattedData
         // Filter by search query - check various fields that might contain searchable content
         const searchableText = [
           file.displayTitle, // This is from useTransformedMedia
@@ -136,7 +136,7 @@ const MediaContainer: React.FC = () => {
         
         return searchableText.includes(searchQuery.toLowerCase());
       })
-      .map(file => { // 'file' is an item from useTransformedMedia.formattedData (QueryHooksMediaFile)
+      .map((file: QueryHooksMediaFile) => { // 'file' is an item from useTransformedMedia.formattedData (QueryHooksMediaFile)
         // Construct the object for the MediaLibrary component, ensuring it matches BaseMediaFile + any extras MediaLibrary needs
         // The 'file' object already has most of what we need from useTransformedMedia.
         // We just need to ensure the final structure aligns with what MediaLibrary expects (BaseMediaFile)

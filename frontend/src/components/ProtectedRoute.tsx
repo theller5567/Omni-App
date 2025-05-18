@@ -1,11 +1,12 @@
 import React, { Suspense } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store/store';
 import { Box, CircularProgress } from '@mui/material';
+import type { User } from '../hooks/query-hooks';
 
 interface ProtectedRouteProps {
   element: React.ReactElement;
+  userProfile: User | null | undefined;
+  requiredRole?: Array<'user' | 'admin' | 'distributor' | 'superAdmin'> | 'user' | 'admin' | 'distributor' | 'superAdmin';
   adminOnly?: boolean;
 }
 
@@ -15,20 +16,30 @@ const LoadingFallback = () => (
   </Box>
 );
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ element, adminOnly = false }) => {
-  const user = useSelector((state: RootState) => state.user.currentUser);
-  const isAuthenticated = !!user.email;
-  const isAdmin = user.role === 'admin' || user.role === 'superAdmin';
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ element, userProfile, requiredRole, adminOnly = false }) => {
+  const isAuthenticated = !!userProfile?._id;
 
-  // Check authentication first
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
-  // If adminOnly is true, check if user is an admin
-  if (adminOnly && !isAdmin) {
-    // Redirect to dashboard or another page if not an admin
-    return <Navigate to="/dashboard" />;
+  let hasRequiredRole = true;
+
+  if (requiredRole) {
+    const userRole = userProfile?.role;
+    const userRolesArray = Array.isArray(userRole) ? userRole : (userRole ? [userRole] : []);
+
+    if (Array.isArray(requiredRole)) {
+      hasRequiredRole = requiredRole.some(role => userRolesArray.includes(role));
+    } else {
+      hasRequiredRole = userRolesArray.includes(requiredRole);
+    }
+  } else if (adminOnly) {
+    hasRequiredRole = userProfile?.role === 'admin' || userProfile?.role === 'superAdmin';
+  }
+
+  if (!hasRequiredRole) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (

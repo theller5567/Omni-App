@@ -1,7 +1,7 @@
 import express from 'express';
 import User from '../models/User.js';
 import { authenticate } from '../middleware/authMiddleware.js';
-import { getUsernameById } from '../controllers/userController.js';
+import { getUsernameById, getUserPublicProfileById } from '../controllers/userController.js';
 
 const router = express.Router();
 
@@ -72,6 +72,22 @@ router.get('/username/:userId', async (req, res) => {
   } catch (error) {
     console.error('Error fetching username:', error);
     res.status(404).json({ error: 'User not found' });
+  }
+});
+
+// Route to get public user profile by ID
+router.get('/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const userProfile = await getUserPublicProfileById(userId);
+    res.status(200).json(userProfile);
+  } catch (error) {
+    // Log the error and send an appropriate status code
+    console.error('Error in GET /users/:userId route:', error.message);
+    if (error.message === 'User not found') {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(500).json({ message: 'Server error fetching user profile' });
   }
 });
 

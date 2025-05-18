@@ -16,14 +16,17 @@ class ActivityTrackingService {
   static async trackMediaUpload(user, media) {
     if (!user || !media) return;
     
+    const mediaTitle = media.title || 'Untitled';
+    console.log('ActivityTrackingService: Logging media upload with mediaTitle:', mediaTitle);
     const activity = await LoggerService.logActivity({
       userId: user.id,
       username: user.username || user.email,
       action: 'UPLOAD',
-      details: `Uploaded media file: ${media.title || media.metadata?.fileName || 'Untitled'}`,
+      details: `Uploaded media file: ${mediaTitle}`,
       resourceType: 'media',
       resourceId: media.id || media._id,
-      mediaSlug: media.slug
+      mediaSlug: media.slug,
+      mediaTitle
     });
     
     // Process notification
@@ -45,14 +48,17 @@ class ActivityTrackingService {
   static async trackMediaDeletion(user, media) {
     if (!user || !media) return;
     
+    const mediaTitle = media.title || 'Untitled';
+    console.log('ActivityTrackingService: Logging media deletion with mediaTitle:', mediaTitle);
     const activity = await LoggerService.logActivity({
       userId: user.id,
       username: user.username || user.email,
       action: 'DELETE',
-      details: `Deleted media file: ${media.title || media.metadata?.fileName || 'Untitled'}`,
+      details: `Deleted media file: ${mediaTitle}`,
       resourceType: 'media',
       resourceId: media.id || media._id,
-      mediaSlug: media.slug
+      mediaSlug: media.slug,
+      mediaTitle
     });
     
     // Process notification
@@ -75,14 +81,17 @@ class ActivityTrackingService {
   static async trackMediaUpdate(user, media, changedFields = []) {
     if (!user || !media) return;
     
+    const mediaTitle = media.title || 'Untitled';
+    console.log('ActivityTrackingService: Logging media update with mediaTitle:', mediaTitle);
     const activity = await LoggerService.logActivity({
       userId: user.id,
       username: user.username || user.email,
       action: 'EDIT',
-      details: `Updated media file: ${media.title || media.metadata?.fileName || 'Untitled'} (${changedFields.join(', ')})`,
+      details: `Updated media file: ${mediaTitle} (${changedFields.join(', ')})`,
       resourceType: 'media',
       resourceId: media.id || media._id,
-      mediaSlug: media.slug
+      mediaSlug: media.slug,
+      mediaTitle
     });
     
     // Process notification

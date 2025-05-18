@@ -1,6 +1,4 @@
-import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store/store';
+import React, { useState, useEffect } from 'react';
 import { 
   Paper, 
   Typography, 
@@ -24,631 +22,384 @@ import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { FaTag } from 'react-icons/fa';
-import axios from 'axios';
-import { API_BASE_URL } from '../../config/config';
-import { useActivityLogs } from '../../hooks/query-hooks';
+import { Link } from 'react-router-dom';
+import { 
+  useActivityLogs, 
+  useAllUsers, 
+  useTransformedMedia, 
+  User as UserType, 
+  TransformedMediaFile 
+} from '../../hooks/query-hooks';
 
-// Example activity type
+// ActivityLog interface - ensure this matches the data from fetchActivityLogs
 interface ActivityLog {
-  id: string;
-  userId: string;
-  username: string;
-  action: string;
-  details: string;
-  resourceType: string;
-  resourceId: string;
-  timestamp: string;
-  // Add slug fields for tracking media
-  slug?: string;
-  mediaSlug?: string;
-}
-
-interface ApiResponse {
-  data: ActivityLog[];
-  success: boolean;
-  message?: string;
-}
-
-interface UserType {
-  _id?: string;
-  id?: string;
+  _id: string; // Assuming API returns _id
+  userId?: string; // Optional if system activities don't have a user
   username?: string;
-  name?: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
+  action: string;
+  details?: string;
+  targetType?: string; // e.g., 'media', 'user', 'mediaType'
+  targetId?: string;
+  targetSlug?: string; // If API provides a direct slug for the target
+  ip?: string;
+  userAgent?: string;
+  timestamp: string;
+  mediaSlug?: string;
+  mediaTitle?: string;
+  resourceType?: string;
 }
-
-// Determine if we're running on localhost
-// const isLocalhost = 
-//   window.location.hostname === 'localhost' || 
-//   window.location.hostname === '127.0.0.1';
 
 const RecentActivity: React.FC = () => {
   const [disableMock, setDisableMock] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Get users from Redux store to ensure we only use MongoDB users
-  const userState = useSelector((state: RootState) => state.user);
-  const users: UserType[] = userState.users.allUsers || [];
-  const media = useSelector((state: RootState) => state.media.allMedia);
-  
-  // Use TanStack Query for activity logs
+  const [displayError, setDisplayError] = useState<string | null>(null);
+
+  // Use TanStack Query hooks
   const { 
-    data: activitiesData,
-    isLoading,
-    isError,
-    error: queryError,
+    data: activityLogs = [], // Assuming useActivityLogs directly returns ActivityLog[]
+    isLoading: isLoadingActivities,
+    isError: isActivitiesError,
+    error: activitiesError,
     refetch,
     isRefetching
-  } = useActivityLogs(20);
+  } = useActivityLogs(20); // Fetch latest 20, or make configurable
+
+  const { 
+    data: allUsers = [], 
+    isLoading: isLoadingUsers 
+  } = useAllUsers();
   
-  // Create a more detailed error message from queryError if available
-  React.useEffect(() => {
-    if (isError && queryError) {
-      const errorMessage = queryError instanceof Error 
-        ? queryError.message 
-        : 'Failed to load activity logs';
-      setError(errorMessage);
+  const { 
+    data: allMedia = [], 
+    isLoading: isLoadingMedia 
+  } = useTransformedMedia();
+
+  useEffect(() => {
+    if (isActivitiesError && activitiesError) {
+      const errorMessage = activitiesError instanceof Error 
+        ? activitiesError.message 
+        : typeof activitiesError === 'string' ? activitiesError : 'Failed to load activity logs'; // Handle non-Error objects
+      setDisplayError(errorMessage);
     } else {
-      setError(null);
+      setDisplayError(null);
     }
-  }, [isError, queryError]);
-  
-  // Function to enrich media activities with slugs
-  const enrichMediaActivities = (activities: ActivityLog[], allMedia: any[]): ActivityLog[] => {
-    // Create a copy of activities to modify
-    const enrichedActivities = [...activities];
-    
-    // Only log in development mode and limit to summary information
-    const isDev = process.env.NODE_ENV === 'development';
-    
-    // Count for logging summary
-    let mediaActivitiesEnriched = 0;
-    
-    // Process each activity
-    for (const activity of enrichedActivities) {
-      // Handle media type activities
-      if (activity.resourceType === 'media') {
-        // If mediaSlug is already available from the API, use it
-        if (activity.mediaSlug) {
-          activity.slug = activity.mediaSlug;
-          mediaActivitiesEnriched++;
-          continue;
-        }
+  }, [isActivitiesError, activitiesError]);
 
-        // Try to find matching media by resourceId
-        if (activity.resourceId) {
-          const mediaFile = allMedia.find(media => 
-            media._id === activity.resourceId || 
-            media.id === activity.resourceId
-          );
-          
-          if (mediaFile && mediaFile.slug) {
-            activity.slug = mediaFile.slug;
-            mediaActivitiesEnriched++;
-            continue; // Skip to next activity
-          }
-        }
+  // Process activities (enrichment, filtering) once all data is available
+  const processedActivities = React.useMemo(() => {
+    let logs: ActivityLog[] = activityLogs || []; // Use activityLogs directly
+    // For now, just return the fetched logs directly, assuming backend provides sufficient info
+    return logs;
+  }, [activityLogs, allMedia, allUsers]);
 
-        // If no slug found yet, try to extract from details
-        if (activity.details) {
-          // Extract potential media title from activity details
-          let potentialTitle = '';
-          if (activity.action === 'UPLOAD' && activity.details.includes('Uploaded media file: ')) {
-            potentialTitle = activity.details.substring(activity.details.indexOf('Uploaded media file: ') + 'Uploaded media file: '.length);
-          } else if (activity.action === 'UPLOAD' && activity.details.includes('Uploaded ')) {
-            potentialTitle = activity.details.substring(activity.details.indexOf('Uploaded ') + 'Uploaded '.length);
-          } else if (activity.action === 'DELETE' && activity.details.includes('Deleted media file: ')) {
-            potentialTitle = activity.details.substring(activity.details.indexOf('Deleted media file: ') + 'Deleted media file: '.length);
-          } else if (activity.action === 'DELETE' && activity.details.includes('Deleted ')) {
-            potentialTitle = activity.details.substring(activity.details.indexOf('Deleted ') + 'Deleted '.length);
-          } else if (activity.action === 'EDIT' && activity.details.includes('Updated media file: ')) {
-            potentialTitle = activity.details.substring(activity.details.indexOf('Updated media file: ') + 'Updated media file: '.length);
-          } else if (activity.action === 'EDIT' && activity.details.includes('Updated ')) {
-            potentialTitle = activity.details.substring(activity.details.indexOf('Updated ') + 'Updated '.length);
-          }
-          
-          // Clean up potential title (remove anything after parenthesis)
-          if (potentialTitle.includes(' (')) {
-            potentialTitle = potentialTitle.substring(0, potentialTitle.indexOf(' ('));
-          }
-          
-          if (potentialTitle) {
-            // Try to find a media file with a matching title
-            const matchingMedia = allMedia.find(media => 
-              media.title === potentialTitle || 
-              media.metadata?.fileName === potentialTitle
-            );
-            
-            if (matchingMedia && matchingMedia.slug) {
-              activity.slug = matchingMedia.slug;
-              mediaActivitiesEnriched++;
-            }
-          }
-        }
-      }
-    }
-    
-    // Log summary in development mode only
-    if (isDev) {
-      const mediaActivities = enrichedActivities.filter(a => a.resourceType === 'media');
-      if (mediaActivities.length > 0) {
-        console.log(`Enrichment complete: Found slugs for ${mediaActivitiesEnriched} out of ${mediaActivities.length} media activities`);
-      }
-    }
-    
-    return enrichedActivities;
-  };
-  
-  // Function to create mock data for fallback
-  const createMockData = () => {
-    // For demo purposes, create mock data using the actual MongoDB users
-    const mockUsernames = users.length > 0 
-      ? users.map((user: UserType) => user.username || user.name || 'user')
-      : ['admin', 'editor'];
-    
-    const mockUserIds = users.length > 0
-      ? users.map((user: UserType) => user.id || user._id || '1')
-      : ['1', '2'];
-    
-    // Use a counter to ensure unique IDs
+
+  // Function to create mock data for fallback (Simplified - needs careful review)
+  const createMockData = (): ActivityLog[] => {
+    if (disableMock) return [];
     let counter = 0;
+    const generateUniqueId = (prefix: string) => `${prefix}-${Date.now()}-${counter++}-${Math.random().toString(36).substring(2, 9)}`;
     
-    // Create realistic activity based on actual media items when possible
     const mockActivities: ActivityLog[] = [];
-    
-    // Generate a truly unique ID for mock data
-    const generateUniqueId = (prefix: string) => {
-      counter++;
-      return `${prefix}-${Date.now()}-${counter}-${Math.random().toString(36).substring(2, 9)}`;
-    };
-    
-    // Media upload activity
-    mockActivities.push({
-      id: generateUniqueId('mock-upload'),
-      userId: mockUserIds[0] || '1',
-      username: mockUsernames[0] || 'admin',
-      action: 'UPLOAD',
-      details: `Uploaded ${media.length > 0 ? media[0].title || 'a new file' : 'a new image file'}`,
-      resourceType: 'media',
-      resourceId: media.length > 0 ? media[0].id || '123' : '123',
-      timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString()
-    });
-    
-    // Media delete activity
-    mockActivities.push({
-      id: generateUniqueId('mock-delete'),
-      userId: mockUserIds.length > 1 ? mockUserIds[1] : mockUserIds[0] || '1',
-      username: mockUsernames.length > 1 ? mockUsernames[1] : mockUsernames[0] || 'admin',
-      action: 'DELETE',
-      details: 'Deleted a document file',
-      resourceType: 'media',
-      resourceId: '456',
-      timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString()
-    });
-    
-    // Media type creation activity
-    mockActivities.push({
-      id: generateUniqueId('mock-create'),
-      userId: mockUserIds[0] || '1',
-      username: mockUsernames[0] || 'admin',
-      action: 'CREATE',
-      details: 'Created a new media type: Videos',
-      resourceType: 'mediaType',
-      resourceId: '789',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString()
-    });
-    
-    // Media edit activity
-    mockActivities.push({
-      id: generateUniqueId('mock-edit'),
-      userId: mockUserIds.length > 1 ? mockUserIds[1] : mockUserIds[0] || '1',
-      username: mockUsernames.length > 1 ? mockUsernames[1] : mockUsernames[0] || 'admin',
-      action: 'EDIT',
-      details: 'Updated media metadata',
-      resourceType: 'media',
-      resourceId: media.length > 1 ? media[1].id || '456' : '456',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString()
-    });
-    
-    // View activity
-    mockActivities.push({
-      id: generateUniqueId('mock-view'),
-      userId: mockUserIds[0] || '1',
-      username: mockUsernames[0] || 'admin',
-      action: 'VIEW',
-      details: 'Accessed media library',
-      resourceType: 'system',
-      resourceId: 'media-library',
-      timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString()
-    });
-    
+
+    // User for mock data
+    const mockUser = allUsers.length > 0 ? allUsers[0] : ({ _id: 'mock-user-1', id: 'mock-user-1', username: 'mockUser' } as UserType); // Cast to UserType
+    const mockMedia = allMedia.length > 0 ? allMedia[0] : ({ _id: 'mock-media-1', id: 'mock-media-1', title: 'Mock Media Title', slug: 'mock-media-slug' } as TransformedMediaFile); // Cast to TransformedMediaFile
+
+    if (!isLoadingActivities && !isLoadingUsers && !isLoadingMedia) {
+        mockActivities.push({
+            _id: generateUniqueId('mock-upload'),
+            userId: mockUser._id,
+            username: mockUser.username,
+            action: 'UPLOAD',
+            details: `Uploaded ${mockMedia.title || 'a new file'}`,
+            targetType: 'media',
+            targetId: mockMedia._id,
+            targetSlug: mockMedia.slug,
+            timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString()
+        });
+        // Add more mock activities as needed
+    }
     return mockActivities;
   };
-  
-  // Process the activities data
-  const activities = React.useMemo(() => {
-    // If no data or disableMock is true and there's an error, return empty array
-    if (!activitiesData || (isError && disableMock)) {
-      return [];
-    }
-    
-    // If there's an error and disableMock is false, create mock data
-    if (isError && !disableMock) {
-      return createMockData();
-    }
-    
-    // Filter activities to only include MongoDB users
-    const filteredActivities = activitiesData.filter(activity => {
-      return users.some((user: UserType) => user.id === activity.userId || user._id === activity.userId);
-    });
-    
-    // Enrich the activities with media slugs
-    return enrichMediaActivities(filteredActivities, media);
-  }, [activitiesData, isError, disableMock, users, media]);
-  
-  // Handle manual refresh
+
+  const finalActivities: ActivityLog[] = (activityLogs && activityLogs.length > 0) 
+                          ? processedActivities 
+                          : (isLoadingActivities || isLoadingUsers || isLoadingMedia) ? [] : createMockData();
+
   const handleRefresh = () => {
     refetch();
   };
-  
-  // Handle toggle mock data
+
   const handleToggleMock = (event: React.ChangeEvent<HTMLInputElement>) => {
     setDisableMock(event.target.checked);
   };
-  
-  // Function to get icon based on action type
-  const getActionIcon = (action: string) => {
-    switch (action) {
+
+  const getActionIcon = (action: string, resourceType?: string) => {
+    switch (action.toUpperCase()) {
       case 'UPLOAD':
-        return <CloudUploadIcon />;
+      case 'CREATE':
+        return resourceType === 'media' ? <CloudUploadIcon /> : <FaTag />;
       case 'DELETE':
         return <DeleteIcon />;
       case 'EDIT':
+      case 'UPDATE':
         return <EditIcon />;
-      case 'CREATE':
-        return <FaTag />;
-      case 'VIEW':
+      case 'LOGIN':
+      case 'REGISTER':
+      case 'PROFILE_UPDATE':
         return <PersonIcon />;
       default:
         return <SettingsIcon />;
     }
   };
-  
-  // Function to get avatar color based on action
+
   const getAvatarColor = (action: string) => {
-    switch (action) {
-      case 'UPLOAD':
-        return 'primary.main';
-      case 'DELETE':
-        return 'error.main';
-      case 'EDIT':
-        return 'warning.main';
-      case 'CREATE':
-        return 'success.main';
-      case 'VIEW':
-        return 'info.main';
-      default:
-        return 'text.secondary';
+    // ... (keep existing logic or simplify)
+    switch (action.toUpperCase()) {
+        case 'UPLOAD': case 'CREATE': return 'primary.main';
+        case 'DELETE': return 'error.main';
+        case 'EDIT': case 'UPDATE': return 'info.main';
+        case 'LOGIN': case 'REGISTER': case 'PROFILE_UPDATE': return 'success.main';
+        default: return 'grey.500';
     }
   };
-  
-  // Function to render activity details with links for media files
+
   const renderActivityDetails = (activity: ActivityLog) => {
-    // Extract main details and changed fields if present
-    let mainDetails = activity.details;
+    // Debug: log the full activity object
+    console.log('RecentActivity: activity object', activity);
+    let details = activity.details || activity.action;
     let changedFields: string[] = [];
-    
-    // Extract changed fields for EDIT actions with parentheses pattern
-    if (activity.action === 'EDIT' && activity.details.includes('(')) {
-      const fieldsMatch = activity.details.match(/\(([^)]+)\)/);
-      if (fieldsMatch && fieldsMatch[1]) {
-        // Split by comma and clean up each field
-        changedFields = fieldsMatch[1].split(',').map(field => field.trim());
-        // Remove the fields portion from the main details
-        mainDetails = activity.details.replace(/\s*\([^)]+\)/, '');
+    let mainDetails = details;
+    let mediaLink: string | null = null;
+    let mediaLabel: string | null = null;
+
+    {
+      // Support both camelCase and lowercase field names
+      const mediaSlug = activity.mediaSlug || (activity as any)['mediaslug'];
+      const mediaTitle = activity.mediaTitle || (activity as any)['mediatitle'];
+      // Debug: log the resolved mediaSlug and mediaTitle
+      console.log('RecentActivity: resolved mediaSlug', mediaSlug, 'mediaTitle', mediaTitle);
+      if (activity.resourceType === 'media' && mediaSlug && mediaTitle) {
+        let displayTextBefore = '';
+        if (activity.action === 'UPLOAD') {
+          displayTextBefore = 'Uploaded media file: ';
+        } else if (activity.action === 'EDIT' || activity.action === 'UPDATE') {
+          displayTextBefore = 'Updated media file: ';
+        } else if (activity.action.toLowerCase().includes('thumbnail')) {
+          displayTextBefore = 'Updated video thumbnail for ';
+        }
+        // Extract changed fields if present in details
+        if (typeof details === 'string' && details.includes('(') && details.includes(')')) {
+          const match = details.match(/\(([^)]+)\)/);
+          if (match && match[1]) {
+            changedFields = match[1].split(',').map(f => f.trim());
+          }
+        }
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+            <Typography variant="body2" component="span" noWrap sx={{ mr: 1 }}>
+              {displayTextBefore}
+              <Link to={`/media/slug/${mediaSlug}`} style={{ textDecoration: 'underline', color: '#1976d2', fontWeight: 500 }}>
+                {mediaTitle}
+              </Link>
+            </Typography>
+            {changedFields.length > 0 && (
+              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                {changedFields.map((field, idx) => (
+                  <Chip key={field + idx} label={field} size="small" color="info" variant="outlined" />
+                ))}
+              </Box>
+            )}
+          </Box>
+        );
       }
     }
-    
+
+    // If details is a string and contains changed fields in parentheses, extract them
+    if (typeof details === 'string' && details.includes('(') && details.includes(')')) {
+      const match = details.match(/\(([^)]+)\)/);
+      if (match && match[1]) {
+        changedFields = match[1].split(',').map(f => f.trim());
+        // Remove the fields portion from the main details
+        mainDetails = details.replace(/\s*\([^)]+\)/, '').trim();
+      }
+    }
+
+    // Only create a link for specific actions (UPLOAD, UPDATE (media), UPDATE VIDEO THUMBNAIL)
+    const actionType = (activity.action || '').toUpperCase();
+    let foundTitle: string = '';
+    let foundMedia: TransformedMediaFile | undefined;
+    let shouldTryUpdateLink = false;
+    let displayTextBefore = '';
+    let displayTextAfter = '';
+    // Always link for upload actions
+    if (actionType === 'UPLOAD') {
+      if (activity.targetSlug) {
+        mediaLink = `/media/slug/${activity.targetSlug}`;
+        foundMedia = allMedia.find(m => m.slug === activity.targetSlug);
+        mediaLabel = foundMedia?.title || foundMedia?.metadata?.fileName || 'Media File';
+        displayTextBefore = 'Uploaded media file: ';
+      } else if (activity.targetId) {
+        foundMedia = allMedia.find(m => m._id === activity.targetId || m.id === activity.targetId);
+        if (foundMedia && foundMedia.slug) {
+          mediaLink = `/media/slug/${foundMedia.slug}`;
+          mediaLabel = foundMedia.title || foundMedia.metadata?.fileName || 'Media File';
+          displayTextBefore = 'Uploaded media file: ';
+        }
+      } else if (details.startsWith('Uploaded media file:')) {
+        foundTitle = details.split(':').pop()?.trim() || '';
+        foundMedia = allMedia.find(
+          m => (m.title && m.title.toLowerCase() === foundTitle.toLowerCase()) ||
+               (m.metadata?.fileName && m.metadata.fileName.toLowerCase() === foundTitle.toLowerCase())
+        );
+        if (foundMedia && foundMedia.slug) {
+          mediaLink = `/media/slug/${foundMedia.slug}`;
+          mediaLabel = foundTitle;
+          displayTextBefore = 'Uploaded media file: ';
+        }
+      }
+    } else {
+      if (typeof details === 'string') {
+        if (details.startsWith('Updated media file:')) {
+          foundTitle = details.split(':').pop()?.trim() || '';
+          shouldTryUpdateLink = true;
+          displayTextBefore = 'Updated media file: ';
+        } else if (details.toLowerCase().includes('updated video thumbnail')) {
+          // Remove timestamp and extract media title
+          // Example: 'Updated video thumbnail at timestamp 00:01:29 for VWR Bead Mill Max - Plant'
+          // Should become: 'Updated video thumbnail for <LINK>VWR Bead Mill Max - Plant</LINK>'
+          const forIdx = details.toLowerCase().lastIndexOf(' for ');
+          if (forIdx !== -1) {
+            foundTitle = details.substring(forIdx + 5).trim();
+            shouldTryUpdateLink = true;
+            // Always display 'Updated video thumbnail for ' (remove timestamp)
+            displayTextBefore = 'Updated video thumbnail for ';
+          }
+        }
+        if (shouldTryUpdateLink && foundTitle) {
+          foundMedia = allMedia.find(
+            m => (m.title && m.title.toLowerCase() === foundTitle.toLowerCase()) ||
+                 (m.metadata?.fileName && m.metadata.fileName.toLowerCase() === foundTitle.toLowerCase())
+          );
+          if (foundMedia && foundMedia.slug) {
+            mediaLink = `/media/slug/${foundMedia.slug}`;
+            mediaLabel = foundTitle;
+          }
+        }
+      }
+    }
+
     return (
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-        <Box sx={{ color: 'text.secondary', mt: 0.5 }}>
-          {getActionIcon(activity.action)}
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Typography component="div" variant="body2" color="text.primary">
-            {mainDetails}
-          </Typography>
-          
-          {/* If there are changed fields, display them as chips */}
-          {changedFields.length > 0 && (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-              {changedFields.map((field, idx) => (
-                <Chip
-                  key={`field-${idx}`}
-                  label={field}
-                  size="small"
-                  variant="outlined"
-                  sx={{ height: '20px', fontSize: '0.7rem', borderColor: 'warning.main', color: 'warning.main' }}
-                />
-              ))}
-            </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+        {/* Main details text */}
+        <Typography variant="body2" component="span" noWrap sx={{ mr: 1 }}>
+          {mediaLink && mediaLabel ? (
+            <>
+              {displayTextBefore}
+              <Link to={mediaLink} style={{ textDecoration: 'underline', color: '#1976d2', fontWeight: 500 }}>
+                {mediaLabel}
+              </Link>
+              {displayTextAfter}
+            </>
+          ) : (
+            mainDetails
           )}
-          
-          {/* If it's a media activity and we have a slug, add a link below */}
-          {activity.resourceType === 'media' && (activity.slug || activity.mediaSlug) && (
-            <Typography component="div" variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-              Media: {activity.slug || activity.mediaSlug}
-            </Typography>
-          )}
-        </Box>
+        </Typography>
+        {/* Changed fields as Chips */}
+        {changedFields.length > 0 && (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {changedFields.map((field, idx) => (
+              <Chip key={field + idx} label={field} size="small" color="info" variant="outlined" />
+            ))}
+          </Box>
+        )}
       </Box>
     );
   };
-  
-  // Format timestamp to relative time
+
   const formatRelativeTime = (timestamp: string) => {
+    // ... (keep existing logic)
+    const date = new Date(timestamp);
     const now = new Date();
-    const activityTime = new Date(timestamp);
-    const diffMs = now.getTime() - activityTime.getTime();
-    const diffMins = Math.round(diffMs / 60000);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
-    
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    
-    const diffDays = Math.floor(diffHours / 24);
-    if (diffDays < 30) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-    
-    return activityTime.toLocaleDateString();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays}d ago`;
+    return date.toLocaleDateString();
   };
-  
-  // Debug function to test authentication
-  const testAuthentication = async () => {
-    try {
-      const token = localStorage.getItem('authToken');
-      
-      if (!token) {
-        setError("No authentication token found in localStorage. Please log in again.");
-        return;
-      }
-      
-      console.log("Current token:", token);
-      
-      // First try a simpler endpoint to test basic authentication
-      console.log("Testing authentication with database-stats endpoint...");
-      const statsResponse = await axios.get(`${API_BASE_URL}/api/admin/database-stats`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
-      console.log("Database stats authentication successful:", statsResponse.data);
-      
-      // Now specifically test the activity-logs endpoint
-      console.log("Testing authentication with activity-logs endpoint...");
-      const logsResponse = await axios.get<ApiResponse>(`${API_BASE_URL}/api/admin/activity-logs`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-        params: {
-          limit: 5
-        }
-      });
-      
-      console.log("Activity logs authentication successful:", logsResponse.data);
-      
-      // Check if we got any actual logs back
-      if (logsResponse.data && logsResponse.data.data && logsResponse.data.data.length > 0) {
-        console.log(`Successfully retrieved ${logsResponse.data.data.length} activity logs`);
-        console.log("Sample log:", logsResponse.data.data[0]);
-        
-        // Filter logs by valid users
-        const filteredLogs = logsResponse.data.data.filter(activity => {
-          return users.some((user: UserType) => user.id === activity.userId || user._id === activity.userId);
-        });
-        
-        if (filteredLogs.length > 0) {
-          // Try to enrich them with slugs
-          const enrichedLogs = await enrichMediaActivities(filteredLogs, media);
-          console.log("Enriched logs sample:", enrichedLogs[0]);
-          
-          // Log the enriched logs instead of updating state
-          console.log("Enriched logs:", enrichedLogs);
-        }
-        
-        alert(`Authentication successful! You have admin privileges.\nSuccessfully retrieved ${logsResponse.data.data.length} activity logs.`);
-      } else {
-        console.log("Authentication successful but no activity logs found");
-        alert("Authentication successful, but no activity logs were found in the database.");
-      }
-      
-      setError(null);
-    } catch (err: any) {
-      console.error("Authentication test failed:", err);
-      
-      if (err.response) {
-        if (err.response.status === 401) {
-          setError(`Authentication failed (401): ${err.response.data.error || 'Invalid token'}. Please log in again.`);
-        } else if (err.response.status === 403) {
-          setError("You don't have admin privileges (403). Admin access is required for this feature.");
-        } else if (err.response.status === 404) {
-          setError(`API endpoint not found (404): ${err.config.url}. Check if backend routes are correctly configured.`);
-        } else {
-          setError(`Server error: ${err.response.status} - ${err.response.data.message || err.response.statusText || 'Unknown error'}`);
-        }
-      } else if (err.request) {
-        setError(`No response from server. Check if the backend is running at ${API_BASE_URL}.`);
-      } else {
-        setError(`Request error: ${err.message}`);
-      }
-    }
-  };
-  
-  if (isLoading) {
+
+  if (isLoadingActivities || isLoadingUsers || isLoadingMedia) {
     return (
-      <Paper elevation={2} className="dashboard-card" style={{ minHeight: '450px' }}>
-        <Typography variant="h6" gutterBottom>Recent Activity</Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', py: 3, minHeight: '350px' }}>
-          <CircularProgress />
-          <Typography component="div" variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-            Loading activity logs...
-          </Typography>
-        </Box>
+      <Paper sx={{ padding: 2, textAlign: 'center', minHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Loading recent activities...</Typography>
       </Paper>
     );
   }
-  
-  if (error) {
-    return (
-      <Paper elevation={2} className="dashboard-card" style={{ minHeight: '450px' }}>
-        <Typography variant="h6" gutterBottom>Recent Activity</Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', py: 3, minHeight: '350px' }}>
-          <Typography component="div" color="error" gutterBottom>{error}</Typography>
-          
-          <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-            <Button 
-              variant="contained" 
-              color="primary" 
-              onClick={() => refetch()}
-              startIcon={<RefreshIcon />}
-            >
-              Retry
-            </Button>
-            
-            <Button 
-              variant="outlined" 
-              color="secondary" 
-              onClick={testAuthentication}
-            >
-              Test Auth
-            </Button>
-            
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={disableMock}
-                  onChange={handleToggleMock}
-                  size="small"
-                />
-              }
-              label="Disable Mock Data"
-            />
-          </Box>
-        </Box>
-      </Paper>
-    );
-  }
-  
+
+  // const testAuthentication = async () => { ... }; // This can be removed or adapted if still needed
+
   return (
-    <Paper elevation={2} className="dashboard-card has-scroll" style={{ width: '100%', maxWidth: '100%', minHeight: '450px' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+    <Paper elevation={2} sx={{ p: 2, minHeight: 300 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography variant="h6">Recent Activity</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={disableMock}
-                onChange={handleToggleMock}
-                size="small"
-              />
-            }
-            label={<Typography variant="caption">Disable Mock Data</Typography>}
+        <Box>
+           <FormControlLabel 
+            control={<Checkbox checked={disableMock} onChange={handleToggleMock} size="small" />} 
+            label={<Typography variant="caption">Disable Fallback Data</Typography>}
+            sx={{mr: 1}}
           />
           <Button 
-            variant="outlined" 
-            color="primary" 
+            onClick={handleRefresh} 
+            startIcon={isRefetching ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />}
+            disabled={isRefetching || isLoadingActivities}
             size="small"
-            onClick={handleRefresh}
-            disabled={isLoading || isRefetching}
-            startIcon={isRefetching ? <CircularProgress size={16} /> : <RefreshIcon />}
+            variant="outlined"
           >
-            {isRefetching ? 'Refreshing...' : 'Refresh'}
+            Refresh
           </Button>
-          {error && (
-            <Button 
-              variant="outlined" 
-              color="secondary" 
-              size="small"
-              onClick={testAuthentication}
-            >
-              Test Auth
-            </Button>
-          )}
         </Box>
       </Box>
-      
-      {activities.length === 0 ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 3, minHeight: '350px' }}>
-          <Typography component="div" color="textSecondary">
-            {isLoading ? 'Loading activity data...' : 'No recent activity found'}
-          </Typography>
-        </Box>
-      ) : (
-        <List sx={{ width: '100%', bgcolor: 'background.paper', minHeight: '350px', position: 'relative' }}>
-          {/* Show a loading overlay when refetching */}
-          {isRefetching && (
-            <Box sx={{ 
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(255, 255, 255, 0.5)',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: 5
-            }}>
-              <CircularProgress size={30} />
-            </Box>
-          )}
-          {activities.map((activity, index) => (
-            <React.Fragment key={`activity-${activity.id || index}`}>
+      {displayError && (
+        <Typography color="error" sx={{ mb: 2 }}>Error: {displayError}</Typography>
+      )}
+      {finalActivities.length === 0 && !displayError && (
+        <Typography sx={{ textAlign: 'center', py: 3 }}>No recent activity found.</Typography>
+      )}
+      <List dense>
+        {finalActivities.map((activity: ActivityLog, index: number) => { // Added types for activity and index
+          const user = activity.userId ? allUsers.find(u => u._id === activity.userId) : null;
+          const userDisplayName = user?.username || activity.username || 'System';
+          // const avatarText = user?.firstName && user?.lastName 
+          //                   ? `${user.firstName[0]}${user.lastName[0]}` 
+          //                   : userDisplayName.substring(0, 1).toUpperCase();
+
+          return (
+            <React.Fragment key={activity._id || index}>
               <ListItem alignItems="flex-start">
                 <ListItemAvatar>
-                  <Avatar sx={{ bgcolor: getAvatarColor(activity.action) }}>
-                    {getActionIcon(activity.action)}
+                  <Avatar sx={{ bgcolor: getAvatarColor(activity.action), width: 36, height: 36 }}>
+                    {getActionIcon(activity.action, activity.resourceType)}
                   </Avatar>
                 </ListItemAvatar>
                 <ListItemText
-                  primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography component="span" variant="body1" fontWeight="bold">
-                        {activity.username}
-                      </Typography>
-                      <Chip
-                        key={`chip-${activity.id || index}`}
-                        label={activity.action}
-                        size="small"
-                        sx={{ 
-                          bgcolor: getAvatarColor(activity.action), 
-                          color: 'white', 
-                          height: '20px', 
-                          fontSize: '0.7rem' 
-                        }}
-                      />
-                    </Box>
-                  }
+                  primary={renderActivityDetails(activity)}
                   secondary={
-                    <Box component="div" sx={{ mt: 1 }}>
-                      {renderActivityDetails(activity)}
-                      <Typography component="div" variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                        {formatRelativeTime(activity.timestamp)}
-                      </Typography>
-                    </Box>
+                    <Typography variant="caption" color="textSecondary">
+                      By: {userDisplayName} - {formatRelativeTime(activity.timestamp)}
+                    </Typography>
                   }
-                  secondaryTypographyProps={{ component: 'div' }}
                 />
               </ListItem>
-              {index < activities.length - 1 && <Divider key={`divider-${activity.id || index}`} />}
+              {index < finalActivities.length - 1 && <Divider variant="inset" component="li" />}
             </React.Fragment>
-          ))}
-        </List>
-      )}
+          );
+        })}
+      </List>
     </Paper>
   );
 };

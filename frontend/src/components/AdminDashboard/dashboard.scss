@@ -1,7 +1,6 @@
 // Dashboard shared styles
 .dashboard-container {
-  width: calc(100% - 250px);
-  margin-left: 250px;
+  width: 100%;
   padding: 1rem;
   background-color: var(--bg-primary, #1e1e1e);
   color: var(--text-primary, #ffffff);

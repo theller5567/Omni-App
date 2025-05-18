@@ -37,6 +37,7 @@ class LoggerService {
         details: data.details,
         resourceType: data.resourceType,
         resourceId: data.resourceId,
+        mediaTitle: data.mediaTitle,
         mediaSlug: data.mediaSlug || null,
         timestamp: data.timestamp || new Date(),
         tagId: data.tagId || null,

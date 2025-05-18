@@ -36,6 +36,11 @@ const activityLogSchema = new mongoose.Schema({
     type: String,
     required: false
   },
+  // Add mediaTitle field for easier display in the UI
+  mediaTitle: {
+    type: String,
+    required: false
+  },
   // Add fields for tag activities
   tagId: {
     type: String,

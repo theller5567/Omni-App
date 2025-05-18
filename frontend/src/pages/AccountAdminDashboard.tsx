@@ -9,12 +9,8 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '../store/store';
-import { AppDispatch } from '../store/store';
-import { initializeMedia } from '../store/slices/mediaSlice';
 import '../components/AdminDashboard/dashboard.scss';
-import { useMediaTypesWithUsageCounts } from '../hooks/query-hooks';
+import { useMediaTypesWithUsageCounts, useTransformedMedia } from '../hooks/query-hooks';
 
 // Lazy-loaded dashboard components
 const MediaTypeDistribution = lazy(() => import('../components/AdminDashboard/MediaTypeDistribution'));
@@ -68,13 +64,14 @@ const AccountAdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const dispatch = useDispatch<AppDispatch>();
   
-  // Get media data from Redux store
-  const allMedia = useSelector((state: RootState) => state.media.allMedia);
-  const mediaStatus = useSelector((state: RootState) => state.media.status);
+  // Get media data using TanStack Query
+  const { 
+    data: allMedia = [], 
+    isLoading: isLoadingMedia, 
+  } = useTransformedMedia();
   
-  // Get media types using TanStack Query instead of Redux
+  // Get media types using TanStack Query
   const { 
     data: mediaTypes = [], 
     isLoading: mediaTypesLoading,
@@ -83,19 +80,13 @@ const AccountAdminDashboard: React.FC = () => {
   
   // Initialize data when component mounts if not already loaded
   useEffect(() => {
-    const loadDashboardData = async () => {
-      // Only load media data if it hasn't been loaded yet
-      if (mediaStatus === 'idle' || allMedia.length === 0) {
-        console.log('Initializing media data for Admin Dashboard');
-        dispatch(initializeMedia());
-      }
-      
-      // Media types are now loaded automatically by TanStack Query
-      // No need to dispatch initializeMediaTypes
-    };
-    
-    loadDashboardData();
-  }, [dispatch, mediaStatus, allMedia.length]);
+    // Data fetching is now handled by TanStack Query hooks directly.
+    // No need for explicit dispatch(initializeMedia()) or similar here.
+    // TanStack Query will fetch when the component mounts if data is stale.
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Admin Dashboard: TanStack Query hooks will manage data fetching.');
+    }
+  }, []); // Empty dependency array, or could depend on specific query statuses if needed for side effects
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -124,7 +115,9 @@ const AccountAdminDashboard: React.FC = () => {
           {/* Media Stats Card */}
           <Paper elevation={2} className="dashboard-card stat-card">
             <Typography variant="h6" className="stat-title">Media Files</Typography>
-            <Typography variant="h3" className="stat-value" sx={{ color: 'primary.main' }}>{allMedia.length}</Typography>
+            <Typography variant="h3" className="stat-value" sx={{ color: 'primary.main' }}>
+              {isLoadingMedia ? <CircularProgress size={24} /> : allMedia.length}
+            </Typography>
             <Typography variant="body2" className="stat-subtitle">Total media files</Typography>
           </Paper>
           

@@ -27,8 +27,6 @@ import {
   Tabs
 } from '@mui/material';
 import { FaPlus, FaTrash, FaEdit, FaSave, FaEnvelope } from 'react-icons/fa';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store/store';
 import { 
   useNotificationSettings,
   useUpdateNotificationSettings,
@@ -36,7 +34,8 @@ import {
   useUpdateNotificationRule,
   useDeleteNotificationRule,
   useEligibleRecipients,
-  useSendTestNotification
+  useSendTestNotification,
+  useUserProfile
 } from '../../hooks/query-hooks';
 import './systemSettings.scss';
 
@@ -68,13 +67,22 @@ const TabPanel = (props: TabPanelProps) => {
 const SystemSettings: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   
-  // Get current user role from Redux
-  const userRole = useSelector((state: RootState) => state.user.currentUser?.role);
-  const isAuthorized = userRole === 'superAdmin';
+  // Get current user profile using TanStack Query
+  const { data: userProfile, isLoading: isLoadingUserProfile } = useUserProfile();
+  const isAuthorized = userProfile?.role === 'superAdmin';
   
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
+  
+  if (isLoadingUserProfile) {
+    return (
+      <Paper elevation={2} className="dashboard-card" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 200 }}>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Loading user profile...</Typography>
+      </Paper>
+    );
+  }
   
   if (!isAuthorized) {
     return (

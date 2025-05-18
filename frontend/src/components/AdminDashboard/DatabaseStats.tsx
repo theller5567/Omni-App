@@ -23,7 +23,7 @@ import { formatFileSize } from '../../utils/formatFileSize';
 import { useDatabaseStats } from '../../hooks/query-hooks';
 
 const DatabaseStats: React.FC = () => {
-  const [error, setError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
   
   // Get media and user data from Redux store for fallback
   const allMedia = useSelector((state: RootState) => state.media.allMedia);

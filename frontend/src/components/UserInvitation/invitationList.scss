@@ -1,0 +1,147 @@
+.invitation-list-container {
+  // This class is on the MUI Container, can be used for overall padding/margin if needed
+  // but might be better to let the Container handle its default behavior or use sx prop for that.
+}
+
+.invitation-custom-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color, #333);
+  border-radius: var(--border-radius-md, 8px);
+  overflow: hidden; // Ensures child border-radius conformity if needed
+  background-color: var(--bg-paper, #2a2a2a); // Base background for the list area
+}
+
+.invitation-list-header,
+.invitation-list-row {
+  display: grid;
+  // Define columns: Name, Email, Role, Status, Expires, Created, Actions
+  // Adjust fractions as needed for desired column widths
+  grid-template-columns: 1.5fr 2fr 1fr 1fr 1.5fr 1.5fr 1.5fr;
+  align-items: center;
+  min-height: 56px; // Fixed row height
+  border-bottom: 1px solid var(--border-color-light, #444);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.invitation-list-header {
+  background-color: var(--bg-secondary-dark, #222); // Darker header background
+  color: var(--text-color-strong, #fff);
+  font-weight: 600;
+  position: sticky;
+  top: 0; // If the list itself is scrollable, header can stick
+  z-index: 1;
+
+  .invitation-header-cell {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &.actions-header {
+      text-align: right;
+    }
+  }
+}
+
+.invitation-list-row {
+  // Zebra striping
+  &.invitation-list-row--odd {
+    background-color: var(--bg-paper, #2a2a2a); // Base row color (matches list background)
+  }
+
+  &.invitation-list-row--even {
+    background-color: var(--bg-secondary-light, #313131); // Stripe color
+  }
+
+  &:hover {
+    background-color: var(--bg-hover, #383838);
+  }
+
+  .invitation-data-cell {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-color, #ccc);
+    border-right: 1px solid var(--border-color-light, #444); // Vertical grid lines
+
+    &:last-child {
+      border-right: none;
+    }
+  }
+
+  .invitation-actions-cell {
+    text-align: right;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+
+    .action-button {
+      // General styles for action IconButtons, can be more specific
+      &.cancel-button {
+        // Specific styles if needed, color is set in TSX
+      }
+      &.resend-button {
+        // Specific styles if needed
+      }
+      &.delete-permanently-button {
+        // Specific styles if needed
+      }
+    }
+  }
+}
+
+// Responsive considerations (example)
+@media (max-width: 960px) { // MUI md breakpoint
+  .invitation-list-header,
+  .invitation-list-row {
+    // Make expires and created columns smaller, actions take more space or wrap
+    grid-template-columns: 1.5fr 2fr 1fr 1fr 1fr 1fr 1.2fr; 
+  }
+}
+
+@media (max-width: 768px) { // Custom breakpoint, adjust as needed
+  .invitation-list-header {
+    display: none; // Hide header on very small screens, use data-label for context
+  }
+
+  .invitation-list-row {
+    grid-template-columns: 1fr; // Stack columns
+    min-height: auto;
+    padding: 0.75rem 0;
+
+    .invitation-data-cell {
+      display: flex; // Allow label and value to sit side-by-side or stack
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      border-right: none;
+      border-bottom: 1px solid var(--border-color-extralight, #555); 
+      white-space: normal;
+      text-align: right; // Value to the right
+
+      &::before {
+        content: attr(data-label); // Show label from data-label attribute
+        font-weight: 500;
+        margin-right: 0.5rem;
+        color: var(--text-color-medium, #aaa);
+        text-align: left;
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+    
+    .invitation-actions-cell {
+      justify-content: flex-start; // Align actions to start on mobile
+      padding-top: 0.5rem;
+    }
+  }
+} 

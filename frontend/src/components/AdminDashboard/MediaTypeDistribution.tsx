@@ -1,7 +1,7 @@
 import React from 'react';
 import { Paper, Typography, Box, CircularProgress } from '@mui/material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { useTransformedMedia, useMediaTypesWithUsageCounts } from '../../hooks/query-hooks';
+import { useTransformedMedia, useMediaTypesWithUsageCounts, TransformedMediaFile } from '../../hooks/query-hooks';
 
 const COLORS: Record<string, string> = {
   'Product Image': '#3f8cff',
@@ -111,7 +111,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
 const MediaTypeDistribution: React.FC = () => {
   // Use TanStack Query hooks instead of Redux
   const { 
-    formattedData: allMedia = [], 
+    data: allMedia = [], 
     isLoading: isLoadingMedia, 
     isError: isMediaError 
   } = useTransformedMedia();
@@ -161,7 +161,7 @@ const MediaTypeDistribution: React.FC = () => {
   // Calculate distribution data
   const getDistributionData = () => {
     // Create a count map of media types
-    const mediaTypeCounts = allMedia.reduce((acc: {[key: string]: number}, media) => {
+    const mediaTypeCounts = allMedia.reduce((acc: {[key: string]: number}, media: TransformedMediaFile) => {
       const type = media.mediaType || 'Uncategorized';
       acc[type] = (acc[type] || 0) + 1;
       return acc;

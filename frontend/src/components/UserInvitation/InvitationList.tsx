@@ -20,16 +20,19 @@ import {
   DialogTitle,
   DialogContent,
   DialogContentText,
-  DialogActions
+  DialogActions,
+  Container
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
   Send as ResendIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  DeleteForever as DeleteForeverIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config/config';
 import { formatDistance } from 'date-fns';
+import './invitationList.scss'; // Import the new SCSS file
 
 interface Invitation {
   _id: string;
@@ -64,6 +67,8 @@ const InvitationList: React.FC<InvitationListProps> = ({ refreshTrigger, onRefre
   const [invitationToResend, setInvitationToResend] = useState<Invitation | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [invitationToDeletePermanently, setInvitationToDeletePermanently] = useState<Invitation | null>(null);
+  const [deletePermanentlyDialogOpen, setDeletePermanentlyDialogOpen] = useState<boolean>(false);
   
   // Load invitations
   const fetchInvitations = async () => {
@@ -197,6 +202,41 @@ const InvitationList: React.FC<InvitationListProps> = ({ refreshTrigger, onRefre
     }
   };
   
+  // --- New: Delete Permanently ---
+  const handleDeletePermanentlyClicked = (invitation: Invitation) => {
+    setInvitationToDeletePermanently(invitation);
+    setDeletePermanentlyDialogOpen(true);
+  };
+
+  const handleDeletePermanentlySubmit = async () => {
+    if (!invitationToDeletePermanently) return;
+
+    try {
+      setActionLoading(`delete-perm-${invitationToDeletePermanently._id}`);
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        setError('You must be logged in to delete invitations');
+        setActionLoading(null);
+        return;
+      }
+
+      await axios.delete(`${API_BASE_URL}/api/invitations/${invitationToDeletePermanently._id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setInvitations(prev => prev.filter(inv => inv._id !== invitationToDeletePermanently._id));
+      setActionSuccess(`Invitation to ${invitationToDeletePermanently.email} has been permanently deleted.`);
+      setInvitationToDeletePermanently(null);
+      setDeletePermanentlyDialogOpen(false);
+
+    } catch (err: any) {
+      console.error('Error permanently deleting invitation:', err);
+      setError(err.response?.data?.message || 'An error occurred while permanently deleting the invitation.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+  
   // Handle refresh
   const handleRefresh = () => {
     fetchInvitations();
@@ -260,7 +300,7 @@ const InvitationList: React.FC<InvitationListProps> = ({ refreshTrigger, onRefre
   };
   
   return (
-    <Paper elevation={3} sx={{ p: 3 }}>
+    <Container className="invitation-list-container">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5">
           Invitations
@@ -301,83 +341,91 @@ const InvitationList: React.FC<InvitationListProps> = ({ refreshTrigger, onRefre
         </Alert>
       ) : (
         <>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Role</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Expires</TableCell>
-                  <TableCell>Created</TableCell>
-                  <TableCell align="right">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {invitations
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((invitation) => (
-                    <TableRow key={invitation._id}>
-                      <TableCell>
-                        {invitation.firstName} {invitation.lastName}
-                      </TableCell>
-                      <TableCell>{invitation.email}</TableCell>
-                      <TableCell sx={{ textTransform: 'capitalize' }}>
-                        {invitation.role}
-                      </TableCell>
-                      <TableCell>
-                        {invitation.status === 'pending' && isExpired(invitation.expiresAt)
-                          ? renderStatusChip('expired')
-                          : renderStatusChip(invitation.status)}
-                      </TableCell>
-                      <TableCell>
-                        {formatDate(invitation.expiresAt)}
-                      </TableCell>
-                      <TableCell>
-                        {formatDate(invitation.createdAt)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {invitation.status === 'pending' && !isExpired(invitation.expiresAt) && (
-                          <>
-                            <Tooltip title="Resend Invitation">
-                              <IconButton 
-                                size="small" 
-                                color="primary"
-                                onClick={() => setInvitationToResend(invitation)}
-                                disabled={actionLoading === `resend-${invitation._id}`}
-                              >
-                                {actionLoading === `resend-${invitation._id}` ? (
-                                  <CircularProgress size={24} />
-                                ) : (
-                                  <ResendIcon fontSize="small" />
-                                )}
-                              </IconButton>
-                            </Tooltip>
-                            
-                            <Tooltip title="Cancel Invitation">
-                              <IconButton 
-                                size="small" 
-                                color="error"
-                                onClick={() => setInvitationToCancel(invitation)}
-                                disabled={actionLoading === `cancel-${invitation._id}`}
-                              >
-                                {actionLoading === `cancel-${invitation._id}` ? (
-                                  <CircularProgress size={24} />
-                                ) : (
-                                  <DeleteIcon fontSize="small" />
-                                )}
-                              </IconButton>
-                            </Tooltip>
-                          </>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <div className="invitation-custom-list">
+            {/* Header Row */}
+            <div className="invitation-list-header">
+              <div className="invitation-header-cell">Name</div>
+              <div className="invitation-header-cell">Email</div>
+              <div className="invitation-header-cell">Role</div>
+              <div className="invitation-header-cell">Status</div>
+              <div className="invitation-header-cell">Expires</div>
+              <div className="invitation-header-cell">Created</div>
+              <div className="invitation-header-cell actions-header">Actions</div>
+            </div>
+
+            {/* Data Rows */}
+            {invitations
+              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage) // Pagination logic still applied here
+              .map((invitation, index) => (
+                <div 
+                  className={`invitation-list-row ${index % 2 === 0 ? 'invitation-list-row--even' : 'invitation-list-row--odd'}`} 
+                  key={invitation._id}
+                >
+                  <div className="invitation-data-cell" data-label="Name">
+                    {invitation.firstName} {invitation.lastName}
+                  </div>
+                  <div className="invitation-data-cell" data-label="Email">{invitation.email}</div>
+                  <div className="invitation-data-cell" data-label="Role" style={{ textTransform: 'capitalize' }}>
+                    {invitation.role}
+                  </div>
+                  <div className="invitation-data-cell" data-label="Status">
+                    {invitation.status === 'pending' && isExpired(invitation.expiresAt)
+                      ? renderStatusChip('expired')
+                      : renderStatusChip(invitation.status)}
+                  </div>
+                  <div className="invitation-data-cell" data-label="Expires">
+                    {formatDate(invitation.expiresAt)}
+                  </div>
+                  <div className="invitation-data-cell" data-label="Created">
+                    {formatDate(invitation.createdAt)}
+                  </div>
+                  <div className="invitation-data-cell invitation-actions-cell" data-label="Actions">
+                    {invitation.status === 'pending' && !isExpired(invitation.expiresAt) && (
+                      <>
+                        <Tooltip title="Cancel Invitation">
+                          <IconButton
+                            size="small"
+                            onClick={() => setInvitationToCancel(invitation)}
+                            disabled={!!actionLoading}
+                            color="warning"
+                            className="action-button cancel-button"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Resend Invitation">
+                          <IconButton
+                            size="small"
+                            onClick={() => setInvitationToResend(invitation)}
+                            disabled={!!actionLoading}
+                            color="primary"
+                            className="action-button resend-button"
+                          >
+                            <ResendIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </>
+                    )}
+                    {invitation.status === 'cancelled' && (
+                      <Tooltip title="Delete Permanently">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeletePermanentlyClicked(invitation)}
+                          disabled={!!actionLoading}
+                          color="error"
+                          className="action-button delete-permanently-button"
+                        >
+                          <DeleteForeverIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {/* Placeholder for other statuses if needed */}
+                  </div>
+                </div>
+              ))}
+          </div>
           
+          {/* 
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
@@ -386,7 +434,8 @@ const InvitationList: React.FC<InvitationListProps> = ({ refreshTrigger, onRefre
             page={page}
             onPageChange={handleChangePage}
             onRowsPerPageChange={handleChangeRowsPerPage}
-          />
+          /> 
+          */}
         </>
       )}
       
@@ -432,7 +481,33 @@ const InvitationList: React.FC<InvitationListProps> = ({ refreshTrigger, onRefre
           </Button>
         </DialogActions>
       </Dialog>
-    </Paper>
+
+      {/* --- New: Confirmation Dialog for Permanent Deletion --- */}
+      <Dialog open={deletePermanentlyDialogOpen} onClose={() => setDeletePermanentlyDialogOpen(false)}>
+        <DialogTitle>Confirm Permanent Delete</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to permanently delete the invitation for {' '}
+            <strong>{invitationToDeletePermanently?.email}</strong>? 
+            This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeletePermanentlyDialogOpen(false)} color="inherit" disabled={!!actionLoading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeletePermanentlySubmit} 
+            color="error" 
+            variant="contained"
+            disabled={!!actionLoading}
+            startIcon={actionLoading === `delete-perm-${invitationToDeletePermanently?._id}` ? <CircularProgress size={16} color="inherit" /> : null}
+          >
+            {actionLoading === `delete-perm-${invitationToDeletePermanently?._id}` ? 'Deleting...' : 'Delete Permanently'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
 };
 

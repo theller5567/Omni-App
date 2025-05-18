@@ -15,7 +15,7 @@ $spacing-lg: 15px;
 // Dialog Container Styles
 #dialog-container {
   width: 100%;
-  max-width: calc(100% - 250px);
+  max-width: 100%;
   margin-left: auto;
   
   .MuiDialog-paper {

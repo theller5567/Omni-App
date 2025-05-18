@@ -3,7 +3,6 @@ $spacing-xs: 0.5rem;
 $spacing-sm: 1rem;
 $spacing-md: 2rem;
 $spacing-lg: 4rem;
-$sidebar-width: 250px;
 $border-radius: 0.5rem;
 
 // Mixins
@@ -38,11 +37,11 @@ $border-radius: 0.5rem;
   overflow: hidden;
   box-sizing: border-box;
   padding: $spacing-md;
-  padding-left: calc($spacing-md + $sidebar-width);
+  padding-left: $spacing-md;
   @include flex-container(column);
   @include mobile {
     padding: $spacing-sm;
-    padding-left: calc($spacing-sm + $sidebar-width);
+    padding-left: $spacing-sm;
     height: auto;
     min-height: calc(100vh - 60px);
   }

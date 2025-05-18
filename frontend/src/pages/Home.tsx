@@ -94,7 +94,7 @@ const HomePage: React.FC = () => {
 
   return (
     <Box display="flex" justifyContent="center" alignItems="start" height="100vh">
-      <Paper elevation={3} sx={{ padding: '2rem', width: "100%", marginBlock: '2rem', marginLeft: '250px' }}>
+      <Paper elevation={3} sx={{ padding: '2rem', width: "100%", marginBlock: '2rem' }}>
         <Typography variant="h5" align="center" gutterBottom>
           Contacts
         </Typography>

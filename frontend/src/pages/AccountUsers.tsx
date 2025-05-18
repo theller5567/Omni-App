@@ -1,10 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../store/store';
-import { fetchAllUsers, updateUser } from '../store/slices/userSlice';
+import React, { useState } from 'react';
 import { DataGrid, GridColDef, GridToolbar, GridRenderCellParams } from '@mui/x-data-grid';
 import { 
-  alpha, 
   Avatar, 
   Box, 
   Button, 
@@ -17,26 +13,31 @@ import {
   IconButton, 
   InputLabel,
   MenuItem,
-  Paper,
   Select,
   Tab,
   Tabs,
   TextField,
-  Toolbar, 
   Tooltip, 
   Typography,
   useMediaQuery,
-  Theme
+  Theme,
+  CircularProgress,
+  Alert,
+  Link
 } from '@mui/material';
 import { toast } from 'react-toastify';
-import { FaTrash, FaEdit, FaUser, FaEnvelope, FaIdCard, FaUserTag, FaUserPlus, FaTimes } from 'react-icons/fa';
+import { FaTrash, FaEdit, FaEnvelope, FaTimes, FaUserPlus } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import './accountUsers.scss';
-import { AppDispatch } from '../store/store';
-import type { User } from '../types/userTypes';
 import { SelectChangeEvent } from '@mui/material';
 import InvitationForm from '../components/UserInvitation/InvitationForm';
 import InvitationList from '../components/UserInvitation/InvitationList';
+import { 
+  useUserProfile, 
+  useAllUsers, 
+  useUpdateUserProfile,
+  User
+} from '../hooks/query-hooks';
 
 // Interface for tab panel props
 interface TabPanelProps {
@@ -59,7 +60,7 @@ function TabPanel(props: TabPanelProps) {
       {...other}
     >
       {value === index && (
-        <Box sx={{ p: 3 }}>
+        <Box className="custom-tab-panel-content">
           {children}
         </Box>
       )}
@@ -75,93 +76,98 @@ function a11yProps(index: number) {
   };
 }
 
-const AccountUsers = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { currentUser, users } = useSelector((state: RootState) => state.user);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+const AccountUsers: React.FC = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [userIdToDelete, setUserIdToDelete] = useState<string | null>(null);
-  const [editFormData, setEditFormData] = useState({
+  const [editFormData, setEditFormData] = useState<Partial<User>>({
     firstName: '',
     lastName: '',
     email: '',
     username: '',
-    role: ''
+    role: 'user'
   });
   
-  // Tab state
   const [tabValue, setTabValue] = useState(0);
   const [newUserDialog, setNewUserDialog] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
 
-  useEffect(() => {
-    // Fetch users if we're admin/super-admin and users haven't been loaded yet
-    console.log('AccountUsers - Current state:', {
-      role: currentUser?.role,
-      usersCount: users.allUsers?.length,
-      usersStatus: users.status
-    });
-    
-    if ((currentUser?.role === 'admin' || currentUser?.role === 'superAdmin') && 
-        (users.status === 'idle' || (!users.allUsers || users.allUsers.length === 0))) {
-      console.log('AccountUsers - Fetching users');
-      dispatch(fetchAllUsers());
-    }
-  }, [dispatch, currentUser?.role, users.status, users.allUsers]);
+  const { data: currentUserProfile, isLoading: isCurrentUserLoading, error: currentUserError } = useUserProfile();
+  const { 
+    data: usersData = [], 
+    isLoading: isLoadingUsers, 
+    error: usersError
+  } = useAllUsers({
+    enabled: !!currentUserProfile && (currentUserProfile.role === 'admin' || currentUserProfile.role === 'superAdmin')
+  });
+  const { mutate: updateUserMutate, isPending: isUpdatingUser } = useUpdateUserProfile();
 
-  // Handle tab change
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
   
-  // Handle invitation sent
   const handleInvitationSent = () => {
     setNewUserDialog(false);
     setRefreshTrigger(prev => prev + 1);
   };
 
-  const handleEdit = (id: string) => {
-    const user = users.allUsers.find(u => u._id === id);
-    if (user) {
-      setUserToEdit(user);
-      setEditFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        username: user.username || '',
-        role: user.role || 'user'
-      });
-      setEditDialogOpen(true);
-    }
+  const handleEdit = (user: User) => {
+    setUserToEdit(user);
+    setEditFormData({
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      email: user.email || '',
+      username: user.username || '',
+      role: user.role || 'user'
+    });
+    setEditDialogOpen(true);
   };
 
   const handleEditSubmit = async () => {
-    if (!userToEdit) return;
-    
-    try {
-      // Cast role to the proper type
-      const role = editFormData.role as 'user' | 'admin' | 'distributor' | 'superAdmin';
-      
-      await dispatch(updateUser({
-        _id: userToEdit._id,
-        firstName: editFormData.firstName,
-        lastName: editFormData.lastName,
-        email: editFormData.email,
-        username: editFormData.username,
-        role
-      })).unwrap();
-      
-      toast.success('User updated successfully');
-      setEditDialogOpen(false);
-      setUserToEdit(null);
-    } catch (error) {
-      toast.error('Failed to update user');
-      console.error('Update error:', error);
+    if (!userToEdit || !userToEdit._id) {
+      toast.error("User data is incomplete for update.");
+      return;
     }
+
+    const payload: Partial<User> & { _id: string } = { _id: userToEdit._id };
+    let hasChanges = false;
+
+    if (editFormData.firstName !== undefined && editFormData.firstName !== userToEdit.firstName) {
+      payload.firstName = editFormData.firstName;
+      hasChanges = true;
+    }
+    if (editFormData.lastName !== undefined && editFormData.lastName !== userToEdit.lastName) {
+      payload.lastName = editFormData.lastName;
+      hasChanges = true;
+    }
+    if (editFormData.email !== undefined && editFormData.email !== userToEdit.email) {
+      payload.email = editFormData.email;
+      hasChanges = true;
+    }
+    if (editFormData.role !== undefined && editFormData.role !== userToEdit.role) {
+      payload.role = editFormData.role;
+      hasChanges = true;
+    }
+    
+    if (!hasChanges) {
+      toast.info("No changes were made.");
+      setEditDialogOpen(false);
+      return;
+    }
+
+    updateUserMutate(payload, {
+      onSuccess: (updatedUser) => {
+        toast.success(`User ${updatedUser.username || 'profile'} updated successfully`);
+        setEditDialogOpen(false);
+        setUserToEdit(null);
+      },
+      onError: (error: any) => {
+        toast.error(`Failed to update user: ${error.message || 'Unknown error'}`);
+      }
+    });
   };
 
   const handleDeleteClick = (id: string) => {
@@ -170,11 +176,10 @@ const AccountUsers = () => {
   };
 
   const handleDeleteConfirm = () => {
-    // Implement actual delete functionality here
-    console.log('Delete user', userIdToDelete);
+    console.log('Delete user action for ID:', userIdToDelete);
+    toast.warn("Delete functionality not fully implemented yet.");
     setDeleteDialogOpen(false);
     setUserIdToDelete(null);
-    // You might want to add an actual deleteUser action
   };
 
   const handleFieldChange = (
@@ -187,581 +192,307 @@ const AccountUsers = () => {
     }));
   };
 
-  // User Cell Component for DataGrid
-  const UserCell = ({ params }: { params: GridRenderCellParams }) => {
+  const UserCell = ({ params }: { params: GridRenderCellParams<any, User> }) => {
     const { value } = params;
+    const user = params.row;
     
     return (
-      <div className="user-cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'start', gap: '8px' }}>
+      <div className="user-cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'start', gap: '8px', height: '100%' }}>
         <Avatar 
-              sx={{ 
-                width: 32, 
-                height: 32,
-                bgcolor: `var(--${params.row.role === 'superAdmin' ? 'accent-color' : params.row.role === 'admin' ? 'primary-color' : 'secondary-color'})` 
-              }} 
-              src={params.row.avatar}
-            >
-              {params.row.firstName?.[0] || params.row.username?.[0] || 'U'}
-            </Avatar>
-        <Typography variant="body2">{value}</Typography>
+          sx={{ 
+            width: 32, 
+            height: 32,
+            bgcolor: `var(--${user.role === 'superAdmin' ? 'accent-color' : user.role === 'admin' ? 'primary-color' : 'secondary-color'})` 
+          }} 
+          src={user.avatar || undefined}
+        >
+          {(user.firstName?.[0] || user.username?.[0] || 'U').toUpperCase()}
+        </Avatar>
+        <Link className="user-link" href={`/user/${user._id}`} underline="hover" color="var(--text-secondary)">
+          <Typography variant="body2">{value?.toString()}</Typography>
+        </Link>
       </div>
     );
   };
 
-  const columns: GridColDef[] = [
+  const columns: GridColDef<User>[] = [
     { 
       field: 'username', 
       headerName: 'Username',
+      align: 'center',
       flex: 1,
       renderCell: (params) => <UserCell params={params} />
     },
     {
       field: 'email',
       headerName: 'Email',
-      flex: 1,
-      minWidth: 200,
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params: GridRenderCellParams) => {
-        if (!params.row) return null;
-        return <span>{params.row.email}</span>;
-      }
+      flex: 1.5,
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <FaEnvelope style={{ marginRight: '8px', color: 'var(--text-secondary)' }} />
+          {params.value}
+        </Box>
+      )
     },
-    { 
-      field: 'fullName', 
-      headerName: 'Full Name', 
-      flex: 1,
-      minWidth: 150,
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params: GridRenderCellParams) => {
-        if (!params.row) return null;
-        const fullName = `${params.row.firstName || ''} ${params.row.lastName || ''}`.trim();
-        return <span>{fullName || 'Not set'}</span>;
-      }
-    },
-    { 
-      field: 'role', 
-      headerName: 'Role', 
-      flex: 0.5,
-      minWidth: 120,
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params: GridRenderCellParams) => {
-        if (!params.row) return null;
-        
-        const roleColors = {
-          superAdmin: '#f44336',
-          admin: '#3f51b5',
-          distributor: '#ff9800',
-          user: '#757575'
-        };
-        
-        const roleBgColors = {
-          superAdmin: 'rgba(244, 67, 54, 0.12)',
-          admin: 'rgba(63, 81, 181, 0.12)',
-          distributor: 'rgba(255, 152, 0, 0.12)',
-          user: 'rgba(117, 117, 117, 0.12)'
-        };
-        
-        return (
-          <Chip 
-            label={params.row.role} 
-            size="small"
-            sx={{ 
-              fontWeight: 500,
-              textTransform: 'capitalize',
-              bgcolor: roleBgColors[params.row.role as keyof typeof roleBgColors] || roleBgColors.user,
-              color: roleColors[params.row.role as keyof typeof roleColors] || roleColors.user,
-              border: `1px solid ${roleColors[params.row.role as keyof typeof roleColors] || roleColors.user}`,
-              borderRadius: '16px',
-            }}
-          />
-        );
-      }
+    {
+      field: 'role',
+      headerName: 'Role',
+      flex: 0.75,
+      renderCell: (params) => (
+        <Chip 
+          label={params.value} 
+          size="small" 
+          color={params.value === 'admin' || params.value === 'superAdmin' ? 'primary' : 'default'} 
+          variant="outlined"
+        />
+      )
     },
     {
       field: 'actions',
       headerName: 'Actions',
-      flex: 0.5,
-      minWidth: 120,
+      flex: 0.75,
       sortable: false,
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params: GridRenderCellParams) => {
-        if (!params.row) return null;
-        return (
-          <Box sx={{ display: 'flex', gap: '8px', justifyContent: 'center', width: '100%' }}>
-            <Tooltip title="Edit User">
-              <IconButton
-                color="primary"
-                size="small"
-                onClick={() => handleEdit(params.row._id)}
-                className="action-button edit"
-              >
-                <FaEdit />
-              </IconButton>
-            </Tooltip>
-            
-            {currentUser?.role === 'superAdmin' && params.row._id !== currentUser._id && (
-              <Tooltip title="Delete User">
-                <IconButton
-                  color="error"
-                  size="small"
-                  onClick={() => handleDeleteClick(params.row._id)}
-                  className="action-button delete"
-                >
-                  <FaTrash />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Box>
-        );
-      },
-    },
-  ];
-
-  const EnhancedTableToolbar = ({ numSelected }: { numSelected: number }) => (
-    <Toolbar
-      className="toolbar"
-      sx={{
-        ...(numSelected > 0 && {
-          bgcolor: (theme) =>
-            alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
-        }),
-      }}
-    >
-      {numSelected > 0 && (
-        <Typography
-          sx={{ flex: '1 1 100%' }}
-          color="inherit"
-          variant="subtitle1"
-          component="div"
-        >
-          {numSelected} selected
-        </Typography>
-      )}
-      {numSelected > 0 && currentUser?.role === 'superAdmin' ? (
-        <Tooltip title="Delete">
-          <IconButton onClick={() => handleDeleteClick(selectedUser?._id || '')}>
-            <FaTrash />
-          </IconButton>
-        </Tooltip>
-      ) : null}
-    </Toolbar>
-  );
-
-  const containerVariants = {
-    hidden: { opacity: 0, x: isMobile ? -100 : -350 },
-    visible: { opacity: 1, x: 0, transition: { duration: isMobile ? 0.3 : 0.5 } },
-    exit: { opacity: 0, x: isMobile ? -100 : -350, transition: { duration: isMobile ? 0.3 : 0.5 } },
-  };
-
-  // Show loading state
-  if (users.status === 'loading') {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Typography>Loading users...</Typography>
-      </Box>
-    );
-  }
-
-  // Show error state
-  if (users.status === 'failed') {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Typography color="error">Error: {users.error || 'Failed to load users'}</Typography>
-      </Box>
-    );
-  }
-
-  return (
-    <motion.div
-      id="account-users"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-    >
-      <Box className="account-users" sx={{ width: '100%', overflow: 'hidden' }}>
-        <Typography variant="h1" align="left" sx={{ paddingBottom: isMobile ? '1rem' : '2rem' }}>
-          Manage Users
-        </Typography>
-        
-        <Paper elevation={2} className="user-management-container">
-          <Box className="tab-header">
-            <Tabs 
-              value={tabValue} 
-              onChange={handleTabChange} 
-              className="user-tabs"
-              variant="fullWidth"
+      filterable: false,
+      renderCell: (params) => (
+        <Box>
+          <Tooltip title="Edit User">
+            <IconButton 
+              onClick={() => handleEdit(params.row)} 
+              color="primary" 
+              size="small"
+              disabled={isUpdatingUser || editDialogOpen}
             >
-              <Tab label="Users" {...a11yProps(0)} className="user-tab" />
-              <Tab label="Invitations" {...a11yProps(1)} className="user-tab" />
-            </Tabs>
+              <FaEdit />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete User (Not Implemented)">
+            <IconButton 
+              onClick={() => handleDeleteClick(params.row._id!)} 
+              color="error" 
+              size="small"
+              disabled={isUpdatingUser || editDialogOpen}
+            >
+              <FaTrash />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      )
+    }
+  ];
+  
+  if (!isMobile) {
+    columns.splice(1, 0, { field: 'firstName', headerName: 'First Name', flex: 1 });
+    columns.splice(2, 0, { field: 'lastName', headerName: 'Last Name', flex: 1 });
+  }
+
+  if (isCurrentUserLoading) {
+    return (
+      <Box className="loading-indicator-container">
+        <CircularProgress />
+        <Typography className="loading-indicator-text">Loading your permissions...</Typography>
+      </Box>
+    );
+  }
+
+  if (currentUserError) {
+    return <Alert severity="error" className="error-alert-message">Error loading your profile: {currentUserError?.message || 'An unknown error occurred.'}</Alert>;
+  }
+
+  if (!currentUserProfile || (currentUserProfile.role !== 'admin' && currentUserProfile.role !== 'superAdmin')) {
+    return (
+      <Box className="access-denied-container">
+        <Typography variant="h4" color="error" gutterBottom>
+          Access Denied
+        </Typography>
+        <Typography variant="body1">
+          You do not have permission to manage users.
+        </Typography>
+      </Box>
+    );
+  }
+  
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="account-users-page-container"
+    >
+      <Typography 
+        variant={isMobile ? "h4" : "h2"} 
+        gutterBottom 
+        className="account-users-title"
+      >
+        User Management
+      </Typography>
+      <Box className="account-users-tabs-container">
+    
+          <Tabs 
+            value={tabValue} 
+            onChange={handleTabChange} 
+            aria-label="user management tabs" 
+            variant={isMobile ? "fullWidth" : "standard"}
+            indicatorColor="primary"
+            textColor="primary"
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
+          >
+            <Tab label="All Users" {...a11yProps(0)} />
+            <Tab label="Invitations" {...a11yProps(1)} />
+          </Tabs>
+          <Box className="account-users-invite-button-container">
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={<FaUserPlus />}
+              onClick={() => setNewUserDialog(true)}
+            >
+              Invite User
+            </Button>
           </Box>
-          
-          {/* Users Tab */}
-          <TabPanel value={tabValue} index={0}>
-            <Box className="tab-content">
-              <Typography variant="h6" gutterBottom>
-                User Management
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Manage user accounts, edit user details, and control access permissions. 
-                {currentUser?.role === 'superAdmin' && ' As a super admin, you can also delete user accounts.'}
-              </Typography>
-              
-              {selectedUser && (
-                <EnhancedTableToolbar numSelected={1} />
-              )}
-              
-              <Box sx={{ height: 500, width: '100%', mt: 2 }}>
-                <DataGrid
-                  className="users-data-grid"
-                  rows={users.allUsers}
-                  columns={columns}
-                  getRowId={(row) => row._id}
-                  pageSizeOptions={[5, 10, 20, 50]}
-                  initialState={{
-                    pagination: {
-                      paginationModel: { pageSize: 10 },
-                    },
-                    sorting: {
-                      sortModel: [{ field: 'username', sort: 'asc' }],
-                    },
-                  }}
-                  checkboxSelection={currentUser?.role === 'superAdmin'}
-                  disableRowSelectionOnClick
-                  onRowSelectionModelChange={(newSelection) => {
-                    const selectedId = newSelection[0];
-                    const foundUser = users.allUsers.find(u => u._id === selectedId);
-                    setSelectedUser(foundUser || null);
-                  }}
-                  slots={{ toolbar: GridToolbar }}
-                  slotProps={{
-                    toolbar: {
-                      showQuickFilter: true,
-                      quickFilterProps: { debounceMs: 500 },
-                    },
-                  }}
-                  sx={{
-                    border: 'none',
-                    fontFamily: 'inherit',
-                    '& .MuiDataGrid-columnHeader': {
-                      backgroundColor: 'var(--bg-secondary, #222)',
-                      color: 'var(--text-color, #fff)',
-                    },
-                    '& .MuiDataGrid-columnHeaderTitle': {
-                      fontWeight: 600,
-                      fontSize: '14px',
-                      color: 'var(--text-color, #fff)',
-                      fontFamily: 'inherit',
-                    },
-                    '& .MuiDataGrid-columnHeaderTitleContainer': {
-                      justifyContent: 'left',
-                    },
-                    '& .MuiDataGrid-cell': {
-                      borderBottom: '1px solid var(--border-color, #333)',
-                      color: 'var(--text-color, #fff)',
-                      fontSize: '14px',
-                      fontFamily: 'inherit',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'left',
-                    },
-                    '& .MuiDataGrid-cell:focus': {
-                      outline: 'none',
-                    },
-                    '& .MuiDataGrid-row': {
-                      height: '52px',
-                      '&:hover': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      },
-                    },
-                    '& .MuiCheckbox-root': {
-                      color: 'var(--text-color, #fff)',
-                      padding: '4px',
-                      '&.Mui-checked': {
-                        color: 'var(--primary-color, #4dabf5)',
-                      },
-                      '& .MuiSvgIcon-root': {
-                        fontSize: '1.25rem',
-                        width: '1.25rem',
-                        height: '1.25rem',
-                      }
-                    },
-                    '& .MuiDataGrid-cellCheckbox, & .MuiDataGrid-columnHeaderCheckbox': {
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'left',
-                      padding: '0 6px',
-                      '& .MuiCheckbox-root': {
-                        padding: 0,
-                      }
-                    },
-                    '& .MuiDataGrid-footerContainer': {
-                      borderTop: '1px solid var(--border-color, #333)',
-                      backgroundColor: 'var(--bg-secondary, #222)',
-                      fontFamily: 'inherit',
-                    },
-                    '& .MuiTablePagination-root': {
-                      color: 'var(--text-color, #fff)',
-                      fontFamily: 'inherit',
-                    },
-                    '& .MuiIconButton-root': {
-                      color: 'var(--text-color, #fff)',
-                    },
-                    '& .MuiDataGrid-virtualScroller': {
-                      backgroundColor: 'var(--bg-secondary, #222)',
-                    },
-                    '& .MuiDataGrid-main': {
-                      backgroundColor: 'var(--bg-secondary, #222)',
-                      color: 'var(--text-color, #fff)',
-                      fontFamily: 'inherit',
-                    },
-                    '& .MuiDataGrid-toolbarContainer': {
-                      backgroundColor: 'var(--bg-secondary, #222)',
-                      padding: '8px 16px',
-                      borderBottom: '1px solid var(--border-color, #333)',
-                      fontFamily: 'inherit',
-                    },
-                    '& .MuiInputBase-root': {
-                      color: 'var(--text-color, #fff)',
-                      backgroundColor: 'var(--background-color, #121212)',
-                      borderRadius: '4px',
-                      padding: '2px 8px',
-                      fontFamily: 'inherit',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: 'var(--border-color, #333)',
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: 'var(--border-color, #555)',
-                      }
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: 'var(--text-secondary, #aaa)',
-                      fontFamily: 'inherit',
-                    },
-                    '& .MuiDataGrid-columnSeparator': {
-                      color: 'var(--border-color, #333)',
-                    },
-                  }}
-                />
-              </Box>
-            </Box>
-          </TabPanel>
-          
-          {/* Invitations Tab */}
-          <TabPanel value={tabValue} index={1}>
-            <Box className="tab-content">
-              <Box className="invitation-section">
-                <Box className="section-header">
-                  <div>
-                    <Typography variant="h6" gutterBottom>
-                      User Invitations
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Invite new users to join Omni's Media Library. Invited users will receive an email with instructions to create their account.
-                    </Typography>
-                  </div>
-                
-                  <Button 
-                    variant="contained" 
-                    color="primary" 
-                    size="large" 
-                    className="invitation-button" 
-                    startIcon={<FaUserPlus />}
-                    onClick={() => setNewUserDialog(true)}
-                  >
-                    Invite New User
-                  </Button>
-                </Box>
-                
-                <Box className="invitation-table-container">
-                  <InvitationList refreshTrigger={refreshTrigger} />
-                </Box>
-              </Box>
-            </Box>
-          </TabPanel>
-        </Paper>
       </Box>
       
-      {/* New User Invitation Dialog */}
-      <Dialog 
-        open={newUserDialog} 
-        onClose={() => setNewUserDialog(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box display="flex" alignItems="center">
-            <FaUserPlus style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
-            Invite New User
-          </Box>
-          <IconButton
-            aria-label="close"
-            onClick={() => setNewUserDialog(false)}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: 'var(--text-color, #fff)'
-            }}
-          >
-            <FaTimes />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          <InvitationForm onInvitationSent={handleInvitationSent} />
-        </DialogContent>
-      </Dialog>
+
+      <TabPanel value={tabValue} index={0}>
+       
+          {isLoadingUsers && !usersData.length ? (
+            <Box className="loading-indicator-container">
+              <CircularProgress />
+              <Typography className="loading-indicator-text">Loading users list...</Typography>
+            </Box>
+          ) : usersError ? (
+            <Alert severity="error" className="error-alert-message">Error loading users: {usersError?.message || 'An unknown error occurred.'}</Alert>
+          ) : (
+            <DataGrid
+              className="users-data-grid"
+              rows={usersData}
+              columns={columns}
+              getRowId={(row) => row._id!}
+              pageSizeOptions={[10, 25, 50]}
+              initialState={{
+                pagination: { paginationModel: { pageSize: 10 } },
+              }}
+              slots={{ toolbar: GridToolbar }}
+              slotProps={{
+                toolbar: {
+                  className: 'custom-data-grid-toolbar',
+                  showQuickFilter: false,
+                  printOptions: { disableToolbarButton: true },
+                  csvOptions: { disableToolbarButton: true },
+                }
+              }}
+              autoHeight
+              getRowClassName={(params) =>
+                params.indexRelativeToCurrentPage % 2 === 0 ? 'datagrid-row--even' : 'datagrid-row--odd'
+              }
+            />
+          )}
+      </TabPanel>
       
+      <TabPanel value={tabValue} index={1}>
+        <InvitationList refreshTrigger={refreshTrigger} />
+      </TabPanel>
+
       {/* Edit User Dialog */}
-      <Dialog 
-        open={editDialogOpen} 
-        onClose={() => setEditDialogOpen(false)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>
-          Edit User
-        </DialogTitle>
-        <DialogContent dividers>
-          <Box sx={{ p: 1 }}>
-            <div className="edit-user-grid">
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ borderBottom: '1px solid var(--border-color)' }}>Edit User Profile</DialogTitle>
+        <DialogContent sx={{ paddingTop: '16px !important' }}>
+          {userToEdit && (
+            <Box component="form" noValidate autoComplete="off">
               <TextField
-                name="firstName"
+                margin="dense"
                 label="First Name"
-                value={editFormData.firstName}
-                onChange={handleFieldChange}
+                type="text"
                 fullWidth
-                margin="normal"
                 variant="outlined"
-                className="first-name-field"
-                InputProps={{
-                  startAdornment: (
-                    <FaUser style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
-                  ),
-                }}
+                name="firstName"
+                value={editFormData.firstName || ''}
+                onChange={handleFieldChange}
+                disabled={isUpdatingUser}
               />
               <TextField
-                name="lastName"
+                margin="dense"
                 label="Last Name"
-                value={editFormData.lastName}
-                onChange={handleFieldChange}
+                type="text"
                 fullWidth
-                margin="normal"
                 variant="outlined"
-                className="last-name-field"
-                InputProps={{
-                  startAdornment: (
-                    <FaIdCard style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
-                  ),
-                }}
+                name="lastName"
+                value={editFormData.lastName || ''}
+                onChange={handleFieldChange}
+                disabled={isUpdatingUser}
               />
               <TextField
-                name="email"
+                margin="dense"
                 label="Email"
                 type="email"
-                value={editFormData.email}
-                onChange={handleFieldChange}
                 fullWidth
-                margin="normal"
                 variant="outlined"
-                className="email-field"
-                InputProps={{
-                  startAdornment: (
-                    <FaEnvelope style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
-                  ),
-                }}
+                name="email"
+                value={editFormData.email || ''}
+                onChange={handleFieldChange}
+                disabled={isUpdatingUser}
               />
               <TextField
-                name="username"
-                label="Username"
-                value={editFormData.username}
-                onChange={handleFieldChange}
+                margin="dense"
+                label="Username (cannot be changed)"
+                type="text"
                 fullWidth
-                margin="normal"
                 variant="outlined"
-                className="username-field"
-                InputProps={{
-                  startAdornment: (
-                    <FaUser style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
-                  ),
-                }}
+                name="username"
+                value={editFormData.username || ''}
+                disabled
               />
-              <FormControl fullWidth margin="normal" variant="outlined" className="role-field">
-                <InputLabel id="role-label">Role</InputLabel>
+              <FormControl fullWidth margin="dense" variant="outlined" disabled={isUpdatingUser}>
+                <InputLabel id="role-select-label">Role</InputLabel>
                 <Select
-                  labelId="role-label"
-                  name="role"
-                  value={editFormData.role}
-                  onChange={handleFieldChange}
+                  labelId="role-select-label"
                   label="Role"
-                  disabled={userToEdit?._id === currentUser?._id}
-                  sx={{
-                    '& .MuiSelect-select': {
-                      display: 'flex',
-                      alignItems: 'center',
-                    }
-                  }}
-                  startAdornment={
-                    <FaUserTag style={{ marginRight: '8px', color: 'var(--accent-color)' }} />
-                  }
+                  name="role"
+                  value={editFormData.role || 'user'}
+                  onChange={(e) => handleFieldChange(e as SelectChangeEvent<string>)}
                 >
                   <MenuItem value="user">User</MenuItem>
                   <MenuItem value="distributor">Distributor</MenuItem>
                   <MenuItem value="admin">Admin</MenuItem>
-                  {currentUser?.role === 'superAdmin' && (
-                    <MenuItem value="superAdmin">Super Admin</MenuItem>
-                  )}
+                  <MenuItem value="superAdmin">Super Admin</MenuItem>
                 </Select>
               </FormControl>
-            </div>
-            
-            {userToEdit?._id === currentUser?._id && (
-              <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 2 }}>
-                Note: You cannot change your own role.
-              </Typography>
-            )}
-          </Box>
+            </Box>
+          )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => setEditDialogOpen(false)} color="inherit">
-            Cancel
+        <DialogActions sx={{ borderTop: '1px solid var(--border-color)', padding: '16px 24px' }}>
+          <Button onClick={() => setEditDialogOpen(false)} color="inherit" disabled={isUpdatingUser}>Cancel</Button>
+          <Button onClick={handleEditSubmit} color="primary" variant="contained" disabled={isUpdatingUser} startIcon={isUpdatingUser ? <CircularProgress size={16} /> : null}>
+            {isUpdatingUser ? 'Saving...' : 'Save Changes'}
           </Button>
-          <Button 
-            onClick={handleEditSubmit} 
-            variant="contained" 
-            color="primary"
-            disabled={!editFormData.username || !editFormData.email}
-          >
-            Save Changes
-          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog - Placeholder */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to delete this user? This action cannot be undone.</Typography>
+          <Typography variant="caption" color="error">(Delete functionality not fully implemented)</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} color="inherit">Cancel</Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">Delete</Button>
         </DialogActions>
       </Dialog>
       
-      {/* Delete Confirmation Dialog */}
-      <Dialog 
-        open={deleteDialogOpen} 
-        onClose={() => setDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Confirm Deletion</DialogTitle>
+      {/* Add New User / Send Invitation Dialog */}
+      <Dialog open={newUserDialog} onClose={() => setNewUserDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Add New User / Send Invitation
+          <IconButton onClick={() => setNewUserDialog(false)} size="small">
+            <FaTimes />
+          </IconButton>
+        </DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to delete this user? This action cannot be undone.
-          </Typography>
+          <InvitationForm onInvitationSent={handleInvitationSent} />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} color="inherit">
-            Cancel
-          </Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
       </Dialog>
+
     </motion.div>
   );
 };

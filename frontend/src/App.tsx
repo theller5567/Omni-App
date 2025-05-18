@@ -6,13 +6,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { lightTheme, darkTheme } from './theme';
 import './App.scss';
-import { useDispatch, useSelector } from 'react-redux';
 import ProtectedRoute from './components/ProtectedRoute';
-import { setUser, initializeUser } from './store/slices/userSlice';
-// Remove the import for initializeMediaTypes from mediaTypeSlice
-// import { initializeMediaTypes } from './store/slices/mediaTypeSlice';
-import { RootState } from './store/store';
-import { AppDispatch } from './store/store';
 import axios from 'axios';
 import { Box, CircularProgress, useMediaQuery } from '@mui/material';
 // React Query imports
@@ -21,8 +15,11 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 // Import ToastContainer for centralized toast notifications
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-// Import the useMediaTypesWithUsageCounts hook
-import { useMediaTypesWithUsageCounts } from './hooks/query-hooks';
+// Import the necessary hooks
+import { useMediaTypesWithUsageCounts, useUserProfile } from './hooks/query-hooks';
+// Remove Redux imports if no longer used for user state here
+// import { useDispatch, useSelector } from 'react-redux';
+// import { RootState, AppDispatch } from './store/store';
 
 // Create React Query client with improved configuration
 const queryClient = new QueryClient({
@@ -55,6 +52,7 @@ const AccountMediaTypes = lazy(() => import('./pages/AccountMediaTypes'));
 const AccountAdminDashboard = lazy(() => import('./pages/AccountAdminDashboard'));
 const StyleGuidePage = lazy(() => import('./pages/StyleGuidePage'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
+const UserPage = lazy(() => import('./pages/User'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -96,17 +94,59 @@ const AppContent: React.FC = () => {
   // Check localStorage for saved theme preference
   const savedTheme = localStorage.getItem('theme');
   const [isDarkMode, setIsDarkMode] = useState(savedTheme ? savedTheme === 'dark' : true);
-  const dispatch = useDispatch<AppDispatch>();
-  const isLoading = useSelector((state: RootState) => state.user.currentUser.isLoading);
-  const userRole = useSelector((state: RootState) => state.user.currentUser.role);
-  const userState = useSelector((state: RootState) => state.user.currentUser);
+  // const dispatch = useDispatch<AppDispatch>(); // Removed, not used for user init
+  // const isLoadingRedux = useSelector((state: RootState) => state.user.currentUser.isLoading); // Removed
+  // const userRoleRedux = useSelector((state: RootState) => state.user.currentUser.role); // Removed
+  // const userStateRedux = useSelector((state: RootState) => state.user.currentUser); // Removed
   const [isInitialized, setIsInitialized] = useState(false);
   // Check for mobile view to determine toast position
   const isMobile = useMediaQuery('(max-width:600px)');
   
   // Prefetch media types data using TanStack Query
   // This replaces the Redux mediaTypes initialization
-  const { data: mediaTypes } = useMediaTypesWithUsageCounts();
+  useMediaTypesWithUsageCounts();
+
+  // --- User Profile with TanStack Query ---
+  const { 
+    data: userProfile, 
+    isLoading: isUserLoading, 
+    error: userError,
+    isSuccess: isUserSuccess,
+    isError: isUserFetchError
+  } = useUserProfile();
+
+  useEffect(() => {
+    // This effect block was primarily for the old custom callbacks.
+    // The core logic of clearing userProfile on auth error is now in useUserProfile's internal onError.
+    // The logic for localStorage.removeItem('authToken') on 401 is handled by the axios interceptor.
+    // If additional side-effects are needed in App.tsx based on userProfile changes, 
+    // a new useEffect watching userProfile, isUserFetchError, and userError can be added.
+    if (isUserFetchError) {
+      // Example: if a specific action is needed in App.tsx when user fetch fails, beyond what useUserProfile does.
+      if (process.env.NODE_ENV === 'development') {
+        console.error('App.tsx: User profile fetch resulted in an error state.', userError);
+      }
+      // If the error indicates an auth failure and the token is somehow still present, clear it.
+      // This is a defensive check, as the interceptor and useUserProfile's onError should handle most cases.
+      const token = localStorage.getItem('authToken');
+      if (token && userError && typeof userError === 'object' && 'message' in userError) {
+        const errorMessage = (userError as any).message || '';
+        let isAuthFailure = errorMessage.includes('Authentication token missing');
+        // Check for shape of Axios error without relying on isAxiosError
+        if (!isAuthFailure && userError && typeof userError === 'object' && 'response' in userError && (userError as any).response) {
+            const status = (userError as any).response.status;
+            if (status === 401 || status === 403) {
+                isAuthFailure = true;
+            }
+        }
+        if (isAuthFailure) {
+            localStorage.removeItem('authToken');
+            // Optionally, redirect here if not handled by other mechanisms
+            // window.location.href = '/login'; 
+        }
+      }
+    }
+  }, [isUserFetchError, userError]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
@@ -114,90 +154,37 @@ const AppContent: React.FC = () => {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
+  // useEffect to manage overall app initialization status
+  // This effect now primarily waits for user and media types to settle.
   useEffect(() => {
-    if (isInitialized) return;
-
-    const token = localStorage.getItem('authToken');
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Initializing app with token:', token ? 'exists' : 'none');
-    }
-    
-    const initializeApp = async () => {
-      if (token) {
-        try {
-          // First initialize user (authentication)
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Starting data initialization sequence...');
-          }
-          const userResult = await dispatch(initializeUser()).unwrap();
-          
-          // Skip media initialization if we're not signed in
-          if (!userResult.currentUser?._id) {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('User initialization did not return a valid user - skipping media initialization');
-            }
-            setIsInitialized(true);
-            return;
-          }
-          
-          // Media types are now loaded by TanStack Query
-          // No need to dispatch initializeMediaTypes
-          
-          if (process.env.NODE_ENV === 'development') {
-            console.log('App initialization complete');
-            console.log('Media types loaded with TanStack Query:', mediaTypes?.length || 0);
-          }
-        } catch (authError) {
-          console.error('Authentication failed:', authError);
-          // Handle auth error - clear token and set empty user
-          localStorage.removeItem('authToken');
-          dispatch(setUser({ 
-            id: '', 
-            email: '', 
-            firstName: '', 
-            lastName: '', 
-            avatar: '', 
-            isLoading: false, 
-            _id: '', 
-            username: '', 
-            role: 'user', 
-            error: null, 
-            token: '' 
-          }));
-        }
-      } else {
-        dispatch(setUser({ 
-          id: '', 
-          email: '', 
-          firstName: '', 
-          lastName: '', 
-          avatar: '', 
-          isLoading: false, 
-          _id: '', 
-          username: '', 
-          role: 'user', 
-          error: null, 
-          token: '' 
-        }));
-      }
-      // Always set initialized to true, even if there were errors
+    if (isUserSuccess || isUserFetchError) { // Considered initialized once user fetch attempt is complete
       setIsInitialized(true);
-    };
-
-    initializeApp();
-  }, [dispatch, isInitialized, mediaTypes]);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('App initialization status: User fetch attempt complete.');
+        if (isUserSuccess) console.log('User profile:', userProfile);
+        if (isUserFetchError) console.log('User fetch error:', userError);
+      }
+    }
+  }, [isUserSuccess, isUserFetchError, userProfile, userError]);
 
   // Updated to handle direct theme changes
   const toggleTheme = (newTheme: 'light' | 'dark') => {
     setIsDarkMode(newTheme === 'dark');
   };
 
-  if (isLoading) {
+  // Show loading fallback if user profile is loading or app is not yet initialized.
+  // Ensure mediaTypes loading is also considered if it's critical before rendering.
+  if (isUserLoading || !isInitialized) { 
     // Only show loading screen for protected routes, not for login/auth page
-    if (window.location.pathname !== '/login' && !window.location.pathname.includes('/auth')) {
+    // Check if userProfile is null (meaning not fetched or error) when deciding to show loading for protected routes.
+    const currentPath = window.location.pathname;
+    const isAuthPath = currentPath === '/login' || currentPath.includes('/auth');
+    
+    // If on an auth path, don't show global loading, let the auth page handle its own state.
+    // If not on an auth path AND user is loading OR app not initialized, show fallback.
+    if (!isAuthPath && (isUserLoading || !isInitialized)) {
       return <LoadingFallback />;
     }
-    // For login/auth pages, continue rendering normally
   }
 
   return (
@@ -205,34 +192,36 @@ const AppContent: React.FC = () => {
       <CssBaseline />
       <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
         <Router>
-          <div id="app-container" style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-            {userState.email && <Sidebar />}
+          <div id="app-container" style={{ display: 'flex', flexDirection: 'row', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+            {/* Sidebar is shown if user profile fetch was successful and userProfile exists */}
+           {isUserSuccess && userProfile && <Sidebar />}
             <div
               style={{
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                bottom: 0,
-                width: '100vw',
-                overflow: 'auto',
+                flexGrow: 1,
+                height: '100vh', // Ensure the content area can scroll independently
+                overflow: 'auto', // Allows content to scroll
+                // Removed position: 'absolute' and related top, left, right, bottom, width properties
               }}
             >
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>
-                  <Route path="/media/slug/:slug" element={<ProtectedRoute element={<MediaDetail />} />} />
-                  <Route path="/media-library" element={<ProtectedRoute element={<MediaLibraryPage />} />} />
-                  <Route path="/account" element={<ProtectedRoute element={<Account />} />} />
-                  <Route path="/admin-users" element={<ProtectedRoute element={<AccountUsers />} />} />
-                  <Route path="/admin-tags" element={<ProtectedRoute element={<AccountTags />} />} />
-                  <Route path="/admin-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} />} />
-                  {userRole === 'superAdmin' && (
-                    <Route path="/manage-media-types" element={<AccountMediaTypes />} />
+                  {/* Pass userProfile to ProtectedRoutes */}
+                  <Route path="/media/slug/:slug" element={<ProtectedRoute element={<MediaDetail />} userProfile={userProfile} />} />
+                  <Route path="/media-library" element={<ProtectedRoute element={<MediaLibraryPage />} userProfile={userProfile} />} />
+                  <Route path="/account" element={<ProtectedRoute element={<Account />} userProfile={userProfile} />} />
+                  <Route path="/user/:id" element={<ProtectedRoute element={<UserPage />} userProfile={userProfile} />} />
+                  <Route path="/admin-users" element={<ProtectedRoute element={<AccountUsers />} userProfile={userProfile} adminOnly />} />
+                  <Route path="/admin-tags" element={<ProtectedRoute element={<AccountTags />} userProfile={userProfile} adminOnly />} />
+                  <Route path="/admin-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} userProfile={userProfile} adminOnly />} />
+                  {/* Conditional route based on userProfile role */}
+                  {userProfile?.role === 'superAdmin' && (
+                    <Route path="/manage-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} userProfile={userProfile} adminOnly />} />
                   )}
-                  <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} />} />
-                  <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
-                  <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
-                  <Route path="/password-setup" element={<PasswordSetupPage />} />
-                  <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} />} />
+                  <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} userProfile={userProfile} adminOnly />} />
+                  <Route path="/accept-invitation/:token" element={<AcceptInvitation />} /> {/* Consider if this needs protection */}
+                  <Route path="/home" element={<ProtectedRoute element={<Home />} userProfile={userProfile} />} />
+                  <Route path="/password-setup" element={<ProtectedRoute element={<PasswordSetupPage />} userProfile={userProfile} />} />
+                  <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} userProfile={userProfile} adminOnly />} />
                   <Route path="/login" element={<AuthPage />} />
                   <Route path="/" element={<AuthPage />} />
                 </Routes>

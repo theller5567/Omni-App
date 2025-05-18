@@ -2,17 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { TextField, Button, Typography, Box, CircularProgress, Container, Alert, Grid, Link } from '@mui/material';
-import { useDispatch, useSelector } from 'react-redux';
-import { register, login } from '../store/slices/authSlice';
-import { RootState } from '../store/store';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { AppDispatch } from '../store/store';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { setUser } from '../store/slices/userSlice';
+import { useLogin, useRegister } from '../hooks/query-hooks'; // Import TanStack Query hooks
 
 const AuthPage: React.FC = () => {
-  const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const location = useLocation();
   const [isSignUp, setIsSignUp] = useState(false);
@@ -20,17 +15,17 @@ const AuthPage: React.FC = () => {
   const [showForm, setShowForm] = useState(true);
   const [emailVerified, setEmailVerified] = useState(false);
 
-  const { error, message } = useSelector((state: RootState) => state.auth);
-  const loading = useSelector((state: RootState) => state.auth.isLoading);
+  // Instantiate mutation hooks
+  const { mutate: loginMutate, isPending: isPendingLogin, error: loginError } = useLogin();
+  const { mutate: registerMutate, isPending: isPendingRegister, error: registerError } = useRegister();
 
   useEffect(() => {
-    // Check for verification parameters in URL
     const params = new URLSearchParams(location.search);
     const verified = params.get('emailVerified');
     
     if (verified === 'true') {
       setEmailVerified(true);
-      setIsSignUp(false); // Switch to sign in form
+      setIsSignUp(false); 
       toast.success('Your email has been successfully verified!');
     }
   }, [location]);
@@ -41,33 +36,43 @@ const AuthPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    try {
-      if (isSignUp) {
-        await dispatch(register({ 
-          firstName: formData.firstName, 
-          lastName: formData.lastName, 
-          email: formData.email,
-          username: formData.email,
-          password: "temporary123" // Temporary password for email registration flow
-        }));
-        // After successful registration, hide the form and show the email verification message
-        setShowForm(false);
-      } else {
-        const response = await dispatch(login({ email: formData.email, password: formData.password }));
-        if (response.payload && typeof response.payload === 'object' && 'token' in response.payload && 'user' in response.payload) {
-          const { token, user } = response.payload as { token: string, user: any }; // Type assertion to specify the structure of response.payload
-          localStorage.setItem('authToken', token); // Store token in localStorage
-          dispatch(setUser(user)); // Update Redux store with user information
-          navigate('/media-library'); // Redirect to home or another page
-        } else {
-          console.error('Invalid login response:', response.payload);
+    if (isSignUp) {
+      registerMutate({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        username: formData.email, // Assuming username is email as before
+        password: formData.password, // Use actual password for sign up now
+      }, {
+        onSuccess: () => {
+          setShowForm(false); // Keep this specific UI logic
+          // Toast for success is handled by useRegister hook
+        },
+        onError: () => {
+          // Toast for error is handled by useRegister hook
         }
-      }
-    } catch (error) {
-      console.error('Error during authentication:', error);
+      });
+    } else {
+      loginMutate({ 
+        email: formData.email, 
+        password: formData.password 
+      }, {
+        onSuccess: (data) => {
+          // data here is AuthResponse. Token is stored by loginUser API function.
+          // User profile cache is updated by useLogin hook.
+          // Toast for success is handled by useLogin hook.
+          navigate('/media-library'); 
+        },
+        onError: () => {
+          // Toast for error is handled by useLogin hook
+        }
+      });
     }
   };
   
+  const overallIsLoading = isPendingLogin || isPendingRegister;
+  const currentError = isSignUp ? registerError : loginError;
+
   return (
     <Container 
       component="main" 
@@ -96,7 +101,7 @@ const AuthPage: React.FC = () => {
           {isSignUp ? 'Create Account' : 'Sign In'}
         </Typography>
 
-        {emailVerified && (
+        {emailVerified && !isSignUp && (
           <Alert severity="success" sx={{ mb: 2, width: '100%' }}>
             Email verified successfully! You can now sign in.
           </Alert>
@@ -110,10 +115,13 @@ const AuthPage: React.FC = () => {
             <Button
               fullWidth
               variant="outlined"
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                setIsSignUp(false); // Switch to sign-in
+                setShowForm(true);
+              }}
               sx={{ mt: 2 }}
             >
-              Back to Sign In
+              Go to Sign In
             </Button>
           </Box>
         )}
@@ -158,7 +166,8 @@ const AuthPage: React.FC = () => {
                 value={formData.email}
                 onChange={handleChange}
               />
-              {!isSignUp && (
+              {/* Show password field for both sign-up and sign-in if isSignUp is true, or if it's sign-in mode*/}
+              {(isSignUp || !isSignUp) && (
                 <TextField
                   margin="normal"
                   required
@@ -167,7 +176,7 @@ const AuthPage: React.FC = () => {
                   label="Password"
                   type="password"
                   id="password"
-                  autoComplete="current-password"
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -177,9 +186,9 @@ const AuthPage: React.FC = () => {
                 fullWidth
                 variant="contained"
                 sx={{ mt: 3, mb: 2 }}
-                disabled={loading}
+                disabled={overallIsLoading}
               >
-                {loading ? (
+                {overallIsLoading ? (
                   <CircularProgress size={24} />
                 ) : isSignUp ? (
                   'Sign Up'
@@ -207,17 +216,12 @@ const AuthPage: React.FC = () => {
           </>
         )}
 
-        {error && (
+        {/* Errors are handled by react-toastify via the hooks, so these general Alert components can be removed */}
+        {/* {currentError && (
           <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
-            {error}
+            {currentError.message}
           </Alert>
-        )}
-        
-        {message && (
-          <Alert severity="success" sx={{ mt: 2, width: '100%' }}>
-            {message}
-          </Alert>
-        )}
+        )} */}
       </Box>
     </Container>
   );
