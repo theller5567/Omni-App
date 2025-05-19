@@ -23,10 +23,10 @@ import {
   Theme,
   CircularProgress,
   Alert,
-  Link
 } from '@mui/material';
 import { toast } from 'react-toastify';
 import { FaTrash, FaEdit, FaEnvelope, FaTimes, FaUserPlus } from 'react-icons/fa';
+import { Link as RouterLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import './accountUsers.scss';
 import { SelectChangeEvent } from '@mui/material';
@@ -208,9 +208,11 @@ const AccountUsers: React.FC = () => {
         >
           {(user.firstName?.[0] || user.username?.[0] || 'U').toUpperCase()}
         </Avatar>
-        <Link className="user-link" href={`/user/${user._id}`} underline="hover" color="var(--text-secondary)">
-          <Typography variant="body2">{value?.toString()}</Typography>
-        </Link>
+        <RouterLink className="user-link" to={`/user/${user._id}`} style={{ textDecoration: 'none', color: 'var(--text-secondary)' }}>
+          <Typography variant="body2" sx={{ '&:hover': { textDecoration: 'underline' }}}>
+            {value?.toString()}
+          </Typography>
+        </RouterLink>
       </div>
     );
   };

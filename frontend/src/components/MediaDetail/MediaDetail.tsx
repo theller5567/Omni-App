@@ -39,7 +39,7 @@ import {
   useUpdateMedia, 
   useApiHealth, 
   QueryKeys, 
-  useMediaTypes,
+  useMediaTypes, 
   useUserProfile
 } from '../../hooks/query-hooks';
 import { useQueryClient } from '@tanstack/react-query';
@@ -615,6 +615,22 @@ const MediaDetail: React.FC = () => {
     refetch: recheckHealth 
   } = useApiHealth();
 
+  // MOVED HOOKS UP: Define userId and call useUsername and useEffect before conditional returns.
+  // Ensure userId is derived safely, defaulting to empty string if mediaFile or uploadedBy is not yet available.
+  const userId = mediaFile ? (getMetadataField(mediaFile, 'uploadedBy', '') || '') : '';
+  const { username: uploadedBy } = useUsername(userId);
+
+  // Effect to update the URL if the slug in the URL doesn't match the actual slug
+  useEffect(() => {
+    if (mediaFile && slug && mediaFile.slug && slug !== mediaFile.slug) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Correcting URL: changing ${slug} to ${mediaFile.slug}`);
+      }
+      const newPath = location.pathname.replace(slug, mediaFile.slug);
+      navigate(newPath, { replace: true });
+    }
+  }, [mediaFile, slug, navigate, location.pathname]);
+
   useEffect(() => {
       if (!slug) {
       navigate('/media-library');
@@ -706,21 +722,8 @@ const MediaDetail: React.FC = () => {
   }
 
   // If we reach here, userProfile exists, and mediaFile exists and there were no errors loading it.
-  const userId = getMetadataField(mediaFile, 'uploadedBy', '') || '';
-  const { username: uploadedBy } = useUsername(userId);
-
-  // Effect to update the URL if the slug in the URL doesn't match the actual slug
-  useEffect(() => {
-    if (mediaFile && slug && mediaFile.slug && slug !== mediaFile.slug) {
-      // We found media but the URL slug doesn't match the actual slug
-      // Update the URL without triggering a new page load
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`Correcting URL: changing ${slug} to ${mediaFile.slug}`);
-      }
-      const newPath = location.pathname.replace(slug, mediaFile.slug);
-      navigate(newPath, { replace: true });
-    }
-  }, [mediaFile, slug, navigate, location.pathname]);
+  // const userId = getMetadataField(mediaFile, 'uploadedBy', '') || ''; // MOVED UP
+  // const { username: uploadedBy } = useUsername(userId); // MOVED UP
 
   // Motion animation adjusted for mobile
   const motionProps = {
@@ -847,16 +850,9 @@ const MediaDetail: React.FC = () => {
     }
   };
   
-  const handleSuccessfulUpdate = (updatedMediaFile: Partial<BaseMediaFile> & { metadata?: Record<string, any> }) => {
+  const handleSuccessfulUpdate = (_updatedMediaFile: Partial<BaseMediaFile> & { metadata?: Record<string, any> }) => {
     // Close the edit dialog 
     setIsEditDialogOpen(false);
-    
-    // Show success message
-    if (updatedMediaFile.title !== mediaFile?.title) {
-      toast.success(`Title updated successfully`);
-    } else {
-      toast.success(`Media details updated successfully`);
-    }
     
     // Invalidate activity logs query to refresh the Recent Activity component
     queryClient.invalidateQueries({ queryKey: [QueryKeys.activityLogs] });
@@ -867,12 +863,6 @@ const MediaDetail: React.FC = () => {
   
   const handleFailedUpdate = (payload: unknown) => {
     console.error('Error updating media:', payload);
-    
-    if (typeof payload === 'object' && payload !== null && 'message' in payload) {
-      toast.error(`Update failed: ${String((payload as any).message)}`);
-    } else {
-      toast.error('Failed to update media');
-    }
   };
   
   const handleThumbnailUpdate = (thumbnailUrl: string) => {

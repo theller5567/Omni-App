@@ -10,11 +10,9 @@ import { toast } from 'react-toastify';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { GridRowSelectionModel } from '@mui/x-data-grid';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store/store';
 import axios from 'axios';
 import env from '../../config/env';
-import { useTagCategories } from '../../hooks/query-hooks';
+import { useTagCategories, useUserProfile } from '../../hooks/query-hooks';
 
 // Lazy load subcomponents
 const HeaderComponent = lazy(() => import('./components/HeaderComponent'));
@@ -65,7 +63,8 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
   const prevDataRef = useRef<string>('');
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   // Get user role from Redux store
-  const userRole = useSelector((state: RootState) => state.user.currentUser.role);
+  const { data: userProfile } = useUserProfile();
+  const userRole = userProfile?.role;
   const [downloading, setDownloading] = useState<boolean>(false);
   const [toastSettings] = useState({
     disableTagNotifications: true,
@@ -73,7 +72,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
   });
   
   // Use TanStack Query for tag categories
-  const { refetch: refetchTagCategories } = useTagCategories();
+  const { refetch: refetchTagCategories } = useTagCategories(userProfile);
   
   // Handle initial data loading silently - with debounce
   const tagsFetchedRef = useRef(false);
@@ -405,19 +404,17 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
                 gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
                 gap: 2
               }}>
-                {rows.map((row) => {
-                  return (
-                    <Box key={`${row.id}-${row.metadata?.v_thumbnailTimestamp || ''}`}>
-                      <Suspense fallback={<LoadingFallback />}>
-                        <MediaCard
-                          file={row}
-                          handleFileClick={() => handleFileClick(row)}
-                          onDeleteClick={userRole === 'superAdmin' ? () => handleDeleteClick(row.id) : undefined}
-                        />
-                      </Suspense>
-                    </Box>
-                  );
-                })}
+                {rows.map((row) => (
+                  <Box key={`${row.id}-${row.metadata?.v_thumbnailTimestamp || ''}`}>
+                    <Suspense fallback={<LoadingFallback />}>
+                      <MediaCard
+                        file={row}
+                        handleFileClick={() => handleFileClick(row)}
+                        onDeleteClick={userRole === 'superAdmin' || userRole === 'admin' ? () => handleDeleteClick(row.id) : undefined}
+                      />
+                    </Suspense>
+                  </Box>
+                ))}
                 {rows.length === 0 && (
                   <Typography variant="body1" color="textSecondary" sx={{ gridColumn: '1/-1', textAlign: 'center', py: 4 }}>
                     No media files found. Try changing your filter or upload new media.
@@ -447,4 +444,3 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
 // Modified component exports to support both direct and lazy loading
 export { HeaderComponent, DataTable, MediaCard, ConfirmationModal };
 export default MediaLibrary;
-

@@ -103,10 +103,6 @@ const AppContent: React.FC = () => {
   // Check for mobile view to determine toast position
   const isMobile = useMediaQuery('(max-width:600px)');
   
-  // Prefetch media types data using TanStack Query
-  // This replaces the Redux mediaTypes initialization
-  useMediaTypesWithUsageCounts();
-
   // --- User Profile with TanStack Query ---
   const { 
     data: userProfile, 
@@ -115,6 +111,10 @@ const AppContent: React.FC = () => {
     isSuccess: isUserSuccess,
     isError: isUserFetchError
   } = useUserProfile();
+
+  // Prefetch media types data using TanStack Query
+  // This replaces the Redux mediaTypes initialization
+  useMediaTypesWithUsageCounts(userProfile);
 
   useEffect(() => {
     // This effect block was primarily for the old custom callbacks.

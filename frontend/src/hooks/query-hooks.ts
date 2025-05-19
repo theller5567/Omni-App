@@ -145,6 +145,23 @@ export interface NewTagCategoryData {
   tags?: Array<{ id: string; name: string }>; // Match TagCategoryFormData in TagCategoryManager
 }
 
+// Type for invitation data
+export interface InvitationData {
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: 'user' | 'admin' | 'distributor' | 'superAdmin'; // Or more specific roles
+  message?: string;
+  invitedBy: string; // User ID of the inviter
+}
+
+// Type for invitation response
+export interface InvitationResponse {
+  message: string;
+  // Include other fields if your API returns more data upon sending an invitation
+  // For example: invitationId?: string;
+}
+
 // ======================
 // === API Functions ===
 // ======================
@@ -859,11 +876,12 @@ export const useMediaTypes = () => {
 };
 
 // New hook to get media types with usage counts
-export const useMediaTypesWithUsageCounts = () => {
+export const useMediaTypesWithUsageCounts = (userProfile: User | null | undefined) => {
   return useQuery({
     queryKey: [QueryKeys.mediaTypes, 'withUsageCounts'],
     queryFn: fetchMediaTypesWithUsageCounts,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!userProfile && (userProfile.role === 'admin' || userProfile.role === 'superAdmin')
   });
 };
 
@@ -1979,6 +1997,51 @@ export const useCreateTagCategory = () => {
         error.response?.data?.message ||
         error.message ||
         'Failed to create tag category.';
+      toast.error(message);
+    },
+  });
+};
+
+// ... existing useTransformedMedia, prefetchMediaDetail, useMediaByType, migrateMediaFiles, useMigrateMediaFiles ...
+
+// ... User Query Hooks ...
+
+// ... existing code ...
+
+// API function to send an invitation
+export const sendInvitation = async (invitationData: InvitationData): Promise<InvitationResponse> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing. You must be logged in to send invitations.');
+  }
+  const response = await axios.post<InvitationResponse>(
+    `${env.BASE_URL}/api/invitations`,
+    invitationData,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Invitation sent successfully:', response.data);
+  }
+  return response.data;
+};
+
+// Hook to send an invitation
+export const useSendInvitation = () => {
+  return useMutation<InvitationResponse, Error, InvitationData>({
+    mutationFn: sendInvitation,
+    onSuccess: (data) => {
+      toast.success(data.message || 'Invitation sent successfully!');
+    },
+    onError: (error: any) => {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to send invitation. Please try again.';
       toast.error(message);
     },
   });

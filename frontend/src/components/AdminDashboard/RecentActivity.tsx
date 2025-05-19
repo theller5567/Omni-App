@@ -26,7 +26,7 @@ import {
   useAllUsers, 
   useTransformedMedia, 
   useUserProfile,
-  User as UserType, 
+  User,
   TransformedMediaFile 
 } from '../../hooks/query-hooks';
 

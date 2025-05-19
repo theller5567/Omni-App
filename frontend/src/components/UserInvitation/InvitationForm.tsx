@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -16,20 +16,16 @@ import {
   IconButton
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-import axios from 'axios';
-import { API_BASE_URL } from '../../config/config';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store/store';
+import { useUserProfile, useSendInvitation, InvitationData } from '../../hooks/query-hooks';
 
 interface InvitationFormProps {
   onInvitationSent?: () => void;
 }
 
 const InvitationForm: React.FC<InvitationFormProps> = ({ onInvitationSent }) => {
-  // Get current user from Redux store
-  const currentUser = useSelector((state: RootState) => state.user.currentUser);
+  const { data: userProfile } = useUserProfile();
+  const { mutate: sendInvitationMutate, isPending: isLoadingInvitation, error: invitationErrorHook } = useSendInvitation();
 
-  // Form state
   const [formData, setFormData] = useState({
     email: '',
     firstName: '',
@@ -38,10 +34,20 @@ const InvitationForm: React.FC<InvitationFormProps> = ({ onInvitationSent }) => 
     message: ''
   });
   
-  // UI state
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (invitationErrorHook) {
+      const message =
+        (invitationErrorHook as any).response?.data?.message ||
+        (invitationErrorHook as any).message ||
+        'Failed to send invitation. Please try again.';
+      setError(message);
+    } else {
+      setError(null);
+    }
+  }, [invitationErrorHook]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any) => {
     const { name, value } = e.target;
@@ -52,7 +58,6 @@ const InvitationForm: React.FC<InvitationFormProps> = ({ onInvitationSent }) => 
   };
   
   const validateEmail = (email: string): boolean => {
-    // Basic email validation regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
@@ -62,11 +67,10 @@ const InvitationForm: React.FC<InvitationFormProps> = ({ onInvitationSent }) => 
     setSuccess(null);
   };
   
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     resetMessages();
     
-    // Validate form data
     if (!formData.email || !formData.firstName || !formData.lastName) {
       setError('Email, first name, and last name are required');
       return;
@@ -76,78 +80,36 @@ const InvitationForm: React.FC<InvitationFormProps> = ({ onInvitationSent }) => 
       setError('Please enter a valid email address');
       return;
     }
-    
-    try {
-      setLoading(true);
-      
-      // Get token from localStorage
-      const token = localStorage.getItem('authToken');
-      
-      if (!token) {
-        setError('You must be logged in to send invitations');
-        setLoading(false);
-        return;
-      }
-      
-      // Add the invitedBy field to the request - important: use the current user's id
-      const userId = currentUser.id || currentUser._id;
-      console.log('Current user for invitation:', currentUser);
-      console.log('Using userId for invitedBy:', userId);
-      
-      const invitationData = {
-        ...formData,
-        invitedBy: userId
-      };
-      
-      console.log('Sending invitation with data:', invitationData);
-      
-      // Send the invitation
-      const response = await axios.post(
-        `${API_BASE_URL}/api/invitations`,
-        invitationData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-      
-      console.log('Invitation response:', response.data);
-      
-      setSuccess(`Invitation sent to ${formData.email} successfully!`);
-      
-      // Reset form
-      setFormData({
-        email: '',
-        firstName: '',
-        lastName: '',
-        role: 'user',
-        message: ''
-      });
-      
-      // Notify parent component if callback provided
-      if (onInvitationSent) {
-        onInvitationSent();
-      }
-      
-    } catch (err: any) {
-      console.error('Error sending invitation:', err);
-      
-      // If we have a response with an error message
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } 
-      // If we have a generic axios error message
-      else if (err.message) {
-        setError(`Error: ${err.message}`);
-      }
-      // Fallback error message
-      else {
-        setError('An error occurred while sending the invitation. Please try again.');
-      }
-    } finally {
-      setLoading(false);
+
+    if (!userProfile?._id) {
+      setError('Could not identify the current user. Please try logging in again.');
+      return;
     }
+    
+    const invitationPayload: InvitationData = {
+      ...formData,
+      role: formData.role as InvitationData['role'],
+      invitedBy: userProfile._id
+    };
+    
+    sendInvitationMutate(invitationPayload, {
+      onSuccess: (data) => {
+        setSuccess(data.message || `Invitation sent to ${formData.email} successfully!`);
+        setFormData({
+          email: '',
+          firstName: '',
+          lastName: '',
+          role: 'user',
+          message: ''
+        });
+        if (onInvitationSent) {
+          onInvitationSent();
+        }
+      },
+      onError: (error: any) => {
+        console.error('Error sending invitation from component callback:', error);
+      }
+    });
   };
   
   return (
@@ -160,7 +122,6 @@ const InvitationForm: React.FC<InvitationFormProps> = ({ onInvitationSent }) => 
         Send an email invitation to a new user to join Omni's Media Library.
       </Typography>
       
-      {/* Success message */}
       <Collapse in={!!success}>
         <Alert 
           severity="success"
@@ -180,7 +141,6 @@ const InvitationForm: React.FC<InvitationFormProps> = ({ onInvitationSent }) => 
         </Alert>
       </Collapse>
       
-      {/* Error message */}
       <Collapse in={!!error}>
         <Alert 
           severity="error"
@@ -211,6 +171,7 @@ const InvitationForm: React.FC<InvitationFormProps> = ({ onInvitationSent }) => 
             required
             autoFocus
             autoComplete="given-name"
+            disabled={isLoadingInvitation}
           />
           
           <TextField
@@ -221,6 +182,7 @@ const InvitationForm: React.FC<InvitationFormProps> = ({ onInvitationSent }) => 
             fullWidth
             required
             autoComplete="family-name"
+            disabled={isLoadingInvitation}
           />
         </Box>
         <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
@@ -234,9 +196,10 @@ const InvitationForm: React.FC<InvitationFormProps> = ({ onInvitationSent }) => 
           margin="normal"
           type="email"
           autoComplete="email"
+          disabled={isLoadingInvitation}
         />
         
-        <FormControl fullWidth margin="normal">
+        <FormControl fullWidth margin="normal" disabled={isLoadingInvitation}>
           <InputLabel id="role-label">Role</InputLabel>
           <Select
             labelId="role-label"
@@ -244,6 +207,7 @@ const InvitationForm: React.FC<InvitationFormProps> = ({ onInvitationSent }) => 
             value={formData.role}
             onChange={handleChange}
             label="Role"
+            disabled={isLoadingInvitation}
           >
             <MenuItem value="user">User</MenuItem>
             <MenuItem value="distributor">Distributor</MenuItem>
@@ -265,6 +229,7 @@ const InvitationForm: React.FC<InvitationFormProps> = ({ onInvitationSent }) => 
           multiline
           rows={3}
           placeholder="Add a personal message to include in the invitation email"
+          disabled={isLoadingInvitation}
         />
         
         <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
@@ -272,10 +237,10 @@ const InvitationForm: React.FC<InvitationFormProps> = ({ onInvitationSent }) => 
             type="submit"
             variant="contained"
             color="primary"
-            disabled={loading}
             sx={{ minWidth: 120 }}
+            disabled={isLoadingInvitation}
           >
-            {loading ? <CircularProgress size={24} /> : 'Send Invitation'}
+            {isLoadingInvitation ? <CircularProgress size={24} sx={{ color: 'white'}} /> : 'Send Invitation'}
           </Button>
         </Box>
       </Box>

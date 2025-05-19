@@ -1,47 +1,54 @@
-import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { register, login } from '../store/slices/authSlice';
-import { setUser } from '../store/slices/userSlice';
-import { AppDispatch } from '../store/store';
+import { useLogin, useRegister, UserLoginCredentials, UserRegistrationData } from './query-hooks';
+import { toast } from 'react-toastify';
 
 export const useAuthHandler = (formData: any, isSignUp: boolean) => {
-  const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const { mutate: loginUser, isPending: isLoggingIn, error: loginError } = useLogin();
+  const { mutate: registerUser, isPending: isRegistering, error: registerError } = useRegister();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
 
-    try {
-      if (isSignUp) {
-        const response = await dispatch(register({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          username: formData.email, // Using email as username
-          password: formData.password || '123456' // Default password
-        }));
-        console.log('Registration response:', response);
-      } else {
-        const response = await dispatch(login({
-          email: formData.email,
-          password: formData.password
-        }));
-        if (response.payload && typeof response.payload === 'object' && 'token' in response.payload && 'user' in response.payload) {
-          const { token, user } = response.payload as { token: string, user: any };
-          console.log('Login successful, token:', token);
-          console.log('User data:', user);
-          
-          // Store tokens and redirect
-          localStorage.setItem('authToken', token);
-          dispatch(setUser(user));
-          navigate('/home');
+    if (isSignUp) {
+      const registrationData: UserRegistrationData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        username: formData.username || formData.email,
+        password: formData.password,
+      };
+      registerUser(registrationData, {
+        onSuccess: (data) => {
+          navigate('/login');
+        },
+        onError: (error: any) => {
+          console.error('Registration failed from useAuthHandler:', error);
         }
-      }
-    } catch (error) {
-      console.error('Auth error:', error);
+      });
+    } else {
+      const loginCredentials: UserLoginCredentials = {
+        email: formData.email,
+        password: formData.password,
+      };
+      loginUser(loginCredentials, {
+        onSuccess: (data) => {
+          if (data.user?.role === 'admin' || data.user?.role === 'superAdmin') {
+            navigate('/admin-dashboard');
+          } else {
+            navigate('/home');
+          }
+        },
+        onError: (error: any) => {
+          console.error('Login failed from useAuthHandler:', error);
+        }
+      });
     }
   };
 
-  return { handleSubmit };
+  return { 
+    handleSubmit, 
+    isLoading: isLoggingIn || isRegistering, 
+    error: loginError || registerError 
+  };
 }; 

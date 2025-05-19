@@ -17,7 +17,6 @@ import {
   Tooltip,
   Backdrop
 } from '@mui/material';
-import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { FaArrowRight, FaArrowLeft, FaSave, FaQuestionCircle } from 'react-icons/fa';
@@ -30,7 +29,6 @@ import {
 } from '../../types/mediaTypes';
 import '../MediaTypeUploader.scss';
 import env from '../../config/env';
-import { RootState } from '../../store/store';
 import { 
   ColorPicker, 
   FieldEditor, 
@@ -49,7 +47,8 @@ import debounce from 'lodash/debounce';
 import {
   useMediaTypes,
   useUpdateMediaType,
-  useCreateMediaType
+  useCreateMediaType,
+  useUserProfile
 } from '../../hooks/query-hooks';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -158,9 +157,10 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
   const { data: mediaTypes = [] } = useMediaTypes();
   const { mutateAsync: createMediaTypeMutation } = useCreateMediaType();
   const { mutateAsync: updateMediaTypeMutation } = useUpdateMediaType();
+  const { data: userProfile, isLoading: isUserProfileLoading, error: userProfileError } = useUserProfile();
   
-  // Get the current user role (still using Redux for user info)
-  const userRole = useSelector((state: RootState) => state.user.currentUser.role);
+  // Get the current user role
+  const userRole = userProfile?.role;
   const isSuperAdmin = userRole === 'superAdmin';
   
   // State for media type configuration

@@ -25,8 +25,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import { MediaFile, MediaType } from '../../../types/media';
 import '../styles/EditMediaDialog.scss';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../../store/store';
+import { useUserProfile } from '../../../hooks/query-hooks';
 import { normalizeTag } from '../../../utils/mediaTypeUploaderUtils';
 
 // Define interface for MediaTypeField if it's missing from imports
@@ -175,7 +174,8 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
 }) => {
 
   // Get user role from Redux
-  const userRole = useSelector((state: RootState) => state.user.currentUser.role);
+  const { data: userProfile } = useUserProfile();
+  const userRole = userProfile?.role;
   const isSuperAdmin = userRole === 'superAdmin';
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
 

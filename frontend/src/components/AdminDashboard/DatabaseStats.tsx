@@ -17,8 +17,6 @@ import GroupIcon from '@mui/icons-material/Group';
 import CollectionsIcon from '@mui/icons-material/Collections';
 import CategoryIcon from '@mui/icons-material/Category';
 import TagIcon from '@mui/icons-material/Tag';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store/store';
 import { formatFileSize } from '../../utils/formatFileSize';
 import { useDatabaseStats, useUserProfile } from '../../hooks/query-hooks';
 import type { User } from '../../hooks/query-hooks';
@@ -28,12 +26,6 @@ const DatabaseStats: React.FC = () => {
   
   // Get userProfile for enabling the query
   const { data: userProfile } = useUserProfile();
-  
-  // Remove Redux store access for fallback data if primary data source is TanStack Query
-  // const allMedia = useSelector((state: RootState) => state.media.allMedia);
-  // const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
-  // const userState = useSelector((state: RootState) => state.user);
-  // const mongoUsers = userState.users.allUsers || [];
   
   // Use TanStack Query for fetching database stats, passing userProfile
   const { 

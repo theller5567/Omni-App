@@ -86,7 +86,7 @@ const AccountAdminDashboard: React.FC = () => {
     data: mediaTypes = [], 
     isLoading: isLoadingMediaTypes,
     isError: _mediaTypesError
-  } = useMediaTypesWithUsageCounts();
+  } = useMediaTypesWithUsageCounts(userProfile);
   
   // Initialize data when component mounts if not already loaded
   useEffect(() => {

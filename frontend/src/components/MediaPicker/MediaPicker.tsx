@@ -13,19 +13,20 @@ import {
   CardActionArea,
   Chip
 } from '@mui/material';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../../store/store';
-import { initializeMedia } from '../../store/slices/mediaSlice';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
-import { BaseMediaFile } from '../../interfaces/MediaFile';
+import { 
+  useUserProfile, 
+  useTransformedMedia, 
+  TransformedMediaFile
+} from '../../hooks/query-hooks';
 import { isImageFile, isVideoFile } from '../MediaLibrary/utils/fileUtils';
 import './MediaPicker.scss';
 
 interface MediaPickerProps {
   open: boolean;
   onClose: () => void;
-  onSelect: (mediaFile: BaseMediaFile) => void;
+  onSelect: (mediaFile: TransformedMediaFile) => void;
   title?: string;
   excludeIds?: string[]; // IDs to exclude from selection
   filterMediaTypes?: string[]; // Media types to show
@@ -39,19 +40,18 @@ const MediaPicker: React.FC<MediaPickerProps> = ({
   excludeIds = [],
   filterMediaTypes = []
 }) => {
-  const dispatch = useDispatch<AppDispatch>();
-  const mediaState = useSelector((state: RootState) => state.media);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Ensure media is loaded
-  useEffect(() => {
-    if (open && mediaState.status === 'idle') {
-      dispatch(initializeMedia());
-    }
-  }, [open, mediaState.status, dispatch]);
-  
+
+  const { data: userProfile } = useUserProfile();
+  const { 
+    data: allMedia = [],
+    isLoading: isMediaLoading,
+    isError: isMediaError,
+    error: mediaFetchError
+  } = useTransformedMedia(userProfile);
+
   // Filter media based on search and exclude IDs
-  const filteredMedia = mediaState.allMedia
+  const filteredMedia = allMedia
     .filter(media => {
       // Exclude specified IDs
       if (excludeIds.includes(media._id || '') || excludeIds.includes(media.id || '')) {
@@ -65,47 +65,45 @@ const MediaPicker: React.FC<MediaPickerProps> = ({
       
       // Apply search filter
       const searchTerms = searchQuery.toLowerCase().split(' ');
-      const fileName = (media.metadata?.fileName || media.title || '').toLowerCase();
-      const description = (media.metadata?.description || '').toLowerCase();
-      const tags = (media.metadata?.tags || []).map(tag => tag.toLowerCase());
+      const searchableText = (
+        media.displayTitle +
+        (media.metadata?.description || '') +
+        (media.metadata?.tags || []).join(' ')
+      ).toLowerCase();
       
-      return searchTerms.every(term => 
-        fileName.includes(term) || 
-        description.includes(term) || 
-        tags.some(tag => tag.includes(term))
-      );
+      return searchTerms.every(term => searchableText.includes(term));
     });
   
   // Handle media selection
-  const handleSelect = (media: BaseMediaFile) => {
+  const handleSelect = (media: TransformedMediaFile) => {
     onSelect(media);
     onClose();
   };
   
   // Render preview based on media type
-  const renderPreview = (media: BaseMediaFile) => {
+  const renderPreview = (media: TransformedMediaFile) => {
     // Handle images
-    if (isImageFile(media.fileExtension || '')) {
+    const extension = media.fileExtension || media.metadata?.fileExtension || '';
+    if (isImageFile(extension)) {
       return (
         <CardMedia
           component="img"
           height="100"
-          image={media.location}
-          alt={media.metadata?.fileName || media.title || 'Image'}
+          image={media.thumbnailUrl || media.location}
+          alt={media.displayTitle}
           sx={{ objectFit: 'contain', backgroundColor: '#f0f0f0' }}
         />
       );
     }
     
     // Handle videos with thumbnail
-    if (isVideoFile(media.fileExtension || '') && media.metadata?.v_thumbnail) {
-      const thumbnailUrl = `${media.metadata.v_thumbnail}${media.metadata.v_thumbnail.includes('?') ? '&' : '?'}id=${media._id || media.id || ''}`;
+    if (isVideoFile(extension) && media.thumbnailUrl) {
       return (
         <CardMedia
           component="img"
           height="100"
-          image={thumbnailUrl}
-          alt={media.metadata?.fileName || media.title || 'Video'}
+          image={media.thumbnailUrl}
+          alt={media.displayTitle}
           sx={{ objectFit: 'contain', backgroundColor: '#000' }}
         />
       );
@@ -123,7 +121,7 @@ const MediaPicker: React.FC<MediaPickerProps> = ({
         }}
       >
         <Typography variant="caption">
-          {media.fileExtension?.toUpperCase() || 'FILE'}
+          {extension.toUpperCase() || 'FILE'}
         </Typography>
       </Box>
     );
@@ -167,13 +165,13 @@ const MediaPicker: React.FC<MediaPickerProps> = ({
         }}
       />
       
-      {mediaState.status === 'loading' ? (
+      {isMediaLoading ? (
         <Box className="media-picker-loading">
           <CircularProgress />
         </Box>
-      ) : mediaState.status === 'failed' ? (
+      ) : isMediaError ? (
         <Typography color="error" className="media-picker-error">
-          Error loading media: {mediaState.error}
+          Error loading media: {mediaFetchError?.message || 'Unknown error'}
         </Typography>
       ) : (
         <Box className="media-picker-content">
@@ -196,11 +194,11 @@ const MediaPicker: React.FC<MediaPickerProps> = ({
                       {renderPreview(media)}
                       <CardContent sx={{ py: 1, px: 1 }}>
                         <Typography variant="caption" noWrap>
-                          {media.metadata?.fileName || media.title || 'Untitled'}
+                          {media.displayTitle}
                         </Typography>
                         <Box sx={{ mt: 0.5 }}>
                           <Chip 
-                            label={media.mediaType} 
+                            label={media.mediaType}
                             size="small"
                             className="media-chip"
                             sx={{ fontSize: '0.6rem', height: 16 }}

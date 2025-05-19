@@ -2,8 +2,7 @@ import React from 'react';
 import { Card, CardContent, Typography, Box} from '@mui/material';
 import '../MediaCard.scss';
 import { isImageFile, isVideoFile, getFileIcon } from '../utils';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../../store/store';
+import { useMediaTypes, MediaType } from '../../../hooks/query-hooks';
 
 interface MediaCardProps {
   file: any;
@@ -56,14 +55,15 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
   }, [file]);
   
   // Get media types to find the color
-  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  const { data: mediaTypes = [], isLoading: isLoadingMediaTypes, isError: isMediaTypesError } = useMediaTypes();
   // Get current user role
   
   // Find the media type color
   const mediaTypeColor = React.useMemo(() => {
-    const mediaType = mediaTypes.find(type => type.name === file.mediaType);
+    if (isLoadingMediaTypes || isMediaTypesError || !mediaTypes) return '#4dabf5'; // Default color during load/error
+    const mediaType = mediaTypes.find((type: MediaType) => type.name === file.mediaType || type._id === file.mediaType);
     return mediaType?.catColor || '#4dabf5';
-  }, [file.mediaType, mediaTypes]);
+  }, [file.mediaType, mediaTypes, isLoadingMediaTypes, isMediaTypesError]);
 
   // If there was an error rendering, show a placeholder
   if (hasError) {

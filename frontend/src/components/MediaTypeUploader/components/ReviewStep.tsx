@@ -3,8 +3,7 @@ import { Box, Typography, Chip, List, ListItem, ListItemText } from '@mui/materi
 import { FaExclamationCircle, FaTag, FaTags } from 'react-icons/fa';
 import { MediaTypeConfig, SelectField, MediaTypeField } from '../../../types/mediaTypes';
 import { isSelectField, predefinedColors } from '../../../utils/mediaTypeUploaderUtils';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../../store/store';
+import { useTagCategories, useUserProfile, User } from '../../../hooks/query-hooks';
 
 // Helper function to check if a field has tag category support
 const hasTagCategory = (field: MediaTypeField): field is SelectField & { useTagCategory: boolean; tagCategoryId: string } => {
@@ -22,7 +21,12 @@ interface ReviewStepProps {
 
 const ReviewStep: React.FC<ReviewStepProps> = ({ mediaTypeConfig, inputOptions, isSuperAdmin = false }) => {
   // Get tag categories to display information
-  const tagCategories = useSelector((state: RootState) => state.tagCategories.tagCategories);
+  const { data: userProfile } = useUserProfile();
+  const { 
+    data: tagCategories = [], 
+    isLoading: isLoadingTagCategories, 
+    error: tagCategoriesError 
+  } = useTagCategories(userProfile);
   
   
   // Helper function to get category name
@@ -195,7 +199,11 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ mediaTypeConfig, inputOptions, 
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                             <FaTags size={12} />
                             <Typography component="span" variant="body2">
-                              Using Tag Category: {getCategoryName(field.tagCategoryId)}
+                              {isLoadingTagCategories 
+                                ? "Loading category info..." 
+                                : tagCategoriesError 
+                                  ? "Error loading category" 
+                                  : `Using Tag Category: ${getCategoryName(field.tagCategoryId)}`}
                               {field.options.length > 0 && ` (${field.options.length} options)`}
                             </Typography>
                           </Box>

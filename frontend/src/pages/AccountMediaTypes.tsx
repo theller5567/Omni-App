@@ -13,10 +13,8 @@ import {
 } from '@mui/material';
 import './accountMediaTypes.scss';
 import { motion } from 'framer-motion';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'react-toastify';
 import MediaTypeUploader from '../components/MediaTypeUploader/MediaTypeUploader';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store/store';
 import { FaPlus, FaSync } from 'react-icons/fa';
 import MediaTypeCard from '../components/MediaTypeUploader/components/MediaTypeCard';
 import { 
@@ -24,7 +22,8 @@ import {
   useDeleteMediaType,
   useArchiveMediaType,
   useCheckMediaTypeUsage,
-  MediaType
+  MediaType,
+  useUserProfile,
 } from '../hooks/query-hooks';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -114,6 +113,7 @@ const ActionBar = ({
           color="secondary"
           onClick={onCreateNew}
           startIcon={<FaPlus />}
+          disabled={userRole !== 'superAdmin'}
         >
           Create New Media Type
         </Button>
@@ -248,19 +248,23 @@ const AccountMediaTypes = () => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [editMediaTypeId, setEditMediaTypeId] = useState<string | null>(null);
   const [selectedMediaTypeId, setSelectedMediaTypeId] = useState<string | null>(null);
+
+  const { data: userProfile, isLoading: isUserLoading, error: userError } = useUserProfile();
+
+  // REDUX: Get user role (replace with TanStack Query user profile)
+  // const userRole = useSelector((state: RootState) => state.user.currentUser.role);
+  const userRole = userProfile?.role;
   
-  // User role from Redux (keep this)
-  const userRole = useSelector((state: RootState) => state.user.currentUser?.role);
-  
-  // TanStack Query hooks
+  // TanStack Query Client
   const queryClient = useQueryClient();
+
+  // Fetch media types with usage counts
   const { 
     data: mediaTypes = [], 
     isLoading, 
-    isError, 
-    error,
-    refetch
-  } = useMediaTypesWithUsageCounts();
+    error, 
+    refetch 
+  } = useMediaTypesWithUsageCounts(userProfile);
   
   // Use the query for a specific media type usage (when needed)
   const { 
@@ -361,8 +365,40 @@ const AccountMediaTypes = () => {
     }
   };
 
-  // Handle error state
-  if (isError) {
+  // CHECK USER PROFILE LOADING AND ERROR FIRST
+  if (isUserLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ ml: 2 }}>
+          Loading user data...
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (userError || !userProfile) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '80vh' }}>
+        <Typography variant="h5" color="error" gutterBottom>
+          Error Loading User Profile
+        </Typography>
+        <Typography>
+          {userError?.message || "Could not load user profile. Please try logging in again."}
+        </Typography>
+        <Button component="a" href="/login" variant="contained" sx={{ mt: 2 }}>
+          Go to Login
+        </Button>
+      </Box>
+    );
+  }
+  
+  // Handle media types loading state AFTER user profile is loaded
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
+  if (error) {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '80vh' }}>
         <Typography variant="h6" color="error" gutterBottom>
@@ -381,11 +417,6 @@ const AccountMediaTypes = () => {
         </Button>
       </Box>
     );
-  }
-
-  // Render loading state
-  if (isLoading) {
-    return <LoadingState />;
   }
 
   // Render empty state
@@ -436,7 +467,7 @@ const AccountMediaTypes = () => {
         selectedId={selectedMediaTypeId}
       />
       
-      <ToastContainer position="top-right" />
+      {/* <ToastContainer position="top-right" /> */}
     </motion.div>
   );
 };

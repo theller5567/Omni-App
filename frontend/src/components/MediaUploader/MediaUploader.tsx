@@ -26,13 +26,11 @@ import { FaFileImage, FaFileVideo, FaUpload, FaImage, FaVideo, FaFileAudio, FaFi
 import "./MediaUploader.scss";
 import { useNavigate } from "react-router-dom";
 import { BaseMediaFile } from "../../interfaces/MediaFile";
-import { useSelector } from "react-redux";
-import { RootState } from "../../store/store";
 import { toast } from "react-toastify";
 // Import TanStack Query hooks and types
-import { useMediaTypes, useTagCategories } from "../../hooks/query-hooks";
+import { useMediaTypes, useTagCategories, useUserProfile, MediaType as HookMediaType } from "../../hooks/query-hooks";
 // Keep the import for Field and specific MediaType shape from Redux
-import type { MediaType as ReduxMediaType } from "../../store/slices/mediaTypeSlice";
+// import type { MediaType as ReduxMediaType } from "../../store/slices/mediaTypeSlice"; // Removed
 import { motion, AnimatePresence } from "framer-motion";
 
 // Import our utilities
@@ -47,11 +45,32 @@ import { MediaTypeUploaderProps, MetadataState } from "./types";
 import UploadThumbnailSelector from '../VideoThumbnailSelector/UploadThumbnailSelector';
 import MetadataForm from "./components/MetadataForm";
 
+// Define an internal MediaType interface based on the old ReduxMediaType structure
+interface InternalMediaType {
+  _id: string;
+  name: string;
+  description?: string; // Make optional if not always present from API or used
+  fields: any[]; // Define more specific field type if possible
+  status: string;
+  usageCount?: number;
+  replacedBy?: string | null;
+  isDeleting?: boolean;
+  acceptedFileTypes: string[];
+  createdAt?: string;
+  updatedAt?: string;
+  baseType: string;
+  includeBaseFields: boolean;
+  catColor: string;
+  defaultTags: string[];
+  settings: Record<string, any>; // Or a more specific settings type
+}
+
 // Helper to adapt MediaType from TanStack Query to the shape expected by the MediaUploader
-const adaptMediaType = (mediaType: any): ReduxMediaType => {
+const adaptMediaType = (mediaType: HookMediaType): InternalMediaType => {
   return {
     _id: mediaType._id,
     name: mediaType.name,
+    description: mediaType.description, // Assume HookMediaType provides description
     fields: mediaType.fields || [],
     status: mediaType.status || 'active',
     usageCount: mediaType.usageCount || 0,
@@ -60,19 +79,19 @@ const adaptMediaType = (mediaType: any): ReduxMediaType => {
     acceptedFileTypes: mediaType.acceptedFileTypes || [],
     createdAt: mediaType.createdAt,
     updatedAt: mediaType.updatedAt,
-    baseType: mediaType.baseType,
-    includeBaseFields: mediaType.includeBaseFields,
-    catColor: mediaType.catColor,
+    baseType: mediaType.baseType as string, // Ensure baseType is string
+    includeBaseFields: mediaType.includeBaseFields || true,
+    catColor: mediaType.catColor || '#2196f3',
     defaultTags: mediaType.defaultTags || [],
     settings: mediaType.settings || {}
   };
 };
 
-// Adapter for findMediaType to use ReduxMediaType
-const findReduxMediaType = (
-  mediaTypes: ReduxMediaType[],
+// Adapter for findMediaType to use InternalMediaType
+const findInternalMediaType = (
+  mediaTypes: InternalMediaType[], // Use InternalMediaType
   mediaTypeId: string | null
-): ReduxMediaType | null => {
+): InternalMediaType | null => { // Return InternalMediaType
   if (!mediaTypeId || !mediaTypes.length) return null;
   
   // First try to find by ID
@@ -92,13 +111,13 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   onUploadComplete,
 }) => {
   const navigate = useNavigate();
-  const user = useSelector((state: RootState) => state.user);
+  const { data: userProfile, isLoading: isUserProfileLoading, error: userProfileError } = useUserProfile();
   
   // Replace Redux selector with TanStack Query hook
   const { data: mediaTypesData = [], isLoading: isLoadingMediaTypes } = useMediaTypes();
   
-  // Adapt the TanStack MediaType to the Redux MediaType shape
-  const mediaTypes: ReduxMediaType[] = useMemo(() => {
+  // Adapt the TanStack MediaType to the InternalMediaType shape
+  const mediaTypes: InternalMediaType[] = useMemo(() => {
     const adaptedTypes = mediaTypesData.map(adaptMediaType);
     
     // Add debugging output in development mode
@@ -115,7 +134,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   }, [mediaTypesData, isLoadingMediaTypes]);
   
   // Use TanStack Query for tag categories instead of Redux
-  const { data: tagCategories = [], refetch: refetchTagCategories } = useTagCategories();
+  const { data: tagCategories = [], refetch: refetchTagCategories } = useTagCategories(userProfile);
   
   // =============== CONSTANTS ===============
   const maxFileSizeMB = 200;
@@ -156,8 +175,8 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     altText: "",
     description: "",
     recordedDate: new Date().toISOString(),
-    uploadedBy: user.currentUser._id,
-    modifiedBy: user.currentUser._id,
+    uploadedBy: userProfile?._id || '',
+    modifiedBy: userProfile?._id || '',
     mediaTypeId: "",
     mediaTypeName: "",
     title: "",
@@ -195,7 +214,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   const isFileTypeValid = (file: File): boolean => {
     if (!selectedMediaType) return false;
     
-    const mediaType = mediaTypes.find(type => type._id === selectedMediaType);
+    const mediaType = mediaTypes.find((type: InternalMediaType) => type._id === selectedMediaType);
     if (!mediaType || !mediaType.acceptedFileTypes || mediaType.acceptedFileTypes.length === 0) {
       return false;
     }
@@ -454,14 +473,14 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
 
   // Set user ID in metadata when user changes
   useEffect(() => {
-    if (user) {
+    if (userProfile) {
       setMetadata((prevMetadata) => ({
         ...prevMetadata,
-        uploadedBy: user.currentUser._id,
-        modifiedBy: user.currentUser._id,
+        uploadedBy: userProfile._id,
+        modifiedBy: userProfile._id,
       }));
     }
-  }, [user]);
+  }, [userProfile]);
 
   // Reset upload progress when changing to step 2
   useEffect(() => {
@@ -809,7 +828,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     
     try {
       // Find the matching media type
-      const mediaType = findReduxMediaType(mediaTypes, selectedMediaType);
+      const mediaType = findInternalMediaType(mediaTypes, selectedMediaType);
       
       if (!mediaType) {
         setUploadError('Selected media type not found');
@@ -818,7 +837,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
       }
       
       // Prepare metadata
-      const preparedMetadata = prepareMetadataForUpload(metadata, user.currentUser._id);
+      const preparedMetadata = prepareMetadataForUpload(metadata, userProfile?._id || '');
       preparedMetadata.mediaTypeId = mediaType._id;
       preparedMetadata.mediaTypeName = mediaType.name;
       
@@ -906,8 +925,8 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
       altText: "",
       description: "",
       recordedDate: new Date().toISOString(),
-      uploadedBy: user.currentUser._id,
-      modifiedBy: user.currentUser._id,
+      uploadedBy: userProfile?._id || '',
+      modifiedBy: userProfile?._id || '',
       mediaTypeId: "",
       mediaTypeName: "",
       title: "",
@@ -950,8 +969,8 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
       altText: "",
       description: "",
       recordedDate: new Date().toISOString(),
-      uploadedBy: user.currentUser._id,
-      modifiedBy: user.currentUser._id,
+      uploadedBy: userProfile?._id || '',
+      modifiedBy: userProfile?._id || '',
       mediaTypeId: "",
       mediaTypeName: "",
       title: "",
@@ -1271,6 +1290,16 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   };
 
   const renderFields = () => {
+    const currentMediaType = mediaTypes.find((type: InternalMediaType) => type._id === selectedMediaType);
+    if (!currentMediaType) return null;
+
+    const fieldsToRender = currentMediaType.fields?.filter((field: any) => field.name !== 'File Name');
+
+    // Add title field if not present and base fields are included
+    if (currentMediaType.includeBaseFields && !fieldsToRender?.find((field: any) => field.name === 'Title')) {
+      fieldsToRender?.unshift({ name: 'Title', type: 'Text', required: true });
+    }
+
     return (
       <MetadataForm
         mediaTypes={mediaTypes}
@@ -1294,27 +1323,14 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   };
 
   const renderMediaTypeSelector = () => {
-    // Helper function to get an appropriate icon based on accepted file types
-    const getFileTypeIcons = (mediaType: ReduxMediaType) => {
-      if (!mediaType.acceptedFileTypes || mediaType.acceptedFileTypes.length === 0) {
-        return null;
-      }
-
-      const hasImages = mediaType.acceptedFileTypes.some(type => type.startsWith('image/'));
-      const hasVideos = mediaType.acceptedFileTypes.some(type => type.startsWith('video/'));
-      const hasAudio = mediaType.acceptedFileTypes.some(type => type.startsWith('audio/'));
-      const hasDocuments = mediaType.acceptedFileTypes.some(type => 
-        type.includes('pdf') || type.includes('doc') || type.includes('text/')
-      );
-      
-      return (
-        <Box sx={{ display: 'flex', ml: 'auto', gap: 0.5 }}>
-          {hasImages && <FaImage size={12} style={{ color: '#4dabf5' }} />}
-          {hasVideos && <FaVideo size={12} style={{ color: '#f57c00' }} />}
-          {hasAudio && <FaFileAudio size={12} style={{ color: '#7e57c2' }} />}
-          {hasDocuments && <FaFileWord size={12} style={{ color: '#2196f3' }} />}
-        </Box>
-      );
+    // Helper function to get icons for file types
+    const getFileTypeIcons = (mediaType: InternalMediaType) => {
+      const icons = [];
+      if (mediaType.acceptedFileTypes?.some((type: string) => type.startsWith('image/'))) icons.push(<FaImage key="image" />);
+      if (mediaType.acceptedFileTypes?.some((type: string) => type.startsWith('video/'))) icons.push(<FaVideo key="video" />);
+      if (mediaType.acceptedFileTypes?.some((type: string) => type.startsWith('audio/'))) icons.push(<FaFileAudio key="audio" />);
+      if (mediaType.acceptedFileTypes?.some((type: string) => type.startsWith('application/') || type.startsWith('text/'))) icons.push(<FaFileWord key="document" />);
+      return icons.length > 0 ? icons : [<FaUpload key="default" />];
     };
 
     // Filter out archived media types

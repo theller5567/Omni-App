@@ -14,7 +14,8 @@ import {
   Chip,
   Divider,
   Alert,
-  SelectChangeEvent
+  SelectChangeEvent,
+  CircularProgress
 } from '@mui/material';
 import { FaPlus, FaCheck, FaTimes, FaStar, FaTags, FaEdit } from 'react-icons/fa';
 import { 
@@ -27,8 +28,7 @@ import {
   createField, 
   updateFieldOptions 
 } from '../../../utils/mediaTypeUploaderUtils';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../../store/store';
+import { useTagCategories, useUserProfile, User } from '../../../hooks/query-hooks';
 
 interface FieldEditorProps {
   field: MediaTypeField;
@@ -58,7 +58,12 @@ const FieldEditor: React.FC<FieldEditorProps> = ({
   onRemove
 }) => {
   const [optionInput, setOptionInput] = useState('');
-  const tagCategories = useSelector((state: RootState) => state.tagCategories.tagCategories);
+  const { data: userProfile } = useUserProfile();
+  const { 
+    data: tagCategories = [], 
+    isLoading: isLoadingTagCategories, 
+    error: tagCategoriesError 
+  } = useTagCategories(userProfile);
 
   // Effect to update options when tag category changes
   useEffect(() => {
@@ -203,6 +208,7 @@ const FieldEditor: React.FC<FieldEditorProps> = ({
                     checked={field.useTagCategory || false}
                     onChange={handleUseTagCategoryChange}
                     color="primary"
+                    disabled={isLoadingTagCategories || !!tagCategoriesError}
                   />
                 }
                 label={
@@ -215,7 +221,13 @@ const FieldEditor: React.FC<FieldEditorProps> = ({
               
               {field.useTagCategory && (
                 <Box sx={{ mt: 1 }}>
-                  {tagCategories.length > 0 ? (
+                  {isLoadingTagCategories ? (
+                    <CircularProgress size={20} />
+                  ) : tagCategoriesError ? (
+                    <Alert severity="error" sx={{ mt: 1 }}>
+                      Error loading predefined lists: {tagCategoriesError.message}
+                    </Alert>
+                  ) : tagCategories.length > 0 ? (
                     <FormControl fullWidth size="small">
                       <InputLabel>Select Predefined Lists</InputLabel>
                       <Select
