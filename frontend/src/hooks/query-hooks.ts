@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient, UseQueryOptions, QueryKey } from
 import axios from 'axios';
 import env from '../config/env';
 import { toast } from 'react-toastify';
-import { useMemo } from 'react';
 
 // ======================
 // === Query Keys ===
@@ -137,6 +136,13 @@ export interface NewMediaData {
   mediaType?: string;
   tags?: string[];
   // Any other relevant fields
+}
+
+// Type for the data sent to create a tag category
+export interface NewTagCategoryData {
+  name: string;
+  description?: string;
+  tags?: Array<{ id: string; name: string }>; // Match TagCategoryFormData in TagCategoryManager
 }
 
 // ======================
@@ -816,7 +822,7 @@ export const useMedia = (options?: CustomQueryOptions<MediaFile[], Error>) => {
     onSuccess: onSuccessCallback
   };
   
-  return useQuery<MediaFile[], Error, MediaFile[]>(queryOptions);
+  return useQuery<MediaFile[], Error, MediaFile[]>(queryOptions as any); // Cast to any to avoid linter error
 };
 
 export const useDeleteMedia = () => {
@@ -990,11 +996,11 @@ export const useDeprecateMediaType = () => {
 };
 
 // -- Media Detail --
-export const useMediaDetail = (slug: string | undefined) => {
+export const useMediaDetail = (userProfile: User | null | undefined, slug: string | undefined) => {
   return useQuery<MediaFile>({
     queryKey: slug ? (slug.includes('-') ? QueryKeys.mediaBySlug(slug) : QueryKeys.mediaById(slug)) : ['media', 'unknown'],
     queryFn: () => fetchMediaBySlug(slug),
-    enabled: !!slug,
+    enabled: !!userProfile && !!slug, // Check for userProfile and slug
     staleTime: 1000 * 60 * 10, // 10 minutes
     retry: (failureCount, error: any) => {
       // Don't retry if we get a 404 (not found)
@@ -1186,32 +1192,35 @@ export const fetchDatabaseStats = async (): Promise<any> => {
 // =====================
 
 // -- Activity Logs --
-export const useActivityLogs = (limit = 20) => {
+export const useActivityLogs = (userProfile: User | null | undefined, limit = 20) => {
   return useQuery({
     queryKey: [QueryKeys.activityLogs, limit],
     queryFn: () => fetchActivityLogs(limit),
     staleTime: 60 * 1000, // 1 minute
-    retry: 1
+    retry: 1,
+    enabled: !!userProfile && (userProfile.role === 'admin' || userProfile.role === 'superAdmin')
   });
 };
 
 // -- User Activities --
-export const useUserActivities = (page = 1, limit = 10) => {
+export const useUserActivities = (userProfile: User | null | undefined, page = 1, limit = 10) => {
   return useQuery({
     queryKey: [QueryKeys.userActivities, page, limit],
     queryFn: () => fetchUserActivities(page, limit),
     staleTime: 60 * 1000, // 1 minute
-    placeholderData: (prev) => prev
+    placeholderData: (prev) => prev,
+    enabled: !!userProfile && (userProfile.role === 'admin' || userProfile.role === 'superAdmin')
   });
 };
 
 // -- Database Stats --
-export const useDatabaseStats = () => {
+export const useDatabaseStats = (userProfile: User | null | undefined) => {
   return useQuery({
     queryKey: [QueryKeys.databaseStats],
     queryFn: fetchDatabaseStats,
     staleTime: 2 * 60 * 1000, // 2 minutes
-    retry: 1
+    retry: 1,
+    enabled: !!userProfile && (userProfile.role === 'admin' || userProfile.role === 'superAdmin')
   });
 };
 
@@ -1343,16 +1352,17 @@ export const sendTestNotification = async (recipients?: string[]): Promise<void>
 // =====================
 
 // Hook to fetch notification settings
-export const useNotificationSettings = () => {
+export const useNotificationSettings = (userProfile: User | null | undefined) => {
   return useQuery({
     queryKey: [QueryKeys.notificationSettings],
     queryFn: fetchNotificationSettings,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!userProfile && (userProfile.role === 'admin' || userProfile.role === 'superAdmin')
   });
 };
 
 // Hook to update notification settings
-export const useUpdateNotificationSettings = () => {
+export const useUpdateNotificationSettings = (_userProfile: User | null | undefined) => {
   const queryClient = useQueryClient();
   
   return useMutation({
@@ -1368,7 +1378,7 @@ export const useUpdateNotificationSettings = () => {
 };
 
 // Hook to add a notification rule
-export const useAddNotificationRule = () => {
+export const useAddNotificationRule = (_userProfile: User | null | undefined) => {
   const queryClient = useQueryClient();
   
   return useMutation({
@@ -1384,7 +1394,7 @@ export const useAddNotificationRule = () => {
 };
 
 // Hook to update a notification rule
-export const useUpdateNotificationRule = () => {
+export const useUpdateNotificationRule = (_userProfile: User | null | undefined) => {
   const queryClient = useQueryClient();
   
   return useMutation({
@@ -1400,7 +1410,7 @@ export const useUpdateNotificationRule = () => {
 };
 
 // Hook to delete a notification rule
-export const useDeleteNotificationRule = () => {
+export const useDeleteNotificationRule = (_userProfile: User | null | undefined) => {
   const queryClient = useQueryClient();
   
   return useMutation({
@@ -1416,16 +1426,17 @@ export const useDeleteNotificationRule = () => {
 };
 
 // Hook to fetch eligible recipients
-export const useEligibleRecipients = () => {
+export const useEligibleRecipients = (_userProfile: User | null | undefined) => {
   return useQuery({
     queryKey: [QueryKeys.eligibleRecipients],
     queryFn: fetchEligibleRecipients,
     staleTime: 10 * 60 * 1000, // 10 minutes
+    enabled: !!_userProfile && (_userProfile.role === 'admin' || _userProfile.role === 'superAdmin')
   });
 };
 
 // Hook to send a test notification
-export const useSendTestNotification = () => {
+export const useSendTestNotification = (_userProfile: User | null | undefined) => {
   return useMutation({
     mutationFn: sendTestNotification,
     onSuccess: () => {
@@ -1443,13 +1454,17 @@ export const useSendTestNotification = () => {
 
 // Drastically simplified useUserProfile: No options, internal handlers only for now.
 export const useUserProfile = () => {
-  const queryClient = useQueryClient();
+  const hasToken = !!localStorage.getItem('authToken'); // Check token status
 
-  const queryOptions: UseQueryOptions<User, Error, User, QueryKey> = {
+  // Original useQuery call
+  const queryResult = useQuery<User, Error, User>({
     queryKey: QueryKeys.userProfile,
-    queryFn: fetchUserProfile,
+    queryFn: async () => {
+      console.log('[useUserProfile] Fetching user profile. Current authToken:', localStorage.getItem('authToken'));
+      return fetchUserProfile();
+    },
     staleTime: 1000 * 60 * 15, 
-    enabled: !!localStorage.getItem('authToken'), 
+    enabled: hasToken, // Query is enabled only if token exists
     retry: (failureCount: number, error: Error) => {
       if (error && typeof error === 'object' && 'response' in error && 
           (error as any).response && typeof (error as any).response.status === 'number') {
@@ -1462,31 +1477,21 @@ export const useUserProfile = () => {
       }
       return failureCount < 2;
     },
-    onSuccess: (data: User) => {
-      if (process.env.NODE_ENV === 'development') {
-        // console.log('useUserProfile internal onSuccess: Prefetching allUsers if admin.', data);
-      }
-      if ((data.role === 'admin' || data.role === 'superAdmin') && !queryClient.getQueryData(QueryKeys.allUsers)) {
-        queryClient.prefetchQuery({ queryKey: QueryKeys.allUsers, queryFn: fetchAllUsers, staleTime: 1000 * 60 * 5 });
-      }
-    },
-    onError: (error: any) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('useUserProfile internal onError.', error.message);
-      }
-      if (error && error.response && typeof error.response.status === 'number') {
-        if (error.response.status === 401 || error.response.status === 403) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('Auth error in useUserProfile onError (401/403). Clearing userProfile query.');
-          }
-          queryClient.removeQueries({ queryKey: QueryKeys.userProfile });
-        }
-      }
-    },
-  } as any; // Cast the object literal to any
+    // Remove onSuccess and onError from here
+  });
 
-  // TODO: Investigate why TypeScript incorrectly flags 'onSuccess' as not existing on UseQueryOptions here.
-  return useQuery(queryOptions); // No cast needed here if queryOptions is now considered `any` or correctly typed by assignment
+  // If there's no token, explicitly return a state indicating no user
+  if (!hasToken) {
+    return {
+      ...queryResult, // Spread other properties like error, refetch, etc.
+      data: undefined,
+      isLoading: false, // Not loading if no token
+      isSuccess: false, // Not successful if no token
+      status: 'idle' as const, // Or 'error' if you prefer, but 'idle' seems fit if disabled
+    };
+  }
+
+  return queryResult; // Return original result if token exists
 };
 
 export const useAllUsers = (options?: Omit<UseQueryOptions<User[], Error, User[], QueryKey>, 'queryKey' | 'queryFn'>) => {
@@ -1655,7 +1660,7 @@ export const useRegister = () => {
 };
 
 // New hook for transformed media data
-export const useTransformedMedia = (mediaTypeId: string = 'All') => {
+export const useTransformedMedia = (userProfile: User | null | undefined, mediaTypeId: string = 'All') => {
   const queryFn = mediaTypeId === 'All' || !mediaTypeId
     ? fetchMedia
     : () => fetchMediaByType(mediaTypeId);
@@ -1672,6 +1677,7 @@ export const useTransformedMedia = (mediaTypeId: string = 'All') => {
     queryFn: queryFn,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false,
+    enabled: !!userProfile, // Only enable if userProfile exists
     select: (data: MediaFile[]): TransformedMediaFile[] => {
       return data.map(media => ({
         ...media,
@@ -1782,26 +1788,10 @@ export const fetchTagCategories = async (): Promise<TagCategory[]> => {
   return response.data;
 };
 
-// Placeholder for fetchTags - implement if needed
+// Placeholder for fetchTags - THIS SECTION SHOULD BE REPLACED
 // export const fetchTags = async (): Promise<Tag[]> => { ... };
 
-// -- Tags and Tag Categories Hooks --
-export const useTagCategories = () => {
-  return useQuery<TagCategory[], Error>({
-    queryKey: [QueryKeys.tagCategories],
-    queryFn: fetchTagCategories,
-    staleTime: 1000 * 60 * 10, // 10 minutes
-  });
-};
-
-// Placeholder for useTags - implement if needed
-// export const useTags = () => { ... };
-
-// ... existing useTransformedMedia, prefetchMediaDetail, useMediaByType, migrateMediaFiles, useMigrateMediaFiles ...
-
-// ... User Query Hooks ...
-
-// -- Tags and Tag Categories API Functions --
+// New fetchTags function - REPLACING THE PLACEHOLDER ABOVE
 export const fetchTags = async (): Promise<Tag[]> => {
   const token = localStorage.getItem('authToken');
   if (!token) {
@@ -1818,111 +1808,74 @@ export const fetchTags = async (): Promise<Tag[]> => {
   return response.data;
 };
 
+// New createTag function - ADDED HERE
 export const createTag = async (tagName: string): Promise<Tag> => {
   const token = localStorage.getItem('authToken');
   if (!token) {
     throw new Error('Authentication token missing');
   }
-  const response = await axios.post<Tag>(`${env.BASE_URL}/api/tags`, { name: tagName }, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
+  const response = await axios.post<Tag>(
+    `${env.BASE_URL}/api/tags`,
+    { name: tagName }, // Send name in the request body
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Created tag:', response.data);
+  }
   return response.data;
 };
 
-export const updateTag = async ({ id, name }: { id: string, name: string }): Promise<Tag> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  const response = await axios.put<Tag>(`${env.BASE_URL}/api/tags/${id}`, { name }, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+// -- Tags and Tag Categories Hooks --
+export const useTagCategories = (userProfile: User | null | undefined) => {
+  return useQuery<TagCategory[], Error>({
+    queryKey: [QueryKeys.tagCategories],
+    queryFn: fetchTagCategories,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    enabled: !!userProfile,
   });
-  return response.data;
 };
 
-export const deleteTag = async (id: string): Promise<{ id: string }> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  await axios.delete(`${env.BASE_URL}/api/tags/${id}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  return { id };
-};
-
-// -- Hooks for Tags --
-export const useTags = () => {
+// useTags hook - ENSURING THIS IS CORRECTLY PLACED
+export const useTags = (userProfile: User | null | undefined) => {
   return useQuery<Tag[], Error>({
     queryKey: [QueryKeys.tags],
-    queryFn: fetchTags,
+    queryFn: fetchTags, // Uses the fetchTags function defined above
     staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: !!userProfile, // Only fetch if userProfile exists
   });
 };
 
+// useCreateTag hook - ENSURING THIS IS CORRECTLY PLACED
 export const useCreateTag = () => {
   const queryClient = useQueryClient();
   return useMutation<Tag, Error, string>({
-    mutationFn: createTag,
+    mutationFn: createTag, // Uses the createTag function defined above
     onSuccess: (newTag) => {
       queryClient.invalidateQueries({ queryKey: [QueryKeys.tags] });
-      // Optionally, optimistically update the cache
-      queryClient.setQueryData<Tag[]>([QueryKeys.tags], (oldTags = []) => [...oldTags, newTag]);
-      toast.success(`Tag "${newTag.name}" created successfully`);
+      queryClient.setQueryData<Tag[]>([QueryKeys.tags], (oldTags = []) => [
+        ...oldTags,
+        newTag,
+      ]);
+      toast.success(`Tag "${newTag.name}" created successfully!`);
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || error.message || 'Failed to create tag.');
-    },
-  });
-};
-
-export const useUpdateTag = () => {
-  const queryClient = useQueryClient();
-  return useMutation<Tag, Error, { id: string, name: string }>({
-    mutationFn: updateTag,
-    onSuccess: (updatedTag) => {
-      queryClient.invalidateQueries({ queryKey: [QueryKeys.tags] });
-      // Optionally, optimistically update the cache
-      queryClient.setQueryData<Tag[]>([QueryKeys.tags], (oldTags = []) =>
-        oldTags.map(tag => tag._id === updatedTag._id ? updatedTag : tag)
-      );
-      toast.success(`Tag "${updatedTag.name}" updated successfully`);
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || error.message || 'Failed to update tag.');
-    },
-  });
-};
-
-export const useDeleteTag = () => {
-  const queryClient = useQueryClient();
-  return useMutation<{ id: string }, Error, string>({
-    mutationFn: deleteTag,
-    onSuccess: ({ id }) => {
-      queryClient.invalidateQueries({ queryKey: [QueryKeys.tags] });
-      // Optionally, optimistically update the cache
-      queryClient.setQueryData<Tag[]>([QueryKeys.tags], (oldTags = []) =>
-        oldTags.filter(tag => tag._id !== id)
-      );
-      toast.success('Tag deleted successfully');
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || error.message || 'Failed to delete tag.');
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to create tag. Please try again.';
+      toast.error(message);
     },
   });
 };
 
 // ... existing useTransformedMedia, prefetchMediaDetail, useMediaByType, migrateMediaFiles, useMigrateMediaFiles ...
 
-// ... User Query Hooks ... 
+// ... User Query Hooks ...
 
 // --- New: Fetch User by ID ---
 export const fetchUserById = async (userId: string): Promise<User | null> => {
@@ -1931,20 +1884,37 @@ export const fetchUserById = async (userId: string): Promise<User | null> => {
     console.warn('fetchUserById called without a userId');
     return null;
   }
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    // Depending on whether this is a public or private route,
+    // you might allow this or throw an error.
+    // For now, let's assume it might be used for public profiles,
+    // but usually, an API would handle auth internally.
+    // Consider if a token is always required for /api/users/:userId
+    // For consistency with other user fetches, let's require a token for now.
+    // If a public version is needed, a separate endpoint/logic might be better.
+    // throw new Error('Authentication token missing for fetchUserById');
+  }
   try {
     // Expecting the API to return the User object directly
-    const response = await axios.get<User>(`${env.BASE_URL}/api/users/${userId}`);
+    const response = await axios.get<User>(`${env.BASE_URL}/api/users/${userId}`, {
+      headers: {
+        // Conditionally add Authorization header if token exists
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
     return response.data;
   } catch (error: any) {
     console.error(`Error fetching user by ID (${userId}):`, error.response?.data?.message || error.message);
+    // It's good practice to throw the error so React Query can handle it (e.g., set isError state)
     throw error;
   }
 };
 
-// React Query hook to get current user's profile
+// React Query hook to get user by ID
 export const useUserById = (userId: string | undefined) => {
   return useQuery<User | null, Error>({
-    queryKey: QueryKeys.userById(userId || 'invalid'),
+    queryKey: QueryKeys.userById(userId || 'invalid_user_id'), // Ensure a valid string for queryKey
     queryFn: () => {
       if (!userId) {
         // Return a promise that resolves to null or rejects if userId is not available
@@ -1960,92 +1930,62 @@ export const useUserById = (userId: string | undefined) => {
       if (error.response?.status === 404) {
         return false;
       }
-      // Standard retry for other errors (e.g., up to 3 times)
+      // Standard retry for other errors (e.g., up to 2 times)
       return failureCount < 2;
     },
   });
 };
 
-// API Functions for Tag Categories
-export const createTagCategory = async (categoryData: Partial<TagCategory>): Promise<TagCategory> => {
+// ... existing code ...
+
+// API function to create a tag category
+export const createTagCategory = async (data: NewTagCategoryData): Promise<TagCategory> => {
   const token = localStorage.getItem('authToken');
-  if (!token) throw new Error('Authentication token missing');
-  const response = await axios.post<TagCategory>(`${env.BASE_URL}/api/tag-categories`, categoryData, {
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-  });
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  const response = await axios.post<TagCategory>(
+    `${env.BASE_URL}/api/tag-categories`,
+    data,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Created tag category:', response.data);
+  }
   return response.data;
 };
 
-export const updateTagCategory = async ({ id, updates }: { id: string, updates: Partial<TagCategory> }): Promise<TagCategory> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) throw new Error('Authentication token missing');
-  const response = await axios.put<TagCategory>(`${env.BASE_URL}/api/tag-categories/${id}`, updates, {
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-  });
-  return response.data;
-};
-
-export const deleteTagCategory = async (id: string): Promise<{ id: string }> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) throw new Error('Authentication token missing');
-  await axios.delete(`${env.BASE_URL}/api/tag-categories/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return { id };
-};
-
-// Hooks for Tag Categories
+// Hook to create a tag category
 export const useCreateTagCategory = () => {
   const queryClient = useQueryClient();
-  return useMutation<TagCategory, Error, Partial<TagCategory>>({
+  return useMutation<TagCategory, Error, NewTagCategoryData>({
     mutationFn: createTagCategory,
     onSuccess: (newCategory) => {
       queryClient.invalidateQueries({ queryKey: [QueryKeys.tagCategories] });
-      queryClient.setQueryData<TagCategory[]>([QueryKeys.tagCategories], (oldCategories = []) => [...oldCategories, newCategory]);
-      toast.success(`Category "${newCategory.name}" created successfully`);
+      // Optionally, update cache directly
+      queryClient.setQueryData<TagCategory[]>([QueryKeys.tagCategories], (oldCategories = []) => [
+        ...oldCategories,
+        newCategory,
+      ]);
+      toast.success(`Tag category "${newCategory.name}" created successfully!`);
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || error.message || 'Failed to create category.');
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to create tag category.';
+      toast.error(message);
     },
   });
 };
-
-export const useUpdateTagCategory = () => {
-  const queryClient = useQueryClient();
-  return useMutation<TagCategory, Error, { id: string, updates: Partial<TagCategory> }>({
-    mutationFn: updateTagCategory,
-    onSuccess: (updatedCategory) => {
-      queryClient.invalidateQueries({ queryKey: [QueryKeys.tagCategories] });
-      queryClient.setQueryData<TagCategory[]>([QueryKeys.tagCategories], (oldCategories = []) =>
-        oldCategories.map(cat => cat._id === updatedCategory._id ? updatedCategory : cat)
-      );
-      toast.success(`Category "${updatedCategory.name}" updated successfully`);
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || error.message || 'Failed to update category.');
-    },
-  });
-};
-
-export const useDeleteTagCategory = () => {
-  const queryClient = useQueryClient();
-  return useMutation<{ id: string }, Error, string>({
-    mutationFn: deleteTagCategory,
-    onSuccess: ({ id }) => {
-      queryClient.invalidateQueries({ queryKey: [QueryKeys.tagCategories] });
-      queryClient.setQueryData<TagCategory[]>([QueryKeys.tagCategories], (oldCategories = []) =>
-        oldCategories.filter(cat => cat._id !== id)
-      );
-      toast.success('Category deleted successfully');
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || error.message || 'Failed to delete category.');
-    },
-  });
-};
-
-// Placeholder for useTags - implement if needed
 
 // ... existing useTransformedMedia, prefetchMediaDetail, useMediaByType, migrateMediaFiles, useMigrateMediaFiles ...
 
-// ... User Query Hooks ... 
+// ... User Query Hooks ...
+
+// ... existing code ... 

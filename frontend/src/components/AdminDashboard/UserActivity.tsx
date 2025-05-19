@@ -15,7 +15,13 @@ import {
   LinearProgress,
   CircularProgress
 } from '@mui/material';
-import { useUserActivities, useAllUsers, User as UserType } from '../../hooks/query-hooks';
+import { 
+  useUserActivities, 
+  useAllUsers, 
+  useUserProfile,
+  User as UserType 
+} from '../../hooks/query-hooks';
+import type { User } from '../../hooks/query-hooks'; // Import User type if not already via UserType
 
 // User activity interface - ensure this matches the data from fetchUserActivities
 interface UserActivityEntry {
@@ -37,6 +43,9 @@ const UserActivity: React.FC = () => {
   const [page, setPage] = useState(0); // API is 1-indexed, UI is 0-indexed for MUI TablePagination
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  // Get userProfile for enabling the query
+  const { data: userProfile } = useUserProfile();
+
   // Use TanStack Query hooks
   const { 
     data: activityData, // Contains { data: UserActivityEntry[], total: number }
@@ -44,7 +53,7 @@ const UserActivity: React.FC = () => {
     isError,
     error,
     // refetch // Can be used for manual refetching if needed
-  } = useUserActivities(page + 1, rowsPerPage); // Pass 1-indexed page
+  } = useUserActivities(userProfile, page + 1, rowsPerPage); // Pass userProfile and 1-indexed page
 
   const { data: allUsers = [], isLoading: isLoadingUsers } = useAllUsers();
 

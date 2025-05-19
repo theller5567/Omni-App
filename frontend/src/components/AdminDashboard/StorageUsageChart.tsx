@@ -1,9 +1,11 @@
 import React, { useRef } from 'react';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store/store';
+// Remove Redux imports
+// import { useSelector } from 'react-redux';
+// import { RootState } from '../../store/store';
 import { Paper, Typography, Box, Tab, Tabs } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { formatFileSize } from '../../utils/formatFileSize';
+import type { TransformedMediaFile, MediaType } from '../../hooks/query-hooks'; // Import types
 
 // Same color scheme as MediaTypeDistribution for consistency
 const DEFAULT_COLORS = [
@@ -19,13 +21,19 @@ const DEFAULT_COLORS = [
   '#2196f3', // blue
 ];
 
-const StorageUsageChart: React.FC = () => {
+interface StorageUsageChartProps {
+  allMedia: TransformedMediaFile[];
+  mediaTypes: MediaType[];
+  isLoading?: boolean; // Optional loading prop
+}
+
+const StorageUsageChart: React.FC<StorageUsageChartProps> = ({ allMedia, mediaTypes, isLoading }) => {
   const [activeTab, setActiveTab] = React.useState(0);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   
-  // Get media data from Redux store
-  const allMedia = useSelector((state: RootState) => state.media.allMedia);
-  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  // Remove Redux store access
+  // const allMedia = useSelector((state: RootState) => state.media.allMedia);
+  // const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
   
   // Calculate storage by media type
   const getStorageByMediaType = () => {
@@ -78,8 +86,27 @@ const StorageUsageChart: React.FC = () => {
     return [formatFileSize(value), 'Storage Used'];
   };
   
-  // Empty state
-  if (allMedia.length === 0) {
+  // Empty state or loading state
+  if (isLoading) {
+    return (
+      <Paper elevation={2} className="dashboard-card storage-chart">
+        <Typography variant="h6" gutterBottom>Storage Usage</Typography>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '400px',
+          minHeight: '400px'
+        }}>
+          <Typography variant="body1" color="textSecondary">
+            Loading storage data...
+          </Typography>
+        </Box>
+      </Paper>
+    );
+  }
+
+  if (!allMedia || allMedia.length === 0) {
     return (
       <Paper elevation={2} className="dashboard-card storage-chart">
         <Typography variant="h6" gutterBottom>Storage Usage</Typography>

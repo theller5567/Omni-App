@@ -2,14 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
   Chip,
   IconButton,
   Button,
@@ -61,8 +53,8 @@ const InvitationList: React.FC<InvitationListProps> = ({ refreshTrigger, onRefre
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState<number>(0);
-  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+  const [page, _setPage] = useState<number>(0);
+  const [rowsPerPage, _setRowsPerPage] = useState<number>(10);
   const [invitationToCancel, setInvitationToCancel] = useState<Invitation | null>(null);
   const [invitationToResend, setInvitationToResend] = useState<Invitation | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -243,15 +235,6 @@ const InvitationList: React.FC<InvitationListProps> = ({ refreshTrigger, onRefre
     if (onRefresh) onRefresh();
   };
   
-  // Handle pagination
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-  
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
   
   // Render status chip
   const renderStatusChip = (status: string) => {

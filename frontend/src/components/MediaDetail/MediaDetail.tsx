@@ -11,7 +11,6 @@ import {
   Tabs,
   Tab,
   Tooltip,
-  TextField
 } from "@mui/material";
 import axios from "axios";
 import { BaseMediaFile } from "../../interfaces/MediaFile";
@@ -597,19 +596,17 @@ const MediaDetail: React.FC = () => {
   
   const queryClient = useQueryClient();
   
-  const [showAdvancedDebug, setShowAdvancedDebug] = useState(false);
-  const [customEndpoint, setCustomEndpoint] = useState('');
-  const [isTestingEndpoint, setIsTestingEndpoint] = useState(false);
-  const [testResult, setTestResult] = useState<{success: boolean, message: string} | null>(null);
-  
   const { data: mediaTypes = [] } = useMediaTypes();
+  
+  const { data: userProfile, isLoading: isUserLoading, isError: isUserProfileError } = useUserProfile(); 
   const { 
     data: mediaFile, 
     isLoading: isLoadingMedia,
     isError: isMediaError,
     error: mediaError,
-    refetch 
-  } = useMediaDetail(slug);
+    refetch,
+  } = useMediaDetail(userProfile, slug);
+  
   const { mutateAsync: updateMediaMutation } = useUpdateMedia();
   const { 
     isLoading: isCheckingHealth, 
@@ -617,9 +614,6 @@ const MediaDetail: React.FC = () => {
     error: healthError,
     refetch: recheckHealth 
   } = useApiHealth();
-
-  // Get current user profile using TanStack Query
-  const { data: userProfile, isLoading: isUserLoading } = useUserProfile(); 
 
   useEffect(() => {
       if (!slug) {
@@ -630,7 +624,89 @@ const MediaDetail: React.FC = () => {
   // Determine if editing is enabled based on userProfile role
   const isEditingEnabled = !isUserLoading && userProfile && (userProfile.role === 'admin' || userProfile.role === 'superAdmin');
 
-  const userId = mediaFile ? (getMetadataField(mediaFile, 'uploadedBy', '') || '') : '';
+  // 1. Handle user profile loading state first
+  if (isUserLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Loading user information...</Typography>
+      </Box>
+    );
+  }
+
+  // 2. Handle user logged-out state (ProtectedRoute should also catch this)
+  // This check is important because useMediaDetail is enabled based on userProfile.
+  // If no userProfile, mediaFile will be undefined and isLoadingMedia will be false (as query is disabled).
+  if (!userProfile) {
+    // If there was an error fetching the profile itself, that's a different issue
+    if (isUserProfileError) {
+       return (
+        <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100vh" className="media-detail-container error-container">
+          <Typography variant="h5" color="error" gutterBottom>Error Loading User Profile</Typography>
+          <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>Could not load your profile. Please try again.</Typography>
+          <Button variant="contained" onClick={() => window.location.reload()}>Reload</Button>
+        </Box>
+      );
+    }
+    // Otherwise, user is simply not logged in.
+    return (
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100vh" className="media-detail-container error-container">
+        <Typography variant="h5" color="textSecondary" gutterBottom>Access Denied</Typography>
+        <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>Please log in to view this content.</Typography>
+        <Button variant="contained" onClick={() => navigate('/login')}>Go to Login</Button>
+      </Box>
+    );
+  }
+
+  // At this point, userProfile IS defined.
+  // So, useMediaDetail query IS (or was) enabled (assuming slug is also present).
+
+  // 3. Handle media loading state (query is enabled and fetching)
+  if (isLoadingMedia) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Loading media details...</Typography>
+      </Box>
+    );
+  }
+
+  // 4. Handle media fetching error (query was enabled, ran, but failed)
+  if (isMediaError) {
+    return (
+      <div className="media-detail-container error-container">
+        <Typography variant="h4" color="error" gutterBottom>Error Loading Media</Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
+          {mediaError?.message || "An unexpected error occurred while trying to load the media file."}
+        </Typography>
+        <Typography variant="subtitle2">API Server Status: {isCheckingHealth ? "Checking..." : isHealthError ? `Offline (${healthError?.message || 'Unknown Error'})` : "Online"}</Typography>
+        <Button onClick={() => recheckHealth()} disabled={isCheckingHealth} sx={{ my: 1 }}>Retry Health Check</Button>
+        <Button onClick={() => refetch()} sx={{ my: 1, ml: 1 }}>Retry Loading Media</Button>
+        
+        <Box sx={{ mt: 2, p: 2, border: '1px dashed grey', borderRadius: '4px' }}>
+          <Typography variant="caption" display="block" gutterBottom>Debug Information:</Typography>
+          <Typography variant="caption" display="block">Slug: {slug}</Typography>
+          <Typography variant="caption" display="block">Error: {mediaError?.message || JSON.stringify(mediaError)}</Typography>
+        </Box>
+      </div>
+    );
+  }
+
+  // 5. Handle media not found (query was enabled, ran, succeeded, but returned no data e.g. 404 for slug)
+  if (!mediaFile) {
+    return (
+      <div className="media-detail-container error-container">
+        <Typography variant="h4" color="error" gutterBottom>Media Not Found</Typography>
+        <Typography variant="body1">
+          The requested media could not be found. It may have been moved or deleted.
+        </Typography>
+        <Button onClick={() => navigate('/media-library')} sx={{ mt: 2 }}>Back to Library</Button>
+      </div>
+    );
+  }
+
+  // If we reach here, userProfile exists, and mediaFile exists and there were no errors loading it.
+  const userId = getMetadataField(mediaFile, 'uploadedBy', '') || '';
   const { username: uploadedBy } = useUsername(userId);
 
   // Effect to update the URL if the slug in the URL doesn't match the actual slug
@@ -841,44 +917,6 @@ const MediaDetail: React.FC = () => {
     return Promise.resolve(false);
   };
   
-  // Function to test a custom endpoint
-  const testCustomEndpoint = async () => {
-    if (!customEndpoint || !slug) return;
-    
-    setIsTestingEndpoint(true);
-    setTestResult(null);
-    
-    try {
-      const token = localStorage.getItem('authToken');
-      // Extract ID if present in the slug
-      const idMatch = slug.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
-      const id = idMatch ? idMatch[1] : slug;
-      
-      // Replace :id or :slug placeholders with actual values
-      const endpoint = customEndpoint
-        .replace(':id', id)
-        .replace(':slug', slug);
-        
-      const response = await axios.get(endpoint, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
-      setTestResult({
-        success: true,
-        message: `Success! Endpoint returned ${response.status} with data: ${JSON.stringify(response.data).substring(0, 100)}...`
-      });
-    } catch (error: any) {
-      setTestResult({
-        success: false,
-        message: `Error: ${error.message}${error.response ? ` (Status: ${error.response.status})` : ''}`
-      });
-    } finally {
-      setIsTestingEndpoint(false);
-    }
-  };
-
   // Find media type details and convert to MediaTypeConfig format
   const mediaTypeInfo = mediaTypes.find(
     (type) => type.name === mediaFile?.mediaType
@@ -938,232 +976,56 @@ const MediaDetail: React.FC = () => {
         <ArrowBackIcon fontSize={isMobile ? "small" : "medium"} />
       </Button>
 
-      {isLoadingMedia || isUserLoading ? (
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            minHeight: "400px",
-          }}
-        >
-          <CircularProgress />
-        </Box>
-      ) : isMediaError || !mediaFile ? (
-        <Box
-          sx={{
-            p: 3,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-          }}
-        >
-          <Typography variant="h5" color="error">
-            Error Loading Media
-          </Typography>
-          <Typography variant="body1" sx={{ maxWidth: '600px', textAlign: 'center', mb: 2 }}>
-            {mediaError instanceof Error ? mediaError.message : 'Failed to load media file'}
-          </Typography>
-          
-          {/* Show API Health Status */}
-          <Box sx={{ 
-            p: 2, 
-            bgcolor: isHealthError ? 'rgba(255,0,0,0.05)' : 'rgba(0,255,0,0.05)', 
-            borderRadius: 1,
-            mb: 2,
-            width: '100%',
-            maxWidth: '500px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center'
-          }}>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              API Server Status: {isCheckingHealth ? 'Checking...' : (isHealthError ? 'Error' : 'Online')}
-            </Typography>
-            
-            {isHealthError && (
-              <Typography variant="body2" color="error">
-                {healthError instanceof Error ? healthError.message : 'Cannot connect to API server'}
-              </Typography>
-            )}
-            
-            {!isCheckingHealth && (
-              <Button 
-                size="small" 
-                variant="outlined" 
-                onClick={() => recheckHealth()}
-                sx={{ mt: 1 }}
-              >
-                Check API Status
-              </Button>
-            )}
-      </Box>
-          
-          {process.env.NODE_ENV === 'development' && (
-            <>
-              <Box sx={{ 
-                p: 2, 
-                bgcolor: 'rgba(0,0,0,0.05)', 
-                borderRadius: 1, 
-                width: '100%',
-                maxWidth: '600px',
-                overflow: 'auto',
-                mb: showAdvancedDebug ? 0 : 2
-              }}>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>Debug Information:</Typography>
-                <Typography variant="caption" component="pre" sx={{ whiteSpace: 'pre-wrap' }}>
-                  Slug: {slug}
-                  {mediaError instanceof Error ? 
-                    `\n\nError: ${mediaError.message}\n\nStack: ${mediaError.stack || 'No stack trace'}` : 
-                    `\n\nError: ${JSON.stringify(mediaError, null, 2)}`}
-                </Typography>
-                
-                <Button 
-                  size="small" 
-                  variant="text" 
-                  onClick={() => setShowAdvancedDebug(!showAdvancedDebug)}
-                  sx={{ mt: 2 }}
-                >
-                  {showAdvancedDebug ? 'Hide Advanced Debug' : 'Show Advanced Debug'}
-                </Button>
-      </Box>
-              
-              {showAdvancedDebug && (
-                <Box sx={{ 
-                  p: 2, 
-                  bgcolor: 'rgba(0,0,255,0.05)', 
-                  borderRadius: 1, 
-                  width: '100%',
-                  maxWidth: '600px',
-                  mb: 2
-                }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>Test Custom Endpoint:</Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <Typography variant="caption">
-                      Enter a custom API endpoint to test. Use :id or :slug for dynamic values.
-                    </Typography>
-                    
-                    <TextField 
-                      size="small"
-                      fullWidth
-                      value={customEndpoint}
-                      onChange={(e) => setCustomEndpoint(e.target.value)}
-                      placeholder="e.g., http://localhost:5002/api/media/:id"
-                      disabled={isTestingEndpoint}
-                    />
-                    
-      <Button
-                      variant="contained" 
-                      size="small"
-                      onClick={testCustomEndpoint}
-                      disabled={!customEndpoint || isTestingEndpoint}
-                    >
-                      {isTestingEndpoint ? 'Testing...' : 'Test Endpoint'}
-                    </Button>
-                    
-                    {testResult && (
-                      <Box sx={{ 
-                        mt: 1, 
-                        p: 1, 
-                        bgcolor: testResult.success ? 'rgba(0,255,0,0.1)' : 'rgba(255,0,0,0.1)', 
-                        borderRadius: 1 
-                      }}>
-                        <Typography variant="caption">
-                          {testResult.message}
-                        </Typography>
-                      </Box>
-                    )}
-                    
-                    <Typography variant="caption" sx={{ mt: 1 }}>
-                      Suggested endpoints to try:
-                    </Typography>
-                    
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {[
-                        'http://localhost:5002/media/slug/:slug',
-                        'http://localhost:5002/media/:slug',
-                        'http://localhost:5002/api/media/id/:id',
-                        'http://localhost:5002/media/id/:id',
-                        'http://localhost:5002/api/media/:id',
-                        'http://localhost:5002/media/by-id/:id'
-                      ].map((endpoint) => (
-                        <Chip 
-                          key={endpoint}
-                          label={endpoint} 
-                          size="small" 
-                          onClick={() => setCustomEndpoint(endpoint)}
-                          clickable
-                        />
-                      ))}
-                    </Box>
-                  </Box>
-                </Box>
-              )}
-            </>
-          )}
-          
-          <Button
-        variant="outlined"
-            onClick={() => refetch()}
+      <Box
+        className="media-detail"
+        sx={{
+          p: isMobile ? 2 : 3,
+          maxWidth: '100%',
+          margin: '0 auto'
+        }}
       >
-            Retry
-      </Button>
-        </Box>
-      ) : (
-        <>
-          <Box
-            className="media-detail"
-            sx={{
-              p: isMobile ? 2 : 3,
-              maxWidth: '100%',
-              margin: '0 auto'
-            }}
-          >
         <MediaDetailPreview 
-              mediaFile={mediaFile as BaseMediaFile}
+          mediaFile={mediaFile as BaseMediaFile}
           onEdit={handleEdit}
           onDownload={handleDownload}
           isEditingEnabled={isEditingEnabled ?? false}
-              onThumbnailUpdate={isVideo && isEditingEnabled ? () => setIsThumbnailDialogOpen(true) : undefined}
+          onThumbnailUpdate={isVideo && isEditingEnabled ? () => setIsThumbnailDialogOpen(true) : undefined}
+        />
+        
+        <Box className="media-detail-content">
+          <Suspense fallback={<CircularProgress size={24} />}>
+            <MediaInformation
+              mediaFile={mediaFile}
+              mediaTypeConfig={mediaTypeConfig}
+              baseFields={baseFields}
+              getMetadataField={getMetadataField}
             />
-          
-            <Box className="media-detail-content">
-              <Suspense fallback={<CircularProgress size={24} />}>
-                <MediaInformation
-                  mediaFile={mediaFile}
-                  mediaTypeConfig={mediaTypeConfig}
-                  baseFields={baseFields}
-                  getMetadataField={getMetadataField}
-                />
-              </Suspense>
-            </Box>
-          </Box>
+          </Suspense>
+        </Box>
+      </Box>
 
-          {isEditDialogOpen && (
-            <Suspense fallback={<CircularProgress size={24} />}>
-              <EditMediaDialog
-                open={isEditDialogOpen}
-                onClose={() => setIsEditDialogOpen(false)}
-                mediaFile={mediaFile as any}
-                mediaType={mediaTypeConfig as any}
-                onSave={async (data) => {
-                  await handleSave(data);
-                  return;
-                }}
-              />
-            </Suspense>
-          )}
-          
-          {isThumbnailDialogOpen && (
-            <ThumbnailUpdateDialog
-              open={isThumbnailDialogOpen}
-              onClose={() => setIsThumbnailDialogOpen(false)}
-              mediaData={mediaFile}
-              onThumbnailUpdate={handleThumbnailUpdate}
-            />
-          )}
-        </>
+      {isEditDialogOpen && (
+        <Suspense fallback={<CircularProgress size={24} />}>
+          <EditMediaDialog
+            open={isEditDialogOpen}
+            onClose={() => setIsEditDialogOpen(false)}
+            mediaFile={mediaFile as any}
+            mediaType={mediaTypeConfig as any}
+            onSave={async (data) => {
+              await handleSave(data);
+              return;
+            }}
+          />
+        </Suspense>
+      )}
+      
+      {isThumbnailDialogOpen && (
+        <ThumbnailUpdateDialog
+          open={isThumbnailDialogOpen}
+          onClose={() => setIsThumbnailDialogOpen(false)}
+          mediaData={mediaFile}
+          onThumbnailUpdate={handleThumbnailUpdate}
+        />
       )}
       
       <ToastContainer

@@ -10,7 +10,11 @@ import {
   useMediaQuery
 } from '@mui/material';
 import '../components/AdminDashboard/dashboard.scss';
-import { useMediaTypesWithUsageCounts, useTransformedMedia } from '../hooks/query-hooks';
+import { 
+  useMediaTypesWithUsageCounts, 
+  useTransformedMedia,
+  useUserProfile
+} from '../hooks/query-hooks';
 
 // Lazy-loaded dashboard components
 const MediaTypeDistribution = lazy(() => import('../components/AdminDashboard/MediaTypeDistribution'));
@@ -65,17 +69,23 @@ const AccountAdminDashboard: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
+  // --- User Profile ---
+  const { 
+    data: userProfile, 
+    isLoading: isLoadingUserProfile,
+  } = useUserProfile();
+  
   // Get media data using TanStack Query
   const { 
     data: allMedia = [], 
     isLoading: isLoadingMedia, 
-  } = useTransformedMedia();
+  } = useTransformedMedia(userProfile);
   
   // Get media types using TanStack Query
   const { 
     data: mediaTypes = [], 
-    isLoading: mediaTypesLoading,
-    isError: mediaTypesError
+    isLoading: isLoadingMediaTypes,
+    isError: _mediaTypesError
   } = useMediaTypesWithUsageCounts();
   
   // Initialize data when component mounts if not already loaded
@@ -125,7 +135,7 @@ const AccountAdminDashboard: React.FC = () => {
           <Paper elevation={2} className="dashboard-card stat-card">
             <Typography variant="h6" className="stat-title">Media Types</Typography>
             <Typography variant="h3" className="stat-value" sx={{ color: 'success.main' }}>
-              {mediaTypesLoading ? <CircularProgress size={24} /> : mediaTypes.length}
+              {isLoadingMediaTypes ? <CircularProgress size={24} /> : mediaTypes.length}
             </Typography>
             <Typography variant="body2" className="stat-subtitle">Configured media types</Typography>
           </Paper>
@@ -202,7 +212,12 @@ const AccountAdminDashboard: React.FC = () => {
           
           <TabPanel value={activeTab} index={1} key="tab-panel-1">
             <Suspense fallback={<LoadingFallback />}>
-              <StorageUsageChart key="storage-usage-chart" />
+              <StorageUsageChart 
+                key="storage-usage-chart" 
+                allMedia={allMedia} 
+                mediaTypes={mediaTypes} 
+                isLoading={isLoadingUserProfile || isLoadingMedia || isLoadingMediaTypes}
+              />
             </Suspense>
           </TabPanel>
           

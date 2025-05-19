@@ -11,8 +11,6 @@ import {
   Box, 
   Chip,
   Button,
-  FormControlLabel,
-  Checkbox,
   CircularProgress
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -27,6 +25,7 @@ import {
   useActivityLogs, 
   useAllUsers, 
   useTransformedMedia, 
+  useUserProfile,
   User as UserType, 
   TransformedMediaFile 
 } from '../../hooks/query-hooks';
@@ -47,11 +46,15 @@ interface ActivityLog {
   mediaSlug?: string;
   mediaTitle?: string;
   resourceType?: string;
+  tagName?: string;
+  tagCategoryName?: string;
 }
 
 const RecentActivity: React.FC = () => {
-  const [disableMock, setDisableMock] = useState(false);
   const [displayError, setDisplayError] = useState<string | null>(null);
+
+  // Get user profile
+  const { data: userProfile } = useUserProfile();
 
   // Use TanStack Query hooks
   const { 
@@ -61,7 +64,7 @@ const RecentActivity: React.FC = () => {
     error: activitiesError,
     refetch,
     isRefetching
-  } = useActivityLogs(20); // Fetch latest 20, or make configurable
+  } = useActivityLogs(userProfile, 20); // Pass userProfile, Fetch latest 20
 
   const { 
     data: allUsers = [], 
@@ -71,7 +74,7 @@ const RecentActivity: React.FC = () => {
   const { 
     data: allMedia = [], 
     isLoading: isLoadingMedia 
-  } = useTransformedMedia();
+  } = useTransformedMedia(userProfile); // Pass userProfile, implicitly uses 'All' for mediaTypeId
 
   useEffect(() => {
     if (isActivitiesError && activitiesError) {
@@ -89,48 +92,14 @@ const RecentActivity: React.FC = () => {
     let logs: ActivityLog[] = activityLogs || []; // Use activityLogs directly
     // For now, just return the fetched logs directly, assuming backend provides sufficient info
     return logs;
-  }, [activityLogs, allMedia, allUsers]);
-
-
-  // Function to create mock data for fallback (Simplified - needs careful review)
-  const createMockData = (): ActivityLog[] => {
-    if (disableMock) return [];
-    let counter = 0;
-    const generateUniqueId = (prefix: string) => `${prefix}-${Date.now()}-${counter++}-${Math.random().toString(36).substring(2, 9)}`;
-    
-    const mockActivities: ActivityLog[] = [];
-
-    // User for mock data
-    const mockUser = allUsers.length > 0 ? allUsers[0] : ({ _id: 'mock-user-1', id: 'mock-user-1', username: 'mockUser' } as UserType); // Cast to UserType
-    const mockMedia = allMedia.length > 0 ? allMedia[0] : ({ _id: 'mock-media-1', id: 'mock-media-1', title: 'Mock Media Title', slug: 'mock-media-slug' } as TransformedMediaFile); // Cast to TransformedMediaFile
-
-    if (!isLoadingActivities && !isLoadingUsers && !isLoadingMedia) {
-        mockActivities.push({
-            _id: generateUniqueId('mock-upload'),
-            userId: mockUser._id,
-            username: mockUser.username,
-            action: 'UPLOAD',
-            details: `Uploaded ${mockMedia.title || 'a new file'}`,
-            targetType: 'media',
-            targetId: mockMedia._id,
-            targetSlug: mockMedia.slug,
-            timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString()
-        });
-        // Add more mock activities as needed
-    }
-    return mockActivities;
-  };
+  }, [activityLogs]);
 
   const finalActivities: ActivityLog[] = (activityLogs && activityLogs.length > 0) 
                           ? processedActivities 
-                          : (isLoadingActivities || isLoadingUsers || isLoadingMedia) ? [] : createMockData();
+                          : []; // Simplified: show processed or empty, no mock, no loading check needed here as UI handles loading
 
   const handleRefresh = () => {
     refetch();
-  };
-
-  const handleToggleMock = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setDisableMock(event.target.checked);
   };
 
   const getActionIcon = (action: string, resourceType?: string) => {
@@ -152,14 +121,29 @@ const RecentActivity: React.FC = () => {
     }
   };
 
-  const getAvatarColor = (action: string) => {
-    // ... (keep existing logic or simplify)
-    switch (action.toUpperCase()) {
-        case 'UPLOAD': case 'CREATE': return 'primary.main';
-        case 'DELETE': return 'error.main';
-        case 'EDIT': case 'UPDATE': return 'info.main';
-        case 'LOGIN': case 'REGISTER': case 'PROFILE_UPDATE': return 'success.main';
-        default: return 'grey.500';
+  const getAvatarColor = (action: string, resourceType?: string) => {
+    const actionUpper = action.toUpperCase();
+    // Specific handling for tag creation to match chip color more directly if needed
+    if (resourceType === 'tag' && actionUpper === 'CREATE') return 'var(--color-success)'; 
+    if (resourceType === 'tag' && actionUpper === 'UPDATE') return 'var(--color-info)';
+    if (resourceType === 'tag' && actionUpper === 'DELETE') return 'var(--color-error)';
+
+    switch (actionUpper) {
+      case 'UPLOAD':
+        return 'var(--color-warning)';
+      case 'CREATE': 
+        return 'var(--color-success)';
+      case 'DELETE': 
+        return 'var(--color-error)';
+      case 'EDIT': 
+      case 'UPDATE': 
+        return 'var(--color-info)';
+      case 'LOGIN': 
+      case 'REGISTER': 
+      case 'PROFILE_UPDATE':
+        return 'var(--color-primary)';
+      default: 
+        return 'var(--color-text-secondary)'; // More neutral default
     }
   };
 
@@ -172,11 +156,104 @@ const RecentActivity: React.FC = () => {
     let mediaLink: string | null = null;
     let mediaLabel: string | null = null;
 
+    // Determine the consistent color for this activity item
+    const itemColor = getAvatarColor(activity.action, activity.resourceType);
+
+    // Handle Tag related activities first
+    if (activity.resourceType === 'tag' && activity.tagName) { 
+      let actionText = 'Tag activity:';
+      // Color is already determined by itemColor from getAvatarColor
+
+      const actionUpper = activity.action.toUpperCase();
+      if (actionUpper === 'CREATE') {
+        actionText = 'Created tag:';
+      } else if (actionUpper === 'UPDATE') {
+        actionText = 'Updated tag:';
+      } else if (actionUpper === 'DELETE') {
+        actionText = 'Deleted tag:';
+      }
+
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+          <Typography variant="body2" component="span" sx={{ mr: 0.5 }}>
+            {actionText}
+          </Typography>
+          <Chip 
+            label={activity.tagName} 
+            size="small" 
+            variant="outlined" 
+            sx={{ 
+              color: itemColor, // Use itemColor
+              borderColor: itemColor, // Use itemColor
+              fontSize: "12px" 
+            }}
+          />
+        </Box>
+      );
+    }
+
+    // Handle Tag CATEGORY related activities
+    if (activity.resourceType === 'tagCategory') {
+      let actionText = 'Tag category activity:';
+      // Use tagCategoryName if available, otherwise try to parse from details or use a default
+      const categoryName = activity.tagCategoryName || (activity as any).resourceName || 'Unnamed Category';
+      let associatedTags: Array<{ id?: string; name: string }> = [];
+
+      // Check if backend provides a direct array of tags in the log (ideal scenario)
+      // Example: if (Array.isArray(activity.loggedTags)) { associatedTags = activity.loggedTags; }
+      // For now, we parse from 'details' as per the provided log structure
+
+      if (typeof activity.details === 'string') {
+        // Regex to capture text after "containing tags: " or "with tags: "
+        const tagsStringMatch = activity.details.match(/(?:containing|with) tags: (.*)/i);
+        if (tagsStringMatch && tagsStringMatch[1]) {
+          associatedTags = tagsStringMatch[1]
+            .split(',')
+            .map(name => name.trim())
+            .filter(name => name !== '…' && name.length > 0) // Remove ellipsis and empty strings
+            .map(name => ({ name })); // Create objects { name: string }
+        }
+      }
+
+      const actionUpper = activity.action.toUpperCase();
+      if (actionUpper === 'CREATE') {
+        actionText = `Created category "${categoryName}" with tags:`;
+      } else if (actionUpper === 'UPDATE') {
+        actionText = `Updated category "${categoryName}" with tags:`;
+      } else if (actionUpper === 'DELETE') {
+        actionText = `Deleted category "${categoryName}".`;
+      }
+
+      return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+          <Typography variant="body2" component="span">
+            {actionText}
+          </Typography>
+          {associatedTags.length > 0 && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              {associatedTags.map((tag, index) => (
+                <Chip 
+                  key={tag.id || `tag-${index}`}
+                  label={tag.name}
+                  size="small" 
+                  variant="outlined" 
+                  sx={{ 
+                    color: 'var(--color-success)', 
+                    borderColor: 'var(--color-success)', 
+                    fontSize: "12px" 
+                  }}
+                />
+              ))}
+            </Box>
+          )}
+        </Box>
+      );
+    }
+
+    // Media link rendering logic (updated to use itemColor)
     {
-      // Support both camelCase and lowercase field names
       const mediaSlug = activity.mediaSlug || (activity as any)['mediaslug'];
       const mediaTitle = activity.mediaTitle || (activity as any)['mediatitle'];
-      // Debug: log the resolved mediaSlug and mediaTitle
       console.log('RecentActivity: resolved mediaSlug', mediaSlug, 'mediaTitle', mediaTitle);
       if (activity.resourceType === 'media' && mediaSlug && mediaTitle) {
         let displayTextBefore = '';
@@ -187,7 +264,6 @@ const RecentActivity: React.FC = () => {
         } else if (activity.action.toLowerCase().includes('thumbnail')) {
           displayTextBefore = 'Updated video thumbnail for ';
         }
-        // Extract changed fields if present in details
         if (typeof details === 'string' && details.includes('(') && details.includes(')')) {
           const match = details.match(/\(([^)]+)\)/);
           if (match && match[1]) {
@@ -198,7 +274,14 @@ const RecentActivity: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
             <Typography variant="body2" component="span" noWrap sx={{ mr: 1 }}>
               {displayTextBefore}
-              <Link to={`/media/slug/${mediaSlug}`} style={{ textDecoration: 'underline', color: '#1976d2', fontWeight: 500 }}>
+              <Link 
+                to={`/media/slug/${mediaSlug}`} 
+                style={{ 
+                  textDecoration: 'underline', 
+                  color: itemColor, // Use itemColor for the link
+                  fontWeight: 500 
+                }}
+              >
                 {mediaTitle}
               </Link>
             </Typography>
@@ -214,24 +297,22 @@ const RecentActivity: React.FC = () => {
       }
     }
 
-    // If details is a string and contains changed fields in parentheses, extract them
+    // Fallback logic for other types of links or details if needed (updated to use itemColor for links)
     if (typeof details === 'string' && details.includes('(') && details.includes(')')) {
       const match = details.match(/\(([^)]+)\)/);
       if (match && match[1]) {
         changedFields = match[1].split(',').map(f => f.trim());
-        // Remove the fields portion from the main details
         mainDetails = details.replace(/\s*\([^)]+\)/, '').trim();
       }
     }
 
-    // Only create a link for specific actions (UPLOAD, UPDATE (media), UPDATE VIDEO THUMBNAIL)
     const actionType = (activity.action || '').toUpperCase();
     let foundTitle: string = '';
     let foundMedia: TransformedMediaFile | undefined;
     let shouldTryUpdateLink = false;
     let displayTextBefore = '';
     let displayTextAfter = '';
-    // Always link for upload actions
+
     if (actionType === 'UPLOAD') {
       if (activity.targetSlug) {
         mediaLink = `/media/slug/${activity.targetSlug}`;
@@ -264,14 +345,10 @@ const RecentActivity: React.FC = () => {
           shouldTryUpdateLink = true;
           displayTextBefore = 'Updated media file: ';
         } else if (details.toLowerCase().includes('updated video thumbnail')) {
-          // Remove timestamp and extract media title
-          // Example: 'Updated video thumbnail at timestamp 00:01:29 for VWR Bead Mill Max - Plant'
-          // Should become: 'Updated video thumbnail for <LINK>VWR Bead Mill Max - Plant</LINK>'
           const forIdx = details.toLowerCase().lastIndexOf(' for ');
           if (forIdx !== -1) {
             foundTitle = details.substring(forIdx + 5).trim();
             shouldTryUpdateLink = true;
-            // Always display 'Updated video thumbnail for ' (remove timestamp)
             displayTextBefore = 'Updated video thumbnail for ';
           }
         }
@@ -290,12 +367,18 @@ const RecentActivity: React.FC = () => {
 
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-        {/* Main details text */}
         <Typography variant="body2" component="span" noWrap sx={{ mr: 1 }}>
           {mediaLink && mediaLabel ? (
             <>
               {displayTextBefore}
-              <Link to={mediaLink} style={{ textDecoration: 'underline', color: '#1976d2', fontWeight: 500 }}>
+              <Link 
+                to={mediaLink} 
+                style={{ 
+                  textDecoration: 'underline', 
+                  color: itemColor, // Use itemColor for this link too
+                  fontWeight: 500 
+                }}
+              >
                 {mediaLabel}
               </Link>
               {displayTextAfter}
@@ -304,7 +387,6 @@ const RecentActivity: React.FC = () => {
             mainDetails
           )}
         </Typography>
-        {/* Changed fields as Chips */}
         {changedFields.length > 0 && (
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
             {changedFields.map((field, idx) => (
@@ -344,25 +426,18 @@ const RecentActivity: React.FC = () => {
   // const testAuthentication = async () => { ... }; // This can be removed or adapted if still needed
 
   return (
-    <Paper elevation={2} sx={{ p: 2, minHeight: 300 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+    <Paper elevation={3} sx={{ p: 2, display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6">Recent Activity</Typography>
-        <Box>
-           <FormControlLabel 
-            control={<Checkbox checked={disableMock} onChange={handleToggleMock} size="small" />} 
-            label={<Typography variant="caption">Disable Fallback Data</Typography>}
-            sx={{mr: 1}}
-          />
-          <Button 
-            onClick={handleRefresh} 
-            startIcon={isRefetching ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />}
-            disabled={isRefetching || isLoadingActivities}
-            size="small"
-            variant="outlined"
-          >
-            Refresh
-          </Button>
-        </Box>
+        <Button 
+          variant="outlined" 
+          size="small"
+          onClick={handleRefresh} 
+          startIcon={isRefetching ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />}
+          disabled={isRefetching || isLoadingActivities}
+        >
+          Refresh
+        </Button>
       </Box>
       {displayError && (
         <Typography color="error" sx={{ mb: 2 }}>Error: {displayError}</Typography>
@@ -382,7 +457,7 @@ const RecentActivity: React.FC = () => {
             <React.Fragment key={activity._id || index}>
               <ListItem alignItems="flex-start">
                 <ListItemAvatar>
-                  <Avatar sx={{ bgcolor: getAvatarColor(activity.action), width: 36, height: 36 }}>
+                  <Avatar sx={{ bgcolor: getAvatarColor(activity.action, activity.resourceType), width: 36, height: 36 }}>
                     {getActionIcon(activity.action, activity.resourceType)}
                   </Avatar>
                 </ListItemAvatar>

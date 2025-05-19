@@ -20,43 +20,49 @@ import TagIcon from '@mui/icons-material/Tag';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
 import { formatFileSize } from '../../utils/formatFileSize';
-import { useDatabaseStats } from '../../hooks/query-hooks';
+import { useDatabaseStats, useUserProfile } from '../../hooks/query-hooks';
+import type { User } from '../../hooks/query-hooks';
 
 const DatabaseStats: React.FC = () => {
   const [_error, setError] = useState<string | null>(null);
   
-  // Get media and user data from Redux store for fallback
-  const allMedia = useSelector((state: RootState) => state.media.allMedia);
-  const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
-  const userState = useSelector((state: RootState) => state.user);
-  const mongoUsers = userState.users.allUsers || [];
+  // Get userProfile for enabling the query
+  const { data: userProfile } = useUserProfile();
   
-  // Use TanStack Query for fetching database stats
+  // Remove Redux store access for fallback data if primary data source is TanStack Query
+  // const allMedia = useSelector((state: RootState) => state.media.allMedia);
+  // const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
+  // const userState = useSelector((state: RootState) => state.user);
+  // const mongoUsers = userState.users.allUsers || [];
+  
+  // Use TanStack Query for fetching database stats, passing userProfile
   const { 
     data: stats, 
     isLoading, 
     isError, 
     error: queryError,
     refetch 
-  } = useDatabaseStats();
+  } = useDatabaseStats(userProfile);
   
   // Create mock data function for fallback
   const createMockData = () => {
-    // Create mock tags set from media data
+    // Mock data should be self-contained or use minimal external dependencies if Redux is removed
+    // For now, this will likely break or return less accurate mock data without Redux state.
+    // Consider removing or refactoring mock data if live data and loading/error states are sufficient.
     const mockTags = new Set<string>();
-    allMedia.forEach(media => {
-      if (media.metadata?.tags && Array.isArray(media.metadata.tags)) {
-        media.metadata.tags.forEach(tag => mockTags.add(tag));
-      }
-    });
+    // allMedia.forEach(media => { // allMedia from Redux is removed
+    //   if (media.metadata?.tags && Array.isArray(media.metadata.tags)) {
+    //     media.metadata.tags.forEach(tag => mockTags.add(tag));
+    //   }
+    // });
     
     return {
-      totalUsers: mongoUsers.length || 2, 
-      activeUsers: Math.max(1, Math.floor(mongoUsers.length / 2)) || 1, 
-      totalMediaFiles: allMedia.length,
-      totalMediaTypes: mediaTypes.length,
+      totalUsers: 2, // Was mongoUsers.length || 2
+      activeUsers: 1, // Was Math.max(1, Math.floor(mongoUsers.length / 2)) || 1
+      totalMediaFiles: 0, // Was allMedia.length
+      totalMediaTypes: 0, // Was mediaTypes.length
       totalTags: mockTags.size,
-      storageUsed: allMedia.reduce((total, file) => total + (file.fileSize || 0), 0),
+      storageUsed: 0, // Was allMedia.reduce(...)
       storageLimit: 5 * 1024 * 1024 * 1024, // 5GB
       dbSize: 256 * 1024 * 1024, // 256MB
       lastBackup: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),

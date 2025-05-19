@@ -12,11 +12,14 @@ import { FaPlus } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { 
   useTagCategories, 
-  useCreateTagCategory, 
-  useUpdateTagCategory, 
-  useDeleteTagCategory,
-  TagCategory as QueryTagCategory
+  useCreateTagCategory,
+  // useUpdateTagCategory, 
+  // useDeleteTagCategory,
+  TagCategory as QueryTagCategory,
+  User, // Import User type
+  useUserProfile // Import useUserProfile
 } from '../../hooks/query-hooks';
+import type { NewTagCategoryData } from '../../hooks/query-hooks'; // Import NewTagCategoryData
 
 // Lazy load subcomponents
 const TagCategoryForm = lazy(() => import('./TagCategoryForm'));
@@ -45,6 +48,9 @@ const LoadingFallback = () => (
 );
 
 const TagCategoryManager: React.FC = () => {
+  // --- User Profile --- Fetch user profile to pass to hooks
+  const { data: userProfile } = useUserProfile(); // Assuming useUserProfile is available and imported
+
   // Use TanStack Query hooks instead of Redux
   const { 
     data: tagCategories = [],
@@ -52,11 +58,11 @@ const TagCategoryManager: React.FC = () => {
     isError,
     error,
     refetch
-  } = useTagCategories();
+  } = useTagCategories(userProfile); // Pass userProfile
   
-  const { mutateAsync: createTagCategoryMutation } = useCreateTagCategory();
-  const { mutateAsync: updateTagCategoryMutation } = useUpdateTagCategory();
-  const { mutateAsync: deleteTagCategoryMutation } = useDeleteTagCategory();
+  const { mutateAsync: createTagCategoryMutation, isPending: isCreatingCategory } = useCreateTagCategory(); // Use isPending
+  // const { mutateAsync: updateTagCategoryMutation } = useUpdateTagCategory();
+  // const { mutateAsync: deleteTagCategoryMutation } = useDeleteTagCategory();
   
   // State management with useRef for values that don't affect rendering
   const operationInProgressRef = useRef<boolean>(false);
@@ -155,44 +161,27 @@ const TagCategoryManager: React.FC = () => {
   }, []);
   
   const handleConfirmDelete = useCallback(async () => {
-    const { deleteTarget, hardDelete } = dialogState;
+    const { deleteTarget } = dialogState;
     if (!deleteTarget || operationInProgressRef.current) return;
-    
-    try {
-      operationInProgressRef.current = true;
-      
-      // Find category name before deletion
-      const categoryToDelete = tagCategories.find(c => c._id === deleteTarget);
-      const categoryName = categoryToDelete?.name || 'Category';
-      
-      // Delete using the TanStack Query mutation
-      await deleteTagCategoryMutation(deleteTarget);
-      
-      // Generate unique ID for this toast
-      const toastId = `delete-${deleteTarget}-${Date.now()}`;
-      
-      // Success message based on delete type
-      if (hardDelete) {
-        showToastOnce(toastId, 'success', `${categoryName} has been permanently deleted`);
-      } else {
-        showToastOnce(toastId, 'success', `${categoryName} has been moved to inactive categories`);
+
+    operationInProgressRef.current = true;
+    toast.info("Tag category deletion is temporarily disabled.");
+
+    // Simulate operation and cleanup
+    setTimeout(() => {
+      if (isMountedRef.current) {
+        setDialogState(prev => ({
+          ...prev,
+          deleteDialogOpen: false,
+          deleteTarget: null,
+          hardDelete: false
+        }));
+        refetch(); // Refetch categories after simulated deletion
+        operationInProgressRef.current = false;
       }
-      
-      // Close dialog
-      setDialogState(prev => ({
-        ...prev,
-        deleteDialogOpen: false,
-        deleteTarget: null,
-        hardDelete: false
-      }));
-    } catch (error: any) {
-      console.error('Error deleting tag category:', error);
-      const errorId = `delete-error-${dialogState.deleteTarget}-${Date.now()}`;
-      showToastOnce(errorId, 'error', `Failed to delete category: ${error.message || 'Unknown error'}`);
-    } finally {
-      operationInProgressRef.current = false;
-    }
-  }, [dialogState, tagCategories, showToastOnce, deleteTagCategoryMutation]);
+    }, 500); 
+
+  }, [dialogState, refetch, showToastOnce]); // Removed tagCategories and deleteTagCategoryMutation
   
   // Check if category name exists
   const categoryNameExists = useCallback((name: string): boolean => {
@@ -209,13 +198,16 @@ const TagCategoryManager: React.FC = () => {
       return;
     }
     
-    if (operationInProgressRef.current) return;
-    
+    if (operationInProgressRef.current || isCreatingCategory /* || isUpdatingCategory */) return; // Add loading checks
+
+    // operationInProgressRef.current = true; // Mutation hook handles its own loading state
+    // toast.info("Tag category creation/update is temporarily disabled."); // Remove this
+
     const { editingCategory } = dialogState;
     
     try {
-      operationInProgressRef.current = true;
-      
+      operationInProgressRef.current = true; // Still useful to prevent double-submit before mutation state updates
+
       // Check for duplicate name
       const exists = categoryNameExists(submittedFormData.name);
       const isEditingSameName = editingCategory && 
@@ -224,71 +216,49 @@ const TagCategoryManager: React.FC = () => {
       if (exists && (!editingCategory || !isEditingSameName)) {
         const errorId = `duplicate-name-${submittedFormData.name}-${Date.now()}`;
         showToastOnce(errorId, 'error', `Category "${submittedFormData.name}" already exists. Please choose a different name.`);
+        operationInProgressRef.current = false;
         return;
       }
       
-      setDialogState(prev => ({
-        ...prev,
-        creationAttempted: true
-      }));
-      
-      // Prepare data for API
-      const transformedData = {
+      const categoryData: NewTagCategoryData = {
         name: submittedFormData.name,
         description: submittedFormData.description,
-        tags: submittedFormData.tags.map(tag => ({
-          id: tag.id,
-          name: tag.name
-        }))
+        // Ensure tags are in the format { id: string, name: string } if your API expects that for creation
+        // Or adjust if it only needs an array of tag names or IDs.
+        // For now, assuming it matches TagCategoryFormData's structure.
+        tags: submittedFormData.tags.map(tag => ({ id: tag.id, name: tag.name })) 
       };
-      
-      let result;
+
       if (editingCategory) {
-        // Update using TanStack Query mutation
-        result = await updateTagCategoryMutation({ 
-          id: editingCategory._id, 
-          updates: transformedData 
-        });
-        const successId = `update-${editingCategory._id}-${Date.now()}`;
-        showToastOnce(successId, 'success', `Category "${submittedFormData.name}" updated successfully`);
+        // TODO: Implement update logic using updateTagCategoryMutation
+        toast.info('Update functionality for tag categories is not yet implemented.');
+        operationInProgressRef.current = false; // Reset for now
       } else {
         // Create using TanStack Query mutation
-        result = await createTagCategoryMutation(transformedData);
-        const successId = `create-${result._id}-${Date.now()}`;
-        showToastOnce(successId, 'success', `Category "${submittedFormData.name}" created successfully`);
+        await createTagCategoryMutation(categoryData, {
+          onSuccess: () => {
+            if (isMountedRef.current) {
+              handleClose();
+              // refetch(); // Invalidation in useCreateTagCategory handles this
+            }
+          },
+          // onError is handled by the useCreateTagCategory hook's toast
+        });
       }
-      
-      // Close dialog and reset state
-      setDialogState(prev => ({
-        ...prev,
-        open: false,
-        editingCategory: null
-      }));
-      
-      setFormData(initialFormData);
     } catch (error: any) {
+      // This catch block might be redundant if the hook handles all errors with toasts
+      // However, keeping it for now for any local errors or direct throws
       console.error('Error submitting tag category:', error);
-      
-      // Handle authentication error
-      if (error.includes && error.includes('Invalid token') || 
-          (error.response && error.response.status === 401)) {
-        const authErrorId = `auth-error-${Date.now()}`;
-        showToastOnce(authErrorId, 'error', 'Your session has expired. Please sign in again.');
-        // Redirect to login page
-        window.location.href = '/login';
-        return;
-      }
-      
       const errorId = `submit-error-${Date.now()}`;
-      if (error.message?.includes('already exists')) {
-        showToastOnce(errorId, 'error', `Category "${submittedFormData.name}" already exists. Please choose a different name.`);
-      } else {
-        showToastOnce(errorId, 'error', `Failed to ${editingCategory ? 'update' : 'create'} category: ${error.message || 'Unknown error'}`);
-      }
+      showToastOnce(errorId, 'error', `Failed to save category: ${error.message || 'Unknown error'}`);
     } finally {
-      operationInProgressRef.current = false;
+      if (isMountedRef.current) {
+        // Only set to false if not handled by mutation states, or if you want to allow re-submission after a local error
+        // For now, let the mutation hook's pending state manage this more globally.
+        // operationInProgressRef.current = false;
+      }
     }
-  }, [dialogState, categoryNameExists, showToastOnce, createTagCategoryMutation, updateTagCategoryMutation]);
+  }, [dialogState, showToastOnce, categoryNameExists, handleClose, refetch, createTagCategoryMutation, isCreatingCategory]); 
   
   // Memoized derived state
   const isEmpty = useMemo(() => 

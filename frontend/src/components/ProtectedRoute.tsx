@@ -1,11 +1,10 @@
 import React, { Suspense } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
-import type { User } from '../hooks/query-hooks';
+import { useUserProfile } from '../hooks/query-hooks';
 
 interface ProtectedRouteProps {
   element: React.ReactElement;
-  userProfile: User | null | undefined;
   requiredRole?: Array<'user' | 'admin' | 'distributor' | 'superAdmin'> | 'user' | 'admin' | 'distributor' | 'superAdmin';
   adminOnly?: boolean;
 }
@@ -16,7 +15,21 @@ const LoadingFallback = () => (
   </Box>
 );
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ element, userProfile, requiredRole, adminOnly = false }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ element, requiredRole, adminOnly = false }) => {
+  const { 
+    data: userProfile, 
+    isLoading: isUserLoading, 
+    isError: isUserError 
+  } = useUserProfile();
+
+  if (isUserLoading) {
+    return <LoadingFallback />;
+  }
+
+  if (isUserError || !userProfile) {
+    return <Navigate to="/login" replace />;
+  }
+
   const isAuthenticated = !!userProfile?._id;
 
   if (!isAuthenticated) {

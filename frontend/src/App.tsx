@@ -17,6 +17,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 // Import the necessary hooks
 import { useMediaTypesWithUsageCounts, useUserProfile } from './hooks/query-hooks';
+import type { User } from './hooks/query-hooks';
 // Remove Redux imports if no longer used for user state here
 // import { useDispatch, useSelector } from 'react-redux';
 // import { RootState, AppDispatch } from './store/store';
@@ -73,14 +74,14 @@ axios.interceptors.response.use(
   (error) => {
     // Check if the error is a 401 Unauthorized
     if (error.response && error.response.status === 401) {
-      console.log('Authorization error detected, clearing session');
+      console.log('[AXIOS INTERCEPTOR] 401 Unauthorized detected. Current path:', window.location.pathname);
+      console.log('[AXIOS INTERCEPTOR] Removing authToken and refreshToken from localStorage.');
       // Clear all auth data
       localStorage.removeItem('authToken');
       localStorage.removeItem('refreshToken');
-      
       // Only redirect if we're not already on the login page
       if (!window.location.pathname.includes('/login')) {
-        console.log('Redirecting to login page');
+        console.log('[AXIOS INTERCEPTOR] Redirecting to login page.');
         window.location.href = '/login';
       }
     }
@@ -194,7 +195,7 @@ const AppContent: React.FC = () => {
         <Router>
           <div id="app-container" style={{ display: 'flex', flexDirection: 'row', width: '100vw', height: '100vh', overflow: 'hidden' }}>
             {/* Sidebar is shown if user profile fetch was successful and userProfile exists */}
-           {isUserSuccess && userProfile && <Sidebar />}
+           {(isUserSuccess && userProfile && (<Sidebar /> as React.ReactNode))}
             <div
               style={{
                 flexGrow: 1,
@@ -206,22 +207,22 @@ const AppContent: React.FC = () => {
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>
                   {/* Pass userProfile to ProtectedRoutes */}
-                  <Route path="/media/slug/:slug" element={<ProtectedRoute element={<MediaDetail />} userProfile={userProfile} />} />
-                  <Route path="/media-library" element={<ProtectedRoute element={<MediaLibraryPage />} userProfile={userProfile} />} />
-                  <Route path="/account" element={<ProtectedRoute element={<Account />} userProfile={userProfile} />} />
-                  <Route path="/user/:id" element={<ProtectedRoute element={<UserPage />} userProfile={userProfile} />} />
-                  <Route path="/admin-users" element={<ProtectedRoute element={<AccountUsers />} userProfile={userProfile} adminOnly />} />
-                  <Route path="/admin-tags" element={<ProtectedRoute element={<AccountTags />} userProfile={userProfile} adminOnly />} />
-                  <Route path="/admin-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} userProfile={userProfile} adminOnly />} />
+                  <Route path="/media/slug/:slug" element={<ProtectedRoute element={<MediaDetail />} />} />
+                  <Route path="/media-library" element={<ProtectedRoute element={<MediaLibraryPage />} />} />
+                  <Route path="/account" element={<ProtectedRoute element={<Account />} />} />
+                  <Route path="/user/:id" element={<ProtectedRoute element={<UserPage />} />} />
+                  <Route path="/admin-users" element={<ProtectedRoute element={<AccountUsers />} adminOnly />} />
+                  <Route path="/admin-tags" element={<ProtectedRoute element={<AccountTags />} adminOnly />} />
+                  <Route path="/admin-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} adminOnly />} />
                   {/* Conditional route based on userProfile role */}
-                  {userProfile?.role === 'superAdmin' && (
-                    <Route path="/manage-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} userProfile={userProfile} adminOnly />} />
+                  {(userProfile as User | null | undefined)?.role === 'superAdmin' && (
+                    <Route path="/manage-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} adminOnly />} />
                   )}
-                  <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} userProfile={userProfile} adminOnly />} />
+                  <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} adminOnly />} />
                   <Route path="/accept-invitation/:token" element={<AcceptInvitation />} /> {/* Consider if this needs protection */}
-                  <Route path="/home" element={<ProtectedRoute element={<Home />} userProfile={userProfile} />} />
-                  <Route path="/password-setup" element={<ProtectedRoute element={<PasswordSetupPage />} userProfile={userProfile} />} />
-                  <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} userProfile={userProfile} adminOnly />} />
+                  <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
+                  <Route path="/password-setup" element={<ProtectedRoute element={<PasswordSetupPage />} />} />
+                  <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} adminOnly />} />
                   <Route path="/login" element={<AuthPage />} />
                   <Route path="/" element={<AuthPage />} />
                 </Routes>

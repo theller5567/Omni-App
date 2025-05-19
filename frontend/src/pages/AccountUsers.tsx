@@ -101,7 +101,7 @@ const AccountUsers: React.FC = () => {
     isLoading: isLoadingUsers, 
     error: usersError
   } = useAllUsers({
-    enabled: !!currentUserProfile && (currentUserProfile.role === 'admin' || currentUserProfile.role === 'superAdmin')
+    enabled: !!currentUserProfile && ((currentUserProfile as User).role === 'admin' || (currentUserProfile as User).role === 'superAdmin')
   });
   const { mutate: updateUserMutate, isPending: isUpdatingUser } = useUpdateUserProfile();
 
@@ -298,7 +298,7 @@ const AccountUsers: React.FC = () => {
     return <Alert severity="error" className="error-alert-message">Error loading your profile: {currentUserError?.message || 'An unknown error occurred.'}</Alert>;
   }
 
-  if (!currentUserProfile || (currentUserProfile.role !== 'admin' && currentUserProfile.role !== 'superAdmin')) {
+  if (!currentUserProfile || ((currentUserProfile as User).role !== 'admin' && (currentUserProfile as User).role !== 'superAdmin')) {
     return (
       <Box className="access-denied-container">
         <Typography variant="h4" color="error" gutterBottom>

@@ -1,9 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
-import { CircularProgress, Box, Typography } from '@mui/material';
+import { CircularProgress, Box, Typography, Button } from '@mui/material';
 import '../components/MediaLibrary/MediaContainer.scss';
 import { toast } from 'react-toastify';
 // Import React Query hooks
-import { useTransformedMedia, useMediaTypes, useDeleteMedia, useAddMedia } from '../hooks/query-hooks';
+import { 
+  useTransformedMedia, 
+  useMediaTypes, 
+  useDeleteMedia, 
+  useAddMedia,
+  useUserProfile
+} from '../hooks/query-hooks';
+import type { User } from '../hooks/query-hooks';
 import { useQueryClient } from '@tanstack/react-query';
 // Import the correct BaseMediaFile interface
 // We'll also use the MediaFile type from query-hooks to represent the enriched data from useTransformedMedia
@@ -31,13 +38,20 @@ const MediaContainer: React.FC = () => {
   const processingUploadRef = useRef(false);
   const uploadCallTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // --- User Profile ---
+  const { 
+    data: userProfile, 
+    isLoading: isLoadingUserProfile, 
+    isError: isUserProfileError 
+  } = useUserProfile();
+
   // Use enhanced React Query hooks
   const { 
     data: mediaData = [], 
     isLoading: isLoadingMedia, 
     isError: isMediaError,
     error: mediaError
-  } = useTransformedMedia(selectedMediaType);
+  } = useTransformedMedia(userProfile, selectedMediaType);
   
   const { 
     data: mediaTypes = [], 
@@ -180,7 +194,34 @@ const MediaContainer: React.FC = () => {
     }
   }, [filteredMediaFiles.length, mediaData.length]);
 
-  // Show loading state if either media or media types are loading
+  // --- Updated Loading and Auth Checks ---
+  if (isLoadingUserProfile) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Loading user information...</Typography>
+      </Box>
+    );
+  }
+
+  if (isUserProfileError || !userProfile) {
+    return (
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100vh">
+        <Typography variant="h5" color="textSecondary" gutterBottom>
+          {isUserProfileError ? 'Error Loading Profile' : 'Access Denied'}
+        </Typography>
+        <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
+          {isUserProfileError ? 'Could not load your profile. Please try again later.' : 'Please log in to view the media library.'}
+        </Typography>
+        <Button variant="contained" onClick={() => window.location.href = '/login'}>
+          Go to Login
+        </Button>
+      </Box>
+    );
+  }
+  // --- End Updated Loading and Auth Checks ---
+
+  // Show loading state if either media or media types are loading (after user profile is confirmed)
   if (isLoadingMedia || isLoadingMediaTypes) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100vh">

@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import { FaTag, FaSearch, FaPlus, FaTimes, FaArrowRight } from 'react-icons/fa';
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DraggableProvided } from '@hello-pangea/dnd';
-import { useTags, useCreateTag, Tag } from '../../hooks/query-hooks';
+import { useUserProfile, useTags, useCreateTag, Tag } from '../../hooks/query-hooks';
 
 interface TagCategoryFormData {
   name: string;
@@ -43,7 +43,8 @@ export const TagCategoryForm: React.FC<TagCategoryFormProps> = ({
   isEditing
 }) => {
   // Use TanStack Query hooks instead of Redux
-  const { data: tags = [] } = useTags();
+  const { data: userProfile } = useUserProfile();
+  const { data: tags = [] } = useTags(userProfile);
   const { mutateAsync: createTag } = useCreateTag();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,8 +67,9 @@ export const TagCategoryForm: React.FC<TagCategoryFormProps> = ({
       setNewTagName(searchTerm);
     } else {
       setShowCreateTag(false);
+      setNewTagName('');
     }
-  }, [searchTerm, tags]);
+  }, [searchTerm, tags, filteredTags]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -184,7 +186,14 @@ export const TagCategoryForm: React.FC<TagCategoryFormProps> = ({
           </Alert>
         ) : (
           <DragDropContext onDragEnd={handleOnDragEnd}>
-            <Box sx={{ display: 'flex', gap: 2, height: '300px' }}>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2, 
+              minHeight: '300px',
+              maxHeight: '400px',
+              overflow: 'hidden',
+              position: 'relative'
+            }}>
               {/* Left Column - Available Tags */}
               <Paper 
                 elevation={0} 
@@ -193,7 +202,8 @@ export const TagCategoryForm: React.FC<TagCategoryFormProps> = ({
                   width: '50%', 
                   p: 1,
                   display: 'flex',
-                  flexDirection: 'column'
+                  flexDirection: 'column',
+                  flexGrow: 1
                 }}
               >
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
@@ -260,6 +270,7 @@ export const TagCategoryForm: React.FC<TagCategoryFormProps> = ({
                       sx={{ 
                         flex: 1,
                         overflowY: 'auto',
+                        minHeight: 0,
                         display: 'flex',
                         flexWrap: 'wrap',
                         alignContent: 'flex-start',
@@ -317,7 +328,8 @@ export const TagCategoryForm: React.FC<TagCategoryFormProps> = ({
                   width: '50%', 
                   p: 1,
                   display: 'flex',
-                  flexDirection: 'column'
+                  flexDirection: 'column',
+                  flexGrow: 1
                 }}
               >
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
@@ -332,6 +344,7 @@ export const TagCategoryForm: React.FC<TagCategoryFormProps> = ({
                       sx={{ 
                         flex: 1,
                         overflowY: 'auto',
+                        minHeight: 0,
                         display: 'flex',
                         flexWrap: 'wrap',
                         alignContent: 'flex-start',
