@@ -637,6 +637,29 @@ const MediaDetail: React.FC = () => {
     }
   }, [slug, navigate]);
   
+  // Set CSS variables for theming (MOVED UP)
+  useEffect(() => {
+    if (mediaFile && mediaTypes && mediaTypes.length > 0) {
+      const mediaTypeInfo = mediaTypes.find(
+        (type) => type.name === mediaFile.mediaType
+      );
+      const accentColor = mediaTypeInfo?.catColor || '#4dabf5';
+      
+      const root = document.documentElement;
+      root.style.setProperty('--accent-color', accentColor);
+      
+      return () => {
+        root.style.setProperty('--accent-color', '#4dabf5'); // Reset
+      };
+    } else {
+      const root = document.documentElement;
+      root.style.setProperty('--accent-color', '#4dabf5'); // Default if no mediaFile/mediaTypes
+      return () => { // Ensure a cleanup function is always returned
+          root.style.setProperty('--accent-color', '#4dabf5');
+      };
+    }
+  }, [mediaFile, mediaTypes]);
+
   // Determine if editing is enabled based on userProfile role
   const isEditingEnabled = !isUserLoading && userProfile && (userProfile.role === 'admin' || userProfile.role === 'superAdmin');
 
@@ -731,6 +754,10 @@ const MediaDetail: React.FC = () => {
     animate: { opacity: 1, y: 0 },
     transition: { duration: 0.3 }
   };
+
+  // Define isVideo after mediaFile is guaranteed to be available
+  const isVideo = mediaFile && mediaFile.fileExtension && 
+  ['mp4', 'webm', 'ogg', 'mov'].includes(mediaFile.fileExtension.toLowerCase());
 
   const handleDownload = async () => {
     if (!mediaFile || !mediaFile.location) return;
@@ -907,40 +934,21 @@ const MediaDetail: React.FC = () => {
     return Promise.resolve(false);
   };
   
-  // Find media type details and convert to MediaTypeConfig format
-  const mediaTypeInfo = mediaTypes.find(
-    (type) => type.name === mediaFile?.mediaType
-  );
-  
   // Convert mediaTypeInfo to MediaTypeConfig format
-  const mediaTypeConfig = mediaTypeInfo ? {
-    ...mediaTypeInfo,
-    fields: mediaTypeInfo.fields || []
-  } : null;
+  const mediaTypeConfig = mediaFile && mediaTypes && mediaTypes.length > 0 ? (() => {
+    const mtInfo = mediaTypes.find((type) => type.name === mediaFile.mediaType);
+    return mtInfo ? { ...mtInfo, fields: mtInfo.fields || [] } : null;
+  })() : null;
 
-  // Get the media's accent color from its media type
-  const accentColor = mediaTypeInfo?.catColor || '#4dabf5';
-  
   // Get metadata description (from either root or metadata object)
   const description = mediaFile ? getMetadataField(mediaFile, 'description', '') : '';
   
   // Ensure modifiedDate exists - required by BaseMediaFile interface
   const modifiedDate = mediaFile ? (mediaFile.modifiedDate || new Date().toISOString()) : new Date().toISOString();
   
-  // Set CSS variables for theming
-  useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty('--accent-color', accentColor);
-    
-    return () => {
-      // Reset to default when component unmounts
-      root.style.setProperty('--accent-color', '#4dabf5');
-    };
-  }, [accentColor]);
+  // Get the media's accent color from its media type
+  // const accentColor = mediaTypeInfo?.catColor || '#4dabf5'; // REMOVED - Logic moved to useEffect
   
-  const isVideo = mediaFile && mediaFile.fileExtension && 
-    ['mp4', 'webm', 'ogg', 'mov'].includes(mediaFile.fileExtension.toLowerCase());
-
   // Prepare data for MediaInformation component according to its expected props
   const baseFields = mediaFile ? [
     { name: 'File Name', value: getMetadataField(mediaFile, 'fileName', mediaFile.title) },

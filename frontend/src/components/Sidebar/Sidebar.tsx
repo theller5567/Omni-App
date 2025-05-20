@@ -8,7 +8,6 @@ import logoLight from "../../assets/Omni-new-logo-revvity-grey.png";
 import logoDark from "../../assets/Omni-new-logo-revvity-white.png";
 import { useTheme } from "@mui/material/styles";
 import { 
-  FaHubspot, 
   FaImages, 
   FaSignOutAlt, 
   FaUser, 
@@ -21,7 +20,7 @@ import {
 } from "react-icons/fa";
 import { useState, useEffect, ReactNode } from "react";
 import { useQueryClient } from '@tanstack/react-query';
-import { QueryKeys, useUserProfile, User } from '../../hooks/query-hooks';
+import { QueryKeys, useUserProfile } from '../../hooks/query-hooks';
 
 // Define CSS variables for the components
 const setCssVariables = (theme: any) => {
@@ -59,7 +58,9 @@ const AnimatedSubMenu: React.FC<AnimatedSubMenuProps> = ({
   return (
     <Box className={className}>
       <Box 
-        onClick={() => onOpenChange(!open)} 
+        onClick={() => {
+          onOpenChange(!open);
+        }} 
         sx={{ 
           cursor: 'pointer',
           display: 'flex',
@@ -134,22 +135,26 @@ const CustomSidebar: React.FC = () => {
 
   // Detect active submenu based on current route
   useEffect(() => {
-    // Check if the current path matches any admin routes
-    if (
-      isAdmin && // Only open admin submenu if user is admin and submenu items are visible
-      (
-        location.pathname === "/account" ||
-        location.pathname === "/admin-dashboard" ||
-        location.pathname === "/admin-tags" ||
-        location.pathname === "/admin-users" ||
-        location.pathname === "/admin-media-types"
-      )
-    ) {
-      setOpenSubMenu("admin");
-    } else if (!isAdmin && openSubMenu === "admin") {
-      setOpenSubMenu(null); // Close admin submenu if user is no longer admin
+    const onAdminPage = isAdmin && (
+      location.pathname === "/account" ||
+      location.pathname === "/admin-dashboard" ||
+      location.pathname === "/admin-tags" ||
+      location.pathname === "/admin-users" ||
+      location.pathname === "/admin-media-types"
+    );
+
+    if (onAdminPage) {
+      if (openSubMenu === null) {
+        setOpenSubMenu("admin");
+      } else {
+      }
+    } else { // Not on an admin page (or not admin)
+      if (openSubMenu === "admin") {
+        setOpenSubMenu(null);
+      } else {
+      }
     }
-  }, [location.pathname, isAdmin, openSubMenu]);
+  }, [location.pathname, isAdmin]); // openSubMenu REMOVED from dependencies
 
   // Avatar and user name display logic
   const renderUserProfile = () => {
@@ -218,6 +223,11 @@ const CustomSidebar: React.FC = () => {
             {isAdmin ? (
               <AnimatedSubMenu
                 label={renderUserProfile()}
+                open={openSubMenu === "admin"}
+                onOpenChange={(isOpen) => {
+                  setOpenSubMenu(isOpen ? "admin" : null);
+                }}
+                className="admin-profile-submenu"
                 children={
                   <>
                     <MenuItem 
@@ -287,16 +297,13 @@ const CustomSidebar: React.FC = () => {
                     </MenuItem>
                   </>
                 }
-                open={openSubMenu === "admin"}
-                onOpenChange={(open) => setOpenSubMenu(open ? "admin" : null)}
-                className="sidebar-account"
               />
             ) : (
               // Non-admin users get a direct link to their account page if userProfile exists
               userProfile ? (
                 <MenuItem 
                   className="user-menu-item"
-                  component={<NavLink to="/account" className={({ isActive }) => (isActive ? "active-menu-item" : "")} />}
+                  component={<NavLink to="/account" className={({ isActive }) => (isActive ? "active-menu-item" : "")}/>}
                 >
                   {renderUserProfile()}
                 </MenuItem>
@@ -310,7 +317,7 @@ const CustomSidebar: React.FC = () => {
               ) : null // Or some error/fallback display if needed when not loading and no profile
             )}
 
-            <MenuItem 
+            {/* <MenuItem 
               icon={<FaHubspot />} 
               className={location.pathname === "/home" ? "active-item" : ""}
               component={
@@ -322,7 +329,7 @@ const CustomSidebar: React.FC = () => {
               }
             >
               HubSpot
-            </MenuItem>
+            </MenuItem> */}
             
             <MenuItem 
               icon={<FaImages />} 

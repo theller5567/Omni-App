@@ -1472,44 +1472,57 @@ export const useSendTestNotification = (_userProfile: User | null | undefined) =
 
 // Drastically simplified useUserProfile: No options, internal handlers only for now.
 export const useUserProfile = () => {
-  const hasToken = !!localStorage.getItem('authToken'); // Check token status
+  const queryClient = useQueryClient(); // Get query client
+  const hasToken = !!localStorage.getItem('authToken');
 
-  // Original useQuery call
   const queryResult = useQuery<User, Error, User>({
     queryKey: QueryKeys.userProfile,
-    queryFn: async () => {
-      console.log('[useUserProfile] Fetching user profile. Current authToken:', localStorage.getItem('authToken'));
-      return fetchUserProfile();
-    },
+    queryFn: fetchUserProfile, // fetchUserProfile will throw if token is missing now
     staleTime: 1000 * 60 * 15, 
-    enabled: hasToken, // Query is enabled only if token exists
+    enabled: hasToken,
     retry: (failureCount: number, error: Error) => {
+      // If it's an auth error (401/403), clear the query cache for userProfile
       if (error && typeof error === 'object' && 'response' in error && 
           (error as any).response && typeof (error as any).response.status === 'number') {
-        if ((error as any).response.status === 401 || (error as any).response.status === 403) {
+        const status = (error as any).response.status;
+        if (status === 401 || status === 403) {
           if (process.env.NODE_ENV === 'development') {
-            console.warn('Auth error in useUserProfile retry (401/403). Not retrying.');
+            console.warn('Auth error in useUserProfile (401/403). Clearing userProfile cache.');
           }
-          return false;
+          queryClient.removeQueries({ queryKey: QueryKeys.userProfile }); // Proactive clear
+          return false; // Don't retry auth errors that will clear cache
         }
       }
       return failureCount < 2;
     },
-    // Remove onSuccess and onError from here
   });
 
-  // If there's no token, explicitly return a state indicating no user
   if (!hasToken) {
+    // If no token, ensure data is undefined and isSuccess is false.
+    // Also, if the query cache somehow still has data for userProfile, remove it.
+    // This can happen if the token was just deleted and RQ hasn't fully processed the disabled query.
+    if (queryClient.getQueryData(QueryKeys.userProfile)) {
+        if (process.env.NODE_ENV === 'development') {
+            console.log('[useUserProfile] No token, but cached data found. Removing userProfile from cache.');
+        }
+        queryClient.removeQueries({ queryKey: QueryKeys.userProfile });
+    }
     return {
-      ...queryResult, // Spread other properties like error, refetch, etc.
       data: undefined,
-      isLoading: false, // Not loading if no token
-      isSuccess: false, // Not successful if no token
-      status: 'idle' as const, // Or 'error' if you prefer, but 'idle' seems fit if disabled
+      isLoading: false,
+      isSuccess: false,
+      isError: false, // Explicitly false, as it's not an API error but lack of token
+      error: null,    // Explicitly null
+      refetch: queryResult.refetch, // Keep refetch available
+      status: 'idle' as const,
+      // Include other relevant fields from QueryObserverResult if needed, with default/empty states
+      fetchStatus: 'idle' as const,
+      isFetching: false,
+      isInitialLoading: false,
     };
   }
 
-  return queryResult; // Return original result if token exists
+  return queryResult;
 };
 
 export const useAllUsers = (options?: Omit<UseQueryOptions<User[], Error, User[], QueryKey>, 'queryKey' | 'queryFn'>) => {
@@ -1544,7 +1557,11 @@ export const useUpdateUserProfile = () => {
 export const fetchUserProfile = async (): Promise<User> => {
   const token = localStorage.getItem('authToken');
   if (!token) {
-    throw new Error('Authentication token missing');
+    // This will be caught by React Query and set the query to an error state if enabled:true but no token
+    // Or, if enabled:false, the queryFn just won't run.
+    // If this is called directly when hasToken is false (which it shouldn't be by useUserProfile), it's an issue.
+    console.error('[fetchUserProfile] Attempted to fetch profile without a token.');
+    throw new Error('Authentication token missing'); 
   }
   const response = await axios.get<User>(`${env.BASE_URL}/api/user/profile`, {
     headers: {
@@ -1638,10 +1655,8 @@ export const useLogin = () => {
     onSuccess: (data) => {
       // Set the user profile data in the cache
       queryClient.setQueryData(QueryKeys.userProfile, data.user);
-      // Invalidate to ensure freshness if other parts of user data might be stale,
-      // though setQueryData often suffices for immediate UI update.
-      queryClient.invalidateQueries({ queryKey: QueryKeys.userProfile });
-      
+      // queryClient.invalidateQueries({ queryKey: QueryKeys.userProfile }); // Let's comment this out to test
+
       // Prefetch related data if user is admin/superAdmin
       if (data.user && (data.user.role === 'admin' || data.user.role === 'superAdmin')) {
         queryClient.prefetchQuery({ queryKey: QueryKeys.allUsers, queryFn: fetchAllUsers, staleTime: 1000 * 60 * 5 });
