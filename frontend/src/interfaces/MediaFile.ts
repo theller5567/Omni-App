@@ -14,6 +14,8 @@ export interface BaseMediaFile {
   mediaType?: string;
   __t?: string;
   relatedMedia?: RelatedMedia[];
+  approvalStatus?: 'pending' | 'approved' | 'rejected' | 'needs_revision';
+  approvalFeedback?: string;
   metadata?: {
     fileName?: string;
     tags?: string[];

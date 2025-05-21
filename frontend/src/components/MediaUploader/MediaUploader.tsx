@@ -1178,6 +1178,14 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     }
 
     // Success state
+    const uploadedFile = uploaderStateRef.current.uploadedFileData;
+    let successMessage = "Your file has been successfully uploaded.";
+    if (uploadedFile?.approvalStatus === 'pending') {
+      successMessage = "Your file has been submitted for approval.";
+    } else if (uploadedFile?.approvalStatus === 'approved') {
+      successMessage = "Your file has been successfully uploaded and approved.";
+    }
+
     return (
       <Box
         sx={{
@@ -1213,7 +1221,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
             textAlign: "center",
           }}
         >
-          Your file has been successfully uploaded.
+          {successMessage}
         </Typography>
         {file && (
           <Box

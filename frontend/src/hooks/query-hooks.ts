@@ -29,9 +29,11 @@ export const QueryKeys = {
   userProfile: ['userProfile'] as const,
   allUsers: ['allUsers'] as const,
   userById: (userId: string) => ['user', userId] as const, // Adjusted query key pattern
+  mediaByUserId: (userId: string) => ['media', 'user', userId] as const, // New query key
   // Auth-related query keys (primarily for mutations, less for direct caching)
   login: ['auth', 'login'] as const,
   register: ['auth', 'register'] as const,
+  pendingMediaReviews: ['media', 'pendingReview'] as const, // New query key for admin pending reviews
 };
 
 // ======================
@@ -41,12 +43,14 @@ export interface MediaFile {
   _id: string;
   id?: string;
   title?: string;
-  slug?: string;
-  location?: string;
+  slug: string; // Changed to required
+  location: string;
   fileExtension?: string;
   mediaType?: string;
   modifiedDate: string;
   fileSize: number;
+  approvalStatus?: 'pending' | 'approved' | 'rejected' | 'needs_revision'; // Added
+  approvalFeedback?: string; // Added
   metadata?: {
     fileName?: string;
     tags?: any[];
@@ -1706,22 +1710,27 @@ export const useTransformedMedia = (userProfile: User | null | undefined, mediaT
   const finalQueryKey = Array.isArray(queryKey) ? queryKey : [queryKey];
 
   return useQuery<MediaFile[], Error, TransformedMediaFile[]>({
-    queryKey: finalQueryKey, // Use finalQueryKey
+    queryKey: finalQueryKey,
     queryFn: queryFn,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false,
     enabled: !!userProfile, // Only enable if userProfile exists
     select: (data: MediaFile[]): TransformedMediaFile[] => {
-      return data.map(media => ({
+      // Filter for approved media first
+      const approvedMedia = data.filter(media => media.approvalStatus === 'approved');
+      
+      // Then map to TransformedMediaFile
+      return approvedMedia.map(media => ({
         ...media,
         id: media.id || media._id, // Ensure id for DataGrid
         displayTitle: media.title || media.metadata?.fileName || 'Untitled',
         thumbnailUrl: media.metadata?.v_thumbnail || media.location,
-        // Ensure fileSize and modifiedDate are correctly typed (already handled in fetchMedia/fetchMediaByType)
         fileSize: typeof media.fileSize === 'number' ? media.fileSize : 0,
         modifiedDate: typeof media.modifiedDate === 'string' && media.modifiedDate.length > 0
                         ? media.modifiedDate
                         : new Date().toISOString(),
+        // approvalStatus will be 'approved' due to the filter, but keep it if needed downstream
+        // approvalFeedback is unlikely to be relevant for approved items in public view
       }));
     },
   });
@@ -2067,3 +2076,212 @@ export const useSendInvitation = () => {
 // ... User Query Hooks ...
 
 // ... existing code ... 
+
+export const fetchMediaByUserId = async (userId: string): Promise<MediaFile[]> => {
+  const token = localStorage.getItem('authToken');
+  // No token, no fetching user-specific media that might require permission checks
+  if (!token) {
+    // Or, if public profiles can show some approved media, this logic might change.
+    // For now, assume token is required to know who is asking.
+    console.warn('Auth token needed to fetch media by user ID.');
+    return []; 
+  }
+
+  try {
+    const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/media/user/${userId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    // Assuming the backend already filters by approvalStatus based on the requester's role
+    // and ownership. The frontend just gets the list it's allowed to see.
+    // We will still process it to ensure consistency, similar to fetchMedia.
+    return response.data.map(media => {
+      const processedMedia: MediaFile = {
+        ...media,
+        _id: media._id,
+        fileSize: typeof media.fileSize === 'number' ? media.fileSize : 0,
+        modifiedDate: typeof media.modifiedDate === 'string' && media.modifiedDate.length > 0
+                        ? media.modifiedDate
+                        : new Date().toISOString(),
+        metadata: media.metadata || {},
+        // Explicitly include approvalStatus and approvalFeedback from the API response
+        approvalStatus: media.approvalStatus,
+        approvalFeedback: media.approvalFeedback,
+      };
+      
+      if (processedMedia.metadata?.v_thumbnail) {
+        const uniqueId = processedMedia._id || processedMedia.id || '';
+        const separator = processedMedia.metadata.v_thumbnail.includes('?') ? '&' : '?';
+        processedMedia.metadata.v_thumbnail = `${processedMedia.metadata.v_thumbnail}${separator}mediaId=${uniqueId}`;
+      }
+      return processedMedia;
+    });
+  } catch (error) {
+    console.error('Error fetching media by user ID:', error);
+    toast.error('Could not load media for this user.');
+    return []; // Return empty array on error
+  }
+};
+
+// Make sure this is placed before the first 'export const use...' hook if it's a new hook.
+// Or, group it with other user-related hooks.
+
+export const useMediaByUserId = (userId: string | undefined) => {
+  return useQuery<MediaFile[], Error>({
+    queryKey: QueryKeys.mediaByUserId(userId!),
+    queryFn: () => fetchMediaByUserId(userId!),
+    enabled: !!userId, // Only run if userId is provided
+    staleTime: 5 * 60 * 1000, // 5 minutes, adjust as needed
+    // Add other options like cacheTime if necessary
+  });
+};
+
+// ... existing code ...
+// Example existing hook:
+// export const useUserById = (userId: string | undefined) => {
+// ... existing code ...
+
+export const fetchPendingMediaReviews = async (): Promise<MediaFile[]> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    toast.error('Authentication required to fetch pending media reviews.');
+    return [];
+  }
+
+  try {
+    // This endpoint needs to be created on the backend.
+    // It should return media files with status 'pending' or 'needs_revision'.
+    const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/api/admin/media/pending-review`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Fetched ${response.data.length} media items pending review`);
+    }
+
+    // Process the data to ensure consistent formatting
+    return response.data.map(media => ({
+      ...media,
+      _id: media._id,
+      fileSize: typeof media.fileSize === 'number' ? media.fileSize : 0,
+      modifiedDate: typeof media.modifiedDate === 'string' && media.modifiedDate.length > 0
+                      ? media.modifiedDate
+                      : new Date().toISOString(),
+      metadata: media.metadata || {},
+      approvalStatus: media.approvalStatus, // Essential for this hook
+      approvalFeedback: media.approvalFeedback, // Also important
+    }));
+  } catch (error: any) {
+    console.error('Error fetching pending media reviews:', error);
+    toast.error(error.response?.data?.message || 'Could not load media pending review.');
+    return []; // Return empty array on error
+  }
+};
+
+// Hook for admins to get media pending review
+export const usePendingMediaReviews = (userProfile: User | null | undefined) => {
+  return useQuery<MediaFile[], Error>({
+    queryKey: QueryKeys.pendingMediaReviews,
+    queryFn: fetchPendingMediaReviews,
+    enabled: !!userProfile && (userProfile.role === 'admin' || userProfile.role === 'superAdmin'),
+    staleTime: 2 * 60 * 1000, // 2 minutes, admins might want fresher data for this queue
+  });
+};
+
+// API function to Approve a Media Item
+export const approveMediaItem = async (mediaId: string): Promise<MediaFile> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) throw new Error('Authentication required.');
+  const response = await axios.post<MediaFile>(
+    `${env.BASE_URL}/api/admin/media/${mediaId}/approve`,
+    {},
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return response.data;
+};
+
+// API function to Reject a Media Item
+export const rejectMediaItem = async ({ mediaId, feedback }: { mediaId: string; feedback: string }): Promise<MediaFile> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) throw new Error('Authentication required.');
+  const response = await axios.post<MediaFile>(
+    `${env.BASE_URL}/api/admin/media/${mediaId}/reject`,
+    { feedback },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return response.data;
+};
+
+// API function to Request Revision for a Media Item
+export const requestRevisionMediaItem = async ({ mediaId, feedback }: { mediaId: string; feedback: string }): Promise<MediaFile> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) throw new Error('Authentication required.');
+  const response = await axios.post<MediaFile>(
+    `${env.BASE_URL}/api/admin/media/${mediaId}/request-revision`,
+    { feedback },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return response.data;
+};
+
+// Hook to Approve Media
+export const useApproveMedia = () => {
+  const queryClient = useQueryClient();
+  return useMutation<MediaFile, Error, string>({
+    mutationFn: approveMediaItem,
+    onSuccess: (data) => {
+      toast.success(`Media "${data.title || data.metadata?.fileName}" approved successfully.`);
+      queryClient.invalidateQueries({ queryKey: QueryKeys.pendingMediaReviews });
+      // Potentially invalidate other queries if this media now appears in other lists
+      queryClient.invalidateQueries({ queryKey: QueryKeys.allMedia });
+      if (data.mediaType) {
+        queryClient.invalidateQueries({ queryKey: QueryKeys.mediaByType(data.mediaType) });
+      }
+      if (data.uploadedBy) {
+        queryClient.invalidateQueries({ queryKey: QueryKeys.mediaByUserId(data.uploadedBy) });
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to approve media.');
+    },
+  });
+};
+
+// Hook to Reject Media
+export const useRejectMedia = () => {
+  const queryClient = useQueryClient();
+  return useMutation<MediaFile, Error, { mediaId: string; feedback: string }>({
+    mutationFn: rejectMediaItem,
+    onSuccess: (data) => {
+      toast.success(`Media "${data.title || data.metadata?.fileName}" rejected.`);
+      queryClient.invalidateQueries({ queryKey: QueryKeys.pendingMediaReviews });
+      if (data.uploadedBy) { // Media might still be visible to uploader with rejected status
+        queryClient.invalidateQueries({ queryKey: QueryKeys.mediaByUserId(data.uploadedBy) });
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to reject media.');
+    },
+  });
+};
+
+// Hook to Request Revision for Media
+export const useRequestRevisionMedia = () => {
+  const queryClient = useQueryClient();
+  return useMutation<MediaFile, Error, { mediaId: string; feedback: string }>({
+    mutationFn: requestRevisionMediaItem,
+    onSuccess: (data) => {
+      toast.success(`Revision requested for media "${data.title || data.metadata?.fileName}".`);
+      queryClient.invalidateQueries({ queryKey: QueryKeys.pendingMediaReviews });
+      if (data.uploadedBy) {
+        queryClient.invalidateQueries({ queryKey: QueryKeys.mediaByUserId(data.uploadedBy) });
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to request revision for media.');
+    },
+  });
+};

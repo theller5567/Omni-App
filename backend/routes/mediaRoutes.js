@@ -271,89 +271,33 @@ router.post('/batch-download', async (req, res) => {
 });
 
 // Add a route to update media by ID
-router.put('/update-by-id/:id', authenticate, async (req, res) => {
+router.put('/update-by-id/:id', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
-    console.log('Received update request for id:', id);
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Received /update-by-id/:id request for id:', id);
     
-    // Find the media file
-    const mediaFile = await Media.findById(id);
+    // Find the media file by ID to get its slug
+    const mediaFile = await Media.findById(id).select('slug'); // Only select the slug
     
-    if (!mediaFile) {
-      console.log('Media not found for id:', id);
-      return res.status(404).json({ error: 'Media not found' });
+    if (!mediaFile || !mediaFile.slug) {
+      console.log('Media not found or slug missing for id:', id);
+      return res.status(404).json({ error: 'Media not found or slug is missing' });
     }
     
-    console.log('Original metadata before update:', JSON.stringify(mediaFile.metadata || {}, null, 2));
+    console.log(`Found media with slug: ${mediaFile.slug}, forwarding to main updateMedia controller`);
     
-    // Save the original state before updates for comparison
-    const originalTitle = mediaFile.title;
-    const originalMetadata = { ...mediaFile.metadata };
+    // Modify the request object to look like it came to /update/:slug
+    req.params.slug = mediaFile.slug; // Set the slug on req.params for the updateMedia controller
     
-    // Extract update data
-    const { title, metadata } = req.body;
-    
-    // Update fields
-    if (title) mediaFile.title = title;
-    
-    // Update metadata fields
-    if (metadata) {
-      // Ensure metadata exists
-      if (!mediaFile.metadata) mediaFile.metadata = {};
-      
-      // Update each metadata field with proper type preservation
-      for (const [key, value] of Object.entries(metadata)) {
-        if (value !== undefined) {
-          console.log(`Updating metadata field "${key}" from`, originalMetadata[key], 'to', value, 
-                    `(types: ${typeof originalMetadata[key]} → ${typeof value})`);
-          
-          // Special handling for numbers and booleans to ensure correct type
-          if (typeof value === 'boolean') {
-            mediaFile.metadata[key] = Boolean(value);
-          } else if (typeof value === 'number') {
-            mediaFile.metadata[key] = Number(value);
-          } else if (typeof value === 'string' && !isNaN(Number(value)) && value !== '') {
-            // Convert numeric strings to actual numbers if they look like numbers
-            mediaFile.metadata[key] = Number(value);
-          } else {
-            mediaFile.metadata[key] = value;
-          }
-        }
-      }
-    }
-    
-    console.log('Updated metadata before save:', JSON.stringify(mediaFile.metadata || {}, null, 2));
-    
-    // Save the updated media file
-    await mediaFile.save();
-    console.log('Media file updated successfully');
-    
-    // Track the update activity if user is authenticated
-    if (req.user) {
-      // Determine which fields were changed
-      const changedFields = [];
-      if (title && title !== originalTitle) changedFields.push('title');
-      
-      if (metadata) {
-        Object.keys(metadata).forEach(key => {
-          if (JSON.stringify(metadata[key]) !== JSON.stringify(originalMetadata?.[key])) {
-            changedFields.push(`metadata.${key}`);
-          }
-        });
-      }
-      
-      // Log the activity
-      await ActivityTrackingService.trackMediaUpdate(req.user, mediaFile, changedFields);
-      console.log('Media update activity logged with changes:', changedFields);
-    } else {
-      console.log('Warning: Media file was updated but no user was attached to the request. Activity not logged.');
-    }
-    
-    res.status(200).json(mediaFile);
+    // Forward the request to the existing updateMedia controller
+    // This requires updateMedia to be available in this scope, or to be called differently.
+    // Assuming updateMedia is imported and available:
+    return updateMedia(req, res, next); // Pass next for error handling in updateMedia
+
   } catch (error) {
-    console.error('Error updating media file by ID:', error);
-    res.status(500).json({ error: 'Failed to update media file' });
+    console.error('Error in /update-by-id/:id route handler:', error);
+    // Ensure next is called if an error occurs before reaching updateMedia's own error handling
+    next(error); 
   }
 });
 

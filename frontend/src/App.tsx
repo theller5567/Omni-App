@@ -21,6 +21,7 @@ import type { User } from './hooks/query-hooks';
 // Remove Redux imports if no longer used for user state here
 // import { useDispatch, useSelector } from 'react-redux';
 // import { RootState, AppDispatch } from './store/store';
+import MediaApprovalPage from './pages/MediaApprovalPage'; // Adjust path as needed
 
 // Create React Query client with improved configuration
 const queryClient = new QueryClient({
@@ -225,6 +226,7 @@ const AppContent: React.FC = () => {
                   <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} adminOnly />} />
                   <Route path="/login" element={<AuthPage />} />
                   <Route path="/" element={<AuthPage />} />
+                  <Route path="/admin-media-approvals" element={<ProtectedRoute element={<MediaApprovalPage />} adminOnly />} />
                 </Routes>
               </Suspense>
             </div>

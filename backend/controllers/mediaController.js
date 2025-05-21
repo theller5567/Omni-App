@@ -134,6 +134,12 @@ export const updateVideoThumbnail = async (req, res) => {
 
 export const uploadMedia = async (req, res) => {
   try {
+    // Role-based access check for upload
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'superAdmin')) {
+      console.warn(`Upload attempt by unauthorized user: ${req.user?.username || 'guest'} with role: ${req.user?.role}`);
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to upload media.' });
+    }
+
     if (!req.files || !req.files.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -201,14 +207,30 @@ export const uploadMedia = async (req, res) => {
       fileSize: file.size,
       fileExtension: req.body.fileExtension,
       modifiedDate: new Date(),
-      uploadedBy: req.body.uploadedBy,
-      modifiedBy: req.body.modifiedBy,
+      uploadedBy: req.user?._id,
+      modifiedBy: req.user?._id,
       mediaType: req.body.mediaType,
       metadata: {
         ...parsedMetadata,
         tags: combinedTags, // Use the combined tags with defaults
       },
+      // Approval System Logic
+      approvalStatus: 'pending', // Default to pending
+      approvalFeedback: undefined,
+      approvedBy: undefined,
+      approvedAt: undefined,
     };
+
+    // Auto-approve if uploaded by superAdmin, otherwise pending for admin
+    if (req.user.role === 'superAdmin') {
+      mediaData.approvalStatus = 'approved';
+      mediaData.approvedBy = req.user._id;
+      mediaData.approvedAt = new Date();
+    } else if (req.user.role === 'admin') {
+      mediaData.approvalStatus = 'pending';
+      // approvedBy and approvedAt remain undefined for pending state
+    }
+    // No 'else' needed here as we've already checked roles at the top
 
     // Add thumbnail data if available
     if (thumbnailLocation && thumbnailTimestamp) {
@@ -243,6 +265,10 @@ export const uploadMedia = async (req, res) => {
       uploadedBy: savedMedia.uploadedBy,
       modifiedBy: savedMedia.modifiedBy,
       mediaType: savedMedia.mediaType,
+      approvalStatus: savedMedia.approvalStatus,
+      approvalFeedback: savedMedia.approvalFeedback,
+      approvedBy: savedMedia.approvedBy,
+      approvedAt: savedMedia.approvedAt,
       __t: savedMedia.__t
     };
 
@@ -599,6 +625,12 @@ export const updateMedia = async (req, res) => {
   console.log('Received update request for slug:', slug);
   console.log('Request body:', JSON.stringify(req.body, null, 2));
 
+  // Role-based access check for update
+  if (!req.user || req.user.role === 'user') { // Deny regular users from any edit attempts
+    console.warn(`Update attempt by unauthorized user: ${req.user?.username || 'guest'} with role: ${req.user?.role}`);
+    return res.status(403).json({ error: 'Forbidden: You do not have permission to edit media.' });
+  }
+
   try {
     // Fetch the document using the Media model
     console.log('Attempting to find media with slug:', slug);
@@ -613,104 +645,128 @@ export const updateMedia = async (req, res) => {
     const modelName = documentBeforeUpdate.constructor.modelName;
     console.log(`Document model name: ${modelName}`);
     
-    // Use changedFields from the client if provided, otherwise initialize empty array
-    let changedFields = req.body.changedFields || [];
-    
-    // Update the fields
-    if (req.body.title) {
-      documentBeforeUpdate.title = req.body.title;
-      if (!changedFields.includes('title')) {
-        changedFields.push('title');
-      }
+    let changedFieldsForLogging = []; // Use a different name to avoid confusion with req.body.changedFields
+    const proposedTitle = req.body.title;
+    const proposedMetadata = req.body.metadata;
+
+    const isSuperAdmin = req.user.role === 'superAdmin';
+    const isAdminUser = req.user.role === 'admin';
+
+    // Always set modifiedBy if a user is making the change
+    if (req.user) {
+      documentBeforeUpdate.modifiedBy = req.user._id;
     }
-    
-    // Update only the metadata fields specified in changedFields
-    if (req.body.metadata) {
-      // Ensure there is a metadata object
-      if (!documentBeforeUpdate.metadata) {
-        documentBeforeUpdate.metadata = {};
+
+    if (isSuperAdmin) {
+      console.log('SuperAdmin is editing. Applying changes directly and approving.');
+      if (proposedTitle !== undefined) {
+        documentBeforeUpdate.title = proposedTitle;
       }
-      
-      // Extract metadata field names from changedFields
-      const metadataFieldsToUpdate = changedFields
-        .filter(field => field.startsWith('metadata.'))
-        .map(field => field.replace('metadata.', ''));
-      
-      // If client explicitly sent changedFields, use only those fields
-      if (req.body.changedFields && req.body.changedFields.length > 0) {
-        console.log('Using client-provided changedFields:', req.body.changedFields);
-        
-        // Only update metadata fields that are in changedFields
-        metadataFieldsToUpdate.forEach(key => {
-          if (req.body.metadata[key] !== undefined) {
-            console.log(`Updating metadata field "${key}" from ${JSON.stringify(documentBeforeUpdate.metadata[key])} to ${JSON.stringify(req.body.metadata[key])}`);
-            documentBeforeUpdate.metadata[key] = req.body.metadata[key];
-          }
-        });
-      } 
-      // If no changedFields provided, update all fields and track changes
-      else {
-        console.log('No changedFields provided, updating all metadata fields');
-        changedFields = []; // Reset since we'll rebuild from scratch
-        
-        if (req.body.title && req.body.title !== documentBeforeUpdate.title) {
-          changedFields.push('title');
+      if (proposedMetadata !== undefined) {
+        if (!documentBeforeUpdate.metadata) documentBeforeUpdate.metadata = {};
+        for (const [key, value] of Object.entries(proposedMetadata)) {
+          if (value !== undefined) documentBeforeUpdate.metadata[key] = value;
         }
-        
-        // Update all metadata fields and track which ones changed
-        for (const [key, value] of Object.entries(req.body.metadata)) {
-          if (value === undefined) continue;
-          
-          const origValue = documentBeforeUpdate.metadata[key];
-          
-          // Check if the value actually changed
-          let hasChanged = false;
-          
-          // Handle comparison for different types
-          if (origValue === undefined && value !== undefined) {
-            // Special case: undefined to empty string shouldn't be considered a change
-            if (value === '' || value === null) {
-              console.log(`Field "${key}" changed from undefined to empty string/null, not considered a change`);
-              hasChanged = false;
-            } else {
-              hasChanged = true;
+      }
+      documentBeforeUpdate.pendingVersionData = undefined;
+      documentBeforeUpdate.approvalStatus = 'approved';
+      documentBeforeUpdate.approvedBy = req.user._id;
+      documentBeforeUpdate.approvedAt = new Date();
+    } else if (isAdminUser) {
+      console.log('Admin user is editing.');
+      const wasPreviouslyApproved = documentBeforeUpdate.approvalStatus === 'approved';
+
+      // Log initial states for admin edit
+      console.log('--- Admin Edit Initial State ---');
+      console.log('Original documentBeforeUpdate.title:', documentBeforeUpdate.title);
+      console.log('Original documentBeforeUpdate.metadata:', JSON.stringify(documentBeforeUpdate.metadata, null, 2));
+      console.log('Original documentBeforeUpdate.approvalStatus:', documentBeforeUpdate.approvalStatus);
+      console.log('Proposed title from req.body:', proposedTitle);
+      console.log('Proposed metadata from req.body:', JSON.stringify(proposedMetadata, null, 2));
+      console.log('wasPreviouslyApproved:', wasPreviouslyApproved);
+      console.log('--------------------------------');
+
+      if (wasPreviouslyApproved) {
+        console.log('Admin editing a previously approved item. Attempting to store changes in pendingVersionData.');
+        const specificPendingChanges = {};
+
+        // --- Title Change Detection ---
+        if (proposedTitle !== undefined) {
+            console.log('Comparing title - Proposed:', proposedTitle, '| Current Live:', documentBeforeUpdate.title);
+            if (proposedTitle !== documentBeforeUpdate.title) {
+                specificPendingChanges.title = proposedTitle;
+                console.log('>>> Title change detected for pendingVersionData.');
             }
-          } else if (typeof value === 'object' && value !== null) {
-            // For arrays and objects, compare stringified versions
-            hasChanged = JSON.stringify(origValue) !== JSON.stringify(value);
-          } else {
-            // For primitive values, direct comparison
-            hasChanged = origValue !== value;
-          }
-          
-          if (hasChanged) {
-            console.log(`Field "${key}" changed from ${JSON.stringify(origValue)} to ${JSON.stringify(value)}`);
-            documentBeforeUpdate.metadata[key] = value;
-            changedFields.push(`metadata.${key}`);
+        }
+
+        // --- Metadata Change Detection ---
+        if (proposedMetadata !== undefined) {
+            console.log('Comparing metadata - Proposed:', JSON.stringify(proposedMetadata), '| Current Live:', JSON.stringify(documentBeforeUpdate.metadata));
+            const tempPendingMetadata = {};
+            for (const [key, value] of Object.entries(proposedMetadata)) {
+                const liveValue = documentBeforeUpdate.metadata?.[key];
+                console.log(`  - Comparing metadata key: "${key}" - Proposed:`, JSON.stringify(value), '| Live:', JSON.stringify(liveValue));
+                if (value !== undefined && JSON.stringify(value) !== JSON.stringify(liveValue)) {
+                    tempPendingMetadata[key] = value;
+                    console.log(`    >>> Metadata change for key "${key}" detected for pendingVersionData.`);
+                }
+            }
+            if (Object.keys(tempPendingMetadata).length > 0) {
+                specificPendingChanges.metadata = tempPendingMetadata;
+            }
+        }
+        
+        console.log('Constructed specificPendingChanges:', JSON.stringify(specificPendingChanges, null, 2));
+
+        if (Object.keys(specificPendingChanges).length > 0) {
+          documentBeforeUpdate.pendingVersionData = specificPendingChanges;
+          documentBeforeUpdate.approvalStatus = 'pending';
+          documentBeforeUpdate.approvedBy = undefined;
+          documentBeforeUpdate.approvedAt = undefined;
+          documentBeforeUpdate.approvalFeedback = undefined;
+          console.log('>>> pendingVersionData SET, approvalStatus to PENDING, approval fields CLEARED.');
+        } else {
+          console.log('No effective changes detected by diffing logic to put into pendingVersionData.');
+        }
+      } else { // Admin editing a non-approved item (e.g., pending, needs_revision)
+        console.log('Admin editing an item not currently approved. Applying changes directly to main document.');
+        if (proposedTitle !== undefined) {
+          documentBeforeUpdate.title = proposedTitle;
+        }
+        if (proposedMetadata !== undefined) {
+          if (!documentBeforeUpdate.metadata) documentBeforeUpdate.metadata = {};
+          for (const [key, value] of Object.entries(proposedMetadata)) {
+            if (value !== undefined) documentBeforeUpdate.metadata[key] = value;
           }
         }
       }
     }
     
-    // Only proceed with save if there are actual changes
-    if (changedFields.length > 0) {
-      console.log('Saving updated document with changed fields:', changedFields);
+    // Re-evaluate changedFieldsForLogging based on what Mongoose tracks as modified
+    if (documentBeforeUpdate.isModified()) {
+        documentBeforeUpdate.modifiedPaths().forEach(path => {
+            if (!changedFieldsForLogging.includes(path)) {
+                changedFieldsForLogging.push(path);
+            }
+        });
+    }
+
+    if (documentBeforeUpdate.isModified()) {
+      console.log('Saving updated document. Fields considered changed for logging:', changedFieldsForLogging);
       const updatedMediaFile = await documentBeforeUpdate.save();
       
-      // Log the media update activity with the accurate changedFields
       if (req.user) {
-        await ActivityTrackingService.trackMediaUpdate(req.user, updatedMediaFile, changedFields);
-        console.log('Media update activity logged with changes:', changedFields);
+        await ActivityTrackingService.trackMediaUpdate(req.user, updatedMediaFile, changedFieldsForLogging);
+        console.log('Media update activity logged with changes:', changedFieldsForLogging);
       }
       
-      // Send response with proper content type
       res.setHeader('Content-Type', 'application/json');
       return res.status(200).json(updatedMediaFile);
     } else {
-      console.log('No changes detected, skipping update');
+      console.log('No effective changes detected from original DB state, skipping save.');
       return res.status(200).json({
         message: 'No changes detected',
-        data: documentBeforeUpdate
+        data: documentBeforeUpdate // documentBeforeUpdate is the in-memory version, effectively unchanged from DB
       });
     }
   } catch (error) {

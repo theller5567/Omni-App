@@ -8,9 +8,18 @@ const mediaSchema = new mongoose.Schema({
   fileSize: Number,
   fileExtension: String,
   modifiedDate: Date,
-  uploadedBy: String,
-  modifiedBy: String,
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  modifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   mediaType: String,
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected', 'needs_revision'],
+    default: 'pending',
+  },
+  approvalFeedback: { type: String },
+  approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Assuming you have a User model
+  approvedAt: { type: Date },
+  pendingVersionData: { type: Object }, // For storing proposed changes during an edit approval workflow
   metadata: {
     // Standardized fields for all media types
     fileName: { type: String },
