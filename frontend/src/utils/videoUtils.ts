@@ -9,7 +9,7 @@ import env from '../config/env';
 export const getProxiedVideoUrl = (originalUrl: string, mediaId: string): string => {
   // For S3 videos, use the proxy endpoint
   if (originalUrl.includes('s3.') || originalUrl.includes('amazonaws.com')) {
-    return `${env.BASE_URL}/media/video-proxy/${mediaId}`;
+    return `${env.BASE_URL}/api/media/video-proxy/${mediaId}`;
   }
   
   // For testing with local videos, use the direct URL

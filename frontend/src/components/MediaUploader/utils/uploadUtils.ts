@@ -145,7 +145,7 @@ export const uploadMedia = async ({
       }
     };
     
-    const response = await axios.post<UploadedFile>(`${env.BASE_URL}/media/upload`, formData, config);
+    const response = await axios.post<UploadedFile>(`${env.BASE_URL}/api/media/upload`, formData, config);
     
     // Handle successful upload
     if (response.data && response.data.slug) {

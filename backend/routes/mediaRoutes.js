@@ -18,7 +18,12 @@ import {
   deleteMedia, 
   uploadMedia,
   searchMedia,
-  debugMediaFile
+  debugMediaFile,
+  approveMediaItem,
+  rejectMediaItem,
+  getPendingMediaReviews,
+  getRejectedMedia,
+  getMediaByUserId
 } from '../controllers/mediaController.js';
 import mongoose from 'mongoose';
 import LoggerService from '../services/loggerService.js';
@@ -152,6 +157,9 @@ router.get('/', getAllMedia);
 // Search media (must come before ID routes)
 router.get('/search/:query', searchMedia);
 
+// Get media by user ID (must come before generic ID routes)
+router.get('/user/:userId', authenticate, getMediaByUserId);
+
 // Get media by slug (must come before ID routes)
 router.get('/slug/:slug', async (req, res) => {
   try {
@@ -178,6 +186,19 @@ router.get('/:id/debug', debugMediaFile);
 
 // Get specific media by ID
 router.get('/:id', getMediaById);
+
+// --- Admin Approval Routes ---
+const ensureAdmin = (req, res, next) => {
+  if (req.user && (req.user.role === 'admin' || req.user.role === 'superAdmin')) {
+    return next();
+  }
+  return res.status(403).json({ message: 'Forbidden: Administrator access required.' });
+};
+
+router.post('/admin/:mediaId/approve', authenticate, ensureAdmin, approveMediaItem);
+router.post('/admin/:mediaId/reject', authenticate, ensureAdmin, rejectMediaItem);
+router.get('/admin/pending-review', authenticate, ensureAdmin, getPendingMediaReviews);
+router.get('/admin/rejected', authenticate, ensureAdmin, getRejectedMedia);
 
 // Batch download route
 router.post('/batch-download', async (req, res) => {
@@ -441,7 +462,7 @@ router.get('/video-proxy/:id', async (req, res) => {
       });
       
       console.log('S3 response status:', videoResponse.status);
-      console.log('S3 response headers:', JSON.stringify(videoResponse.headers));
+      console.log('S3 response headers from S3:', JSON.stringify(videoResponse.headers, null, 2));
       
       // Copy important headers from S3 response
       const headersToForward = [
@@ -486,6 +507,9 @@ router.get('/video-proxy/:id', async (req, res) => {
         }
       });
       
+      // Log headers being sent to the client by the proxy, right before piping
+      console.log('Proxy response headers TO CLIENT:', JSON.stringify(res.getHeaders(), null, 2));
+
       // Stream the video back to the client
       videoResponse.data.pipe(res);
       

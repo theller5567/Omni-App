@@ -35,7 +35,8 @@ import {
   useDeleteNotificationRule,
   useEligibleRecipients,
   useSendTestNotification,
-  useUserProfile
+  useUserProfile,
+  User
 } from '../../hooks/query-hooks';
 import './systemSettings.scss';
 
@@ -64,78 +65,25 @@ const TabPanel = (props: TabPanelProps) => {
   );
 };
 
-const SystemSettings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState(0);
-  
-  // Get current user profile using TanStack Query
-  const { data: userProfile, isLoading: isLoadingUserProfile } = useUserProfile();
-  const isAuthorized = userProfile?.role === 'superAdmin';
-  
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-  };
-  
-  if (isLoadingUserProfile) {
-    return (
-      <Paper elevation={2} className="dashboard-card" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 200 }}>
-        <CircularProgress />
-        <Typography sx={{ ml: 2 }}>Loading user profile...</Typography>
-      </Paper>
-    );
-  }
-  
-  if (!isAuthorized) {
-    return (
-      <Paper elevation={2} className="dashboard-card">
-        <Alert severity="warning">
-          <Typography variant="h6">Access Restricted</Typography>
-          <Typography>You need superAdmin privileges to view System Settings.</Typography>
-        </Alert>
-      </Paper>
-    );
-  }
-  
-  return (
-    <Paper elevation={2} className="system-settings-container">
-      <Typography variant="h6" gutterBottom>System Settings</Typography>
-      
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs 
-          value={activeTab} 
-          onChange={handleTabChange} 
-          aria-label="system settings tabs"
-        >
-          <Tab label="Email Notifications" id="system-settings-tab-0" />
-          <Tab label="General Settings" id="system-settings-tab-1" disabled />
-        </Tabs>
-      </Box>
-      
-      <TabPanel value={activeTab} index={0}>
-        <NotificationSettings />
-      </TabPanel>
-      
-      <TabPanel value={activeTab} index={1}>
-        <Typography>General System Settings (Coming soon)</Typography>
-      </TabPanel>
-    </Paper>
-  );
-};
+interface NotificationSettingsProps {
+  userProfile: User | null | undefined; // Use the actual User type if available
+}
 
-const NotificationSettings: React.FC = () => {
+const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile }) => {
   // Query hooks for data fetching
-  const { data: settings, isLoading, isError, error } = useNotificationSettings();
+  const { data: settings, isLoading, isError, error } = useNotificationSettings(userProfile);
   const { 
     data: eligibleRecipients = [], 
     isLoading: isLoadingRecipients,
     isError: isRecipientsError,
     error: recipientsError,
     refetch: refetchRecipients
-  } = useEligibleRecipients();
-  const { mutateAsync: updateSettings } = useUpdateNotificationSettings();
-  const { mutateAsync: addRule } = useAddNotificationRule();
-  const { mutateAsync: updateRule } = useUpdateNotificationRule();
-  const { mutateAsync: deleteRule } = useDeleteNotificationRule();
-  const { mutateAsync: sendTestNotification, isPending: isSendingTest } = useSendTestNotification();
+  } = useEligibleRecipients(userProfile);
+  const { mutateAsync: updateSettings } = useUpdateNotificationSettings(userProfile);
+  const { mutateAsync: addRule } = useAddNotificationRule(userProfile);
+  const { mutateAsync: updateRule } = useUpdateNotificationRule(userProfile);
+  const { mutateAsync: deleteRule } = useDeleteNotificationRule(userProfile);
+  const { mutateAsync: sendTestNotification, isPending: isSendingTest } = useSendTestNotification(userProfile);
   
   // Local state for form
   const [isEnabled, setIsEnabled] = useState(false);
@@ -699,6 +647,63 @@ const NotificationSettings: React.FC = () => {
         </DialogActions>
       </Dialog>
     </div>
+  );
+};
+
+const SystemSettings: React.FC = () => {
+  const [activeTab, setActiveTab] = useState(0);
+  
+  // Get current user profile using TanStack Query
+  const { data: userProfile, isLoading: isLoadingUserProfile } = useUserProfile();
+  const isAuthorized = userProfile?.role === 'superAdmin';
+  
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
+  
+  if (isLoadingUserProfile) {
+    return (
+      <Paper elevation={2} className="dashboard-card" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 200 }}>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Loading user profile...</Typography>
+      </Paper>
+    );
+  }
+  
+  if (!isAuthorized) {
+    return (
+      <Paper elevation={2} className="dashboard-card">
+        <Alert severity="warning">
+          <Typography variant="h6">Access Restricted</Typography>
+          <Typography>You need superAdmin privileges to view System Settings.</Typography>
+        </Alert>
+      </Paper>
+    );
+  }
+  
+  return (
+    <Paper elevation={2} className="system-settings-container">
+      <Typography variant="h6" gutterBottom>System Settings</Typography>
+      
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={handleTabChange} 
+          aria-label="system settings tabs"
+        >
+          <Tab label="Email Notifications" id="system-settings-tab-0" />
+          <Tab label="General Settings" id="system-settings-tab-1" disabled />
+        </Tabs>
+      </Box>
+      
+      <TabPanel value={activeTab} index={0}>
+        <NotificationSettings userProfile={userProfile} />
+      </TabPanel>
+      
+      <TabPanel value={activeTab} index={1}>
+        <Typography>General System Settings (Coming soon)</Typography>
+      </TabPanel>
+    </Paper>
   );
 };
 

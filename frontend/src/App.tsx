@@ -21,7 +21,7 @@ import type { User } from './hooks/query-hooks';
 // Remove Redux imports if no longer used for user state here
 // import { useDispatch, useSelector } from 'react-redux';
 // import { RootState, AppDispatch } from './store/store';
-import MediaApprovalPage from './pages/MediaApprovalPage'; // Adjust path as needed
+// import MediaApprovalPage from './pages/MediaApprovalPage'; // Adjust path as needed
 
 // Create React Query client with improved configuration
 const queryClient = new QueryClient({
@@ -196,7 +196,7 @@ const AppContent: React.FC = () => {
         <Router>
           <div id="app-container" style={{ display: 'flex', flexDirection: 'row', width: '100vw', height: '100vh', overflow: 'hidden' }}>
             {/* Sidebar is shown if user profile fetch was successful and userProfile exists */}
-           {(isUserSuccess && userProfile && (<Sidebar /> as React.ReactNode))}
+           {(isUserSuccess && userProfile && Object.keys(userProfile).length > 0 && (<Sidebar /> as React.ReactNode))}
             <div
               style={{
                 flexGrow: 1,
@@ -226,7 +226,7 @@ const AppContent: React.FC = () => {
                   <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} adminOnly />} />
                   <Route path="/login" element={<AuthPage />} />
                   <Route path="/" element={<AuthPage />} />
-                  <Route path="/admin-media-approvals" element={<ProtectedRoute element={<MediaApprovalPage />} adminOnly />} />
+                  {/* <Route path="/admin-media-approvals" element={<ProtectedRoute element={<MediaApprovalPage />} adminOnly />} /> */}
                 </Routes>
               </Suspense>
             </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Paper, Typography, Box, CircularProgress } from '@mui/material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { useTransformedMedia, useMediaTypesWithUsageCounts, TransformedMediaFile } from '../../hooks/query-hooks';
+import { useTransformedMedia, useMediaTypesWithUsageCounts, TransformedMediaFile, useUserProfile } from '../../hooks/query-hooks';
 
 const COLORS: Record<string, string> = {
   'Product Image': '#3f8cff',
@@ -109,21 +109,22 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
 };
 
 const MediaTypeDistribution: React.FC = () => {
-  // Use TanStack Query hooks instead of Redux
+  const { data: userProfile, isLoading: isLoadingUserProfile } = useUserProfile();
+
   const { 
     data: allMedia = [], 
     isLoading: isLoadingMedia, 
     isError: isMediaError 
-  } = useTransformedMedia();
+  } = useTransformedMedia(userProfile);
   
   const { 
     data: mediaTypes = [], 
     isLoading: isLoadingMediaTypes, 
     isError: isMediaTypesError 
-  } = useMediaTypesWithUsageCounts();
+  } = useMediaTypesWithUsageCounts(userProfile);
   
   // Loading state
-  if (isLoadingMedia || isLoadingMediaTypes) {
+  if (isLoadingUserProfile || isLoadingMedia || isLoadingMediaTypes) {
     return (
       <Paper elevation={2} className="dashboard-card media-types-chart">
         <Typography variant="h6" gutterBottom>Media Type Distribution</Typography>

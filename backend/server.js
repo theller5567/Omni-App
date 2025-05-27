@@ -124,8 +124,7 @@ app.use('/api/media-types/files-needing-tags-summary', (req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/users', userRoutes);
-app.use('/media', mediaRoutes);
-app.use('/media/upload', mediaRoutes);
+app.use('/api/media', mediaRoutes);
 app.use('/api/hubspot', hubspotRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/media-types', mediaTypeRoutes);

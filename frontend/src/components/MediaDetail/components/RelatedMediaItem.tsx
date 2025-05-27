@@ -46,8 +46,8 @@ const RelatedMediaItem: React.FC<RelatedMediaItemProps> = ({ media }) => {
       setError(null);
       
       try {
-        // Try the slug endpoint first
-        const response = await axios.get<BaseMediaFile>(`${env.BASE_URL}/media/${media.mediaId}`);
+        // Attempt to fetch by slug first
+        const response = await axios.get<BaseMediaFile>(`${env.BASE_URL}/api/media/slug/${media.mediaId}`);
         setMediaDetails({
           title: response.data.title || response.data.metadata?.fileName || 'Untitled',
           location: response.data.location,
@@ -55,20 +55,24 @@ const RelatedMediaItem: React.FC<RelatedMediaItemProps> = ({ media }) => {
           note: media.note,
           slug: response.data.slug
         });
-      } catch (error) {
-        console.error('Error fetching related media details:', error);
-        // Try fallback endpoint
-        try {
-          const fallbackResponse = await axios.get<BaseMediaFile>(`${env.BASE_URL}/media/by-id/${media.mediaId}`);
-          setMediaDetails({
-            title: fallbackResponse.data.title || fallbackResponse.data.metadata?.fileName || 'Untitled',
-            location: fallbackResponse.data.location,
-            relationship: media.relationship,
-            note: media.note,
-            slug: fallbackResponse.data.slug
-          });
-        } catch (fallbackError) {
-          console.error('Fallback fetch also failed:', fallbackError);
+      } catch (error: any) {
+        // If slug fetch fails (e.g., 404), try fetching by ID as a fallback
+        if (error.response && error.response.status === 404) {
+          try {
+            const fallbackResponse = await axios.get<BaseMediaFile>(`${env.BASE_URL}/api/media/${media.mediaId}`);
+            setMediaDetails({
+              title: fallbackResponse.data.title || fallbackResponse.data.metadata?.fileName || 'Untitled',
+              location: fallbackResponse.data.location,
+              relationship: media.relationship,
+              note: media.note,
+              slug: fallbackResponse.data.slug
+            });
+          } catch (fallbackError) {
+            console.error('Fallback fetch also failed:', fallbackError);
+            setError('Failed to load related media');
+          }
+        } else {
+          console.error('Error fetching related media details:', error);
           setError('Failed to load related media');
         }
       } finally {

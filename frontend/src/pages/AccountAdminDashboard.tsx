@@ -23,6 +23,7 @@ const RecentActivity = lazy(() => import('../components/AdminDashboard/RecentAct
 const DatabaseStats = lazy(() => import('../components/AdminDashboard/DatabaseStats'));
 const UserActivity = lazy(() => import('../components/AdminDashboard/UserActivity'));
 const SystemSettings = lazy(() => import('../components/AdminDashboard/SystemSettings'));
+const MediaApprovalSection = lazy(() => import('../components/AdminDashboard/MediaApprovalSection'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -198,8 +199,13 @@ const AccountAdminDashboard: React.FC = () => {
           />
           <Tab 
             key="tab-5"
-            label="System Settings" 
+            label="Media Approvals" 
             {...a11yProps(5)} 
+          />
+          <Tab 
+            key="tab-6"
+            label="System Settings" 
+            {...a11yProps(6)} 
           />
         </Tabs>
         
@@ -240,6 +246,12 @@ const AccountAdminDashboard: React.FC = () => {
           </TabPanel>
           
           <TabPanel value={activeTab} index={5} key="tab-panel-5">
+            <Suspense fallback={<LoadingFallback />}>
+              <MediaApprovalSection key="media-approval-section" />
+            </Suspense>
+          </TabPanel>
+          
+          <TabPanel value={activeTab} index={6} key="tab-panel-6">
             <Suspense fallback={<LoadingFallback />}>
               <SystemSettings key="system-settings" />
             </Suspense>

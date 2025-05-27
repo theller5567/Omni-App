@@ -10,8 +10,6 @@ import {
   useAddMedia,
   useUserProfile
 } from '../hooks/query-hooks';
-import type { User } from '../hooks/query-hooks';
-import { useQueryClient } from '@tanstack/react-query';
 // Import the correct BaseMediaFile interface
 // We'll also use the MediaFile type from query-hooks to represent the enriched data from useTransformedMedia
 import { BaseMediaFile } from '../interfaces/MediaFile'; 
@@ -32,7 +30,6 @@ const MediaContainer: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMediaType, setSelectedMediaType] = useState<string>('All');
-  const queryClient = useQueryClient();
   
   // Add refs to track upload completion
   const processingUploadRef = useRef(false);

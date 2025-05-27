@@ -535,6 +535,53 @@ class ActivityTrackingService {
   }
   
   /**
+   * Track a change in media approval status (approved, rejected, needs_revision)
+   * 
+   * @param {Object} user - The user who changed the approval status (admin/superAdmin)
+   * @param {Object} media - The media item whose status was changed
+   * @param {'approved' | 'rejected' | 'needs_revision'} newStatus - The new approval status
+   */
+  static async trackMediaApprovalStatusChange(user, media, newStatus) {
+    if (!user || !media || !newStatus) return;
+
+    const mediaTitle = media.title || 'Untitled';
+    let details = `Media file "${mediaTitle}" status changed to ${newStatus.replace('_', ' ')}.`;
+
+    if (newStatus === 'approved') {
+      details = `Media file "${mediaTitle}" was approved.`;
+    } else if (newStatus === 'rejected') {
+      details = `Media file "${mediaTitle}" was rejected.`;
+      if (media.approvalFeedback) {
+        details += ` Feedback: ${media.approvalFeedback}`;
+      }
+    } else if (newStatus === 'needs_revision') {
+      details = `Media file "${mediaTitle}" was marked as needs revision.`;
+      if (media.approvalFeedback) {
+        details += ` Feedback: ${media.approvalFeedback}`;
+      }
+    }
+
+    console.log('ActivityTrackingService: Logging media approval status change with mediaTitle:', mediaTitle, 'New Status:', newStatus);
+    const activity = await LoggerService.logActivity({
+      userId: user.id,
+      username: user.username || user.email,
+      action: 'APPROVAL_STATUS_CHANGE', // A more specific action type
+      details: details,
+      resourceType: 'media',
+      resourceId: media.id || media._id,
+      mediaSlug: media.slug,
+      mediaTitle
+    });
+
+    // Process notification
+    if (activity) {
+      const userRole = await this.getUserRole(user.id);
+      activity.userRole = userRole;
+      await NotificationService.processActivityNotification(activity, user);
+    }
+  }
+  
+  /**
    * Helper to get user role for notification filtering
    * 
    * @param {string} userId - The user ID

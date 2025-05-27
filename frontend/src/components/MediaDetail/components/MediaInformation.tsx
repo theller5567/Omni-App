@@ -50,21 +50,24 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
 }) => {
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   
-  // Filter out fields we don't want to display
-  const filterFields = (fields: { label: string; value: any }[]) => {
+  // Filter for standard/base fields - keeps existing behavior for these sections
+  const filterStandardAndBaseFields = (fields: { label: string; value: any }[]) => {
     return fields.filter(field => 
       !shouldHideField(field.label) && 
       field.value !== undefined && 
       field.value !== null && 
-      field.value !== ''
+      (typeof field.value === 'string' ? field.value.trim() !== '' : true) &&
+      field.value !== 'N/A' && // Avoid hiding our N/A placeholder
+      // Keep specific placeholders for description/altText if they are the value
+      !(field.label === 'Description' && field.value === 'No description') &&
+      !(field.label === 'Alt Text' && field.value === 'No alt text')
     );
   };
 
   const userId = getMetadataField(mediaFile, 'uploadedBy', '');
   const { username: uploaderUsername, loading: uploaderLoading } = useUsername(userId);
 
-  // Group basic file information
-  const basicFileInfo = filterFields([
+  const basicFileInfoRaw = [
     { label: 'Title', value: mediaFile.title || 'Untitled' },
     { label: 'File Name', value: getMetadataField(mediaFile, 'fileName') || mediaFile.title || 'Unknown' },
     { label: 'File Size', value: mediaFile.fileSize ? formatFileSize(mediaFile.fileSize) : 'Unknown' },
@@ -81,53 +84,56 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
           minute: '2-digit'
         })
       : 'Unknown' }
-  ]);
+  ];
+  const displayableBasicFileInfo = filterStandardAndBaseFields(basicFileInfoRaw);
 
-  // Standard metadata
-  const standardMetadata = filterFields([
+  const standardMetadataRaw = [
     { label: 'Description', value: getMetadataField(mediaFile, 'description', 'No description') },
     { label: 'Alt Text', value: getMetadataField(mediaFile, 'altText', 'No alt text') }
-  ]);
+  ];
+  const displayableStandardMetadata = filterStandardAndBaseFields(standardMetadataRaw);
 
-  // Get base schema properties
-  const baseSchemaProperties = filterFields(
-    Object.entries(baseFields).map(([fieldName, fieldProps]: [string, any]) => ({
-      label: fieldName,
-      value: getMetadataField(mediaFile, fieldName) !== undefined 
-        ? fieldProps.type === 'Boolean' 
-          ? (getMetadataField(mediaFile, fieldName) ? 'Yes' : 'No')
-          : String(getMetadataField(mediaFile, fieldName))
-        : undefined
-    }))
-  );
+  const baseSchemaPropertiesRaw = Object.entries(baseFields).map(([fieldName, fieldProps]: [string, any]) => ({
+    label: fieldName,
+    value: getMetadataField(mediaFile, fieldName) !== undefined 
+      ? fieldProps.type === 'Boolean' 
+        ? (getMetadataField(mediaFile, fieldName) ? 'Yes' : 'No')
+        : String(getMetadataField(mediaFile, fieldName))
+      : undefined // Explicitly undefined if not present
+  }));
+  const displayableBaseSchemaProperties = filterStandardAndBaseFields(baseSchemaPropertiesRaw);
+  
+  // New approach for customFields:
+  const allCustomFieldsDefinedByType = mediaTypeConfig?.fields
+    ? mediaTypeConfig.fields
+        .filter(field => 
+          !['fileName', 'tags', 'altText', 'description', 'visibility'].includes(field.name) &&
+          !isBaseSchemaField(field.name, baseFields) &&
+          !shouldHideField(field.name) 
+        )
+        .map(field => {
+          const value = getMetadataField(mediaFile, field.name);
+          let displayValue: string;
 
-  // Get custom media type specific fields
-  const customFields = mediaTypeConfig?.fields
-    ? filterFields(
-        mediaTypeConfig.fields
-          .filter(field => 
-            !['fileName', 'tags', 'altText', 'description', 'visibility'].includes(field.name) &&
-            !isBaseSchemaField(field.name, baseFields)
-          )
-          .map(field => {
-            const value = getMetadataField(mediaFile, field.name);
-            return {
-              label: field.name,
-              value: value !== undefined
-                ? field.type === 'Boolean'
-                  ? (value ? 'Yes' : 'No')
-                  : String(value)
-                : undefined
-            };
-          })
-      )
+          if (value === undefined || value === null || String(value).trim() === '') {
+            displayValue = 'N/A'; // Display 'N/A' for empty or undefined values
+          } else if (field.type === 'Boolean') {
+            displayValue = value ? 'Yes' : 'No';
+          } else {
+            displayValue = String(value);
+          }
+          
+          return {
+            label: field.name,
+            value: displayValue,
+          };
+        })
     : [];
 
   return (
     <div className="media-information">
       
-
-      {basicFileInfo.length > 0 && (
+      {displayableBasicFileInfo.length > 0 && (
         <Accordion defaultExpanded>
           <AccordionSummary
             expandIcon={<ExpandMoreIcon fontSize={isMobile ? "small" : "medium"} />}
@@ -138,7 +144,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
           </AccordionSummary>
           <AccordionDetails>
             <Box className="info-grid">
-              {basicFileInfo.map((info, index) => (
+              {displayableBasicFileInfo.map((info, index) => (
                 <Box key={index} className="info-item">
                   <Typography variant="subtitle2">{info.label}</Typography>
                   <Typography variant="body2">{info.value}</Typography>
@@ -167,7 +173,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
         </Accordion>
       )}
 
-      {standardMetadata.length > 0 && (
+      {displayableStandardMetadata.length > 0 && (
         <Accordion defaultExpanded>
           <AccordionSummary
             expandIcon={<ExpandMoreIcon fontSize={isMobile ? "small" : "medium"} />}
@@ -178,7 +184,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
           </AccordionSummary>
           <AccordionDetails>
             <Box className="info-grid">
-              {standardMetadata.map((info, index) => (
+              {displayableStandardMetadata.map((info, index) => (
                 <Box key={index} className="info-item">
                   <Typography variant="subtitle2">{info.label}</Typography>
                     <Typography variant="body2">{info.value}</Typography>
@@ -189,7 +195,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
         </Accordion>
       )}
 
-      {baseSchemaProperties.length > 0 && (
+      {displayableBaseSchemaProperties.length > 0 && (
         <Accordion>
           <AccordionSummary
             expandIcon={<ExpandMoreIcon fontSize={isMobile ? "small" : "medium"} />}
@@ -202,7 +208,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
           </AccordionSummary>
           <AccordionDetails>
             <Box className="info-grid">
-              {baseSchemaProperties.map((info, index) => (
+              {displayableBaseSchemaProperties.map((info, index) => (
                 <Box key={index} className="info-item">
                   <Typography variant="subtitle2">{info.label}</Typography>
                   <Typography variant="body2">{info.value}</Typography>
@@ -213,7 +219,13 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
         </Accordion>
       )}
 
-      {customFields.length > 0 && (
+      {/* Show the accordion if there are ANY custom fields defined for the type (after initial filtering) */}
+      {mediaTypeConfig && mediaTypeConfig.fields && 
+       mediaTypeConfig.fields.filter(f => 
+         !['fileName', 'tags', 'altText', 'description', 'visibility'].includes(f.name) && 
+         !isBaseSchemaField(f.name, baseFields) && 
+         !shouldHideField(f.name)
+       ).length > 0 && (
         <Accordion>
           <AccordionSummary
             expandIcon={<ExpandMoreIcon fontSize={isMobile ? "small" : "medium"} />}
@@ -226,7 +238,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
           </AccordionSummary>
           <AccordionDetails>
             <Box className="info-grid">
-              {customFields.map((info, index) => (
+              {allCustomFieldsDefinedByType.map((info, index) => (
                 <Box key={index} className="info-item">
                   <Typography variant="subtitle2">{info.label}</Typography>
                   <Typography variant="body2">{info.value}</Typography>

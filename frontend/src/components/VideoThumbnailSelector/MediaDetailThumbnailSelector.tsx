@@ -226,7 +226,7 @@ const MediaDetailThumbnailSelector: React.FC<MediaDetailThumbnailSelectorProps> 
       const stopProgressSimulation = simulateProgress();
       
       const response = await axios.post<ThumbnailResponse>(
-        `${env.BASE_URL}/media/update/timestamp-thumbnail/${mediaId}`,
+        `${env.BASE_URL}/api/media/update/timestamp-thumbnail/${mediaId}`,
         { timestamp },
         { 
           withCredentials: true,

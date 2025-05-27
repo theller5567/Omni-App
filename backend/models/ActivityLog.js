@@ -15,7 +15,7 @@ const activityLogSchema = new mongoose.Schema({
   },
   action: {
     type: String,
-    enum: ['UPLOAD', 'DELETE', 'EDIT', 'CREATE', 'VIEW'],
+    enum: ['UPLOAD', 'DELETE', 'EDIT', 'CREATE', 'VIEW', 'APPROVAL_STATUS_CHANGE'],
     required: true
   },
   details: {

@@ -177,7 +177,7 @@ export const fetchMedia = async (): Promise<MediaFile[]> => {
     throw new Error('Authentication token missing');
   }
   
-  const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/media/all`, {
+  const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/api/media/all`, {
     headers: {
       Authorization: `Bearer ${token}`
     }
@@ -229,7 +229,7 @@ export const fetchMediaByType = async (typeId: string): Promise<MediaFile[]> => 
     return fetchMedia(); // This will use the updated fetchMedia logic
   }
   
-  const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/media/byType/${typeId}`, {
+  const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/api/media/byType/${typeId}`, {
     headers: {
       Authorization: `Bearer ${token}`
     }
@@ -261,19 +261,31 @@ export const fetchMediaByType = async (typeId: string): Promise<MediaFile[]> => 
   });
 };
 
-export const deleteMediaItem = async (id: string): Promise<{ id: string }> => {
+interface DeleteMediaResponse {
+  message: string;
+  deletedId: string;
+  // Include other fields if your backend sends more
+}
+
+export const deleteMediaItem = async (mediaId: string): Promise<DeleteMediaResponse> => {
   const token = localStorage.getItem('authToken');
   if (!token) {
-    throw new Error('Authentication token missing');
+    toast.error('Authentication required to delete media.');
+    throw new Error('Authentication required');
   }
-  
-  await axios.delete(`${env.BASE_URL}/api/media/${id}`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
-  
-  return { id };
+  try {
+    const response = await axios.delete<DeleteMediaResponse>(`${env.BASE_URL}/api/media/delete/${mediaId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    toast.success(response.data.message || 'Media deleted successfully');
+    return response.data;
+  } catch (error: any) {
+    console.error('Error deleting media item:', error);
+    toast.error(error.response?.data?.message || 'Could not delete media item.');
+    throw error;
+  }
 };
 
 // -- Media Types --
@@ -458,65 +470,13 @@ export const deprecateMediaType = async (id: string): Promise<MediaType> => {
 
 // -- Media Detail --
 export const fetchMediaBySlug = async (slug: string | undefined): Promise<MediaFile> => {
+  if (!slug) throw new Error('Slug is undefined, cannot fetch media by slug.');
+
   const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
-  if (!slug) {
-    throw new Error('Media slug is required');
-  }
-  
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`Attempting to fetch media for: ${slug}`);
-  }
-  
-  // Check if the slug looks like just an ID itself
-  const isIdOnly = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(slug);
-  
-  if (isIdOnly) {
-    // If the slug is just an ID, try the ID endpoint directly
-    try {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`Slug appears to be an ID, trying ID endpoint directly: ${slug}`);
-      }
-      
-      const idResponse = await axios.get<MediaFile>(`${env.BASE_URL}/api/media/id/${slug}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
-      return idResponse.data;
-    } catch (idError: any) {
-      if (idError.response) {
-        const { status } = idError.response;
-        
-        if (status === 500) {
-          console.error('Server error fetching media by ID:', idError.response.data);
-          throw new Error(`Server error: The media file could not be loaded.`);
-        } else if (status === 404) {
-          throw new Error(`Media not found: The file with ID "${slug}" does not exist or has been deleted.`);
-        } else if (status === 403) {
-          throw new Error('Access denied: You do not have permission to view this media.');
-        }
-      }
-      
-      throw idError;
-    }
-  }
-  
+  // No token check here, assuming public accessibility for direct slug links or specific auth handling elsewhere
+
   try {
-    // Attempt to fetch by slug first - use the correct slug endpoint format
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`Trying primary slug endpoint: ${env.BASE_URL}/media/slug/${slug}`);
-    }
-    
-    const response = await axios.get<MediaFile>(`${env.BASE_URL}/media/slug/${slug}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+    const response = await axios.get<MediaFile>(`${env.BASE_URL}/api/media/slug/${slug}`);
     
     // Log in development only
     if (process.env.NODE_ENV === 'development') {
@@ -719,7 +679,7 @@ export const updateMediaItem = async (mediaData: Partial<MediaFile> & { changedF
       console.log('Trying to update media using ID endpoint for:', mediaId);
     }
     response = await axios.put<MediaFile>(
-      `${env.BASE_URL}/media/update-by-id/${mediaId}`,
+      `${env.BASE_URL}/api/media/update-by-id/${mediaId}`,
       updatePayload,
       { 
         headers: {
@@ -735,7 +695,7 @@ export const updateMediaItem = async (mediaData: Partial<MediaFile> & { changedF
         console.log('ID endpoint failed, trying slug endpoint for:', mediaSlug);
       }
       response = await axios.put<MediaFile>(
-        `${env.BASE_URL}/media/update/${mediaSlug}`,
+        `${env.BASE_URL}/api/media/update/${mediaSlug}`,
         updatePayload,
         { 
           headers: {
@@ -848,25 +808,22 @@ export const useMedia = (options?: CustomQueryOptions<MediaFile[], Error>) => {
 
 export const useDeleteMedia = () => {
   const queryClient = useQueryClient();
-  
-  return useMutation({
+  return useMutation<DeleteMediaResponse, Error, string>({
     mutationFn: deleteMediaItem,
-    onSuccess: (data) => {
-      // Invalidate the media query to trigger a refetch
+    onSuccess: (data, mediaId) => {
+      console.log('Media deleted successfully, mediaId:', mediaId, 'Response data:', data);
+      // Invalidate queries that would be affected by this deletion
       queryClient.invalidateQueries({ queryKey: [QueryKeys.media] });
-      
-      // OR, optionally, update the cache directly for faster UI updates
-      queryClient.setQueryData<MediaFile[]>([QueryKeys.media], (oldData) => {
-        if (!oldData) return [];
-        return oldData.filter(item => item._id !== data.id);
-      });
-      
-      toast.success('Media deleted successfully');
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.pendingMediaReviews] });
+      queryClient.invalidateQueries({ queryKey: ['media', 'rejectedReview'] }); // Invalidate our new rejected media query
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.mediaByUserId] }); // Corrected QueryKey
+      // Potentially invalidate other specific queries if needed
+      // toast.info('Media list updated after deletion.'); // Toasting from deleteMediaItem is probably sufficient
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'Error deleting media';
-      toast.error(message);
-    }
+      console.error('Failed to delete media:', error);
+      // Toast error is already handled in deleteMediaItem, but good to log here too.
+    },
   });
 };
 
@@ -1954,29 +1911,29 @@ export const fetchUserById = async (userId: string): Promise<User | null> => {
 };
 
 // React Query hook to get user by ID
-export const useUserById = (userId: string | undefined) => {
-  return useQuery<User | null, Error>({
-    queryKey: QueryKeys.userById(userId || 'invalid_user_id'), // Ensure a valid string for queryKey
-    queryFn: () => {
-      if (!userId) {
-        // Return a promise that resolves to null or rejects if userId is not available
-        // This prevents the query from attempting to fetch with an undefined ID
-        return Promise.resolve(null); 
-      }
-      return fetchUserById(userId);
-    },
-    enabled: !!userId, // Only run the query if userId is available
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    retry: (failureCount, error: any) => {
-      // Do not retry on 404 errors
-      if (error.response?.status === 404) {
-        return false;
-      }
-      // Standard retry for other errors (e.g., up to 2 times)
-      return failureCount < 2;
-    },
+export const useUserById = (userId?: string) => {
+  return useQuery<User | null, Error>({ // Allow User | null
+    queryKey: [QueryKeys.userById, userId],
+    queryFn: () => fetchUserById(userId!), 
+    enabled: !!userId,        
+    staleTime: 1000 * 60 * 5, 
   });
 };
+
+// New custom hook to get user avatar
+export const useUserAvatar = (userId?: string): { avatar?: string; isLoading: boolean; isError: boolean; error: Error | null } => {
+  const { data: user, isLoading, isError, error } = useUserById(userId); // user can be User | null | undefined
+
+  return {
+    avatar: user?.avatar, // Correctly handles user being null or undefined
+    isLoading,
+    isError,
+    error,
+  };
+};
+
+// For fetching the current user's profile
+// ... existing code ...
 
 // ... existing code ...
 
@@ -2088,7 +2045,7 @@ export const fetchMediaByUserId = async (userId: string): Promise<MediaFile[]> =
   }
 
   try {
-    const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/media/user/${userId}`, {
+    const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/api/media/user/${userId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -2152,7 +2109,7 @@ export const fetchPendingMediaReviews = async (): Promise<MediaFile[]> => {
   try {
     // This endpoint needs to be created on the backend.
     // It should return media files with status 'pending' or 'needs_revision'.
-    const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/api/admin/media/pending-review`, {
+    const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/api/media/admin/pending-review`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -2196,7 +2153,7 @@ export const approveMediaItem = async (mediaId: string): Promise<MediaFile> => {
   const token = localStorage.getItem('authToken');
   if (!token) throw new Error('Authentication required.');
   const response = await axios.post<MediaFile>(
-    `${env.BASE_URL}/api/admin/media/${mediaId}/approve`,
+    `${env.BASE_URL}/api/media/admin/${mediaId}/approve`,
     {},
     { headers: { Authorization: `Bearer ${token}` } }
   );
@@ -2208,7 +2165,7 @@ export const rejectMediaItem = async ({ mediaId, feedback }: { mediaId: string; 
   const token = localStorage.getItem('authToken');
   if (!token) throw new Error('Authentication required.');
   const response = await axios.post<MediaFile>(
-    `${env.BASE_URL}/api/admin/media/${mediaId}/reject`,
+    `${env.BASE_URL}/api/media/admin/${mediaId}/reject`,
     { feedback },
     { headers: { Authorization: `Bearer ${token}` } }
   );
@@ -2220,7 +2177,7 @@ export const requestRevisionMediaItem = async ({ mediaId, feedback }: { mediaId:
   const token = localStorage.getItem('authToken');
   if (!token) throw new Error('Authentication required.');
   const response = await axios.post<MediaFile>(
-    `${env.BASE_URL}/api/admin/media/${mediaId}/request-revision`,
+    `${env.BASE_URL}/api/media/admin/${mediaId}/request-revision`,
     { feedback },
     { headers: { Authorization: `Bearer ${token}` } }
   );
@@ -2283,5 +2240,54 @@ export const useRequestRevisionMedia = () => {
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to request revision for media.');
     },
+  });
+};
+
+export const fetchRejectedMedia = async (): Promise<MediaFile[]> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    toast.error('Authentication required to fetch rejected media.');
+    return [];
+  }
+
+  try {
+    // This endpoint needs to be created on the backend.
+    // It should return media files with status 'rejected'.
+    const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/api/media/admin/rejected`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Fetched ${response.data.length} rejected media items`);
+    }
+
+    // Process the data to ensure consistent formatting
+    return response.data.map(media => ({
+      ...media,
+      _id: media._id,
+      fileSize: typeof media.fileSize === 'number' ? media.fileSize : 0,
+      modifiedDate: typeof media.modifiedDate === 'string' && media.modifiedDate.length > 0
+                      ? media.modifiedDate
+                      : new Date().toISOString(),
+      metadata: media.metadata || {},
+      approvalStatus: media.approvalStatus, // Essential for this hook
+      approvalFeedback: media.approvalFeedback, // Also important
+    }));
+  } catch (error: any) {
+    console.error('Error fetching rejected media:', error);
+    toast.error(error.response?.data?.message || 'Could not load rejected media.');
+    return []; // Return empty array on error
+  }
+};
+
+// Hook for admins to get rejected media
+export const useRejectedMedia = (userProfile: User | null | undefined) => {
+  return useQuery<MediaFile[], Error>({
+    queryKey: ['media', 'rejectedReview'], // New QueryKey
+    queryFn: fetchRejectedMedia,
+    enabled: !!userProfile && (userProfile.role === 'admin' || userProfile.role === 'superAdmin'),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };

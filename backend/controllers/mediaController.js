@@ -207,8 +207,6 @@ export const uploadMedia = async (req, res) => {
       fileSize: file.size,
       fileExtension: req.body.fileExtension,
       modifiedDate: new Date(),
-      uploadedBy: req.user?._id,
-      modifiedBy: req.user?._id,
       mediaType: req.body.mediaType,
       metadata: {
         ...parsedMetadata,
@@ -220,6 +218,30 @@ export const uploadMedia = async (req, res) => {
       approvedBy: undefined,
       approvedAt: undefined,
     };
+
+    // Log the type and value of user ID from token
+    console.log(`[uploadMedia] req.user from token:`, JSON.stringify(req.user, null, 2));
+    console.log(`[uploadMedia] typeof req.user._id: ${typeof req.user?._id}, value: ${req.user?._id}`);
+    console.log(`[uploadMedia] typeof req.user.id: ${typeof req.user?.id}, value: ${req.user?.id}`);
+
+    let uploaderIdToStore;
+    if (req.user?._id && mongoose.Types.ObjectId.isValid(req.user._id.toString()) && typeof req.user._id !== 'string') {
+      // If req.user._id is already an ObjectId (or a valid representation that's not just a string)
+      uploaderIdToStore = req.user._id;
+      console.log(`[uploadMedia] Using req.user._id as ObjectId: ${uploaderIdToStore}`);
+    } else if (req.user?.id && mongoose.Types.ObjectId.isValid(req.user.id)) {
+      // If req.user.id is a string but a valid ObjectId string, convert it
+      uploaderIdToStore = new mongoose.Types.ObjectId(req.user.id);
+      console.log(`[uploadMedia] Converted req.user.id to ObjectId: ${uploaderIdToStore}`);
+    } else {
+      console.error("[uploadMedia] Could not determine a valid ObjectId for uploader. Fallback or error needed.");
+      // Potentially throw an error or assign a default/null if appropriate for your app logic
+      // For now, let's proceed with undefined, which Mongoose might strip or handle based on schema defaults
+      uploaderIdToStore = undefined; 
+    }
+
+    mediaData.uploadedBy = uploaderIdToStore;
+    mediaData.modifiedBy = uploaderIdToStore; // Assuming modifiedBy should also be the uploader ObjectId
 
     // Auto-approve if uploaded by superAdmin, otherwise pending for admin
     if (req.user.role === 'superAdmin') {
@@ -663,10 +685,21 @@ export const updateMedia = async (req, res) => {
         documentBeforeUpdate.title = proposedTitle;
       }
       if (proposedMetadata !== undefined) {
-        if (!documentBeforeUpdate.metadata) documentBeforeUpdate.metadata = {};
-        for (const [key, value] of Object.entries(proposedMetadata)) {
-          if (value !== undefined) documentBeforeUpdate.metadata[key] = value;
+        // Ensure metadata object exists
+        if (!documentBeforeUpdate.metadata) {
+          documentBeforeUpdate.metadata = {};
         }
+
+        // Merge proposedMetadata into existing metadata by creating a new object
+        documentBeforeUpdate.metadata = { 
+          ...documentBeforeUpdate.metadata, 
+          ...proposedMetadata 
+        };
+
+        // Log AFTER the merge to see the actual state
+        console.log('SuperAdmin - documentBeforeUpdate.metadata AFTER MERGE:', JSON.stringify(documentBeforeUpdate.metadata, null, 2));
+        
+        documentBeforeUpdate.markModified('metadata'); // Mark as modified
       }
       documentBeforeUpdate.pendingVersionData = undefined;
       documentBeforeUpdate.approvalStatus = 'approved';
@@ -780,6 +813,166 @@ export const updateMedia = async (req, res) => {
     }
 
     return res.status(500).json({ error: 'Failed to update media file', details: error.message });
+  }
+};
+
+export const approveMediaItem = async (req, res, next) => {
+  const { mediaId } = req.params;
+  const adminUserId = req.user?._id;
+
+  console.log(`Admin ${adminUserId} attempting to approve media item ${mediaId}`);
+
+  try {
+    const mediaItem = await Media.findById(mediaId);
+
+    if (!mediaItem) {
+      return res.status(404).json({ message: 'Media item not found.' });
+    }
+
+    // Apply pending changes if they exist
+    if (mediaItem.pendingVersionData && Object.keys(mediaItem.pendingVersionData).length > 0) {
+      console.log('Applying pendingVersionData:', JSON.stringify(mediaItem.pendingVersionData, null, 2));
+      // Directly merge pendingVersionData into the mediaItem document
+      // This works for top-level fields like 'title' and nested 'metadata'
+      for (const key in mediaItem.pendingVersionData) {
+        if (key === 'metadata' && typeof mediaItem.pendingVersionData[key] === 'object' && mediaItem.pendingVersionData[key] !== null) {
+          if (!mediaItem.metadata) mediaItem.metadata = {};
+          // Merge metadata deeply
+          for (const metaKey in mediaItem.pendingVersionData[key]) {
+            mediaItem.metadata[metaKey] = mediaItem.pendingVersionData[key][metaKey];
+          }
+          mediaItem.markModified('metadata'); // Important for Mongoose to detect changes in nested objects
+        } else {
+          mediaItem[key] = mediaItem.pendingVersionData[key];
+        }
+      }
+      mediaItem.pendingVersionData = undefined; // Clear pending data
+    }
+
+    mediaItem.approvalStatus = 'approved';
+    mediaItem.approvedBy = adminUserId;
+    mediaItem.approvedAt = new Date();
+    mediaItem.approvalFeedback = undefined; // Clear any previous rejection/revision feedback
+
+    const updatedMediaItem = await mediaItem.save();
+
+    // Log activity
+    if (req.user) {
+      await ActivityTrackingService.trackMediaApprovalStatusChange(req.user, updatedMediaItem, 'approved');
+    }
+
+    console.log(`Media item ${mediaId} approved successfully by ${adminUserId}`);
+    res.status(200).json(updatedMediaItem);
+
+  } catch (error) {
+    console.error(`Error approving media item ${mediaId}:`, error);
+    next(error); // Pass error to the main error handler
+  }
+};
+
+export const rejectMediaItem = async (req, res, next) => {
+  const { mediaId } = req.params;
+  const { feedback } = req.body; // Feedback is expected in the request body
+  const adminUserId = req.user?._id;
+
+  console.log(`Admin ${adminUserId} attempting to reject media item ${mediaId} with feedback: "${feedback}"`);
+
+  if (!feedback || feedback.trim() === '') {
+    return res.status(400).json({ message: 'Feedback is required when rejecting a media item.' });
+  }
+
+  try {
+    const mediaItem = await Media.findById(mediaId);
+
+    if (!mediaItem) {
+      return res.status(404).json({ message: 'Media item not found.' });
+    }
+
+    mediaItem.approvalStatus = 'rejected';
+    mediaItem.approvalFeedback = feedback;
+    mediaItem.approvedBy = undefined; // Clear any previous approver
+    mediaItem.approvedAt = undefined;   // Clear any previous approval date
+    mediaItem.pendingVersionData = undefined; // Clear any pending changes as they are rejected
+
+    const updatedMediaItem = await mediaItem.save();
+
+    // Log activity
+    if (req.user) {
+      await ActivityTrackingService.trackMediaApprovalStatusChange(req.user, updatedMediaItem, 'rejected');
+    }
+
+    console.log(`Media item ${mediaId} rejected successfully by ${adminUserId}`);
+    res.status(200).json(updatedMediaItem);
+
+  } catch (error) {
+    console.error(`Error rejecting media item ${mediaId}:`, error);
+    next(error); // Pass error to the main error handler
+  }
+};
+
+export const getPendingMediaReviews = async (req, res, next) => {
+  console.log(`Admin ${req.user?._id} attempting to fetch media items pending review.`);
+
+  try {
+    const pendingItems = await Media.find({
+      approvalStatus: { $in: ['pending', 'needs_revision'] },
+    }).sort({ updatedAt: -1 }); // Sort by most recently updated
+
+    console.log(`Found ${pendingItems.length} media items pending review.`);
+    res.status(200).json(pendingItems);
+
+  } catch (error) {
+    console.error('Error fetching media items pending review:', error);
+    next(error);
+  }
+};
+
+export const getRejectedMedia = async (req, res, next) => {
+  console.log(`Admin ${req.user?._id} attempting to fetch rejected media items.`);
+
+  try {
+    const rejectedItems = await Media.find({
+      approvalStatus: 'rejected',
+    }).sort({ updatedAt: -1 }); // Sort by most recently updated
+
+    console.log(`Found ${rejectedItems.length} rejected media items.`);
+    res.status(200).json(rejectedItems);
+
+  } catch (error) {
+    console.error('Error fetching rejected media items:', error);
+    next(error);
+  }
+};
+
+// New controller function to get media by user ID
+export const getMediaByUserId = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    console.log(`[getMediaByUserId] Received request for user ID (string): ${userId}`);
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      console.log(`[getMediaByUserId] Invalid ObjectId string: ${userId}`);
+      return res.status(400).json({ message: 'Invalid user ID format.' });
+    }
+    const objectIdForQuery = new mongoose.Types.ObjectId(userId);
+    console.log(`[getMediaByUserId] Converted to ObjectId for query: ${objectIdForQuery}`);
+
+    // Find media where uploadedBy matches the userId
+    const userMedia = await Media.find({ uploadedBy: objectIdForQuery })
+      .sort({ createdAt: -1 }); // Sort by newest first, or as desired
+
+    console.log(`[getMediaByUserId] Media.find({ uploadedBy: ${objectIdForQuery} }) query executed.`);
+    console.log(`[getMediaByUserId] Found ${userMedia.length} media items for user ID: ${userId}`);
+    
+    // Note: A successful query that finds no documents returns an empty array, not null/undefined.
+    // So, checking !userMedia is not the right way to see if nothing was found.
+    // The length check is appropriate.
+
+    res.status(200).json(userMedia);
+
+  } catch (error) {
+    console.error(`[getMediaByUserId] Error fetching media for user ID ${req.params.userId}:`, error);
+    next(error); 
   }
 };
 

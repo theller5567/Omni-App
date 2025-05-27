@@ -232,7 +232,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
         try {
           // Use axios to make the request with responseType blob
           const response = await axios.post<Blob>(
-            `${env.BASE_URL}/media/batch-download`,
+            `${env.BASE_URL}/api/media/batch-download`,
             { fileIds }, // Send as JSON in request body
             { 
               responseType: 'blob',
