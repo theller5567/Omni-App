@@ -46,7 +46,7 @@ const CustomLegend = (props: any) => {
             marginRight: 20,
             marginBottom: 8,
             fontSize: '12px',
-            color: 'rgba(255, 255, 255, 0.7)'
+            color: 'var(--text-primary)'
           }}
         >
           <span style={{ 
@@ -91,13 +91,13 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
           fontSize: '13px'
         }}>{data.name}</p>
         <p style={{ 
-          color: '#fff',
+          color: 'var(--text-primary)',
           margin: '0',
           fontSize: '12px' 
         }}>
           <span style={{ marginRight: '6px' }}>{data.value} files</span>
           <span style={{ 
-            color: 'rgba(255, 255, 255, 0.7)',
+            color: 'var(--text-primary)',
             fontSize: '11px'
           }}>({percentage}%)</span>
         </p>
@@ -250,7 +250,7 @@ const MediaTypeDistribution: React.FC = () => {
                     <text
                       x={x}
                       y={y}
-                      fill="#fff"
+                      fill="var(--color-text-primary)"
                       textAnchor={x > cx ? 'start' : 'end'}
                       dominantBaseline="central"
                       fontSize={12}

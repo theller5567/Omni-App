@@ -22,9 +22,9 @@ const getCssVar = (varName: string, fallback: string = ''): string => {
 // Function to create a theme based on the CSS variables
 const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
   // First set the data-theme attribute to ensure correct CSS variables are used
-  if (typeof document !== 'undefined') {
-    document.documentElement.setAttribute('data-theme', mode);
-  }
+  // REMOVED: if (typeof document !== 'undefined') {
+  // REMOVED:   document.documentElement.setAttribute('data-theme', mode);
+  // REMOVED: }
   
   // Default colors for light and dark modes
   const lightDefaults = {

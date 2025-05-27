@@ -8,12 +8,16 @@ import { isImageFile, isVideoFile, getFileIcon } from '../utils';
 
 interface VirtualizedDataTableProps {
   rows: any[];
-  onSelectionChange: (selection: GridRowSelectionModel) => void;
+  onSelectionChange?: (selection: GridRowSelectionModel) => void;
+  showCheckboxes?: boolean;
+  selectionModel?: GridRowSelectionModel;
 }
 
 const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({ 
   rows,
-  onSelectionChange 
+  onSelectionChange,
+  showCheckboxes = true,
+  selectionModel
 }) => {
   const navigate = useNavigate();
   
@@ -301,9 +305,10 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
         slots={{
           toolbar: GridToolbar,
         }}
-        checkboxSelection
+        checkboxSelection={showCheckboxes}
         onRowClick={handleRowClick}
         onRowSelectionModelChange={onSelectionChange}
+        rowSelectionModel={selectionModel}
         rowHeight={52} // Fixed row height for better virtualization
         rowBufferPx={100} // Increase buffer size for smoother scrolling
         columnBufferPx={100} // Increase column buffer for smoother horizontal scrolling

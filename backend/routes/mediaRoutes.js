@@ -23,7 +23,8 @@ import {
   rejectMediaItem,
   getPendingMediaReviews,
   getRejectedMedia,
-  getMediaByUserId
+  getMediaByUserId,
+  getMediaByTypeName
 } from '../controllers/mediaController.js';
 import mongoose from 'mongoose';
 import LoggerService from '../services/loggerService.js';
@@ -159,6 +160,9 @@ router.get('/search/:query', searchMedia);
 
 // Get media by user ID (must come before generic ID routes)
 router.get('/user/:userId', authenticate, getMediaByUserId);
+
+// Get media by Media Type Name (must come before generic ID or slug routes)
+router.get('/byType/:mediaTypeName', getMediaByTypeName);
 
 // Get media by slug (must come before ID routes)
 router.get('/slug/:slug', async (req, res) => {

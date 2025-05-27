@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 // Remove Redux imports
 // import { useSelector } from 'react-redux';
 // import { RootState } from '../../store/store';
-import { Paper, Typography, Box, Tab, Tabs } from '@mui/material';
+import { Paper, Typography, Box, Tab, Tabs, useTheme } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { formatFileSize } from '../../utils/formatFileSize';
 import type { TransformedMediaFile, MediaType } from '../../hooks/query-hooks'; // Import types
@@ -30,6 +30,7 @@ interface StorageUsageChartProps {
 const StorageUsageChart: React.FC<StorageUsageChartProps> = ({ allMedia, mediaTypes, isLoading }) => {
   const [activeTab, setActiveTab] = React.useState(0);
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const theme = useTheme(); // Get the current theme
   
   // Remove Redux store access
   // const allMedia = useSelector((state: RootState) => state.media.allMedia);
@@ -170,24 +171,29 @@ const StorageUsageChart: React.FC<StorageUsageChartProps> = ({ allMedia, mediaTy
               margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
               barSize={30}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+              <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
               <XAxis 
                 dataKey="name" 
                 angle={-45} 
                 textAnchor="end" 
                 height={70} 
                 interval={0}
-                tick={{ fill: 'rgba(255, 255, 255, 0.7)', fontSize: 12 }}
+                tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
               />
               <YAxis 
                 tickFormatter={(value) => formatFileSize(value)}
-                tick={{ fill: 'rgba(255, 255, 255, 0.7)', fontSize: 12 }}
+                tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
               />
               <Tooltip 
                 formatter={customTooltipFormatter}
-                contentStyle={{ backgroundColor: '#333', border: 'none', borderRadius: '4px' }}
-                labelStyle={{ color: '#fff', fontWeight: 'bold' }}
-                itemStyle={{ color: '#fff' }}
+                contentStyle={{ 
+                  backgroundColor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: '4px',
+                  color: theme.palette.text.primary
+                }}
+                labelStyle={{ color: theme.palette.text.primary, fontWeight: 'bold' }}
+                itemStyle={{ color: theme.palette.text.secondary }}
               />
               <Bar 
                 dataKey="size" 
@@ -219,24 +225,29 @@ const StorageUsageChart: React.FC<StorageUsageChartProps> = ({ allMedia, mediaTy
               margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
               barSize={30}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+              <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
               <XAxis 
                 dataKey="name" 
                 angle={-45} 
                 textAnchor="end" 
                 height={70}
                 interval={0}
-                tick={{ fill: 'rgba(255, 255, 255, 0.7)', fontSize: 12 }}
+                tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
               />
               <YAxis 
                 tickFormatter={(value) => formatFileSize(value)}
-                tick={{ fill: 'rgba(255, 255, 255, 0.7)', fontSize: 12 }}
+                tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
               />
               <Tooltip 
                 formatter={customTooltipFormatter}
-                contentStyle={{ backgroundColor: '#333', border: 'none', borderRadius: '4px' }}
-                labelStyle={{ color: '#fff', fontWeight: 'bold' }}
-                itemStyle={{ color: '#fff' }}
+                contentStyle={{ 
+                  backgroundColor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: '4px',
+                  color: theme.palette.text.primary
+                }}
+                labelStyle={{ color: theme.palette.text.primary, fontWeight: 'bold' }}
+                itemStyle={{ color: theme.palette.text.secondary }}
               />
               <Bar 
                 dataKey="size" 
@@ -266,7 +277,7 @@ const StorageUsageChart: React.FC<StorageUsageChartProps> = ({ allMedia, mediaTy
           <Box sx={{ 
             mb: 2, 
             pb: 2, 
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            borderBottom: `1px solid ${theme.palette.divider}`,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-end'
@@ -357,7 +368,7 @@ const StorageUsageChart: React.FC<StorageUsageChartProps> = ({ allMedia, mediaTy
                     sx={{ 
                       width: '100%', 
                       height: 4, 
-                      bgcolor: 'rgba(255, 255, 255, 0.1)', 
+                      bgcolor: theme.palette.mode === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)',
                       borderRadius: 2,
                       overflow: 'hidden'
                     }}
@@ -398,7 +409,7 @@ const StorageUsageChart: React.FC<StorageUsageChartProps> = ({ allMedia, mediaTy
                 color: 'text.secondary', 
                 mt: 1.5,
                 pt: 1.5,
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                borderTop: `1px solid ${theme.palette.divider}`,
                 textAlign: 'center'
               }}
             >

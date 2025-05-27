@@ -976,4 +976,28 @@ export const getMediaByUserId = async (req, res, next) => {
   }
 };
 
+// New controller function to get media by Media Type Name
+export const getMediaByTypeName = async (req, res, next) => {
+  try {
+    const { mediaTypeName } = req.params;
+    console.log(`[getMediaByTypeName] Received request for media type name: ${mediaTypeName}`);
+
+    // Find media where mediaType (which stores the name) matches the mediaTypeName parameter
+    // The search should be case-insensitive to handle variations like "Webinar Video" vs "webinar video"
+    const mediaItems = await Media.find({ 
+      mediaType: { $regex: new RegExp(`^${mediaTypeName}$`, 'i') } 
+    }).sort({ createdAt: -1 }); // Sort by newest first, or as desired
+
+    console.log(`[getMediaByTypeName] Media.find({ mediaType: ${mediaTypeName} }) query executed (case-insensitive).`);
+    console.log(`[getMediaByTypeName] Found ${mediaItems.length} media items for type: ${mediaTypeName}`);
+    
+    // It's possible that no media items are found for a given type, which is a valid scenario (empty array).
+    res.status(200).json(mediaItems);
+
+  } catch (error) {
+    console.error(`[getMediaByTypeName] Error fetching media for type ${req.params.mediaTypeName}:`, error);
+    next(error); 
+  }
+};
+
 

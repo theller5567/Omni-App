@@ -16,7 +16,7 @@ import { useTagCategories, useUserProfile } from '../../hooks/query-hooks';
 
 // Lazy load subcomponents
 const HeaderComponent = lazy(() => import('./components/HeaderComponent'));
-const DataTable = lazy(() => import('./components/VirtualizedDataTable'));
+const VirtualizedDataTable = lazy(() => import('./components/VirtualizedDataTable'));
 const MediaCard = lazy(() => import('./components/MediaCard'));
 const ConfirmationModal = lazy(() => import('./components/ConfirmationModal'));
 
@@ -29,6 +29,7 @@ const LoadingFallback = () => (
 
 interface MediaLibraryProps {
   mediaFilesData: BaseMediaFile[];
+  dataSourceForFilters?: BaseMediaFile[];
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   onAddMedia: () => void;
   onDeleteMedia: (id: string) => Promise<boolean>;
@@ -39,6 +40,7 @@ interface MediaLibraryProps {
 
 const MediaLibrary: React.FC<MediaLibraryProps> = ({ 
   mediaFilesData, 
+  dataSourceForFilters,
   setSearchQuery, 
   onAddMedia, 
   onDeleteMedia, 
@@ -99,7 +101,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
   }, []);
   
   // Custom toast function that avoids showing tag-related errors during initial page load
-  const safeToast = (type: 'success' | 'error' | 'info', message: string, options = {}) => {
+  const safeToast = (type: 'success' | 'error' | 'info' | 'warning', message: string, options = {}) => {
     // Skip tag-related notifications if disabled and not from user action
     if (toastSettings.disableTagNotifications && 
         !toastSettings.initialLoadComplete && 
@@ -175,27 +177,55 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
   };
 
   const handleConfirmDelete = async () => {
+    let successfullyDeletedIds: string[] = [];
     if (isToolbarDelete) {
       // Handle multiple deletions
-      const promises = selected.map(id => onDeleteMedia(id as string));
+      const numSelected = selected.length;
+      if (numSelected === 0) {
+        safeToast('info', 'No files were selected for deletion.');
+        setIsModalOpen(false);
+        setIsToolbarDelete(false);
+        return;
+      }
+
+      const promises = selected.map(id => onDeleteMedia(id as string).then(success => ({ id: id as string, success })));
       const results = await Promise.all(promises);
 
-      if (results.every(result => result)) {
-        safeToast('success', 'Selected media deleted successfully');
-        setSelected([]); // Clear selection after deletion
-      } else {
-        safeToast('error', 'Failed to delete some media');
+      successfullyDeletedIds = results.filter(r => r.success).map(r => r.id);
+      const successfulDeletionsCount = successfullyDeletedIds.length;
+
+      if (successfulDeletionsCount === numSelected && numSelected > 0) {
+        safeToast('success', `${successfulDeletionsCount} media file${successfulDeletionsCount > 1 ? 's' : ''} deleted successfully.`);
+      } else if (successfulDeletionsCount > 0 && successfulDeletionsCount < numSelected) {
+        safeToast('warning', `${successfulDeletionsCount} out of ${numSelected} media files deleted. Some deletions may have failed.`);
+      } else if (numSelected > 0 && successfulDeletionsCount === 0) {
+        safeToast('error', `Failed to delete ${numSelected} selected media file${numSelected > 1 ? 's' : ''}.`);
       }
     } else if (selectedFileId) {
       // Handle single deletion
+      const fileToDelete = rows.find(row => row.id === selectedFileId);
+      const fileName = fileToDelete?.title || fileToDelete?.metadata?.fileName || 'this media file';
+
       const success = await onDeleteMedia(selectedFileId);
       if (success) {
-        safeToast('success', 'Media deleted successfully');
+        successfullyDeletedIds = [selectedFileId];
+        safeToast('success', `Media file '${fileName}' deleted successfully.`);
         setSelectedFileId(null); // Clear the selected file ID
       } else {
-        safeToast('error', 'Failed to delete media');
+        safeToast('error', `Failed to delete media file '${fileName}'.`);
       }
     }
+
+    // After deletions, filter the 'selected' state to remove IDs of deleted items
+    // This requires knowing the updated rows data. 
+    // Since onDeleteMedia updates the parent (MediaContainer) which then updates mediaFilesData (and thus rows),
+    // we might need a slight delay or ensure 'rows' is fresh before this filter.
+    // For now, let's assume 'rows' will be updated by the time this runs or shortly after.
+    // A more robust way would be to get the updated list of rows or rely on the parent to clear selection.
+    
+    // Update the selected state by removing successfully deleted IDs
+    setSelected(currentSelected => currentSelected.filter(id => !successfullyDeletedIds.includes(id as string)));
+
     setIsModalOpen(false);
     setIsToolbarDelete(false); // Reset the toolbar delete flag
   };
@@ -293,7 +323,25 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
     }
   };
 
-  const EnhancedTableToolbar = ({ numSelected }: { numSelected: number }) => (
+  // Motion animation adjusted for mobile
+  const motionProps = {
+    initial: { opacity: 0, x: isMobile ? -100 : -350 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: isMobile ? -100 : -350 },
+    transition: { duration: isMobile ? 0.3 : 0.5 }
+  };
+
+  // Only log on dev environment and only once per render cycle with a stable key
+  if (process.env.NODE_ENV === 'development' && rows.length > 0 && !prevDataRef.current.includes(rows.length.toString())) {
+    console.log('MediaLibrary - Rendering with:', {
+      rows: rows.length,
+      viewMode,
+      userRole
+    });
+  }
+
+  // Restore EnhancedTableToolbar as a local component
+  const EnhancedTableToolbar = ({ numSelected, onDelete }: { numSelected: number, onDelete: () => void }) => (
     <Toolbar
       className="toolbar"
       sx={{
@@ -325,10 +373,10 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
               {downloading ? <FaSpinner className="fa-spin" /> : <FaDownload />}
             </IconButton>
           </Tooltip>
-          {userRole === 'superAdmin' && (
+          {(userRole === 'superAdmin' || userRole === 'admin') && (
             <Tooltip title="Delete">
               <IconButton 
-                onClick={handleDeleteSelected} 
+                onClick={onDelete} // Use the passed onDelete prop
                 size={isMobile ? "small" : "medium"} 
                 color="error" 
                 disabled={downloading}
@@ -341,23 +389,6 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
       )}
     </Toolbar>
   );
-
-  // Motion animation adjusted for mobile
-  const motionProps = {
-    initial: { opacity: 0, x: isMobile ? -100 : -350 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: isMobile ? -100 : -350 },
-    transition: { duration: isMobile ? 0.3 : 0.5 }
-  };
-
-  // Only log on dev environment and only once per render cycle with a stable key
-  if (process.env.NODE_ENV === 'development' && rows.length > 0 && !prevDataRef.current.includes(rows.length.toString())) {
-    console.log('MediaLibrary - Rendering with:', {
-      rows: rows.length,
-      viewMode,
-      userRole
-    });
-  }
 
   return (
     <motion.div
@@ -372,7 +403,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
           <HeaderComponent
             view={viewMode}
             toggleView={toggleView}
-            mediaFilesData={mediaFilesData}
+            mediaFilesData={dataSourceForFilters || mediaFilesData}
             setSearchQuery={setSearchQuery}
             selectedMediaType={selectedMediaType}
             handleMediaTypeChange={handleMediaTypeChange}
@@ -386,15 +417,16 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
           mt: isMobile ? 1 : 2
         }}>
           {selected.length > 0 && (
-            <EnhancedTableToolbar numSelected={selected.length} />
+            <EnhancedTableToolbar numSelected={selected.length} onDelete={handleDeleteSelected} />
           )}
           
           {viewMode === 'list' ? (
             <Suspense fallback={<LoadingFallback />}>
-              <DataTable
+              <VirtualizedDataTable
                 rows={rows}
                 onSelectionChange={setSelected}
-                key={`datatable-${rows.length}`}
+                selectionModel={selected}
+                key="virtualized-data-table"
               />
             </Suspense>
           ) : (
@@ -442,5 +474,5 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
 };
 
 // Modified component exports to support both direct and lazy loading
-export { HeaderComponent, DataTable, MediaCard, ConfirmationModal };
+export { HeaderComponent, VirtualizedDataTable, MediaCard, ConfirmationModal };
 export default MediaLibrary;

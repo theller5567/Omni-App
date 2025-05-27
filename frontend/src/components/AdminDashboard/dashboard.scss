@@ -2,18 +2,18 @@
 .dashboard-container {
   width: 100%;
   padding: 1rem;
-  background-color: var(--bg-primary, #1e1e1e);
-  color: var(--text-primary, #ffffff);
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
   min-height: calc(100vh - 64px);
   
   .dashboard-title {
     margin-bottom: 1.5rem;
-    color: var(--text-primary);
+    color: var(--color-text-primary);
     font-weight: 500;
   }
   
   .dashboard-card {
-    background-color: var(--bg-secondary, #2d2d2d);
+    background-color: var(--color-surface);
     border-radius: 8px;
     padding: 1.25rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -57,7 +57,7 @@
       
       .stat-title {
         font-size: 0.875rem;
-        color: var(--text-secondary);
+        color: var(--color-text-secondary);
         margin-bottom: 0.75rem;
       }
       
@@ -70,7 +70,7 @@
       
       .stat-subtitle {
         font-size: 0.75rem;
-        color: var(--text-secondary);
+        color: var(--color-text-secondary);
         margin-top: 0.75rem;
       }
     }
@@ -78,18 +78,18 @@
   
   .dashboard-tabs {
     margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+    border-bottom: 1px solid var(--color-border);
     
     .MuiTabs-indicator {
-      background-color: var(--accent-color, #3f8cff);
+      background-color: var(--color-primary);
     }
     
     .MuiTab-root {
-      color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+      color: var(--color-text-secondary);
       text-transform: none;
       
       &.Mui-selected {
-        color: var(--text-primary, #ffffff);
+        color: var(--color-text-primary);
         font-weight: 500;
       }
     }
@@ -148,7 +148,7 @@
     
     .table-header {
       font-weight: 600;
-      color: var(--text-secondary);
+      color: var(--color-text-secondary);
       font-size: 0.875rem;
       
       & > div {
@@ -159,7 +159,7 @@
     .table-row {
       & > div {
         padding: 0.625rem 0;
-        border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+        border-bottom: 1px solid var(--color-border);
       }
       
       &:last-child > div {
@@ -190,18 +190,18 @@
   
   // Card content styling
   .MuiCard-root {
-    background-color: var(--bg-secondary, #2d2d2d);
+    background-color: var(--color-surface);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   }
   
   .MuiTableCell-root {
-    border-bottom-color: var(--border-color, rgba(255, 255, 255, 0.08));
-    color: var(--text-primary, #ffffff);
+    border-bottom-color: var(--color-border);
+    color: var(--color-text-primary);
   }
   
   .MuiTableHead-root .MuiTableCell-root {
-    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    color: var(--color-text-secondary);
     font-weight: 600;
   }
 } 

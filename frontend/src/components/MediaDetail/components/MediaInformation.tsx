@@ -94,25 +94,25 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
   const displayableStandardMetadata = filterStandardAndBaseFields(standardMetadataRaw);
 
   const baseSchemaPropertiesRaw = Object.entries(baseFields).map(([fieldName, fieldProps]: [string, any]) => ({
-    label: fieldName,
-    value: getMetadataField(mediaFile, fieldName) !== undefined 
-      ? fieldProps.type === 'Boolean' 
-        ? (getMetadataField(mediaFile, fieldName) ? 'Yes' : 'No')
-        : String(getMetadataField(mediaFile, fieldName))
+      label: fieldName,
+      value: getMetadataField(mediaFile, fieldName) !== undefined 
+        ? fieldProps.type === 'Boolean' 
+          ? (getMetadataField(mediaFile, fieldName) ? 'Yes' : 'No')
+          : String(getMetadataField(mediaFile, fieldName))
       : undefined // Explicitly undefined if not present
   }));
   const displayableBaseSchemaProperties = filterStandardAndBaseFields(baseSchemaPropertiesRaw);
-  
+
   // New approach for customFields:
   const allCustomFieldsDefinedByType = mediaTypeConfig?.fields
     ? mediaTypeConfig.fields
-        .filter(field => 
-          !['fileName', 'tags', 'altText', 'description', 'visibility'].includes(field.name) &&
+          .filter(field => 
+            !['fileName', 'tags', 'altText', 'description', 'visibility'].includes(field.name) &&
           !isBaseSchemaField(field.name, baseFields) &&
           !shouldHideField(field.name) 
-        )
-        .map(field => {
-          const value = getMetadataField(mediaFile, field.name);
+          )
+          .map(field => {
+            const value = getMetadataField(mediaFile, field.name);
           let displayValue: string;
 
           if (value === undefined || value === null || String(value).trim() === '') {
@@ -123,11 +123,11 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
             displayValue = String(value);
           }
           
-          return {
-            label: field.name,
+            return {
+              label: field.name,
             value: displayValue,
-          };
-        })
+            };
+          })
     : [];
 
   return (

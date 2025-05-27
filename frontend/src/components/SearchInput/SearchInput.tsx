@@ -1,7 +1,7 @@
 import React from 'react';
 import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
-import { InputAdornment } from '@mui/material';
+import { InputAdornment, Box, Typography } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import './searchInput.scss';
 import { BaseMediaFile } from '../../interfaces/MediaFile';
@@ -33,11 +33,9 @@ const SearchInput: React.FC<SearchInputProps> = ({ mediaFiles, setSearchQuery })
         setSearchQuery(newInputValue);
       }}
       onChange={(_, newValue) => {
-        // TypeScript needs explicit null check here
         if (newValue === null) {
           setValue(null);
         } 
-        // Only set value if it's a BaseMediaFile object
         else if (typeof newValue !== 'string') {
           setValue(newValue);
           setSearchQuery(newValue.metadata?.fileName || newValue.title || '');
@@ -59,6 +57,16 @@ const SearchInput: React.FC<SearchInputProps> = ({ mediaFiles, setSearchQuery })
           }}
         />
       )}
+      renderOption={(props, option) => {
+        const key = option._id || option.id || (option.metadata?.fileName || option.title || Math.random().toString());
+        return (
+          <Box component="li" {...props} key={key}>
+            <Typography variant="body2">
+              {option.metadata?.fileName || option.title || 'Untitled'}
+            </Typography>
+          </Box>
+        );
+      }}
     />
   );
 };

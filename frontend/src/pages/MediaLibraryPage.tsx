@@ -42,13 +42,13 @@ const MediaContainer: React.FC = () => {
     isError: isUserProfileError 
   } = useUserProfile();
 
-  // Use enhanced React Query hooks
+  // Fetch ALL media initially. Filtering by selectedMediaType will happen client-side in filteredMediaFiles memo.
   const { 
-    data: mediaData = [], 
+    data: allMediaData = [], // Renamed from mediaData to allMediaData
     isLoading: isLoadingMedia, 
     isError: isMediaError,
     error: mediaError
-  } = useTransformedMedia(userProfile, selectedMediaType);
+  } = useTransformedMedia(userProfile); // Removed selectedMediaType from here
   
   const { 
     data: mediaTypes = [], 
@@ -71,13 +71,13 @@ const MediaContainer: React.FC = () => {
 
   // Track meaningful state changes - logging only in development
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && mediaData.length > 0) {
-      console.log('MediaLibraryPage - Ready:', {
-        items: mediaData.length,
+    if (process.env.NODE_ENV === 'development' && allMediaData.length > 0) {
+      console.log('MediaLibraryPage - Ready (allMediaData):', {
+        items: allMediaData.length,
         mediaTypes: mediaTypes.length
       });
     }
-  }, [mediaData.length, mediaTypes.length]);
+  }, [allMediaData.length, mediaTypes.length]);
 
   const handleOpen = useCallback(() => {
     setIsModalOpen(true);
@@ -117,12 +117,12 @@ const MediaContainer: React.FC = () => {
         console.log('Deleting media with ID:', id);
       }
       
-      // Use React Query mutation - pass the ID directly as a string
-      await deleteMediaMutation(id);
+      // Pass silent option to prevent the hook from showing a toast
+      await deleteMediaMutation({ mediaId: id, options: { silent: true } });
       return true;
     } catch (error) {
       console.error('Error deleting media file:', error);
-      toast.error('Failed to delete media');
+      // MediaLibrary will show its own toast on error, so no toast here is needed
       return false;
     }
   }, [deleteMediaMutation]);
@@ -131,65 +131,99 @@ const MediaContainer: React.FC = () => {
     setSelectedMediaType(type);
   }, []);
 
-  // Filter media files based on search query and ensure it conforms to BaseMediaFile
-  const filteredMediaFiles = useMemo(() => {
-    return mediaData // mediaData is already Array<QueryHooksMediaFile> from useTransformedMedia
-      .filter((file: QueryHooksMediaFile) => { // 'file' here is an item from useTransformedMedia.formattedData
-        // Filter by search query - check various fields that might contain searchable content
+  // Memo for media files filtered ONLY by search query (for HeaderComponent's type buttons)
+  const searchFilteredMediaFiles = useMemo(() => {
+    return allMediaData
+      .filter((file: QueryHooksMediaFile) => {
         const searchableText = [
-          file.displayTitle, // This is from useTransformedMedia
+          file.displayTitle, 
           file.metadata?.fileName,
           file.metadata?.description,
           file.title,
-          // Handle tags which might be an array of strings or objects with a 'name' property
           ...(file.metadata?.tags?.map(tag => typeof tag === 'string' ? tag : tag.name) || []) 
         ].filter(Boolean).join(' ').toLowerCase();
-        
         return searchableText.includes(searchQuery.toLowerCase());
       })
-      .map((file: QueryHooksMediaFile) => { // 'file' is an item from useTransformedMedia.formattedData (QueryHooksMediaFile)
-        // Construct the object for the MediaLibrary component, ensuring it matches BaseMediaFile + any extras MediaLibrary needs
-        // The 'file' object already has most of what we need from useTransformedMedia.
-        // We just need to ensure the final structure aligns with what MediaLibrary expects (BaseMediaFile)
-        // and that critical fields like fileSize and modifiedDate are correctly passed.
+      .map((file: QueryHooksMediaFile) => { 
+        // Map to the structure expected by downstream components (e.g., BaseMediaFile)
+        // This mapping should be consistent with the one in filteredMediaFiles
         const libraryEntry: BaseMediaFile & { fileSize: number; modifiedDate: string; thumbnailUrl?: string; displayTitle?: string; } = {
           _id: file._id,
-          id: file.id || file._id, // VirtualizedDataTable uses 'id' for getRowId
-          title: file.displayTitle || file.title || 'Untitled', // Prefer displayTitle
+          id: file.id || file._id, 
+          title: file.displayTitle || file.title || 'Untitled', 
           location: file.thumbnailUrl || file.location || '', 
           slug: file.slug || `media-${file._id}`, 
           fileExtension: file.fileExtension,
           mediaType: file.mediaType,
-          
-          // --- CORRECTED FIELDS ---
-          fileSize: file.fileSize, // Directly use the fileSize from 'file' (output of useTransformedMedia)
-          modifiedDate: file.modifiedDate, // Directly use the original modifiedDate (ISO string) from 'file'
-          // --- END CORRECTIONS ---
-          
-          metadata: { // Pass through metadata, ensuring fileName is present
-            ...(file.metadata || {}), // Spread existing metadata first
+          fileSize: file.fileSize, 
+          modifiedDate: file.modifiedDate, 
+          metadata: { 
+            ...(file.metadata || {}), 
             fileName: file.metadata?.fileName || file.displayTitle || file.title || 'Untitled',
           },
-          // Pass through any other fields from useTransformedMedia that MediaLibrary might use
           thumbnailUrl: file.thumbnailUrl,
           displayTitle: file.displayTitle,
         };
         return libraryEntry;
       });
-  }, [mediaData, searchQuery]);
+  }, [allMediaData, searchQuery]);
+
+  // Filter media files based on selectedMediaType and searchQuery (for actual display)
+  const filteredMediaFiles = useMemo(() => {
+    return allMediaData // Start with all media data
+      .filter((file: QueryHooksMediaFile) => { 
+        // 1. Filter by selectedMediaType
+        if (selectedMediaType !== 'All' && file.mediaType !== selectedMediaType) {
+          return false;
+        }
+
+        // 2. Filter by search query
+        const searchableText = [
+          file.displayTitle, 
+          file.metadata?.fileName,
+          file.metadata?.description,
+          file.title,
+          ...(file.metadata?.tags?.map(tag => typeof tag === 'string' ? tag : tag.name) || []) 
+        ].filter(Boolean).join(' ').toLowerCase();
+        
+        return searchableText.includes(searchQuery.toLowerCase());
+      })
+      .map((file: QueryHooksMediaFile) => { 
+        const libraryEntry: BaseMediaFile & { fileSize: number; modifiedDate: string; thumbnailUrl?: string; displayTitle?: string; } = {
+          _id: file._id,
+          id: file.id || file._id, 
+          title: file.displayTitle || file.title || 'Untitled', 
+          location: file.thumbnailUrl || file.location || '', 
+          slug: file.slug || `media-${file._id}`, 
+          fileExtension: file.fileExtension,
+          mediaType: file.mediaType,
+          fileSize: file.fileSize, 
+          modifiedDate: file.modifiedDate, 
+          metadata: { 
+            ...(file.metadata || {}), 
+            fileName: file.metadata?.fileName || file.displayTitle || file.title || 'Untitled',
+          },
+          thumbnailUrl: file.thumbnailUrl,
+          displayTitle: file.displayTitle,
+        };
+        return libraryEntry;
+      });
+  }, [allMediaData, selectedMediaType, searchQuery]);
 
   // Only log in development and limit frequency
   const prevFilterCountRef = useRef(0);
   useEffect(() => {
     if (process.env.NODE_ENV === 'development' && 
         Math.abs(prevFilterCountRef.current - filteredMediaFiles.length) > 10) {
-      console.log('MediaLibraryPage - Filter updated:', {
-        total: mediaData.length,
-        filtered: filteredMediaFiles.length
+      console.log('MediaLibraryPage - Filter updated (filteredMediaFiles):', {
+        totalSource: allMediaData.length,
+        filteredResult: filteredMediaFiles.length,
+        currentSearchQuery: searchQuery,
+        currentMediaTypeFilter: selectedMediaType
       });
       prevFilterCountRef.current = filteredMediaFiles.length;
     }
-  }, [filteredMediaFiles.length, mediaData.length]);
+  }, [filteredMediaFiles.length, allMediaData.length, searchQuery, selectedMediaType]);
 
   // --- Updated Loading and Auth Checks ---
   if (isLoadingUserProfile) {
@@ -241,6 +275,7 @@ const MediaContainer: React.FC = () => {
       <Suspense fallback={<LoadingFallback />}>
         <MediaLibrary
           mediaFilesData={filteredMediaFiles}
+          dataSourceForFilters={searchFilteredMediaFiles}
           setSearchQuery={setSearchQuery}
           onAddMedia={handleOpen}
           onDeleteMedia={handleDeleteMedia}

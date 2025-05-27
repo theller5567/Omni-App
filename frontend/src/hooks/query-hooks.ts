@@ -267,23 +267,32 @@ interface DeleteMediaResponse {
   // Include other fields if your backend sends more
 }
 
-export const deleteMediaItem = async (mediaId: string): Promise<DeleteMediaResponse> => {
+export const deleteMediaItem = async ({ mediaId, options }: { mediaId: string, options?: { silent?: boolean } }): Promise<DeleteMediaResponse> => {
   const token = localStorage.getItem('authToken');
   if (!token) {
-    toast.error('Authentication required to delete media.');
-    throw new Error('Authentication required');
+    // Avoid direct toast here if we want full control via options.silent
+    // The onError in useMutation is a better place for user-facing errors.
+    throw new Error('Authentication token missing'); 
   }
   try {
     const response = await axios.delete<DeleteMediaResponse>(`${env.BASE_URL}/api/media/delete/${mediaId}`, {
-      headers: {
+    headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    toast.success(response.data.message || 'Media deleted successfully');
+    // Only show toast if not silent
+    if (!options?.silent) {
+      toast.success(response.data.message || `Media item ${mediaId} deleted successfully.`);
+    }
     return response.data;
   } catch (error: any) {
     console.error('Error deleting media item:', error);
-    toast.error(error.response?.data?.message || 'Could not delete media item.');
+    // Only show toast if not silent, or always show errors?
+    // For now, let's assume errors should always be shown unless explicitly silenced for errors too.
+    // If a silent option should also suppress error toasts, that logic would be added here.
+    if (!options?.silent) { // Optional: make error toasts also respect silent flag
+      toast.error(`Error deleting media ${mediaId}: ${error.response?.data?.message || error.message}`);
+    }
     throw error;
   }
 };
@@ -808,21 +817,32 @@ export const useMedia = (options?: CustomQueryOptions<MediaFile[], Error>) => {
 
 export const useDeleteMedia = () => {
   const queryClient = useQueryClient();
-  return useMutation<DeleteMediaResponse, Error, string>({
-    mutationFn: deleteMediaItem,
-    onSuccess: (data, mediaId) => {
-      console.log('Media deleted successfully, mediaId:', mediaId, 'Response data:', data);
-      // Invalidate queries that would be affected by this deletion
-      queryClient.invalidateQueries({ queryKey: [QueryKeys.media] });
-      queryClient.invalidateQueries({ queryKey: [QueryKeys.pendingMediaReviews] });
-      queryClient.invalidateQueries({ queryKey: ['media', 'rejectedReview'] }); // Invalidate our new rejected media query
-      queryClient.invalidateQueries({ queryKey: [QueryKeys.mediaByUserId] }); // Corrected QueryKey
-      // Potentially invalidate other specific queries if needed
-      // toast.info('Media list updated after deletion.'); // Toasting from deleteMediaItem is probably sufficient
+  // Variables type for the mutation is now { mediaId: string, options?: { silent?: boolean } }
+  return useMutation<DeleteMediaResponse, Error, { mediaId: string, options?: { silent?: boolean } }> ({
+    mutationFn: deleteMediaItem, // deleteMediaItem now expects an object
+    onSuccess: (data, variables) => {
+      // Invalidate and refetch media queries
+      queryClient.invalidateQueries({ queryKey: QueryKeys.allMedia });
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.media, 'type'] });
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.media, 'pendingReview']});
+      // Use variables.mediaId for invalidation
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.media, 'user', variables.mediaId]}); 
+      
+      queryClient.removeQueries({ queryKey: QueryKeys.mediaById(variables.mediaId) });
+      queryClient.removeQueries({ queryKey: QueryKeys.mediaBySlug(variables.mediaId) });
+
+      // Only show toast if not silent
+      if (!variables.options?.silent) {
+        toast.success(data.message || `Media item ${variables.mediaId} deleted successfully.`);
+      }
     },
-    onError: (error: any) => {
-      console.error('Failed to delete media:', error);
-      // Toast error is already handled in deleteMediaItem, but good to log here too.
+    onError: (error: Error, variables) => {
+      // Only show toast if not silent, or always show errors?
+      // For now, let's assume errors should always be shown unless explicitly silenced for errors too.
+      // If a silent option should also suppress error toasts, that logic would be added here.
+      if (!variables.options?.silent) { // Optional: make error toasts also respect silent flag
+        toast.error(`Error deleting media ${variables.mediaId}: ${error.message}`);
+      }
     },
   });
 };

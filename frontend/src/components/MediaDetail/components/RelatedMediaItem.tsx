@@ -58,17 +58,17 @@ const RelatedMediaItem: React.FC<RelatedMediaItemProps> = ({ media }) => {
       } catch (error: any) {
         // If slug fetch fails (e.g., 404), try fetching by ID as a fallback
         if (error.response && error.response.status === 404) {
-          try {
+        try {
             const fallbackResponse = await axios.get<BaseMediaFile>(`${env.BASE_URL}/api/media/${media.mediaId}`);
-            setMediaDetails({
-              title: fallbackResponse.data.title || fallbackResponse.data.metadata?.fileName || 'Untitled',
-              location: fallbackResponse.data.location,
-              relationship: media.relationship,
-              note: media.note,
-              slug: fallbackResponse.data.slug
-            });
-          } catch (fallbackError) {
-            console.error('Fallback fetch also failed:', fallbackError);
+          setMediaDetails({
+            title: fallbackResponse.data.title || fallbackResponse.data.metadata?.fileName || 'Untitled',
+            location: fallbackResponse.data.location,
+            relationship: media.relationship,
+            note: media.note,
+            slug: fallbackResponse.data.slug
+          });
+        } catch (fallbackError) {
+          console.error('Fallback fetch also failed:', fallbackError);
             setError('Failed to load related media');
           }
         } else {
