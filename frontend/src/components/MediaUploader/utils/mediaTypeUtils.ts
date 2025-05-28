@@ -1,5 +1,4 @@
-import { MediaType } from "../../../store/slices/mediaTypeSlice";
-import { TagCategory } from "../../../store/slices/tagCategorySlice";
+import { MediaType, TagCategory } from "../../../hooks/query-hooks";
 
 /**
  * Returns base fields for a specific MIME type

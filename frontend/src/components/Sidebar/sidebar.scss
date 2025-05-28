@@ -4,15 +4,6 @@
   height: 100vh;
   max-width: 250px;
   overflow: hidden;
-
-  .profile-chevron {
-    transition: transform 0.3s ease;
-    margin-left: 0.5rem;
-    
-    &.chevron-open {
-      transform: rotate(-180deg);
-    }
-  }
 }
 
 #sidebar .ps-menu-button.active {
@@ -75,48 +66,52 @@
     }
   }
   
-  /* User profile styling */
-  .user-profile {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    padding: 0.5rem;
+  /* User profile link styling - adjusted */
+  .user-profile-link {
+    display: block; // Make it block to take full width for hover effect
+    text-decoration: none;
+    margin: 0.5rem; // Consistent margin
+    border-radius: var(--border-radius-md, 8px);
     transition: background-color 0.2s ease;
-    border-radius: 4px;
-    
+
     &:hover {
-      background-color: rgba(0, 0, 0, 0.04);
+      background-color: rgba(0, 0, 0, 0.06); // Consistent hover with menu items
     }
     
-    .sidebar-avatar {
-      width: 32px;
-      height: 32px;
-      margin-right: 10px;
-    }
-    
-    .user-name {
-      display: flex;
-      flex-direction: column;
-      font-size: 0.9rem;
-      font-weight: 500;
-      flex: 1;
+    &.active-menu-item { // Active state for the profile link itself
+      background-color: rgba(var(--primary-color-rgb), 0.1);
       
-      .username-tag {
-        font-size: 0.7rem;
-        opacity: 0.8;
-        margin-top: 2px;
+    }
+
+    .user-profile { // Inner content of the link
+      display: flex;
+      align-items: center;
+      width: 100%;
+      padding: 0.75rem 1rem; // Adjusted padding
+      // No hover here, parent link handles it
+      
+      .sidebar-avatar {
+        width: 40px; // Matched from component
+        height: 40px; // Matched from component
+        margin-right: 1rem; // Matched from component
+      }
+      
+      .user-name {
+        display: flex;
+        flex-direction: column;
+        font-size: 0.9rem;
+        font-weight: 500;
+        flex: 1;
+        color: var(--text-color); // Ensure text color is applied
+        
+        .username-tag {
+          font-size: 0.7rem;
+          opacity: 0.7;
+          margin-top: 2px;
+          color: var(--text-color); // Ensure text color is applied
+        }
       }
     }
-  }
-  
-  /* Hide default submenu expand icon */
-  .custom-expand-icon {
-    display: none !important;
-  }
-  
-  /* Hide all built-in submenu expand icons */
-  .ps-submenu-expand-icon {
-    display: none !important;
   }
   
   /* Menu items styling */
@@ -153,24 +148,7 @@
     .ps-menu-button {
       font-weight: 600;
       border-left: 3px solid var(--primary-color);
-      
     }
-  }
-
- 
-  
-  /* Submenu styling */
-  .ps-submenu-content:not(.ps-open) {
-    display: none !important;
-  }
-  
-  .ps-submenu-content {
-    background-color: rgba(0, 0, 0, 0.05) !important;
-    padding: 0.5rem 0;
-    margin: 0.25rem 0.75rem 0;
-    border-radius: 6px;
-    overflow: visible !important;
-    width: calc(100% - 1.5rem) !important;
   }
   
   /* Sidebar footer positioning */
@@ -178,7 +156,7 @@
     margin-top: auto;
     padding-bottom: 1rem;
     
-    .signout-button {
+    .signout-button { // Corrected class name from component
       background-color: rgba(255, 75, 75, 0.1);
       border-radius: 6px;
       margin: 0 0.75rem;
@@ -193,25 +171,24 @@
     }
   }
   
-  /* NavLink styling */
-  a {
+  /* NavLink styling within MenuItem */
+  .ps-menuitem-root > .ps-menu-button > a {
     text-decoration: none;
     width: 100%;
     height: 100%;
     display: flex;
     align-items: center;
-    padding: 0.5rem;
-    border-radius: 4px;
+    padding: 0; // MenuItem itself has padding
+    border-radius: 0; // MenuItem itself has radius if needed
     color: var(--text-color, #333);
     
     &.active-menu-item {
       font-weight: 600 !important;
       color: var(--primary-color) !important;
-      background-color: rgba(var(--primary-color-rgb), 0.1) !important;
-      border-radius: 4px;
-      border-left: 3px solid var(--primary-color) !important;
+      // background-color is handled by .ps-active on parent MenuItem
+      // border-left is handled by .ps-active on parent MenuItem
       
-      svg {
+      svg { // Icon color within active NavLink (if not handled by .ps-menu-icon styles)
         color: var(--primary-color) !important;
       }
     }
@@ -220,32 +197,9 @@
   /* Ensure parent container of active links also shows active styling */
   .ps-menuitem-root {
     &:has(a.active-menu-item) {
-      .ps-menu-button {
-        border-left: 3px solid var(--primary-color) !important;
-        background-color: rgba(var(--primary-color-rgb), 0.1) !important;
-      }
-    }
-  }
-  
-  /* User menu item when not in submenu */
-  .user-menu-item {
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  }
-  
-  /* For the sidebar account submenu */
-  .sidebar-account {
-    margin-bottom: 1rem;
-    
-    .ps-menu-button {
-      transition: all 0.2s ease;
-      margin: 0.2rem 0;
-      border-radius: 4px;
-      
-      &:hover {
-        background-color: rgba(0, 0, 0, 0.04);
+      // Ensure icon color is also updated if not covered by .ps-active
+      .ps-menu-icon svg {
+         color: var(--primary-color) !important;
       }
     }
   }

@@ -8,7 +8,6 @@ import {
   useTags,
   useCreateTag
 } from "../hooks/query-hooks";
-import type { User, Tag } from "../hooks/query-hooks";
 
 import { 
   Box, 
@@ -25,7 +24,6 @@ import {
   useMediaQuery,
   Theme,
   Container,
-  Alert,
   Tabs,
   Tab,
   Chip,
@@ -33,7 +31,6 @@ import {
   InputBase,
   Card,
   CardContent,
-  Stack,
   CircularProgress,
   alpha,
   LinearProgress
@@ -53,13 +50,11 @@ const AccountTags: React.FC = () => {
     isError: isUserProfileError 
   } = useUserProfile();
 
-  // Replace Redux with TanStack Query
   const { 
-    data: tags = [] as any[], // Temporarily any
+    data: tags = [], 
     isLoading: isTagsLoading,
-    isError: isTagsError, // Temporarily any
-    refetch: refetchTags // This is where refetchTags comes from
-  } = useTags(userProfile); // useTags(userProfile) - Temporarily using {} as useTags is not implemented
+    refetch: refetchTags 
+  } = useTags(userProfile);
   
   const {
     data: tagCategories = [],
@@ -77,7 +72,6 @@ const AccountTags: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [page, setPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showLocalToasts, setShowLocalToasts] = useState(false);
 
   // Get the mutation function from useCreateTag
   const { mutate: createTagMutation, isPending: isCreatingTag } = useCreateTag();

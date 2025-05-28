@@ -10,8 +10,7 @@ import DoneIcon from "@mui/icons-material/Done";
 import CircleIcon from "@mui/icons-material/Circle";
 import FieldLabel from "./FieldLabel";
 import FieldInput from "./FieldInput";
-import { MediaType } from "../../../store/slices/mediaTypeSlice";
-import { TagCategory } from "../../../store/slices/tagCategorySlice";
+import { MediaType, TagCategory } from "../../../hooks/query-hooks";
 import { MetadataState } from "../types";
 import StandardFields from "./StandardFields";
 import { SelectChangeEvent } from "@mui/material";
@@ -138,7 +137,7 @@ const FormFieldsTab: React.FC<FormFieldsTabProps> = ({
             {...a11yProps(0)}
           />
           
-          {matchingType.fields.length > 0 && (
+          {(matchingType.fields || []).length > 0 && (
             <Tab 
               label={
                 <Box className="tab-label">
@@ -231,10 +230,10 @@ const FormFieldsTab: React.FC<FormFieldsTabProps> = ({
         </TabPanel>
         
         <TabPanel value={currentTab} index={1}>
-          {matchingType.fields.length > 0 && (
+          {(matchingType.fields || []).length > 0 && (
             <Paper className="tab-content-paper" elevation={0} variant="outlined">
               <Box className="fields-grid">
-                {matchingType.fields.map((field: any, index) => (
+                {(matchingType.fields || []).map((field: any, index) => (
                   <Box 
                     className={field.type === 'TextArea' ? 'field-full-width' : 'field-half-width'}
                     key={`${field.name}-${index}`}

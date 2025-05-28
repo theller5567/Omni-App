@@ -14,6 +14,7 @@ import { shouldHideField } from '../../../config/mediaInfoConfig';
 import '../styles/MediaInformation.scss';
 import { MediaDetailTags } from '../MediaDetail';
 import { useUsername } from '../../../hooks/useUsername';
+import { MediaFile } from '../../../hooks/query-hooks';
 
 interface MediaTypeField {
   name: string;
@@ -31,14 +32,14 @@ interface MediaTypeConfig {
 }
 
 interface MediaInformationProps {
-  mediaFile: any;
+  mediaFile: MediaFile;
   mediaTypeConfig: MediaTypeConfig | null;
-  baseFields: Record<string, any>;
-  getMetadataField: (mediaFile: any, fieldName: string, defaultValue?: any) => any;
+  baseFields: Record<string, unknown>;
+  getMetadataField: (mediaFile: MediaFile, fieldName: string, defaultValue?: unknown) => unknown;
 }
 
 // Helper function to check if a field is part of the base schema
-const isBaseSchemaField = (fieldName: string, baseFields: Record<string, any>): boolean => {
+const isBaseSchemaField = (fieldName: string, baseFields: Record<string, unknown>): boolean => {
   return Object.keys(baseFields).includes(fieldName);
 };
 
@@ -51,7 +52,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   
   // Filter for standard/base fields - keeps existing behavior for these sections
-  const filterStandardAndBaseFields = (fields: { label: string; value: any }[]) => {
+  const filterStandardAndBaseFields = (fields: { label: string; value: unknown }[]) => {
     return fields.filter(field => 
       !shouldHideField(field.label) && 
       field.value !== undefined && 
@@ -64,7 +65,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
     );
   };
 
-  const userId = getMetadataField(mediaFile, 'uploadedBy', '');
+  const userId = getMetadataField(mediaFile, 'uploadedBy', '') as string;
   const { username: uploaderUsername, loading: uploaderLoading } = useUsername(userId);
 
   const basicFileInfoRaw = [
@@ -76,7 +77,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
     { label: 'Visibility', value: getMetadataField(mediaFile, 'visibility', 'Public') },
     { label: 'Uploaded By', value: uploaderLoading ? 'Loading...' : (uploaderUsername || userId || 'Unknown') },
     { label: 'Uploaded On', value: getMetadataField(mediaFile, 'modifiedDate', 'Unknown') 
-      ? new Date(getMetadataField(mediaFile, 'modifiedDate')).toLocaleDateString(undefined, {
+      ? new Date(getMetadataField(mediaFile, 'modifiedDate') as string).toLocaleDateString(undefined, {
           year: 'numeric',
           month: 'long',
           day: 'numeric',
@@ -96,7 +97,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
   const baseSchemaPropertiesRaw = Object.entries(baseFields).map(([fieldName, fieldProps]: [string, any]) => ({
       label: fieldName,
       value: getMetadataField(mediaFile, fieldName) !== undefined 
-        ? fieldProps.type === 'Boolean' 
+        ? (fieldProps as MediaTypeField).type === 'Boolean' 
           ? (getMetadataField(mediaFile, fieldName) ? 'Yes' : 'No')
           : String(getMetadataField(mediaFile, fieldName))
       : undefined // Explicitly undefined if not present
@@ -147,7 +148,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
               {displayableBasicFileInfo.map((info, index) => (
                 <Box key={index} className="info-item">
                   <Typography variant="subtitle2">{info.label}</Typography>
-                  <Typography variant="body2">{info.value}</Typography>
+                  <Typography variant="body2">{info.value as string}</Typography>
                 </Box>
               ))}
             </Box>
@@ -165,7 +166,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
           <AccordionDetails>
             <Box>
             <MediaDetailTags 
-            tags={getMetadataField(mediaFile, 'tags', [])} 
+            tags={getMetadataField(mediaFile, 'tags', []) as string[] | undefined} 
             isMobile={isMobile}
             />
             </Box>
@@ -187,7 +188,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
               {displayableStandardMetadata.map((info, index) => (
                 <Box key={index} className="info-item">
                   <Typography variant="subtitle2">{info.label}</Typography>
-                    <Typography variant="body2">{info.value}</Typography>
+                    <Typography variant="body2">{info.value as string}</Typography>
                 </Box>
               ))}
             </Box>
@@ -211,7 +212,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
               {displayableBaseSchemaProperties.map((info, index) => (
                 <Box key={index} className="info-item">
                   <Typography variant="subtitle2">{info.label}</Typography>
-                  <Typography variant="body2">{info.value}</Typography>
+                  <Typography variant="body2">{info.value as string}</Typography>
                 </Box>
               ))}
             </Box>
@@ -241,7 +242,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
               {allCustomFieldsDefinedByType.map((info, index) => (
                 <Box key={index} className="info-item">
                   <Typography variant="subtitle2">{info.label}</Typography>
-                  <Typography variant="body2">{info.value}</Typography>
+                  <Typography variant="body2">{info.value as string}</Typography>
                 </Box>
               ))}
             </Box>

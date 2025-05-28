@@ -118,33 +118,35 @@ const AppContent: React.FC = () => {
   useMediaTypesWithUsageCounts(userProfile);
 
   useEffect(() => {
-    // This effect block was primarily for the old custom callbacks.
-    // The core logic of clearing userProfile on auth error is now in useUserProfile's internal onError.
-    // The logic for localStorage.removeItem('authToken') on 401 is handled by the axios interceptor.
-    // If additional side-effects are needed in App.tsx based on userProfile changes, 
-    // a new useEffect watching userProfile, isUserFetchError, and userError can be added.
-    if (isUserFetchError) {
-      // Example: if a specific action is needed in App.tsx when user fetch fails, beyond what useUserProfile does.
+    if (isUserFetchError && userError) {
       if (process.env.NODE_ENV === 'development') {
         console.error('App.tsx: User profile fetch resulted in an error state.', userError);
       }
-      // If the error indicates an auth failure and the token is somehow still present, clear it.
-      // This is a defensive check, as the interceptor and useUserProfile's onError should handle most cases.
       const token = localStorage.getItem('authToken');
-      if (token && userError && typeof userError === 'object' && 'message' in userError) {
-        const errorMessage = (userError as any).message || '';
+      if (token) {
+        const errorMessage = userError.message || '';
         let isAuthFailure = errorMessage.includes('Authentication token missing');
-        // Check for shape of Axios error without relying on isAxiosError
-        if (!isAuthFailure && userError && typeof userError === 'object' && 'response' in userError && (userError as any).response) {
-            const status = (userError as any).response.status;
+        
+        // Check for Axios-like error structure more robustly
+        if (!isAuthFailure && 
+            typeof userError === 'object' && 
+            userError !== null && 
+            'response' in userError && 
+            userError.response && 
+            typeof userError.response === 'object' && 
+            'status' in userError.response
+           ) {
+          // After these checks, we can more safely assert the type of response and status
+          const response = userError.response as { status?: unknown }; // Assert response exists and might have status
+          if (typeof response.status === 'number') { // Check if status is a number
+            const status = response.status;
             if (status === 401 || status === 403) {
                 isAuthFailure = true;
             }
+          }
         }
         if (isAuthFailure) {
             localStorage.removeItem('authToken');
-            // Optionally, redirect here if not handled by other mechanisms
-            // window.location.href = '/login'; 
         }
       }
     }
@@ -195,8 +197,8 @@ const AppContent: React.FC = () => {
       <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
         <Router>
           <div id="app-container" style={{ display: 'flex', flexDirection: 'row', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-            {/* Sidebar is shown if user profile fetch was successful and userProfile exists */}
-           {(isUserSuccess && userProfile && Object.keys(userProfile).length > 0 && (<Sidebar /> as React.ReactNode))}
+            {/* Sidebar is shown if user profile fetch was successful and userProfile has an _id */}
+           {(isUserSuccess && userProfile && userProfile._id && (<Sidebar /> as React.ReactNode))}
             <div
               style={{
                 flexGrow: 1,
@@ -242,7 +244,7 @@ const AppContent: React.FC = () => {
         newestOnTop={true}
         closeOnClick
         rtl={false}
-        pauseOnFocusLoss
+        pauseOnFocusLoss={false}
         draggable
         pauseOnHover
         limit={3}  // Limit concurrent notifications

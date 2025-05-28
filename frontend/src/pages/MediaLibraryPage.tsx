@@ -140,7 +140,7 @@ const MediaContainer: React.FC = () => {
           file.metadata?.fileName,
           file.metadata?.description,
           file.title,
-          ...(file.metadata?.tags?.map(tag => typeof tag === 'string' ? tag : tag.name) || []) 
+          ...(file.metadata?.tags || []) 
         ].filter(Boolean).join(' ').toLowerCase();
         return searchableText.includes(searchQuery.toLowerCase());
       })
@@ -183,7 +183,7 @@ const MediaContainer: React.FC = () => {
           file.metadata?.fileName,
           file.metadata?.description,
           file.title,
-          ...(file.metadata?.tags?.map(tag => typeof tag === 'string' ? tag : tag.name) || []) 
+          ...(file.metadata?.tags || []) 
         ].filter(Boolean).join(' ').toLowerCase();
         
         return searchableText.includes(searchQuery.toLowerCase());
@@ -284,14 +284,17 @@ const MediaContainer: React.FC = () => {
         />
       </Suspense>
       
-      {/* Always render the MediaUploader component but control visibility with open prop */}
-      <Suspense fallback={<LoadingFallback />}>
-        <MediaUploader
-          open={isModalOpen}
-          onClose={handleClose}
-          onUploadComplete={handleUploadComplete}
-        />
-      </Suspense>
+      {/* Conditionally render the MediaUploader component */}
+      {isModalOpen && (
+        <Suspense fallback={<LoadingFallback />}>
+          <MediaUploader
+            open={isModalOpen}
+            onClose={handleClose}
+            onUploadComplete={handleUploadComplete}
+            // initialSelectedMediaType can be passed if needed, e.g., from selectedMediaType state
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Container, Divider, Grid, Paper } from '@mui/material';
+import { Box, Container, Divider, Paper } from '@mui/material';
 import { DisplayHeading, PageTitle, SectionHeading, LeadText, TruncatedText, GradientText } from '../../theme/extendedComponents';
 import { HoverCard, StatusChip, GradientBox } from '../../theme/extendedComponents';
 
@@ -16,8 +16,18 @@ const TypographyDemo: React.FC = () => {
       
       <PageTitle variant="h2">Typography Examples</PageTitle>
       
-      <Grid container spacing={4}>
-        <Grid item xs={12} md={6}>
+      <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'repeat(2, 1fr)',
+                sm: 'repeat(3, 1fr)',
+                md: 'repeat(6, 1fr)',
+              },
+              gap: 3,
+            }}
+          >
+        <Box component="div">
           <Paper sx={{ p: 3, height: '100%' }}>
             <SectionHeading variant="h3">Headings</SectionHeading>
             
@@ -58,9 +68,9 @@ const TypographyDemo: React.FC = () => {
               </GradientText>
             </Box>
           </Paper>
-        </Grid>
+        </Box>
         
-        <Grid item xs={12} md={6}>
+        <Box component="div">
           <Paper sx={{ p: 3, height: '100%' }}>
             <SectionHeading variant="h3">Extended Components</SectionHeading>
             
@@ -101,8 +111,8 @@ const TypographyDemo: React.FC = () => {
               </Box>
             </Box>
           </Paper>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Container>
   );
 };

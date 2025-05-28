@@ -18,11 +18,10 @@ import CollectionsIcon from '@mui/icons-material/Collections';
 import CategoryIcon from '@mui/icons-material/Category';
 import TagIcon from '@mui/icons-material/Tag';
 import { formatFileSize } from '../../utils/formatFileSize';
-import { useDatabaseStats, useUserProfile } from '../../hooks/query-hooks';
-import type { User } from '../../hooks/query-hooks';
+import { useDatabaseStats, useUserProfile, DatabaseStatsData } from '../../hooks/query-hooks';
 
 const DatabaseStats: React.FC = () => {
-  const [_error, setError] = useState<string | null>(null);
+  const [_queryError, setDisplayError] = useState<string | null>(null);
   
   // Get userProfile for enabling the query
   const { data: userProfile } = useUserProfile();
@@ -37,7 +36,7 @@ const DatabaseStats: React.FC = () => {
   } = useDatabaseStats(userProfile);
   
   // Create mock data function for fallback
-  const createMockData = () => {
+  const createMockData = (): DatabaseStatsData => {
     // Mock data should be self-contained or use minimal external dependencies if Redux is removed
     // For now, this will likely break or return less accurate mock data without Redux state.
     // Consider removing or refactoring mock data if live data and loading/error states are sufficient.
@@ -90,7 +89,7 @@ const DatabaseStats: React.FC = () => {
   
   // Show error state with fallback data
   if (isError) {
-    setError(queryError instanceof Error ? queryError.message : 'Failed to load database stats');
+    setDisplayError(queryError instanceof Error ? queryError.message : 'Failed to load database stats');
     
     // If we have no stats data, create mock data
     if (!stats) {
@@ -109,10 +108,18 @@ const DatabaseStats: React.FC = () => {
   return renderDashboard(stats, isLoading);
   
   // Helper function to render the dashboard with given stats
-  function renderDashboard(statsData: any, isLoadingState: boolean) {
+  function renderDashboard(statsData: DatabaseStatsData, isLoadingState: boolean) {
     // Calculate storage usage percentage
     const storagePercentage = (statsData.storageUsed / statsData.storageLimit) * 100;
     
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[DatabaseStats] Rendering dashboard with statsData:', JSON.stringify(statsData, null, 2));
+      console.log('[DatabaseStats] Calculated storagePercentage:', storagePercentage);
+      if (isNaN(storagePercentage)) {
+        console.error('[DatabaseStats] storagePercentage is NaN. storageUsed:', statsData.storageUsed, 'storageLimit:', statsData.storageLimit);
+      }
+    }
+
     return (
       <Paper elevation={2} className="dashboard-card">
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>

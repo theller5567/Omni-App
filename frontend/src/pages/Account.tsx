@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { 
   Box, 
@@ -421,10 +421,7 @@ const Account: React.FC = () => {
           <Box sx={{ display: 'flex', flexDirection: 'column', maxWidth: '300px', gap: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="body1">Color Theme</Typography>
-              <ThemeToggle 
-                theme={isDarkMode ? 'dark' : 'light'}
-                toggleTheme={(theme) => toggleTheme(theme)}
-              />
+              <ThemeToggle theme={isDarkMode ? 'dark' : 'light'} toggleTheme={toggleTheme} />
             </Box>
             
             <Divider />

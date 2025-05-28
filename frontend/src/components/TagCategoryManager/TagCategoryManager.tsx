@@ -13,11 +13,9 @@ import { toast } from 'react-toastify';
 import { 
   useTagCategories, 
   useCreateTagCategory,
-  // useUpdateTagCategory, 
-  // useDeleteTagCategory,
-  TagCategory as QueryTagCategory,
-  User, // Import User type
-  useUserProfile // Import useUserProfile
+  useDeleteTagCategory,
+  useUserProfile,
+  TagCategory as QueryTagCategory
 } from '../../hooks/query-hooks';
 import type { NewTagCategoryData } from '../../hooks/query-hooks'; // Import NewTagCategoryData
 
@@ -60,9 +58,8 @@ const TagCategoryManager: React.FC = () => {
     refetch
   } = useTagCategories(userProfile); // Pass userProfile
   
-  const { mutateAsync: createTagCategoryMutation, isPending: isCreatingCategory } = useCreateTagCategory(); // Use isPending
-  // const { mutateAsync: updateTagCategoryMutation } = useUpdateTagCategory();
-  // const { mutateAsync: deleteTagCategoryMutation } = useDeleteTagCategory();
+  const { mutateAsync: createTagCategoryMutation, isPending: isCreatingCategory } = useCreateTagCategory();
+  const { mutateAsync: deleteTagCategoryMutation, isPending: isDeletingCategory } = useDeleteTagCategory(); // Instantiate delete mutation
   
   // State management with useRef for values that don't affect rendering
   const operationInProgressRef = useRef<boolean>(false);
@@ -81,13 +78,11 @@ const TagCategoryManager: React.FC = () => {
   
   // Use a separate state for form data to prevent re-renders of the entire component
   const [formData, setFormData] = useState<TagCategoryFormData>(initialFormData);
-  // Add a flag to disable component-level toasts
-  const [disableComponentToasts, setDisableComponentToasts] = useState(true);
   
   // Function to show toast only if not already shown for this operation
   const showToastOnce = useCallback((id: string, type: 'success' | 'error', message: string) => {
     // Only show component toast if not disabled
-    if (!disableComponentToasts && !toastShownRef.current.includes(id)) { // Changed from Set.has to array includes
+    if (!toastShownRef.current.includes(id)) { // Changed from Set.has to array includes
       // Use standard toast API
       toast[type](message);
       
@@ -99,7 +94,7 @@ const TagCategoryManager: React.FC = () => {
         toastShownRef.current = [id];
       }
     }
-  }, [disableComponentToasts]);
+  }, []);
   
   // Component cleanup on unmount
   useEffect(() => {
@@ -161,14 +156,12 @@ const TagCategoryManager: React.FC = () => {
   }, []);
   
   const handleConfirmDelete = useCallback(async () => {
-    const { deleteTarget } = dialogState;
-    if (!deleteTarget || operationInProgressRef.current) return;
+    const { deleteTarget, hardDelete } = dialogState;
+    if (!deleteTarget || isDeletingCategory) return; // Use isDeletingCategory from mutation
 
-    operationInProgressRef.current = true;
-    toast.info("Tag category deletion is temporarily disabled.");
-
-    // Simulate operation and cleanup
-    setTimeout(() => {
+    try {
+      await deleteTagCategoryMutation({ categoryId: deleteTarget, hardDelete }); // Pass hardDelete option
+      // Success toast is handled by the useDeleteTagCategory hook
       if (isMountedRef.current) {
         setDialogState(prev => ({
           ...prev,
@@ -176,12 +169,14 @@ const TagCategoryManager: React.FC = () => {
           deleteTarget: null,
           hardDelete: false
         }));
-        refetch(); // Refetch categories after simulated deletion
-        operationInProgressRef.current = false;
+        // refetch(); // Invalidation in useDeleteTagCategory hook should handle this
       }
-    }, 500); 
-
-  }, [dialogState, refetch, showToastOnce]); // Removed tagCategories and deleteTagCategoryMutation
+    } catch (error: any) {
+      // Error toast is handled by the useDeleteTagCategory hook
+      console.error("Error during delete confirmation:", error);
+      // Optionally, keep dialog open or show a specific message here if needed
+    }
+  }, [dialogState, deleteTagCategoryMutation, isDeletingCategory]);
   
   // Check if category name exists
   const categoryNameExists = useCallback((name: string): boolean => {

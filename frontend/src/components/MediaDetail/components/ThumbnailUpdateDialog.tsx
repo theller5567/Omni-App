@@ -11,11 +11,12 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import MediaDetailThumbnailSelector from '../../VideoThumbnailSelector/MediaDetailThumbnailSelector';
 import { getProxiedVideoUrl } from '../../../utils/videoUtils';
+import { MediaFile } from '../../../hooks/query-hooks';
 
 interface ThumbnailUpdateDialogProps {
   open: boolean;
   onClose: () => void;
-  mediaData: any;
+  mediaData: MediaFile;
   onThumbnailUpdate: (thumbnailUrl: string) => void;
 }
 

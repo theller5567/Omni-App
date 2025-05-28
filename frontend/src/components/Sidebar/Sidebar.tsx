@@ -1,7 +1,7 @@
 import "./sidebar.scss";
 import { Sidebar, Menu, MenuItem } from "react-pro-sidebar";
-import { Box, Avatar, CircularProgress } from "@mui/material";
-import { motion, AnimatePresence } from "framer-motion";
+import { Box, Avatar, CircularProgress, Typography } from "@mui/material";
+import { motion } from "framer-motion";
 import "./sidebar.scss";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import logoLight from "../../assets/Omni-new-logo-revvity-grey.png";
@@ -15,10 +15,8 @@ import {
   FaTags, 
   FaUsers, 
   FaLayerGroup,
-  FaChevronDown,
-  FaPalette
 } from "react-icons/fa";
-import { useState, useEffect, ReactNode } from "react";
+import { useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { QueryKeys, useUserProfile } from '../../hooks/query-hooks';
 
@@ -39,67 +37,9 @@ const setCssVariables = (theme: any) => {
   root.style.setProperty('--text-color', theme.palette.mode === 'light' ? '#333' : '#fff');
 };
 
-// Custom animated submenu component to replace the default SubMenu
-interface AnimatedSubMenuProps {
-  label: ReactNode;
-  children: ReactNode;
-  open: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  className?: string;
-}
-
-const AnimatedSubMenu: React.FC<AnimatedSubMenuProps> = ({ 
-  label, 
-  children, 
-  open, 
-  onOpenChange, 
-  className 
-}) => {
-  return (
-    <Box className={className}>
-      <Box 
-        onClick={() => {
-          onOpenChange(!open);
-        }} 
-        sx={{ 
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0.75rem 1.5rem',
-          borderRadius: '4px',
-          '&:hover': {
-            backgroundColor: 'rgba(0, 0, 0, 0.04)'
-          }
-        }}
-      >
-        {label}
-      </Box>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ 
-              duration: 0.3,
-              ease: [0.4, 0, 0.2, 1]
-            }}
-            style={{ overflow: 'hidden' }}
-          >
-            <Box sx={{ paddingLeft: '1rem' }}>
-              {children}
-            </Box>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </Box>
-  );
-};
-
 const CustomSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
   const theme = useTheme();
   const queryClient = useQueryClient();
 
@@ -133,78 +73,44 @@ const CustomSidebar: React.FC = () => {
     navigate("/login");
   };
 
-  // Detect active submenu based on current route
-  useEffect(() => {
-    const onAdminPage = isAdmin && (
-      location.pathname === "/account" ||
-      location.pathname === "/admin-dashboard" ||
-      location.pathname === "/admin-tags" ||
-      location.pathname === "/admin-users" ||
-      location.pathname === "/admin-media-types"
-    );
-
-    if (onAdminPage) {
-      if (openSubMenu === null) {
-        setOpenSubMenu("admin");
-      } else {
-      }
-    } else { // Not on an admin page (or not admin)
-      if (openSubMenu === "admin") {
-        setOpenSubMenu(null);
-      } else {
-      }
-    }
-  }, [location.pathname, isAdmin]); // openSubMenu REMOVED from dependencies
-
-  // Avatar and user name display logic
-  const renderUserProfile = () => {
+  const renderUserProfileDisplay = () => {
     if (isUserLoading) {
       return (
-        <Box display="flex" alignItems="center" justifyContent="center" height="60px">
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2, height: '80px' }}>
           <CircularProgress size={24} />
         </Box>
       );
     }
     if (userError || !userProfile) {
-      // Minimal display or error indication if profile fetch failed or no profile
       return (
-        <Box display="flex" alignItems="center" justifyContent="center" height="60px">
-          <Avatar className="sidebar-avatar" /> 
-          <span className="user-name">User</span>
+        <Box sx={{ display: 'flex', alignItems: 'center', p: 2, height: '80px' }}>
+          <Avatar className="sidebar-avatar" />
+          <Typography variant="subtitle1" sx={{ ml: 1, color: 'var(--text-color)' }}>User</Typography>
         </Box>
       );
     }
-
-    // Display for Admin users (AnimatedSubMenu)
-    if (isAdmin) {
-      return (
-        <div className="user-profile">
-          <Avatar 
-            className="sidebar-avatar" 
-            src={userProfile.avatar || undefined} 
-            alt={`${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim()}
-          />
-          <span className="user-name">
-            {`${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim()}
-            {userProfile.username && <span className="username-tag">@{userProfile.username}</span>}
-          </span>
-          <FaChevronDown className={`profile-chevron ${openSubMenu === "admin" ? 'chevron-open' : ''}`} />
-        </div>
-      );
-    }
-
-    // Display for non-admin users (Direct MenuItem link)
     return (
-      <div className="user-profile">
-        <Avatar 
-          className="sidebar-avatar" 
-          src={userProfile.avatar || undefined} 
-          alt={`${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim()}
-        />
-        <span className="user-name">
-          {`${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim()}
-        </span>
-      </div>
+      // Link the entire profile section to /account page
+      <NavLink to="/account" className="user-profile-link" style={{ textDecoration: 'none' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', p: 2, borderRadius: '4px', margin: '10px', "&:hover": { backgroundColor: 'rgba(0,0,0,0.04)' } }}>
+            <Avatar 
+              className="sidebar-avatar" 
+              src={userProfile.avatar || undefined} 
+              alt={`${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim()}
+              sx={{ width: 40, height: 40, mr: 1.5 }}
+            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <Typography variant="subtitle1" noWrap sx={{ fontWeight: 'medium', color: 'var(--text-color)' }}>
+                {`${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() || userProfile.username}
+              </Typography>
+              {userProfile.username && (
+                <Typography variant="caption" noWrap sx={{ color: 'var(--text-color)', opacity: 0.7 }}>
+                  @{userProfile.username}
+                </Typography>
+              )}
+            </Box>
+        </Box>
+      </NavLink>
     );
   };
 
@@ -219,154 +125,65 @@ const CustomSidebar: React.FC = () => {
             { theme.palette.mode === "light" ? <img src={logoLight} alt="logo" className="sidebar-logo" /> : <img src={logoDark} alt="logo" className="sidebar-logo" /> }
           </div>
 
-          <Menu className="sidebar-menu">
-            {isAdmin ? (
-              <AnimatedSubMenu
-                label={renderUserProfile()}
-                open={openSubMenu === "admin"}
-                onOpenChange={(isOpen) => {
-                  setOpenSubMenu(isOpen ? "admin" : null);
-                }}
-                className="admin-profile-submenu"
-                children={
-                  <>
-                    <MenuItem 
-                      icon={<FaUser />} 
-                      className={location.pathname === "/account" ? "active-item" : ""}
-                      component={
-                        <NavLink 
-                          to="/account" 
-                          className={({isActive}) => isActive ? "active-menu-item" : ""}
-                          end
-                        />
-                      }
-                    >
-                      Account
-                    </MenuItem>
-                    <MenuItem 
-                      icon={<FaTachometerAlt />} 
-                      className={location.pathname === "/admin-dashboard" ? "active-item" : ""}
-                      component={
-                        <NavLink 
-                          to="/admin-dashboard" 
-                          className={({isActive}) => isActive ? "active-menu-item" : ""}
-                          end
-                        />
-                      }
-                    >
-                      Dashboard
-                    </MenuItem>
-                    <MenuItem 
-                      icon={<FaTags />} 
-                      className={location.pathname === "/admin-tags" ? "active-item" : ""}
-                      component={
-                        <NavLink 
-                          to="/admin-tags" 
-                          className={({isActive}) => isActive ? "active-menu-item" : ""}
-                          end
-                        />
-                      }
-                    >
-                      Tags
-                    </MenuItem>
-                    <MenuItem 
-                      icon={<FaUsers />} 
-                      className={location.pathname === "/admin-users" ? "active-item" : ""}
-                      component={
-                        <NavLink 
-                          to="/admin-users" 
-                          className={({isActive}) => isActive ? "active-menu-item" : ""}
-                          end
-                        />
-                      }
-                    >
-                      Users
-                    </MenuItem>
-                    <MenuItem 
-                      icon={<FaLayerGroup />} 
-                      className={location.pathname === "/admin-media-types" ? "active-item" : ""}
-                      component={
-                        <NavLink 
-                          to="/admin-media-types" 
-                          className={({isActive}) => isActive ? "active-menu-item" : ""}
-                          end
-                        />
-                      }
-                    >
-                      Media Types
-                    </MenuItem>
-                  </>
-                }
-              />
-            ) : (
-              // Non-admin users get a direct link to their account page if userProfile exists
-              userProfile ? (
-                <MenuItem 
-                  className="user-menu-item"
-                  component={<NavLink to="/account" className={({ isActive }) => (isActive ? "active-menu-item" : "")}/>}
-                >
-                  {renderUserProfile()}
-                </MenuItem>
-              ) : isUserLoading ? (
-                // Show a loading placeholder for the user menu item
-                <MenuItem className="user-menu-item">
-                  <Box display="flex" alignItems="center" justifyContent="center" width="100%" height="40px">
-                    <CircularProgress size={20} />
-                  </Box>
-                </MenuItem>
-              ) : null // Or some error/fallback display if needed when not loading and no profile
-            )}
+          {/* Render user profile display at the top */} 
+          {renderUserProfileDisplay()}
 
-            {/* <MenuItem 
-              icon={<FaHubspot />} 
-              className={location.pathname === "/home" ? "active-item" : ""}
-              component={
-                <NavLink 
-                  to="/home" 
-                  className={({isActive}) => isActive ? "active-menu-item" : ""}
-                  end
-                />
-              }
-            >
-              HubSpot
-            </MenuItem> */}
-            
+          <Menu className="sidebar-menu">
+            {/* Common Links */}
             <MenuItem 
               icon={<FaImages />} 
               className={location.pathname === "/media-library" ? "active-item" : ""}
-              component={
-                <NavLink 
-                  to="/media-library" 
-                  className={({isActive}) => isActive ? "active-menu-item" : ""}
-                  end
-                />
-              }
+              component={<NavLink to="/media-library" className={({isActive}) => isActive ? "active-menu-item" : ""} end/>}
             >
               Media Library
             </MenuItem>
-            
+
+            {/* Admin Links - now top level */}
             {isAdmin && (
-              <MenuItem 
-                icon={<FaPalette />} 
-                className={location.pathname === "/style-guide" ? "active-item" : ""}
-                component={
-                  <NavLink 
-                    to="/style-guide" 
-                    className={({isActive}) => isActive ? "active-menu-item" : ""}
-                    end
-                  />
-                }
-              >
-                Style Guide
-              </MenuItem>
+              <>
+                <MenuItem 
+                  icon={<FaUser />} 
+                  className={location.pathname === "/account" ? "active-item" : ""}
+                  component={<NavLink to="/account" className={({isActive}) => isActive ? "active-menu-item" : ""} end/>}
+                >
+                  Account Settings
+                </MenuItem>
+                <MenuItem 
+                  icon={<FaTachometerAlt />} 
+                  className={location.pathname === "/admin-dashboard" ? "active-item" : ""}
+                  component={<NavLink to="/admin-dashboard" className={({isActive}) => isActive ? "active-menu-item" : ""} end/>}
+                >
+                  Admin Dashboard
+                </MenuItem>
+                <MenuItem 
+                  icon={<FaTags />} 
+                  className={location.pathname === "/admin-tags" ? "active-item" : ""}
+                  component={<NavLink to="/admin-tags" className={({isActive}) => isActive ? "active-menu-item" : ""} end/>}
+                >
+                  Tag Management
+                </MenuItem>
+                <MenuItem 
+                  icon={<FaUsers />} 
+                  className={location.pathname === "/admin-users" ? "active-item" : ""}
+                  component={<NavLink to="/admin-users" className={({isActive}) => isActive ? "active-menu-item" : ""} end/>}
+                >
+                  User Management
+                </MenuItem>
+                <MenuItem 
+                  icon={<FaLayerGroup />} 
+                  className={location.pathname === "/admin-media-types" ? "active-item" : ""}
+                  component={<NavLink to="/admin-media-types" className={({isActive}) => isActive ? "active-menu-item" : ""} end/>}
+                >
+                  Media Types
+                </MenuItem>
+              </>
             )}
-          </Menu>
-          
-          <Menu className="sidebar-footer">
+
+            {/* Sign Out Link */}
             <MenuItem 
               icon={<FaSignOutAlt />} 
               onClick={handleSignOut}
-              className="signout-button"
+              className="sign-out-button"
             >
               Sign Out
             </MenuItem>

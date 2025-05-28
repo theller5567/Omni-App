@@ -1,4 +1,4 @@
-import { MediaType } from "../../../store/slices/mediaTypeSlice";
+import { MediaType } from "../../../hooks/query-hooks";
 
 /**
  * Returns the appropriate icon based on file type
@@ -53,7 +53,7 @@ export const getAcceptedFileTypesSummary = (mediaType: MediaType | null): string
     return "All file types";
   }
 
-  const types = mediaType.acceptedFileTypes.map(type => {
+  const types = mediaType.acceptedFileTypes.map((type: string) => {
     if (type === "image/*") return "Images";
     if (type === "video/*") return "Videos";
     if (type === "audio/*") return "Audio";
@@ -84,4 +84,10 @@ export const getAcceptedFileTypesString = (acceptedTypes: string[]): string => {
     return "";
   }
   return acceptedTypes.join(",");
-}; 
+};
+
+export const isVideoFile = (extension: string): boolean => 
+  ['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(extension.toLowerCase());
+
+export const isImageFile = (extension: string): boolean => 
+  ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(extension.toLowerCase()); 

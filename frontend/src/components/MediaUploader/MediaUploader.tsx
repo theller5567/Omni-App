@@ -51,14 +51,14 @@ interface InternalMediaType {
   name: string;
   description?: string; // Make optional if not always present from API or used
   fields: any[]; // Define more specific field type if possible
-  status: string;
+  status: 'active' | 'deprecated' | 'archived';
   usageCount?: number;
   replacedBy?: string | null;
   isDeleting?: boolean;
   acceptedFileTypes: string[];
   createdAt?: string;
   updatedAt?: string;
-  baseType: string;
+  baseType: 'BaseImage' | 'BaseVideo' | 'BaseAudio' | 'BaseDocument' | 'Media' | undefined;
   includeBaseFields: boolean;
   catColor: string;
   defaultTags: string[];
@@ -67,19 +67,29 @@ interface InternalMediaType {
 
 // Helper to adapt MediaType from TanStack Query to the shape expected by the MediaUploader
 const adaptMediaType = (mediaType: HookMediaType): InternalMediaType => {
+  const validStatuses = ['active', 'deprecated', 'archived'];
+  const newStatus = mediaType.status && validStatuses.includes(mediaType.status) 
+    ? mediaType.status 
+    : 'active';
+
+  const validBaseTypes = ['BaseImage', 'BaseVideo', 'BaseAudio', 'BaseDocument', 'Media'];
+  const newBaseType = mediaType.baseType && validBaseTypes.includes(mediaType.baseType) 
+    ? mediaType.baseType 
+    : undefined;
+
   return {
     _id: mediaType._id,
     name: mediaType.name,
-    description: mediaType.description, // Assume HookMediaType provides description
+    description: mediaType.description || '',
     fields: mediaType.fields || [],
-    status: mediaType.status || 'active',
+    status: newStatus as 'active' | 'deprecated' | 'archived',
     usageCount: mediaType.usageCount || 0,
     replacedBy: mediaType.replacedBy || null,
     isDeleting: mediaType.isDeleting || false,
     acceptedFileTypes: mediaType.acceptedFileTypes || [],
     createdAt: mediaType.createdAt,
     updatedAt: mediaType.updatedAt,
-    baseType: mediaType.baseType as string, // Ensure baseType is string
+    baseType: newBaseType as 'BaseImage' | 'BaseVideo' | 'BaseAudio' | 'BaseDocument' | 'Media' | undefined,
     includeBaseFields: mediaType.includeBaseFields || true,
     catColor: mediaType.catColor || '#2196f3',
     defaultTags: mediaType.defaultTags || [],
@@ -111,7 +121,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   onUploadComplete,
 }) => {
   const navigate = useNavigate();
-  const { data: userProfile, isLoading: isUserProfileLoading, error: userProfileError } = useUserProfile();
+  const { data: userProfile } = useUserProfile();
   
   // Replace Redux selector with TanStack Query hook
   const { data: mediaTypesData = [], isLoading: isLoadingMediaTypes } = useMediaTypes();
@@ -1310,7 +1320,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
 
     return (
       <MetadataForm
-        mediaTypes={mediaTypes}
+        mediaTypes={mediaTypes.map(mt => ({ ...mt, description: mt.description || '' }))}
         selectedMediaType={selectedMediaType}
         file={file}
         metadata={metadata}

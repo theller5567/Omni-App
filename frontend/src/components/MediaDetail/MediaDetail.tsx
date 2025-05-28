@@ -14,11 +14,11 @@ import {
 } from "@mui/material";
 import axios from "axios";
 import { BaseMediaFile } from "../../interfaces/MediaFile";
-import { MediaFile } from "../../types/media";
+import { MediaFile as MediaFileType } from '../../types/media';
 import { motion } from 'framer-motion';
 import { formatFileSize } from "../../utils/formatFileSize";
 import "./styles/mediaDetail.scss";
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useUsername } from '../../hooks/useUsername';
 import { 
@@ -440,7 +440,7 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
           variant={isMobile ? "h5" : "h4"} 
           gutterBottom 
           style={{ 
-            color: 'var(--accent-color)',
+            color: 'var(--cat-color)',
             fontSize: isMobile ? '1.25rem' : '2rem',
             marginBottom: '0',
           }}
@@ -643,19 +643,24 @@ const MediaDetail: React.FC = () => {
       const mediaTypeInfo = mediaTypes.find(
         (type) => type.name === mediaFile.mediaType
       );
-      const accentColor = mediaTypeInfo?.catColor || '#4dabf5';
+      const accentColor = '#4dabf5';
+      const catColor = mediaTypeInfo?.catColor || '#4dabf5';
       
       const root = document.documentElement;
       root.style.setProperty('--accent-color', accentColor);
+      root.style.setProperty('--cat-color', catColor);
       
       return () => {
         root.style.setProperty('--accent-color', '#4dabf5'); // Reset
+        root.style.setProperty('--cat-color', '#4dabf5');
       };
     } else {
       const root = document.documentElement;
-      root.style.setProperty('--accent-color', '#4dabf5'); // Default if no mediaFile/mediaTypes
+      root.style.setProperty('--accent-color', '#4dabf5'); // Default if no mediaFile/mediaTypes  
+      root.style.setProperty('--cat-color', '#4dabf5');
       return () => { // Ensure a cleanup function is always returned
           root.style.setProperty('--accent-color', '#4dabf5');
+          root.style.setProperty('--cat-color', '#4dabf5');
       };
     }
   }, [mediaFile, mediaTypes]);
@@ -794,7 +799,7 @@ const MediaDetail: React.FC = () => {
     setIsEditDialogOpen(true);
   };
   
-  const handleSave = async (updatedMediaFile: Partial<MediaFile> & { metadata?: Record<string, any> }): Promise<boolean> => {
+  const handleSave = async (updatedMediaFile: Partial<MediaFileType> & { metadata?: Record<string, any> }): Promise<boolean> => {
     try {
       if (!mediaFile) {
         throw new Error('No media file data available to update');
@@ -844,14 +849,28 @@ const MediaDetail: React.FC = () => {
       
       // Only include changed metadata fields
       if (updatedMediaFile.metadata && changedFields.some(f => f.startsWith('metadata.'))) {
-        updatePayload.metadata = { ...(mediaFile.metadata || {}) };
+        updatePayload.metadata = { ...(mediaFile.metadata || {}) }; // Start with all original fields
         
-        // Only update fields that actually changed
         changedFields
           .filter(field => field.startsWith('metadata.'))
           .forEach(field => {
             const metadataKey = field.replace('metadata.', '');
-            updatePayload.metadata![metadataKey] = updatedMediaFile.metadata![metadataKey];
+            // Only update the field in the payload IF the updatedMediaFile.metadata actually contains this key.
+            // This prevents writing 'undefined' for fields that were simply omitted by the dialog's submission
+            // but were part of the original mediaFile.metadata.
+            if (updatedMediaFile.metadata!.hasOwnProperty(metadataKey)) {
+              updatePayload.metadata![metadataKey] = updatedMediaFile.metadata![metadataKey];
+            } else {
+              // If the field was registered as "changed" because it's missing from updatedMediaFile.metadata
+              // (i.e., original had a value, new submission doesn't for this key),
+              // it implies the dialog did not intend to clear it but rather didn't include it in its submission.
+              // The original value is already in updatePayload.metadata from the initial spread, so we don't
+              // explicitly set it to undefined here. If a field needs to be explicitly cleared to null/undefined,
+              // the dialog should send that value.
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`DEBUG MediaDetail handleSave: Metadata field '${metadataKey}' was in changedFields but not in submitted metadata. Original value will be kept.`);
+              }
+            }
           });
       }
       
@@ -950,7 +969,7 @@ const MediaDetail: React.FC = () => {
   // const accentColor = mediaTypeInfo?.catColor || '#4dabf5'; // REMOVED - Logic moved to useEffect
   
   // Prepare data for MediaInformation component according to its expected props
-  const baseFields = mediaFile ? [
+  const baseFieldsArray = mediaFile ? [
     { name: 'File Name', value: getMetadataField(mediaFile, 'fileName', mediaFile.title) },
     { name: 'Media Type', value: mediaFile.mediaType },
     { name: 'File Size', value: formatFileSize(mediaFile.fileSize || 0) },
@@ -961,6 +980,11 @@ const MediaDetail: React.FC = () => {
     { name: 'Alt Text', value: getMetadataField(mediaFile, 'altText', '') },
     { name: 'Visibility', value: getMetadataField(mediaFile, 'visibility', 'private')?.toUpperCase() },
   ] : [];
+
+  const baseFields = baseFieldsArray.reduce((obj, item) => {
+    obj[item.name] = item.value;
+    return obj;
+  }, {} as Record<string, unknown>);
 
   // Render the successful state with the media file
   return (
@@ -1025,17 +1049,6 @@ const MediaDetail: React.FC = () => {
           onThumbnailUpdate={handleThumbnailUpdate}
         />
       )}
-      
-      <ToastContainer
-        position={isMobile ? "bottom-center" : "top-right"}
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
     </motion.div>
   );
 };

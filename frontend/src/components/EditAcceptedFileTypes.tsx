@@ -11,10 +11,10 @@ import {
   Checkbox, 
   FormControlLabel, 
   Chip,
-  TextField
+  TextField,
 } from '@mui/material';
 import { FaImage, FaVideo, FaFileAudio, FaFileWord, FaPlus } from 'react-icons/fa';
-import { MediaType } from '../store/slices/mediaTypeSlice';
+import { MediaType } from '../hooks/query-hooks';
 import './MediaTypeUploader.scss';
 
 interface FileTypeCategory {
@@ -74,7 +74,7 @@ const EditAcceptedFileTypes: React.FC<EditAcceptedFileTypesProps> = ({
       
       // Identify custom MIME types (not in any category)
       const allCategoryMimeTypes = fileTypeCategories.flatMap(category => category.mimeTypes);
-      const customTypes = mediaType.acceptedFileTypes.filter(
+      const customTypes = (mediaType.acceptedFileTypes || []).filter(
         type => !allCategoryMimeTypes.includes(type)
       );
       
@@ -154,7 +154,7 @@ const EditAcceptedFileTypes: React.FC<EditAcceptedFileTypesProps> = ({
       <DialogContent>
         <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
           Select which file types this media type will accept during uploads. 
-          {mediaType.usageCount > 0 && (
+          {(mediaType.usageCount ?? 0) > 0 && (
             <Box component="span" fontWeight="bold" sx={{ ml: 1 }}>
               This media type is used by {mediaType.usageCount} existing file{mediaType.usageCount !== 1 ? 's' : ''}.
             </Box>

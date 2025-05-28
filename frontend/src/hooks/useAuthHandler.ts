@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useLogin, useRegister, UserLoginCredentials, UserRegistrationData } from './query-hooks';
-import { toast } from 'react-toastify';
+import { useQueryClient } from '@tanstack/react-query';
+import { QueryKeys } from './query-hooks';
 
 export const useAuthHandler = (formData: any, isSignUp: boolean) => {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ export const useAuthHandler = (formData: any, isSignUp: boolean) => {
         password: formData.password,
       };
       registerUser(registrationData, {
-        onSuccess: (data) => {
+        onSuccess: () => {
           navigate('/login');
         },
         onError: (error: any) => {
@@ -32,8 +33,8 @@ export const useAuthHandler = (formData: any, isSignUp: boolean) => {
         password: formData.password,
       };
       loginUser(loginCredentials, {
-        onSuccess: (data) => {
-          if (data.user?.role === 'admin' || data.user?.role === 'superAdmin') {
+        onSuccess: (_data) => {
+          if (_data.user?.role === 'admin' || _data.user?.role === 'superAdmin') {
             navigate('/admin-dashboard');
           } else {
             navigate('/home');
@@ -51,4 +52,14 @@ export const useAuthHandler = (formData: any, isSignUp: boolean) => {
     isLoading: isLoggingIn || isRegistering, 
     error: loginError || registerError 
   };
+};
+
+export const useLogoutHandler = () => {
+  const queryClient = useQueryClient();
+  queryClient.invalidateQueries({ queryKey: [QueryKeys.userProfile] });
+  queryClient.removeQueries();
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Logout successful');
+  }
 }; 

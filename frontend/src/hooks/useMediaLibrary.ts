@@ -65,7 +65,7 @@ export function useMediaLibrary() {
   // Expose handlers
   const deleteMediaItem = async (id: string): Promise<boolean> => {
     return new Promise((resolve) => {
-      deleteMediaMutation(id, {
+      deleteMediaMutation({ mediaId: id }, {
         onSuccess: () => {
           // toast.success('Media deleted successfully'); // Handled by useDeleteMedia hook
           resolve(true);

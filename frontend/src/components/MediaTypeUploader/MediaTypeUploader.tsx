@@ -37,18 +37,18 @@ import {
   ReviewStep 
 } from './components';
 import {
-  transformConfigToApiData,
   FileTypeCategory,
   predefinedColors,
   normalizeTag
 } from '../../utils/mediaTypeUploaderUtils';
+import { transformConfigToApiData } from '../../types/mediaTypes';
 import { FaImage, FaVideo, FaFileAudio, FaFileWord } from 'react-icons/fa';
 import debounce from 'lodash/debounce';
 import {
   useMediaTypes,
   useUpdateMediaType,
   useCreateMediaType,
-  useUserProfile
+  useUserProfile,
 } from '../../hooks/query-hooks';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -157,7 +157,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
   const { data: mediaTypes = [] } = useMediaTypes();
   const { mutateAsync: createMediaTypeMutation } = useCreateMediaType();
   const { mutateAsync: updateMediaTypeMutation } = useUpdateMediaType();
-  const { data: userProfile, isLoading: isUserProfileLoading, error: userProfileError } = useUserProfile();
+  const { data: userProfile } = useUserProfile();
   
   // Get the current user role
   const userRole = userProfile?.role;
@@ -394,13 +394,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       logSettings('Before creating API data, settings', mediaTypeConfig.settings);
       
       // Create API data from the media type config
-      const apiData = {
-        ...transformConfigToApiData(mediaTypeConfig),
-        catColor, // Make sure catColor is explicitly included
-        settings: {
-          allowRelatedMedia: mediaTypeConfig.settings?.allowRelatedMedia || false
-        }
-      };
+      const apiData = transformConfigToApiData(mediaTypeConfig);
       
       // Log API data
       console.log('API data being sent:', JSON.stringify(apiData, null, 2));

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { toast, ToastContainer } from "react-toastify"; // Import Toastify for success message
+import { toast } from "react-toastify"; // Import Toastify for success message
 import "react-toastify/dist/ReactToastify.css"; // Import the CSS for Toast notifications
 import { Box, Paper, Typography, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
@@ -121,9 +121,6 @@ const HomePage: React.FC = () => {
           </>
         )}
       </Paper>
-
-      {/* Toast Notifications */}
-      <ToastContainer />
     </Box>
   );
 };

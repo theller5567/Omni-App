@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Paper, 
   Typography, 
@@ -12,8 +12,7 @@ import {
   TablePagination,
   Avatar,
   Chip,
-  LinearProgress,
-  CircularProgress
+  Skeleton
 } from '@mui/material';
 import { 
   useUserActivities, 
@@ -21,7 +20,6 @@ import {
   useUserProfile,
   User as UserType 
 } from '../../hooks/query-hooks';
-import type { User } from '../../hooks/query-hooks'; // Import User type if not already via UserType
 
 // User activity interface - ensure this matches the data from fetchUserActivities
 interface UserActivityEntry {
@@ -110,7 +108,7 @@ const UserActivity: React.FC = () => {
   if (isLoading || isLoadingUsers) {
     return (
       <Paper sx={{ padding: 2, textAlign: 'center' }}>
-        <CircularProgress />
+        <Skeleton />
         <Typography sx={{ mt: 1 }}>Loading user activities...</Typography>
       </Paper>
     );

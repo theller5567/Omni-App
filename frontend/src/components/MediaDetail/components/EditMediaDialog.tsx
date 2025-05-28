@@ -27,6 +27,7 @@ import { MediaFile, MediaType } from '../../../types/media';
 import '../styles/EditMediaDialog.scss';
 import { useUserProfile } from '../../../hooks/query-hooks';
 import { normalizeTag } from '../../../utils/mediaTypeUploaderUtils';
+import { toast } from 'react-toastify';
 
 // Define interface for MediaTypeField if it's missing from imports
 interface MediaTypeField {
@@ -124,29 +125,6 @@ const compareObjects = (obj1: Record<string, any>, obj2: Record<string, any>): b
   return allMatch;
 };
 
-// Helper function to check if custom fields have changed
-const hasCustomFieldChanges = (
-  newFields: Record<string, any>, 
-  originalFields: Record<string, any>
-): boolean => {
-  // Check if keys are different
-  const newKeys = Object.keys(newFields);
-  const origKeys = Object.keys(originalFields);
-  
-  if (newKeys.length !== origKeys.length) {
-    return true;
-  }
-  
-  // Check if any value has changed
-  for (const key of newKeys) {
-    if (JSON.stringify(newFields[key]) !== JSON.stringify(originalFields[key])) {
-      return true;
-    }
-  }
-  
-  return false;
-};
-
 interface EditMediaDialogProps {
   open: boolean;
   onClose: () => void;
@@ -172,7 +150,6 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   mediaType,
   onSave
 }) => {
-
   // Get user role from Redux
   const { data: userProfile } = useUserProfile();
   const userRole = userProfile?.role;
@@ -189,37 +166,21 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
   // Add state to track original values for change detection
   const [originalValues, setOriginalValues] = useState<FormValues | null>(null);
   
-  // Check if mediaType is undefined
-  if (!mediaType) {
-    return (
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth className="edit-media-dialog">
-        <DialogTitle>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h6">Edit Media</Typography>
-            <IconButton onClick={onClose} size="large">
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Box display="flex" justifyContent="center" alignItems="center" p={4}>
-            <CircularProgress size={40} />
-            <Typography variant="body1" sx={{ ml: 2 }}>
-              Loading media type information...
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-        </DialogActions>
-      </Dialog>
-    );
+  // Replace tagWarningOpen with a state to track unsaved tag warning
+  const [unsavedTag, setUnsavedTag] = useState<string | null>(null);
+
+  // Determine the source for custom fields for defaultValues
+  let defaultCustomFieldsData = mediaFile.customFields;
+  if (defaultCustomFieldsData === undefined && mediaFile.metadata && mediaType && mediaType.fields) {
+    defaultCustomFieldsData = {};
+    mediaType.fields.forEach((fieldDefinition: MediaTypeField) => {
+      if (Object.prototype.hasOwnProperty.call(mediaFile.metadata!, fieldDefinition.name)) {
+        defaultCustomFieldsData![fieldDefinition.name] = mediaFile.metadata![fieldDefinition.name];
+      }
+    });
   }
-  
-  // Debug: Log media file custom fields
-  console.log('MediaFile customFields:', mediaFile.customFields);
-  console.log('MediaType fields:', mediaType.fields);
-  
+  defaultCustomFieldsData = defaultCustomFieldsData || {};
+
   const { control, handleSubmit, watch, setValue, reset, formState } = useForm<FormValues>({
     defaultValues: {
       title: mediaFile.title || '',
@@ -228,16 +189,27 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
       description: mediaFile.metadata?.description || mediaFile.description || '',
       visibility: (mediaFile.metadata?.visibility || mediaFile.visibility || 'private') as 'public' | 'private',
       tags: mediaFile.metadata?.tags || mediaFile.tags || [],
-      customFields: mediaFile.customFields || {} // Pass all custom fields
+      customFields: defaultCustomFieldsData // Use derived custom fields
     }
   });
 
   // Reset form when the dialog opens or mediaFile changes
   useEffect(() => {
     if (open) {
-      console.log('Dialog opened, resetting form with fresh values');
+      // console.log('Dialog opened, resetting form with fresh values');
       
-      // Create initial values object
+      // Determine the source for custom fields for initialValues
+      let sourceCustomFieldsForInitial = mediaFile.customFields;
+      if (sourceCustomFieldsForInitial === undefined && mediaFile.metadata && mediaType && mediaType.fields) {
+        sourceCustomFieldsForInitial = {};
+        mediaType.fields.forEach((fieldDefinition: MediaTypeField) => {
+          if (Object.prototype.hasOwnProperty.call(mediaFile.metadata!, fieldDefinition.name)) {
+            sourceCustomFieldsForInitial![fieldDefinition.name] = mediaFile.metadata![fieldDefinition.name];
+          }
+        });
+      }
+      sourceCustomFieldsForInitial = sourceCustomFieldsForInitial || {};
+
       const initialValues = {
         title: mediaFile.title || '',
         fileName: mediaFile.metadata?.fileName || mediaFile.fileName || '',
@@ -245,7 +217,7 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
         description: mediaFile.metadata?.description || mediaFile.description || '',
         visibility: (mediaFile.metadata?.visibility || mediaFile.visibility || 'private') as 'public' | 'private',
         tags: mediaFile.metadata?.tags || mediaFile.tags || [],
-        customFields: mediaFile.customFields || {}
+        customFields: sourceCustomFieldsForInitial // Use derived custom fields
       };
       
       // Store original values for change detection
@@ -378,9 +350,6 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
     setValue('tags', currentTags.filter(tag => normalizeTag(tag) !== normalizedTagToDelete));
   };
 
-  // Replace tagWarningOpen with a state to track unsaved tag warning
-  const [unsavedTag, setUnsavedTag] = useState<string | null>(null);
-
   // Add debugging code to trace form value changes
   useEffect(() => {
     if (open && formState.isDirty) {
@@ -406,74 +375,8 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
       setUnsavedTag(newTag.trim());
       return; // Stop submission flow until user decides
     }
-    
-    setIsSaving(true);
-    // Check for changes before submitting
-    let hasChanges = false;
-    const changes: Record<string, any> = {
-      title: data.title
-    };
-    
-    // Add metadata properties to a metadata object
-    const metadata: Record<string, any> = {};
-    
-    // Map form values to metadata object
-    if (data.fileName !== (originalValues?.fileName || '')) {
-      metadata.fileName = data.fileName;
-      hasChanges = true;
-    }
-    
-    if (data.altText !== (originalValues?.altText || '')) {
-      metadata.altText = data.altText;
-      hasChanges = true;
-    }
-    
-    if (data.description !== (originalValues?.description || '')) {
-      metadata.description = data.description;
-      hasChanges = true;
-    }
-    
-    if (data.visibility !== (originalValues?.visibility || 'private')) {
-      metadata.visibility = data.visibility;
-      hasChanges = true;
-    }
-    
-    // Process tags
-    if (JSON.stringify(data.tags) !== JSON.stringify(originalValues?.tags || [])) {
-      metadata.tags = data.tags;
-      hasChanges = true;
-    }
-    
-    // Process custom fields
-    if (hasCustomFieldChanges(data.customFields, originalValues?.customFields || {})) {
-      // Add custom fields to the metadata object
-      Object.entries(data.customFields).forEach(([key, value]) => {
-        metadata[key] = value;
-      });
-      hasChanges = true;
-    }
-    
-    // Only assign metadata to changes if there are any metadata changes
-    if (Object.keys(metadata).length > 0) {
-      changes.metadata = metadata;
-    }
-    
-    if (!hasChanges) {
-      console.log('No changes detected, not submitting');
-      setIsSaving(false);
-      handleDialogClose();
-      return;
-    }
-    
-    try {
-      console.log('Submitting changes:', changes);
-      await onSave(changes);
-      handleDialogClose();
-    } catch (error) {
-      console.error('Error saving media:', error);
-    } finally {
-      setIsSaving(false);
-    }
+    // Call the main submission handler
+    await handleFormSubmission(data);
   };
 
   // Add these handlers for the inline alert buttons
@@ -515,162 +418,106 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
 
   // Extract the submission logic to a separate function to avoid duplication
   const handleFormSubmission = async (data: FormValues) => {
-    // Ensure all default tags are included
-    if (mediaType && mediaType.defaultTags) {
-      const finalTags = [...data.tags];
-      let tagsChanged = false;
-      
-      // Add any missing default tags
-      mediaType.defaultTags.forEach((tag: string) => {
-        const normalizedDefaultTag = normalizeTag(tag);
-        // Check if this default tag is missing (using normalized comparison)
-        if (!finalTags.some(t => normalizeTag(t) === normalizedDefaultTag)) {
-          finalTags.push(tag);
-          tagsChanged = true;
-        }
-      });
-      
-      // Update the tags if they were changed
-      if (tagsChanged) {
-        data.tags = finalTags;
-      }
-    }
-
-    // Check if any values have actually changed before saving
-    const hasChanged = 
-      data.title !== (originalValues?.title || '') ||
-      data.fileName !== (originalValues?.fileName || '') ||
-      data.altText !== (originalValues?.altText || '') ||
-      data.description !== (originalValues?.description || '') ||
-      data.visibility !== (originalValues?.visibility || '') ||
-      !compareArrays(data.tags, originalValues?.tags || []) ||
-      !compareObjects(data.customFields, originalValues?.customFields || {});
-    
-    // Only proceed with save if changes were made
-    if (hasChanged) {
-      // Debug: Log custom fields before submission
-      console.log('Form custom fields before submission:', data.customFields);
-      
-      // Create object with only the changed fields to minimize what's sent to the server
-      const changedData: any = {
-        id: mediaFile.id,
-        _id: mediaFile._id || mediaFile.id, // Include MongoDB ID
-        slug: (mediaFile as any).slug, // Use type assertion
-      };
-      
-      // Only include fields that actually changed
-      if (data.title !== (originalValues?.title || '')) {
-        changedData.title = data.title;
-      }
-      
-      // Create metadata object for changes
-      changedData.metadata = {};
+    setIsSaving(true);
+    try {
+      // Ensure all default tags are included
+      if (mediaType && mediaType.defaultTags) {
+        const finalTags = [...data.tags];
+        let tagsChangedInternal = false; // Renamed to avoid conflict
         
-      // Only add metadata fields that changed
-      if (data.fileName !== (originalValues?.fileName || '')) {
-        changedData.metadata.fileName = data.fileName;
-      }
-      
-      if (data.altText !== (originalValues?.altText || '')) {
-        changedData.metadata.altText = data.altText;
-      }
-      
-      if (data.description !== (originalValues?.description || '')) {
-        changedData.metadata.description = data.description;
-      }
-      
-      if (data.visibility !== (originalValues?.visibility || '')) {
-        changedData.metadata.visibility = data.visibility;
-      }
-      
-      if (!compareArrays(data.tags, originalValues?.tags || [])) {
-        changedData.metadata.tags = data.tags;
-      }
-      
-      // Only include mediaType fields that have actually changed
-      if (data.customFields && mediaType.fields && originalValues?.customFields) {
-        console.log('Checking for changed mediaType fields');
-        
-        let changedFieldsCount = 0;
-        
-        mediaType.fields.forEach((field: MediaTypeField) => {
-          const newValue = data.customFields[field.name];
-          const originalValue = originalValues.customFields?.[field.name];
-          
-          // Determine if the value has changed based on type
-          let hasChanged = false;
-          
-          // For objects, use JSON comparison
-          if (typeof newValue === 'object' || typeof originalValue === 'object') {
-            hasChanged = JSON.stringify(newValue) !== JSON.stringify(originalValue);
-          } 
-          // For booleans, do direct comparison
-          else if (typeof newValue === 'boolean') {
-            hasChanged = newValue !== originalValue;
-          } 
-          // For numbers, convert both to numbers for comparison
-          else if (typeof newValue === 'number' || !isNaN(Number(newValue))) {
-            const numNewValue = typeof newValue === 'number' ? newValue : Number(newValue);
-            const numOriginalValue = typeof originalValue === 'number' ? originalValue : Number(originalValue);
-            hasChanged = numNewValue !== numOriginalValue;
-          }
-          // For strings and other types
-          else {
-            hasChanged = newValue !== originalValue;
-          }
-          
-          // Only include field if it has changed
-          if (hasChanged) {
-            changedFieldsCount++;
-            console.log(`Field "${field.name}" changed from "${originalValue}" to "${newValue}"`);
-            
-            // Skip adding empty strings when the original value was undefined
-            // This prevents triggering changes for non-required fields that weren't filled out
-            if (originalValue === undefined && (newValue === '' || newValue === null)) {
-              console.log(`Skipping field "${field.name}" as it changed from undefined to empty string`);
-            } else {
-              // Handle specific types correctly
-              if (typeof newValue === 'boolean') {
-                changedData.metadata[field.name] = newValue;
-              }
-              else if (typeof newValue === 'number' || !isNaN(Number(newValue))) {
-                const numValue = typeof newValue === 'number' ? newValue : Number(newValue);
-                changedData.metadata[field.name] = numValue;
-              }
-              else if (newValue !== undefined) {
-                changedData.metadata[field.name] = newValue;
-              }
-            }
-          } else {
-            // Log that this field didn't change
-            console.log(`Field "${field.name}" unchanged: "${newValue}"`);
+        mediaType.defaultTags.forEach((tag: string) => {
+          const normalizedDefaultTag = normalizeTag(tag);
+          if (!finalTags.some(t => normalizeTag(t) === normalizedDefaultTag)) {
+            finalTags.push(tag);
+            tagsChangedInternal = true;
           }
         });
         
-        console.log(`Found ${changedFieldsCount} changed mediaType fields`);
+        if (tagsChangedInternal) {
+          data.tags = finalTags;
+        }
+      }
+
+      // Check if any values have actually changed before saving
+      const customFieldsHaveChanged = !compareObjects(data.customFields, originalValues?.customFields || {});
+      const standardFieldsHaveChanged = 
+        data.title !== (originalValues?.title || '') ||
+        data.fileName !== (originalValues?.fileName || '') ||
+        data.altText !== (originalValues?.altText || '') ||
+        data.description !== (originalValues?.description || '') ||
+        data.visibility !== (originalValues?.visibility || '') || // Corrected: was missing originalValues
+        !compareArrays(data.tags, originalValues?.tags || []);
+        
+      const overallHasChanged = standardFieldsHaveChanged || customFieldsHaveChanged;
+      
+      if (overallHasChanged) {
+        const changedData: any = {
+          _id: mediaFile._id || mediaFile.id,
+          slug: (mediaFile as any).slug,
+        };
+        
+        if (data.title !== (originalValues?.title || '')) {
+          changedData.title = data.title;
+        }
+        
+        changedData.metadata = {}; // Initialize metadata object
+            
+        if (data.fileName !== (originalValues?.fileName || '')) {
+          changedData.metadata.fileName = data.fileName;
+        }
+        if (data.altText !== (originalValues?.altText || '')) {
+          changedData.metadata.altText = data.altText;
+        }
+        if (data.description !== (originalValues?.description || '')) {
+          changedData.metadata.description = data.description;
+        }
+        if (data.visibility !== (originalValues?.visibility || '')) { // Corrected
+          changedData.metadata.visibility = data.visibility;
+        }
+        if (!compareArrays(data.tags, originalValues?.tags || [])) {
+          changedData.metadata.tags = data.tags;
+        }
+        
+        // Process custom fields correctly
+        if (customFieldsHaveChanged) {
+          const fullCustomFieldsPayload = { 
+            ...(originalValues?.customFields || {}),
+            ...data.customFields 
+          };
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log("DEBUG: EditMediaDialog - Merged customFields for payload:", JSON.stringify(fullCustomFieldsPayload, null, 2));
+          }
+
+          Object.keys(fullCustomFieldsPayload).forEach(key => {
+            if (mediaType.fields?.some(field => field.name === key)) {
+              changedData.metadata[key] = fullCustomFieldsPayload[key];
+            }
+          });
+        }
+        
+        if (Object.keys(changedData.metadata).length === 0) {
+          delete changedData.metadata; // Remove if empty
+        }
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log('DEBUG: EditMediaDialog - Submitting changedData:', JSON.stringify(changedData, null, 2));
+        }
+        await onSave(changedData);
+
+      } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('DEBUG: EditMediaDialog - No changes detected. Skipping save operation.');
+        }
       }
       
-      // If no metadata fields changed, remove empty metadata object
-      if (Object.keys(changedData.metadata).length === 0) {
-        delete changedData.metadata;
-      }
-
-
-      try {
-        setIsSaving(true);
-        await onSave(changedData);
-        setIsSaving(false);
-      } catch (error) {
-        setIsSaving(false);
-        console.error('Error saving media:', error);
-        // You might want to show an error message here
-      }
-    } else {
-      console.log('No changes detected. Skipping save operation.');
+      handleDialogClose();
+    } catch (error) {
+      console.error('Error saving media:', error);
+      toast.error('An error occurred while saving. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
-    
-    // Use handleDialogClose instead of directly calling onClose to ensure we clear the tag input
-    handleDialogClose();
   };
 
   const renderCustomField = (field: MediaType['fields'][0], value: any, onChange: (value: any) => void) => {

@@ -9,8 +9,7 @@ import {
 import { MetadataState } from '../types';
 import SimpleFormFieldsTab from "./SimpleFormFieldsTab";
 import RelatedMediaSection from "./RelatedMediaSection";
-import { MediaType } from "../../../store/slices/mediaTypeSlice";
-import { TagCategory } from "../../../store/slices/tagCategorySlice";
+import { MediaType, TagCategory } from "../../../hooks/query-hooks";
 import { 
   hasIncompleteStandardFields, 
   hasIncompleteCustomFields, 

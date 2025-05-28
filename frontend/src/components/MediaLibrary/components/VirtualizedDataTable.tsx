@@ -3,11 +3,11 @@ import { DataGrid, GridColDef, GridToolbar, GridRowSelectionModel, GridRowParams
 import { Link, useNavigate } from 'react-router-dom';
 import { Box, Chip, Stack } from '@mui/material';
 import { formatFileSize } from '../../../utils/formatFileSize';
-import { useMediaTypes } from '../../../hooks/query-hooks';
+import { useMediaTypes, TransformedMediaFile } from '../../../hooks/query-hooks';
 import { isImageFile, isVideoFile, getFileIcon } from '../utils';
 
 interface VirtualizedDataTableProps {
-  rows: any[];
+  rows: TransformedMediaFile[];
   onSelectionChange?: (selection: GridRowSelectionModel) => void;
   showCheckboxes?: boolean;
   selectionModel?: GridRowSelectionModel;
@@ -249,7 +249,7 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
                     my: 0,
                     ...(isDefaultTag && {
                       backgroundColor: 'var(--secondary-color)',
-                      color: 'white',
+                      color: 'var(--text-on-secondary)',
                     }),
                     '& .MuiChip-label': {
                       overflow: 'hidden',

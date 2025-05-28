@@ -3,7 +3,7 @@ import { Box, Typography, Chip, List, ListItem, ListItemText } from '@mui/materi
 import { FaExclamationCircle, FaTag, FaTags } from 'react-icons/fa';
 import { MediaTypeConfig, SelectField, MediaTypeField } from '../../../types/mediaTypes';
 import { isSelectField, predefinedColors } from '../../../utils/mediaTypeUploaderUtils';
-import { useTagCategories, useUserProfile, User } from '../../../hooks/query-hooks';
+import { useTagCategories, useUserProfile } from '../../../hooks/query-hooks';
 
 // Helper function to check if a field has tag category support
 const hasTagCategory = (field: MediaTypeField): field is SelectField & { useTagCategory: boolean; tagCategoryId: string } => {

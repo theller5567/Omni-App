@@ -6,8 +6,7 @@ import {
 } from "@mui/material";
 import FieldLabel from "./FieldLabel";
 import FieldInput from "./FieldInput";
-import { MediaType } from "../../../store/slices/mediaTypeSlice";
-import { TagCategory } from "../../../store/slices/tagCategorySlice";
+import { MediaType, TagCategory } from "../../../hooks/query-hooks";
 import { MetadataState } from "../types";
 import StandardFields from "./StandardFields";
 import { SelectChangeEvent } from "@mui/material";
@@ -15,7 +14,7 @@ import "./FormFieldsTab.css";
 
 interface SimpleFormFieldsTabProps {
   metadata: MetadataState;
-  handleMetadataChange: (field: string, value: any) => void;
+  handleMetadataChange: (field: string, value: unknown) => void;
   isCustomSection?: boolean;
   mediaType?: MediaType | null;
   tagCategories?: TagCategory[];
@@ -68,14 +67,14 @@ const SimpleFormFieldsTab: React.FC<SimpleFormFieldsTabProps> = ({
         <Paper className="tab-content-paper" elevation={0} variant="outlined">
           {mediaType && mediaType.fields && mediaType.fields.length > 0 ? (
             <Box className="fields-grid">
-              {mediaType.fields.map((field: any, index) => (
+              {mediaType.fields.map((field, index: number) => (
                 <Box 
                   className={field.type === 'TextArea' ? 'field-full-width' : 'field-half-width'}
                   key={`${field.name}-${index}`}
                 >
                   <FieldLabel 
                     name={field.name} 
-                    required={field.required} 
+                    required={field.required ?? false}
                     isValid={field.required ? (metadata[field.name] ? true : false) : null}
                   />
                   <FieldInput

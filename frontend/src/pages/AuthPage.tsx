@@ -16,8 +16,8 @@ const AuthPage: React.FC = () => {
   const [emailVerified, setEmailVerified] = useState(false);
 
   // Instantiate mutation hooks
-  const { mutate: loginMutate, isPending: isPendingLogin, error: loginError } = useLogin();
-  const { mutate: registerMutate, isPending: isPendingRegister, error: registerError } = useRegister();
+  const { mutate: loginMutate, isPending: isPendingLogin } = useLogin();
+  const { mutate: registerMutate, isPending: isPendingRegister } = useRegister();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -57,7 +57,7 @@ const AuthPage: React.FC = () => {
         email: formData.email, 
         password: formData.password 
       }, {
-        onSuccess: (data) => {
+        onSuccess: (_data) => {
           // data here is AuthResponse. Token is stored by loginUser API function.
           // User profile cache is updated by useLogin hook.
           // Toast for success is handled by useLogin hook.
@@ -71,7 +71,6 @@ const AuthPage: React.FC = () => {
   };
   
   const overallIsLoading = isPendingLogin || isPendingRegister;
-  const currentError = isSignUp ? registerError : loginError;
 
   return (
     <Container 

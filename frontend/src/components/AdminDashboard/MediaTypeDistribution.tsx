@@ -24,8 +24,19 @@ const DEFAULT_COLORS = [
   '#2196f3', // blue
 ];
 
+// Define types for Recharts custom components props
+interface LegendPayloadEntry {
+  value: string;
+  color: string;
+  [key: string]: any; // For other Recharts properties
+}
+
+interface CustomLegendProps {
+  payload?: LegendPayloadEntry[];
+}
+
 // Custom legend with proper spacing
-const CustomLegend = (props: any) => {
+const CustomLegend = (props: CustomLegendProps) => {
   const { payload } = props;
   
   return (
@@ -37,7 +48,7 @@ const CustomLegend = (props: any) => {
       margin: '10px 0 0 0',
       listStyle: 'none'
     }}>
-      {payload.map((entry: any, index: number) => (
+      {payload?.map((entry: LegendPayloadEntry, index: number) => (
         <li 
           key={`legend-item-${index}`} 
           style={{ 
@@ -64,15 +75,31 @@ const CustomLegend = (props: any) => {
   );
 };
 
-// Custom tooltip component with typescript
+// Define types for CustomTooltip props focusing on used fields
+interface ChartDataItemForTooltip {
+  name: string;
+  value: number;
+  totalCount?: number; // From your data structure
+  [key: string]: any; // Original data item might have more fields
+}
+
+interface TooltipPayloadItem {
+  name: string; 
+  value: number; 
+  payload: ChartDataItemForTooltip; // The original data item for this segment
+  color?: string;
+  [key: string]: any; // Other Recharts properties
+}
+
 interface CustomTooltipProps {
   active?: boolean;
-  payload?: Array<any>;
+  payload?: TooltipPayloadItem[];
+  label?: string | number;
 }
 
 const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
   if (active && payload && payload.length) {
-    const data = payload[0];
+    const data = payload[0]; // data is TooltipPayloadItem
     const totalCount = data.payload.totalCount || 1;
     const percentage = ((data.value / totalCount) * 100).toFixed(1);
     

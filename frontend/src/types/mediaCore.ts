@@ -1,4 +1,4 @@
-import { MediaType } from '../store/slices/mediaTypeSlice';
+import { MediaType } from '../hooks/query-hooks';
 
 // Core interfaces
 export interface MediaMetadata {
@@ -48,11 +48,11 @@ export const mediaLogger = (component: string) => ({
       id: mediaType._id,
       name: mediaType.name,
       acceptedTypes: mediaType.acceptedFileTypes,
-      fields: mediaType.fields.map(f => ({
+      fields: mediaType.fields ? mediaType.fields.map(f => ({
         name: f.name,
         type: f.type,
         required: f.required
-      }))
+      })) : []
     });
   },
 

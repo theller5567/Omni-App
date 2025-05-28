@@ -5,6 +5,7 @@ import axios from 'axios';
 import { BaseMediaFile } from '../../../interfaces/MediaFile';
 import env from '../../../config/env';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 interface RelatedMediaItemProps {
   media: RelatedMedia;
@@ -56,24 +57,19 @@ const RelatedMediaItem: React.FC<RelatedMediaItemProps> = ({ media }) => {
           slug: response.data.slug
         });
       } catch (error: any) {
-        // If slug fetch fails (e.g., 404), try fetching by ID as a fallback
-        if (error.response && error.response.status === 404) {
-        try {
-            const fallbackResponse = await axios.get<BaseMediaFile>(`${env.BASE_URL}/api/media/${media.mediaId}`);
-          setMediaDetails({
-            title: fallbackResponse.data.title || fallbackResponse.data.metadata?.fileName || 'Untitled',
-            location: fallbackResponse.data.location,
-            relationship: media.relationship,
-            note: media.note,
-            slug: fallbackResponse.data.slug
-          });
-        } catch (fallbackError) {
-          console.error('Fallback fetch also failed:', fallbackError);
-            setError('Failed to load related media');
+        console.error('Error fetching related media:', error);
+        // Check for Axios error properties manually
+        if (error && error.isAxiosError && error.response) {
+          if (error.response.status === 404) {
+            console.warn(`Related media endpoint returned 404 for media ID ${media.mediaId}`);
           }
+          toast.error(error.response.data?.message || error.message || 'Could not load related media.');
+        } else if (error && error.message) {
+          // Handle other errors that have a message property
+          toast.error(error.message || 'An unexpected error occurred while fetching related media.');
         } else {
-          console.error('Error fetching related media details:', error);
-          setError('Failed to load related media');
+          // Fallback for completely unknown errors
+          toast.error('An unexpected and unknown error occurred while fetching related media.');
         }
       } finally {
         setLoading(false);

@@ -12,12 +12,11 @@ import {
   Alert,
   Paper,
   InputAdornment,
-  Divider,
-  IconButton
+  IconButton,
 } from '@mui/material';
 import { FaTag, FaSearch, FaPlus, FaTimes, FaArrowRight } from 'react-icons/fa';
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DraggableProvided } from '@hello-pangea/dnd';
-import { useUserProfile, useTags, useCreateTag, Tag } from '../../hooks/query-hooks';
+import { useUserProfile, useTags, useCreateTag } from '../../hooks/query-hooks';
 
 interface TagCategoryFormData {
   name: string;

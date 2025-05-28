@@ -28,7 +28,7 @@ import {
   createField, 
   updateFieldOptions 
 } from '../../../utils/mediaTypeUploaderUtils';
-import { useTagCategories, useUserProfile, User } from '../../../hooks/query-hooks';
+import { useTagCategories, useUserProfile } from '../../../hooks/query-hooks';
 
 interface FieldEditorProps {
   field: MediaTypeField;

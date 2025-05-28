@@ -7,12 +7,13 @@ import { FaTrash, FaDownload, FaSpinner } from 'react-icons/fa';
 import { BaseMediaFile } from '../../interfaces/MediaFile';
 import { alpha } from '@mui/material/styles';
 import { toast } from 'react-toastify';
-import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { GridRowSelectionModel } from '@mui/x-data-grid';
 import axios from 'axios';
 import env from '../../config/env';
 import { useTagCategories, useUserProfile } from '../../hooks/query-hooks';
+// import { MediaCardViewSwitcher } from './components/MediaCardViewSwitcher'; // Removed
+// import { DebugMediaData } from './components/DebugMediaData'; // Removed
 
 // Lazy load subcomponents
 const HeaderComponent = lazy(() => import('./components/HeaderComponent'));
@@ -48,13 +49,8 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
   handleMediaTypeChange,
   children 
 }) => {
-  // If children are provided (compound usage), render them directly
-  if (children) {
-    return <div className="media-library-container">{children}</div>;
-  }
-
+  // Move all hook calls to the top level
   const [viewMode, setViewMode] = useState<'list' | 'card'>(() => {
-    // Get saved view mode from localStorage or default to 'card'
     return localStorage.getItem('mediaLibraryViewMode') as 'list' | 'card' || 'card';
   });
   const navigate = useNavigate();
@@ -64,7 +60,6 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
   const [isToolbarDelete, setIsToolbarDelete] = useState(false);
   const prevDataRef = useRef<string>('');
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
-  // Get user role from Redux store
   const { data: userProfile } = useUserProfile();
   const userRole = userProfile?.role;
   const [downloading, setDownloading] = useState<boolean>(false);
@@ -72,45 +67,33 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
     disableTagNotifications: true,
     initialLoadComplete: false
   });
-  
-  // Use TanStack Query for tag categories
   const { refetch: refetchTagCategories } = useTagCategories(userProfile);
-  
-  // Handle initial data loading silently - with debounce
   const tagsFetchedRef = useRef(false);
-  
-  // Only fetch tag categories when the user actually interacts with the filter
-  // or switches to card view where tags are displayed
+
+  // useEffect and useMemo hooks remain here as they are not conditional on 'children'
   useEffect(() => {
-    // Delay tag loading to prioritize more important UI components
     const tagLoadTimer = setTimeout(() => {
       if (!tagsFetchedRef.current) {
         tagsFetchedRef.current = true;
         refetchTagCategories();
       }
-    }, 2000); // 2 second delay
-    
+    }, 2000);
     return () => clearTimeout(tagLoadTimer);
   }, [refetchTagCategories, viewMode]);
-  
-  // Clean up references on unmount
+
   useEffect(() => {
     return () => {
       tagsFetchedRef.current = false;
     };
   }, []);
-  
-  // Custom toast function that avoids showing tag-related errors during initial page load
+
   const safeToast = (type: 'success' | 'error' | 'info' | 'warning', message: string, options = {}) => {
-    // Skip tag-related notifications if disabled and not from user action
-    if (toastSettings.disableTagNotifications && 
-        !toastSettings.initialLoadComplete && 
+    if (toastSettings.disableTagNotifications &&
+        !toastSettings.initialLoadComplete &&
         (message.includes('tag') || message.includes('Tag') || message.includes('category') || message.includes('Category'))) {
       console.log('Suppressing tag-related toast:', message);
       return;
     }
-    
-    // Otherwise show the toast
     toast[type](message, {
       position: isMobile ? "bottom-center" : "top-right",
       autoClose: 3000,
@@ -118,14 +101,16 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
     });
   };
 
-  // Process rows only when mediaFilesData or filter changes
   const rows = useMemo(() => {
     const newRows = mediaFilesData
       .filter(file => selectedMediaType === 'All' || file.mediaType === selectedMediaType)
       .map((file) => ({
+        _id: file._id || file.id || crypto.randomUUID(),
         id: file._id || file.id || crypto.randomUUID(),
         location: file.location || '',
         title: file.title || '',
+        displayTitle: file.metadata?.fileName || file.title || 'Untitled',
+        thumbnailUrl: file.metadata?.v_thumbnail || file.location,
         fileSize: file.fileSize || 0,
         fileExtension: file.fileExtension || '',
         modifiedDate: file.modifiedDate,
@@ -151,9 +136,13 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
       });
       prevDataRef.current = dataString;
     }
-
     return newRows;
   }, [mediaFilesData, selectedMediaType]);
+
+  // If children are provided (compound usage), render them directly
+  if (children) {
+    return <div className="media-library-container">{children}</div>;
+  }
 
   const toggleView = () => {
     const newViewMode = viewMode === 'list' ? 'card' : 'list';
@@ -436,6 +425,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
                 gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
                 gap: 2
               }}>
+                {/* {viewMode === 'card' && <MediaCardViewSwitcher onViewChange={handleViewChange} currentView={viewMode} />} Commented out */}
                 {rows.map((row) => (
                   <Box key={`${row.id}-${row.metadata?.v_thumbnailTimestamp || ''}`}>
                     <Suspense fallback={<LoadingFallback />}>
@@ -457,7 +447,6 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
           )}
         </Box>
       </Box>
-      <ToastContainer position={isMobile ? "bottom-center" : "top-right"} />
       {isModalOpen && (
         <Suspense fallback={<LoadingFallback />}>
           <ConfirmationModal

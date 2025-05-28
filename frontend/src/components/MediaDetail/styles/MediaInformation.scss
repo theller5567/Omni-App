@@ -3,6 +3,10 @@
   padding: 0;
   height: 100%;
   text-align: left;
+  background-color: var(--color-surface-elevated);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--color-border);
 
   // Mobile mixin
   @mixin mobile {

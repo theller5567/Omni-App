@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Paper,
   Typography,
@@ -24,7 +24,8 @@ import {
   Checkbox,
   ListItemText,
   Tab,
-  Tabs
+  Tabs,
+  OutlinedInput,
 } from '@mui/material';
 import { FaPlus, FaTrash, FaEdit, FaSave, FaEnvelope } from 'react-icons/fa';
 import { 
@@ -36,9 +37,15 @@ import {
   useEligibleRecipients,
   useSendTestNotification,
   useUserProfile,
-  User
+  User,
+  NotificationRule,
+  NotificationSettingsData
 } from '../../hooks/query-hooks';
 import './systemSettings.scss';
+import { SelectChangeEvent } from '@mui/material/Select';
+// import AddIcon from '@mui/icons-material/Add';
+// import EditIcon from '@mui/icons-material/Edit';
+// import DeleteIcon from '@mui/icons-material/Delete';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -70,61 +77,72 @@ interface NotificationSettingsProps {
 }
 
 const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile }) => {
-  // Query hooks for data fetching
-  const { data: settings, isLoading, isError, error } = useNotificationSettings(userProfile);
-  const { 
-    data: eligibleRecipients = [], 
-    isLoading: isLoadingRecipients,
-    isError: isRecipientsError,
-    error: recipientsError,
-    refetch: refetchRecipients
-  } = useEligibleRecipients(userProfile);
-  const { mutateAsync: updateSettings } = useUpdateNotificationSettings(userProfile);
-  const { mutateAsync: addRule } = useAddNotificationRule(userProfile);
-  const { mutateAsync: updateRule } = useUpdateNotificationRule(userProfile);
-  const { mutateAsync: deleteRule } = useDeleteNotificationRule(userProfile);
-  const { mutateAsync: sendTestNotification, isPending: isSendingTest } = useSendTestNotification(userProfile);
-  
-  // Local state for form
-  const [isEnabled, setIsEnabled] = useState(false);
-  const [frequency, setFrequency] = useState('immediate');
-  const [recipients, setRecipients] = useState<string[]>([]);
-  const [scheduledTime, setScheduledTime] = useState('09:00');
-  const [showRuleDialog, setShowRuleDialog] = useState(false);
-  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
-  const [ruleForm, setRuleForm] = useState({
-    name: '',
-    enabled: true,
-    actionTypes: ['ALL'],
-    resourceTypes: ['ALL'],
-    triggerRoles: ['ALL'],
-    priority: 'normal',
-    includeDetails: true
+  const { data: settingsData, isLoading, isError, error } = useNotificationSettings(userProfile);
+  const updateSettingsMutation = useUpdateNotificationSettings(userProfile);
+  const addRuleMutation = useAddNotificationRule(userProfile);
+  const updateRuleMutation = useUpdateNotificationRule(userProfile);
+  const deleteRuleMutation = useDeleteNotificationRule(userProfile);
+  const { data: eligibleRecipients = [], isLoading: isLoadingRecipients } = useEligibleRecipients(userProfile);
+  const sendTestNotificationMutation = useSendTestNotification(userProfile);
+
+  // State for form fields
+  const [formState, setFormState] = useState<Omit<NotificationSettingsData, 'rules' | 'recipients'> & { recipients: Array<{ _id: string; username?: string; email?: string }> }> ({
+    enabled: false,
+    frequency: 'daily',
+    scheduledTime: '09:00',
+    recipients: [], // Initialize recipients as an empty array of objects
   });
-  
-  // Initialize form state from fetched data
-  React.useEffect(() => {
-    if (settings) {
-      setIsEnabled(settings.enabled);
-      setFrequency(settings.frequency);
-      setRecipients(settings.recipients.map((r: any) => r._id));
-      setScheduledTime(settings.scheduledTime);
+
+  // States for rule dialog
+  const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
+  const [currentRule, setCurrentRule] = useState<NotificationRule | null>(null);
+  const [ruleForm, setRuleForm] = useState<Partial<NotificationRule>>({});
+
+  useEffect(() => {
+    if (settingsData) {
+      setFormState({
+        enabled: settingsData.enabled || false,
+        frequency: settingsData.frequency || 'daily',
+        scheduledTime: settingsData.scheduledTime || '09:00',
+        recipients: Array.isArray(settingsData.recipients) ? settingsData.recipients : [], // Store full objects
+      });
     }
-  }, [settings]);
-  
-  // Handle form submission
-  const handleSaveSettings = async () => {
-    const updatedSettings = {
-      enabled: isEnabled,
-      frequency,
-      recipients,
-      scheduledTime
-    };
-    
-    await updateSettings(updatedSettings);
+  }, [settingsData]);
+
+  const handleFormChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>) => {
+    const { name, value } = event.target;
+    setFormState(prev => ({ ...prev, [name]: value }));
   };
-  
-  // Handle rule dialog
+
+  const handleSwitchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = event.target;
+    setFormState(prev => ({ ...prev, [name]: checked }));
+  };
+
+  const handleRecipientsChange = (event: SelectChangeEvent<string[]>) => {
+    const selectedIds = event.target.value as string[];
+    const newSelectedRecipients = eligibleRecipients.filter(r => selectedIds.includes(r._id));
+    setFormState(prev => ({ ...prev, recipients: newSelectedRecipients }));
+  };
+
+  const handleSaveSettings = async () => {
+    if (!settingsData) return;
+
+    const payload: Partial<NotificationSettingsData> = {
+        enabled: formState.enabled,
+        frequency: formState.frequency as NotificationSettingsData['frequency'],
+        scheduledTime: formState.scheduledTime,
+        // Send recipients as an array of objects with _id
+        recipients: formState.recipients.map(r => ({ _id: r._id, username: r.username, email: r.email })),
+    };
+
+    if (process.env.NODE_ENV === 'development') {
+        console.log("Saving notification settings with payload:", JSON.stringify(payload, null, 2));
+    }
+
+    updateSettingsMutation.mutate(payload);
+  };
+
   const openAddRuleDialog = () => {
     setRuleForm({
       name: '',
@@ -135,11 +153,11 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
       priority: 'normal',
       includeDetails: true
     });
-    setEditingRuleId(null);
-    setShowRuleDialog(true);
+    setCurrentRule(null);
+    setRuleDialogOpen(true);
   };
-  
-  const openEditRuleDialog = (rule: any) => {
+
+  const openEditRuleDialog = (rule: NotificationRule) => {
     setRuleForm({
       name: rule.name,
       enabled: rule.enabled,
@@ -149,33 +167,46 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
       priority: rule.priority || 'normal',
       includeDetails: rule.includeDetails !== undefined ? rule.includeDetails : true
     });
-    setEditingRuleId(rule._id);
-    setShowRuleDialog(true);
+    setCurrentRule(rule);
+    setRuleDialogOpen(true);
   };
-  
+
   const closeRuleDialog = () => {
-    setShowRuleDialog(false);
+    setRuleDialogOpen(false);
   };
-  
+
   const handleSaveRule = async () => {
-    if (editingRuleId) {
-      await updateRule({ ruleId: editingRuleId, updates: ruleForm });
+    if (!ruleForm.name) {
+      alert('Rule name is required.'); // Basic validation
+      return;
+    }
+    if (currentRule && currentRule._id) {
+      updateRuleMutation.mutate({ ruleId: currentRule._id, updates: ruleForm });
     } else {
-      await addRule(ruleForm);
+      const newRuleData: Omit<NotificationRule, '_id'> = {
+        name: ruleForm.name || 'Unnamed Rule',
+        enabled: ruleForm.enabled !== undefined ? ruleForm.enabled : true,
+        actionTypes: ruleForm.actionTypes || ['ALL'],
+        resourceTypes: ruleForm.resourceTypes || ['ALL'],
+        triggerRoles: ruleForm.triggerRoles || ['ALL'],
+        priority: ruleForm.priority || 'normal',
+        includeDetails: ruleForm.includeDetails !== undefined ? ruleForm.includeDetails : true,
+      };
+      addRuleMutation.mutate(newRuleData);
     }
     closeRuleDialog();
   };
-  
+
   const handleDeleteRule = async (ruleId: string) => {
     if (confirm('Are you sure you want to delete this rule?')) {
-      await deleteRule(ruleId);
+      await deleteRuleMutation.mutate(ruleId);
     }
   };
-  
+
   const handleTestNotification = async () => {
-    await sendTestNotification(recipients);
+    await sendTestNotificationMutation.mutate(formState.recipients.map(r => r._id));
   };
-  
+
   if (isLoading || isLoadingRecipients) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -197,7 +228,9 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
   const resourceTypeOptions = ['ALL', 'media', 'mediaType', 'user', 'system', 'tag', 'tagCategory'];
   const roleOptions = ['ALL', 'user', 'admin', 'superAdmin'];
   const priorityOptions = ['low', 'normal', 'high'];
-  
+
+  const rulesExist = settingsData && Array.isArray(settingsData.rules) && settingsData.rules.length > 0;
+
   return (
     <div className="notification-settings">
       {/* Global notification settings */}
@@ -222,9 +255,9 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
             color="secondary"
             startIcon={<FaEnvelope />}
             onClick={handleTestNotification}
-            disabled={isSendingTest || !isEnabled || recipients.length === 0}
+            disabled={sendTestNotificationMutation.isPending || !formState.enabled || formState.recipients.length === 0}
           >
-            {isSendingTest ? 'Sending...' : 'Send Test Email'}
+            {sendTestNotificationMutation.isPending ? 'Sending...' : 'Send Test Email'}
           </Button>
         </div>
       </div>
@@ -237,8 +270,9 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
           <FormControlLabel
             control={
               <Switch
-                checked={isEnabled}
-                onChange={(e) => setIsEnabled(e.target.checked)}
+                checked={formState.enabled}
+                onChange={handleSwitchChange}
+                name="enabled"
                 color="primary"
               />
             }
@@ -255,9 +289,10 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
             <InputLabel id="frequency-label">Notification Frequency</InputLabel>
             <Select
               labelId="frequency-label"
-              value={frequency}
-              onChange={(e) => setFrequency(e.target.value)}
-              disabled={!isEnabled}
+              value={formState.frequency}
+              onChange={handleFormChange}
+              name="frequency"
+              disabled={!formState.enabled}
               label="Notification Frequency"
             >
               <MenuItem value="immediate">Immediate (send as events occur)</MenuItem>
@@ -267,13 +302,14 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
             </Select>
           </FormControl>
           
-          {frequency !== 'immediate' && (
+          {formState.frequency !== 'immediate' && (
             <div className="scheduled-time">
               <Typography variant="body2" sx={{ mb: 1 }}>Scheduled Time (24h format):</Typography>
               <TextField
                 type="time"
-                value={scheduledTime}
-                onChange={(e) => setScheduledTime(e.target.value)}
+                value={formState.scheduledTime}
+                onChange={handleFormChange}
+                name="scheduledTime"
                 sx={{ width: '120px' }}
                 InputLabelProps={{
                   shrink: true,
@@ -281,7 +317,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
                 inputProps={{
                   step: 300, // 5 min
                 }}
-                disabled={!isEnabled}
+                disabled={!formState.enabled}
               />
             </div>
           )}
@@ -294,9 +330,9 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
             <Select
               labelId="recipients-label"
               multiple
-              value={recipients}
-              onChange={(e) => setRecipients(e.target.value as string[])}
-              disabled={!isEnabled}
+              value={formState.recipients.map(r => r._id)}
+              onChange={handleRecipientsChange}
+              disabled={!formState.enabled}
               renderValue={(selected) => (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                   {selected.map((value) => {
@@ -321,17 +357,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
                 </MenuItem>
               )}
               
-              {isRecipientsError && (
-                <MenuItem disabled>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
-                    <Typography variant="body2">
-                      Error loading recipients: {recipientsError instanceof Error ? recipientsError.message : 'Unknown error'}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              )}
-              
-              {!isLoadingRecipients && !isRecipientsError && eligibleRecipients.length === 0 && (
+              {!isLoadingRecipients && eligibleRecipients.length === 0 && (
                 <MenuItem disabled>
                   <Typography variant="body2">No admin users found. Please ensure there are admin users in the system.</Typography>
                 </MenuItem>
@@ -339,7 +365,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
               
               {eligibleRecipients?.map((user) => (
                 <MenuItem key={user._id} value={user._id}>
-                  <Checkbox checked={recipients.indexOf(user._id) > -1} />
+                  <Checkbox checked={formState.recipients.some(r => r._id === user._id)} />
                   <ListItemText 
                     primary={user.username || user.email} 
                     secondary={`${user.firstName || ''} ${user.lastName || ''} (${user.role})`} 
@@ -352,16 +378,6 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
             <Typography variant="body2" color="textSecondary">
               Select which administrators will receive notification emails.
             </Typography>
-            
-            <Button 
-              size="small" 
-              variant="outlined" 
-              onClick={() => refetchRecipients()}
-              disabled={isLoadingRecipients}
-              startIcon={isLoadingRecipients ? <CircularProgress size={16} /> : null}
-            >
-              Refresh Recipients
-            </Button>
           </Box>
         </div>
       </div>
@@ -377,7 +393,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
             color="primary"
             startIcon={<FaPlus />}
             onClick={openAddRuleDialog}
-            disabled={!isEnabled}
+            disabled={!formState.enabled}
           >
             Add Rule
           </Button>
@@ -387,14 +403,14 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
           Define rules to determine which activities should trigger notifications.
         </Typography>
         
-        {settings?.rules?.length === 0 ? (
+        {!rulesExist && !isLoadingRecipients ? (
           <Alert severity="info" sx={{ my: 2 }}>
             No notification rules defined. Add a rule to start receiving notifications.
           </Alert>
         ) : (
           <div className="rules-container">
-            {settings?.rules?.map((rule: any) => (
-              <Paper key={rule._id} className="rule-card" variant="outlined">
+            {settingsData?.rules?.map((rule: NotificationRule) => (
+              <Paper key={rule._id!} className="rule-card" variant="outlined">
                 <div className="rule-header">
                   <div className="rule-name">
                     <Typography variant="subtitle1">
@@ -406,8 +422,8 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
                           size="small"
                           checked={rule.enabled}
                           onChange={async (e) => {
-                            await updateRule({
-                              ruleId: rule._id,
+                            await updateRuleMutation.mutate({
+                              ruleId: rule._id!,
                               updates: { ...rule, enabled: e.target.checked }
                             });
                           }}
@@ -430,7 +446,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
                       <IconButton 
                         size="small" 
                         color="error"
-                        onClick={() => handleDeleteRule(rule._id)}
+                        onClick={() => handleDeleteRule(rule._id!)}
                       >
                         <FaTrash />
                       </IconButton>
@@ -507,134 +523,88 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
       
       {/* Rule dialog */}
       <Dialog 
-        open={showRuleDialog} 
+        open={ruleDialogOpen} 
         onClose={closeRuleDialog}
         fullWidth
         maxWidth="md"
       >
-        <DialogTitle>
-          {editingRuleId ? 'Edit Notification Rule' : 'Add Notification Rule'}
-        </DialogTitle>
-        <DialogContent>
-          <div className="rule-form">
-            <div className="rule-form-grid">
-              <TextField
-                label="Rule Name"
-                value={ruleForm.name}
-                onChange={(e) => setRuleForm({ ...ruleForm, name: e.target.value })}
-                fullWidth
-                required
-                sx={{ gridArea: 'name' }}
-              />
-              
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={ruleForm.enabled}
-                    onChange={(e) => setRuleForm({ ...ruleForm, enabled: e.target.checked })}
-                  />
-                }
-                label="Enabled"
-                sx={{ gridArea: 'enabled' }}
-              />
-              
-              <FormControl fullWidth sx={{ gridArea: 'actions' }}>
-                <InputLabel>Action Types</InputLabel>
-                <Select
-                  multiple
-                  value={ruleForm.actionTypes}
-                  onChange={(e) => setRuleForm({ ...ruleForm, actionTypes: e.target.value as string[] })}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={value} size="small" />
-                      ))}
-                    </Box>
-                  )}
-                >
-                  {actionTypeOptions.map((action) => (
-                    <MenuItem key={action} value={action}>
-                      <Checkbox checked={ruleForm.actionTypes.indexOf(action) > -1} />
-                      <ListItemText primary={action} />
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              
-              <FormControl fullWidth sx={{ gridArea: 'resources' }}>
-                <InputLabel>Resource Types</InputLabel>
-                <Select
-                  multiple
-                  value={ruleForm.resourceTypes}
-                  onChange={(e) => setRuleForm({ ...ruleForm, resourceTypes: e.target.value as string[] })}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={value} size="small" />
-                      ))}
-                    </Box>
-                  )}
-                >
-                  {resourceTypeOptions.map((resource) => (
-                    <MenuItem key={resource} value={resource}>
-                      <Checkbox checked={ruleForm.resourceTypes.indexOf(resource) > -1} />
-                      <ListItemText primary={resource} />
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              
-              <FormControl fullWidth sx={{ gridArea: 'roles' }}>
-                <InputLabel>Trigger Roles</InputLabel>
-                <Select
-                  multiple
-                  value={ruleForm.triggerRoles}
-                  onChange={(e) => setRuleForm({ ...ruleForm, triggerRoles: e.target.value as string[] })}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={value} size="small" />
-                      ))}
-                    </Box>
-                  )}
-                >
-                  {roleOptions.map((role) => (
-                    <MenuItem key={role} value={role}>
-                      <Checkbox checked={ruleForm.triggerRoles.indexOf(role) > -1} />
-                      <ListItemText primary={role} />
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              
-              <FormControl fullWidth sx={{ gridArea: 'priority' }}>
-                <InputLabel>Priority</InputLabel>
-                <Select
-                  value={ruleForm.priority}
-                  onChange={(e) => setRuleForm({ ...ruleForm, priority: e.target.value })}
-                >
-                  {priorityOptions.map((priority) => (
-                    <MenuItem key={priority} value={priority}>
-                      {priority.charAt(0).toUpperCase() + priority.slice(1)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={ruleForm.includeDetails}
-                    onChange={(e) => setRuleForm({ ...ruleForm, includeDetails: e.target.checked })}
-                  />
-                }
-                label="Include Details in Notification"
-                sx={{ gridArea: 'details' }}
-              />
-            </div>
-          </div>
+        <DialogTitle>{currentRule ? 'Edit' : 'Add'} Notification Rule</DialogTitle>
+        <DialogContent dividers>
+          {/* Simplified Grid structure for direct form field layout */}
+          <Box component="form" sx={{ pt: 1 }}>
+            <TextField
+              label="Rule Name"
+              name="name"
+              value={ruleForm.name || ''}
+              onChange={handleFormChange}
+              fullWidth
+              required
+              size="small"
+              sx={{ mb: 2 }}
+            />
+            <FormControlLabel
+              control={<Switch name="enabled" checked={ruleForm.enabled || false} onChange={handleSwitchChange} />}
+              label="Enabled"
+              sx={{ mb: 1, display: 'block' }}
+            />
+            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+              <InputLabel>Action Types</InputLabel>
+              <Select 
+                multiple 
+                name="actionTypes" 
+                value={ruleForm.actionTypes || []} 
+                onChange={(event: SelectChangeEvent<string[]>) => {
+                  setRuleForm(prev => ({ ...prev, actionTypes: event.target.value as string[] }));
+                }}
+                input={<OutlinedInput label="Action Types" />} 
+                renderValue={(selected) => selected.join(', ')}
+              >
+                {actionTypeOptions.map(opt => <MenuItem key={opt} value={opt}><Checkbox checked={(ruleForm.actionTypes || []).indexOf(opt) > -1} />{opt}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+              <InputLabel>Resource Types</InputLabel>
+              <Select 
+                multiple 
+                name="resourceTypes" 
+                value={ruleForm.resourceTypes || []} 
+                onChange={(event: SelectChangeEvent<string[]>) => {
+                  setRuleForm(prev => ({ ...prev, resourceTypes: event.target.value as string[] }));
+                }}
+                input={<OutlinedInput label="Resource Types" />} 
+                renderValue={(selected) => selected.join(', ')}
+              >
+                {resourceTypeOptions.map(opt => <MenuItem key={opt} value={opt}><Checkbox checked={(ruleForm.resourceTypes || []).indexOf(opt) > -1} />{opt}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+              <InputLabel>Triggering Roles</InputLabel>
+              <Select 
+                multiple 
+                name="triggerRoles" 
+                value={ruleForm.triggerRoles || []} 
+                onChange={(event: SelectChangeEvent<string[]>) => {
+                  setRuleForm(prev => ({ ...prev, triggerRoles: event.target.value as string[] }));
+                }}
+                input={<OutlinedInput label="Triggering Roles" />} 
+                renderValue={(selected) => selected.join(', ')}
+              >
+                {roleOptions.map(opt => <MenuItem key={opt} value={opt}><Checkbox checked={(ruleForm.triggerRoles || []).indexOf(opt) > -1} />{opt}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+              <InputLabel>Priority</InputLabel>
+              <Select name="priority" value={ruleForm.priority || 'normal'} onChange={handleFormChange} label="Priority">
+                {priorityOptions.map(opt => <MenuItem key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <FormControlLabel
+              control={<Switch name="includeDetails" checked={ruleForm.includeDetails || false} onChange={handleSwitchChange} />}
+              label="Include Details in Notification"
+            />
+          </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{p: '16px 24px'}}>
           <Button onClick={closeRuleDialog}>Cancel</Button>
           <Button 
             onClick={handleSaveRule} 
@@ -642,7 +612,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
             color="primary"
             disabled={!ruleForm.name}
           >
-            {editingRuleId ? 'Update Rule' : 'Add Rule'}
+            {currentRule ? 'Update Rule' : 'Add Rule'}
           </Button>
         </DialogActions>
       </Dialog>

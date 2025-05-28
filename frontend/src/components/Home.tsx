@@ -1,6 +1,4 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { ToastContainer } from "react-toastify"; // Import Toastify for success message
-import "react-toastify/dist/ReactToastify.css"; // Import the CSS for Toast notifications
 import { Box, Paper, Typography } from "@mui/material";
 import axios from 'axios';
 import { DataGrid, GridColDef, GridPaginationModel, GridToolbar } from '@mui/x-data-grid';
@@ -136,9 +134,6 @@ const HomePage: React.FC = () => {
           </div>
         )}
       </Paper>
-
-      {/* Toast Notifications */}
-      <ToastContainer />
     </Box>
     </motion.div>
   );

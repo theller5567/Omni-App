@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 // import { API_BASE_URL } from '../config/config'; // API_BASE_URL is in env.ts now, managed by query-hooks
 // import { initializeUser, fetchAllUsers } from '../store/slices/userSlice'; // Removed
 import { useLogin } from '../hooks/query-hooks'; // Added
-import { toast } from 'react-toastify'; // For displaying errors from useLogin
 
 // interface LoginResponse { // No longer needed as useLogin handles response structure
 //   token: string;

@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   TextField,
   FormControl,
@@ -7,7 +7,7 @@ import {
   Box,
   Chip,
 } from "@mui/material";
-import { TagCategory } from "../../../store/slices/tagCategorySlice";
+import { TagCategory } from "../../../hooks/query-hooks";
 import { MetadataState } from "../types";
 
 interface Field {

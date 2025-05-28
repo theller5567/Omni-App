@@ -53,7 +53,9 @@ export interface MediaFile {
   approvalFeedback?: string; // Added
   metadata?: {
     fileName?: string;
-    tags?: any[];
+    tags?: string[]; // Changed from any[]
+    v_thumbnail?: string; // Added explicitly
+    v_thumbnailTimestamp?: number; // Added explicitly
     [key: string]: any;
   };
   [key: string]: any;
@@ -62,8 +64,18 @@ export interface MediaFile {
 export interface MediaType {
   _id: string;
   name: string;
-  description: string;
+  description: string; // Assuming description is always present, if not, make it optional
   catColor: string;
+  fields?: Array<{ name: string; type: string; options?: string[]; required?: boolean; [key: string]: any; }>; // Added from schema
+  acceptedFileTypes?: string[]; // Added from schema
+  status?: 'active' | 'deprecated' | 'archived'; // Added from schema
+  usageCount?: number; // Added from schema
+  replacedBy?: string | null; // Assuming ObjectId ref is stringified or null
+  isDeleting?: boolean; // Added from schema
+  baseType?: 'BaseImage' | 'BaseVideo' | 'BaseAudio' | 'BaseDocument' | 'Media'; // Added from schema
+  includeBaseFields?: boolean; // Added from schema
+  defaultTags?: string[]; // Added from schema
+  settings?: { allowRelatedMedia?: boolean; [key: string]: any; }; // Added from schema
   [key: string]: any;
 }
 
@@ -164,6 +176,42 @@ export interface InvitationResponse {
   message: string;
   // Include other fields if your API returns more data upon sending an invitation
   // For example: invitationId?: string;
+}
+
+// Type for Database Stats
+export interface DatabaseStatsData {
+  totalUsers: number;
+  activeUsers: number;
+  totalMediaFiles: number;
+  totalMediaTypes: number;
+  totalTags: number;
+  storageUsed: number;
+  storageLimit: number;
+  dbSize: number;
+  lastBackup: string; // ISOString
+  uptime: number; // seconds
+  // Add any other fields returned by the actual API endpoint
+}
+
+// Type for Notification Rule
+export interface NotificationRule {
+  _id?: string; // Present for existing rules
+  name: string;
+  enabled: boolean;
+  actionTypes: string[];
+  resourceTypes: string[];
+  triggerRoles: string[];
+  priority: 'low' | 'normal' | 'high';
+  includeDetails: boolean;
+}
+
+// Type for Notification Settings
+export interface NotificationSettingsData {
+  enabled: boolean;
+  frequency: 'immediate' | 'hourly' | 'daily' | 'weekly';
+  recipients: Array<{ _id: string; username?: string; email?: string }>; // Array of user-like objects with at least _id
+  scheduledTime: string; // e.g., '09:00'
+  rules?: NotificationRule[];
 }
 
 // ======================
@@ -650,23 +698,10 @@ export const updateMediaItem = async (mediaData: Partial<MediaFile> & { changedF
     updatePayload.title = mediaData.title;
   }
   
-  // Only include metadata fields that were actually changed
-  if (mediaData.metadata && mediaData.changedFields) {
-    const metadataFields = mediaData.changedFields
-      .filter(field => field.startsWith('metadata.'))
-      .map(field => field.replace('metadata.', ''));
-      
-    if (metadataFields.length > 0) {
-      updatePayload.metadata = {};
-      
-      // Only add the specific fields that changed
-      metadataFields.forEach(fieldName => {
-        if (mediaData.metadata && mediaData.metadata[fieldName] !== undefined) {
-          if (!updatePayload.metadata) updatePayload.metadata = {};
-          updatePayload.metadata[fieldName] = mediaData.metadata[fieldName];
-        }
-      });
-    }
+  // If metadata changed, pass the fully constructed metadata object from mediaData
+  // (which was prepared by MediaDetail.tsx's handleSave)
+  if (mediaData.metadata && mediaData.changedFields?.some(f => f.startsWith('metadata.'))) {
+    updatePayload.metadata = mediaData.metadata;
   }
   
   // Include changed fields if provided - this is needed for the server to know what changed
@@ -1097,6 +1132,12 @@ export const useUpdateMedia = () => {
       queryClient.invalidateQueries({ queryKey: QueryKeys.allMedia });
       queryClient.invalidateQueries({ queryKey: QueryKeys.mediaByType(data.mediaType || '') });
       
+      // Log the data received after update, specifically the thumbnail
+      if (process.env.NODE_ENV === 'development') {
+        console.log('DEBUG: useUpdateMedia onSuccess - Data from server:', JSON.stringify(data, null, 2));
+        console.log('DEBUG: useUpdateMedia onSuccess - Thumbnail from server data:', data.metadata?.v_thumbnail);
+      }
+
       toast.success('Media updated successfully');
     }
   });
@@ -1167,23 +1208,22 @@ export const fetchUserActivities = async (page = 1, limit = 10): Promise<{data: 
 };
 
 // -- Database Stats --
-export const fetchDatabaseStats = async (): Promise<any> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
-  const response = await axios.get<{data: any, success: boolean}>(`${env.BASE_URL}/api/admin/database-stats`, {
-    headers: {
-      Authorization: `Bearer ${token}`
+export const fetchDatabaseStats = async (): Promise<DatabaseStatsData> => {
+  try {
+    const response = await axios.get<{ data: DatabaseStatsData }>(`${env.BASE_URL}/api/admin/database-stats`, { // Adjusted type for response
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('authToken') || ''}`
+      }
+    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Raw database stats response (query-hooks):", response);
+      console.log("Attempting to return response.data.data:", response.data.data);
     }
-  });
-  
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`Fetched database stats`);
+    return response.data.data; // Return the nested data object
+  } catch (error: any) {
+    console.error('Error fetching database stats (query-hooks):', error);
+    throw new Error('Failed to fetch database stats');
   }
-  
-  return response.data.data;
 };
 
 // =====================
@@ -1214,7 +1254,7 @@ export const useUserActivities = (userProfile: User | null | undefined, page = 1
 
 // -- Database Stats --
 export const useDatabaseStats = (userProfile: User | null | undefined) => {
-  return useQuery({
+  return useQuery<DatabaseStatsData, Error>({ // Use DatabaseStatsData here
     queryKey: [QueryKeys.databaseStats],
     queryFn: fetchDatabaseStats,
     staleTime: 2 * 60 * 1000, // 2 minutes
@@ -1228,74 +1268,47 @@ export const useDatabaseStats = (userProfile: User | null | undefined) => {
 // =====================
 
 // Fetch notification settings
-export const fetchNotificationSettings = async (): Promise<any> => {
+export const fetchNotificationSettings = async (): Promise<NotificationSettingsData> => {
   const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-
-  const response = await axios.get<{success: boolean, data: any}>(`${env.BASE_URL}/api/admin/notification-settings`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
+  if (!token) throw new Error('Authentication token missing');
+  const response = await axios.get<NotificationSettingsData>(`${env.BASE_URL}/api/admin/notification-settings`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
-  
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Fetched notification settings:', response.data);
-  }
-  
-  return response.data.data;
+  // Ensure recipients is always an array
+  return {
+    ...response.data,
+    recipients: Array.isArray(response.data.recipients) ? response.data.recipients : [],
+  };
 };
 
 // Update notification settings
-export const updateNotificationSettings = async (settings: any): Promise<any> => {
+export const updateNotificationSettings = async (settings: Partial<NotificationSettingsData>): Promise<NotificationSettingsData> => {
   const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
-  const response = await axios.put<{success: boolean, data: any}>(`${env.BASE_URL}/api/admin/notification-settings`, settings, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
+  if (!token) throw new Error('Authentication token missing');
+  const response = await axios.put<NotificationSettingsData>(`${env.BASE_URL}/api/admin/notification-settings`, settings, {
+    headers: { Authorization: `Bearer ${token}` },
   });
-  
-  return response.data.data;
+  return response.data;
 };
 
 // Add a new notification rule
-export const addNotificationRule = async (rule: any): Promise<any> => {
+export const addNotificationRule = async (rule: Omit<NotificationRule, '_id'>): Promise<NotificationRule> => {
   const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
-  const response = await axios.post<{success: boolean, data: any}>(`${env.BASE_URL}/api/admin/notification-settings/rules`, rule, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
+  if (!token) throw new Error('Authentication token missing');
+  const response = await axios.post<NotificationRule>(`${env.BASE_URL}/api/admin/notification-settings/rules`, rule, {
+    headers: { Authorization: `Bearer ${token}` },
   });
-  
-  return response.data.data;
+  return response.data;
 };
 
 // Update a notification rule
-export const updateNotificationRule = async ({ ruleId, updates }: { ruleId: string, updates: any }): Promise<any> => {
+export const updateNotificationRule = async ({ ruleId, updates }: { ruleId: string, updates: Partial<NotificationRule> }): Promise<NotificationRule> => {
   const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
-  const response = await axios.put<{success: boolean, data: any}>(`${env.BASE_URL}/api/admin/notification-settings/rules/${ruleId}`, updates, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
+  if (!token) throw new Error('Authentication token missing');
+  const response = await axios.put<NotificationRule>(`${env.BASE_URL}/api/admin/notification-settings/rules/${ruleId}`, updates, {
+    headers: { Authorization: `Bearer ${token}` },
   });
-  
-  return response.data.data;
+  return response.data;
 };
 
 // Delete a notification rule
@@ -1352,7 +1365,7 @@ export const sendTestNotification = async (recipients?: string[]): Promise<void>
 
 // Hook to fetch notification settings
 export const useNotificationSettings = (userProfile: User | null | undefined) => {
-  return useQuery({
+  return useQuery<NotificationSettingsData, Error>({
     queryKey: [QueryKeys.notificationSettings],
     queryFn: fetchNotificationSettings,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -1363,8 +1376,7 @@ export const useNotificationSettings = (userProfile: User | null | undefined) =>
 // Hook to update notification settings
 export const useUpdateNotificationSettings = (_userProfile: User | null | undefined) => {
   const queryClient = useQueryClient();
-  
-  return useMutation({
+  return useMutation<NotificationSettingsData, Error, Partial<NotificationSettingsData>>({
     mutationFn: updateNotificationSettings,
     onSuccess: (_data) => {
       queryClient.invalidateQueries({ queryKey: [QueryKeys.notificationSettings] });
@@ -1379,8 +1391,7 @@ export const useUpdateNotificationSettings = (_userProfile: User | null | undefi
 // Hook to add a notification rule
 export const useAddNotificationRule = (_userProfile: User | null | undefined) => {
   const queryClient = useQueryClient();
-  
-  return useMutation({
+  return useMutation<NotificationRule, Error, Omit<NotificationRule, '_id'>>({
     mutationFn: addNotificationRule,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QueryKeys.notificationSettings] });
@@ -1395,8 +1406,7 @@ export const useAddNotificationRule = (_userProfile: User | null | undefined) =>
 // Hook to update a notification rule
 export const useUpdateNotificationRule = (_userProfile: User | null | undefined) => {
   const queryClient = useQueryClient();
-  
-  return useMutation({
+  return useMutation<NotificationRule, Error, { ruleId: string, updates: Partial<NotificationRule> }>({
     mutationFn: updateNotificationRule,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QueryKeys.notificationSettings] });
@@ -1411,7 +1421,6 @@ export const useUpdateNotificationRule = (_userProfile: User | null | undefined)
 // Hook to delete a notification rule
 export const useDeleteNotificationRule = (_userProfile: User | null | undefined) => {
   const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: deleteNotificationRule,
     onSuccess: () => {
@@ -1729,7 +1738,10 @@ export const useAddMedia = () => {
       return newlyUploadedMedia;
     },
     onSuccess: (data: MediaFile) => {
-      toast.success(`Media "${data.title || data.metadata?.fileName || 'New Media'}" processed successfully!`);
+      const toastId = `media-upload-success-${data._id || Date.now()}`; // Unique toastId
+      toast.success(`Media "${data.title || data.metadata?.fileName || 'New Media'}" processed successfully!`, {
+        toastId: toastId
+      });
       
       // Invalidate queries to refetch media lists
       queryClient.invalidateQueries({ queryKey: QueryKeys.allMedia });
@@ -1880,7 +1892,7 @@ export const useCreateTag = () => {
         ...oldTags,
         newTag,
       ]);
-      toast.success(`Tag "${newTag.name}" created successfully!`);
+      // toast.success(`Tag "${newTag.name}" created successfully!`); // Removed this line
     },
     onError: (error: any) => {
       const message =
@@ -2309,5 +2321,88 @@ export const useRejectedMedia = (userProfile: User | null | undefined) => {
     queryFn: fetchRejectedMedia,
     enabled: !!userProfile && (userProfile.role === 'admin' || userProfile.role === 'superAdmin'),
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// API function to delete a tag category
+export const deleteTagCategory = async ({ categoryId, hardDelete }: { categoryId: string; hardDelete?: boolean }): Promise<void> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  
+  let url = `${env.BASE_URL}/api/tag-categories/${categoryId}`;
+  if (hardDelete) {
+    url += '?hardDelete=true';
+  }
+  
+  await axios.delete(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+// Hook to delete a tag category
+export const useDeleteTagCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, { categoryId: string; hardDelete?: boolean }>({
+    mutationFn: deleteTagCategory,
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.tagCategories] });
+      toast.success(`Tag category deleted successfully.`);
+    },
+    onError: (error: any, variables) => {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        `Failed to delete tag category ${variables.categoryId}.`;
+      toast.error(message);
+    },
+  });
+};
+
+// API function to update a tag category
+export const updateTagCategory = async ({ categoryId, data }: { categoryId: string, data: Partial<Pick<TagCategory, 'name' | 'description' | 'tags' | 'isActive'>> }): Promise<TagCategory> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Authentication token missing');
+  }
+  const response = await axios.put<TagCategory>(`${env.BASE_URL}/api/tag-categories/${categoryId}`, data, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  return response.data;
+};
+
+// Hook to update a tag category
+export const useUpdateTagCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation<TagCategory, Error, { categoryId: string, data: Partial<Pick<TagCategory, 'name' | 'description' | 'tags' | 'isActive'>> }>({
+    mutationFn: updateTagCategory,
+    onSuccess: (updatedCategory) => {
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.tagCategories] });
+      // Optionally update the specific category in cache
+      queryClient.setQueryData(
+        QueryKeys.tagCategoryById(updatedCategory._id),
+        updatedCategory
+      );
+      // And update it in the list of all categories
+      queryClient.setQueryData<TagCategory[]>([QueryKeys.tagCategories], (oldData = []) =>
+        oldData.map(category => 
+          category._id === updatedCategory._id ? updatedCategory : category
+        )
+      );
+      toast.success(`Tag category "${updatedCategory.name}" updated successfully!`);
+    },
+    onError: (error: any, variables) => {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        `Failed to update tag category ${variables.data.name || variables.categoryId}.`;
+      toast.error(message);
+    },
   });
 };

@@ -47,7 +47,7 @@ const MediaApprovalSection: React.FC = () => {
 
   const handleDeleteRejected = (mediaId: string) => {
     if (window.confirm('Are you sure you want to permanently delete this rejected media item?')) {
-      deleteMediaMutation.mutate(mediaId);
+      deleteMediaMutation.mutate({ mediaId });
     }
   };
 
@@ -233,7 +233,7 @@ const MediaApprovalSection: React.FC = () => {
                           onClick={() => handleDeleteRejected(media._id!)}
                           disabled={deleteMediaMutation.isPending || isLoading} 
                         >
-                          {deleteMediaMutation.isPending && deleteMediaMutation.variables === media._id ? (
+                          {deleteMediaMutation.isPending && deleteMediaMutation.variables?.mediaId === media._id ? (
                             <CircularProgress size={20} sx={{mr:1}} /> 
                           ) : null}
                           Delete Log Entry

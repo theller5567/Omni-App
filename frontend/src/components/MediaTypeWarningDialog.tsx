@@ -11,7 +11,7 @@ import {
   Box 
 } from '@mui/material';
 import { FaExclamationTriangle } from 'react-icons/fa';
-import { MediaType } from '../store/slices/mediaTypeSlice';
+import { MediaType } from '../hooks/query-hooks';
 
 interface MediaTypeWarningDialogProps {
   open: boolean;

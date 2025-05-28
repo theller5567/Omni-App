@@ -24,7 +24,7 @@
   --color-surface-variant: #b7b5b5;
   --color-surface-elevated: #ffffff;
   --color-surface-light: #cdcbcb;
-  --color-surface-gradient: linear-gradient(to bottom right, var(--color-surface-light), var(--color-surface-variant));
+  --color-surface-gradient: linear-gradient(to bottom right, rgba(255, 255, 255, 1), rgba(220, 220, 220, 1));
   
   // Text Colors
   --color-text-primary: #000000;

@@ -306,14 +306,15 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
         styleOverrides: {
           root: {
             ...(mode === 'light' && {
+              color: colors.primary,
               backgroundColor: 'transparent',
             }),
             '&.MuiInputLabel-shrink': {
               ...(mode === 'light' && {
                 backgroundColor: 'transparent',
+                color: colors.primary,
                 '&.MuiInputLabel-outlined': {
                   padding: '0 4px',
-                  backgroundColor: getCssVar('--color-surface')
                 }
               })
             }

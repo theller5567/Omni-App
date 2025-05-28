@@ -42,8 +42,10 @@ interface ActivityLog {
   ip?: string;
   userAgent?: string;
   timestamp: string;
-  mediaSlug?: string;
-  mediaTitle?: string;
+  mediaSlug?: string; // CamelCase from interface
+  mediaTitle?: string; // CamelCase from interface
+  mediaslug?: string; // Optional: lowercase version from potential API inconsistency
+  mediatitle?: string; // Optional: lowercase version from potential API inconsistency
   resourceType?: string;
   tagName?: string;
   tagCategoryName?: string;
@@ -88,7 +90,7 @@ const RecentActivity: React.FC = () => {
 
   // Process activities (enrichment, filtering) once all data is available
   const processedActivities = React.useMemo(() => {
-    let logs: ActivityLog[] = activityLogs || []; // Use activityLogs directly
+    const logs: ActivityLog[] = activityLogs || []; // Use const
     // For now, just return the fetched logs directly, assuming backend provides sufficient info
     return logs;
   }, [activityLogs]);
@@ -149,7 +151,7 @@ const RecentActivity: React.FC = () => {
   const renderActivityDetails = (activity: ActivityLog) => {
     // Debug: log the full activity object
     console.log('RecentActivity: activity object', activity);
-    let details = activity.details || activity.action;
+    const details = activity.details || activity.action; // Use const
     let changedFields: string[] = [];
     let mainDetails = details;
     let mediaLink: string | null = null;
@@ -251,10 +253,10 @@ const RecentActivity: React.FC = () => {
 
     // Media link rendering logic (updated to use itemColor)
     {
-      const mediaSlug = activity.mediaSlug || (activity as any)['mediaslug'];
-      const mediaTitle = activity.mediaTitle || (activity as any)['mediatitle'];
-      console.log('RecentActivity: resolved mediaSlug', mediaSlug, 'mediaTitle', mediaTitle);
-      if (activity.resourceType === 'media' && mediaSlug && mediaTitle) {
+      const resolvedMediaSlug = activity.mediaSlug || activity.mediaslug; // Prefer camelCase, fallback to lowercase
+      const resolvedMediaTitle = activity.mediaTitle || activity.mediatitle; // Prefer camelCase, fallback to lowercase
+      console.log('RecentActivity: resolved mediaSlug', resolvedMediaSlug, 'mediaTitle', resolvedMediaTitle);
+      if (activity.resourceType === 'media' && resolvedMediaSlug && resolvedMediaTitle) {
         let displayTextBefore = '';
         if (activity.action === 'UPLOAD') {
           displayTextBefore = 'Uploaded media file: ';
@@ -274,14 +276,14 @@ const RecentActivity: React.FC = () => {
             <Typography variant="body2" component="span" noWrap sx={{ mr: 1 }}>
               {displayTextBefore}
               <Link 
-                to={`/media/slug/${mediaSlug}`} 
+                to={`/media/slug/${resolvedMediaSlug}`} 
                 style={{ 
                   textDecoration: 'underline', 
                   color: itemColor, // Use itemColor for the link
                   fontWeight: 500 
                 }}
               >
-                {mediaTitle}
+                {resolvedMediaTitle}
               </Link>
             </Typography>
             {changedFields.length > 0 && (
@@ -310,7 +312,7 @@ const RecentActivity: React.FC = () => {
     let foundMedia: TransformedMediaFile | undefined;
     let shouldTryUpdateLink = false;
     let displayTextBefore = '';
-    let displayTextAfter = '';
+    const displayTextAfter = ''; // Use const
 
     if (actionType === 'UPLOAD') {
       if (activity.targetSlug) {

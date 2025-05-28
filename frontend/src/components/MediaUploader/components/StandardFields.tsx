@@ -16,11 +16,11 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import SearchIcon from "@mui/icons-material/Search";
 import FieldLabel from "./FieldLabel";
 import { MetadataState } from "../types";
-import { TagCategory } from "../../../store/slices/tagCategorySlice";
+import { TagCategory } from "../../../hooks/query-hooks";
 
 interface StandardFieldsProps {
   metadata: MetadataState;
-  handleMetadataChange: (field: string, value: any) => void;
+  handleMetadataChange: (field: string, value: unknown) => void;
   showTagFilter: boolean;
   setShowTagFilter: React.Dispatch<React.SetStateAction<boolean>>;
   tagCategories: TagCategory[];

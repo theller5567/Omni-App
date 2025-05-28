@@ -9,9 +9,10 @@ import {
     useUserById,
     useMediaByUserId,
     useUserProfile,
-    useDeleteMedia
+    useDeleteMedia,
+    MediaFile,
+    TransformedMediaFile
   } from '../hooks/query-hooks';
-import { BaseMediaFile as MediaFile } from '../interfaces/MediaFile'; // Assuming MediaFile interface is used by useMediaByUserId
 
 const UserPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +30,17 @@ const UserPage: React.FC = () => {
   // State for delete confirmation dialog
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedMediaIdForDelete, setSelectedMediaIdForDelete] = useState<string | null>(null);
+
+  // Memoized and transformed media data
+  const transformedUserMedia = useMemo((): TransformedMediaFile[] => {
+    if (!userMedia) return [];
+    return userMedia.map((mediaFile: MediaFile): TransformedMediaFile => ({
+      ...mediaFile,
+      id: mediaFile._id, // MediaFile from query-hooks has _id: string
+      displayTitle: mediaFile.title || mediaFile.metadata?.fileName || 'Untitled',
+      thumbnailUrl: mediaFile.metadata?.v_thumbnail || mediaFile.location,
+    }));
+  }, [userMedia]);
 
   // Handler for clicking on a media file
   const handleFileClick = (file: MediaFile) => {
@@ -74,20 +86,6 @@ const UserPage: React.FC = () => {
       localStorage.setItem('userPageViewMode', newViewMode);
     }
   };
-  
-  // Prepare rows for VirtualizedDataTable
-  const tableRows = useMemo(() => {
-    if (!userMedia) return [];
-    return userMedia.map(media => ({
-      ...media,
-      id: media._id || media.id || '', // Ensure id is present
-      // Add any other transformations needed for DataTable columns
-      // For example, if DataTable expects a specific date format or nested data flattened
-      fileName: media.metadata?.fileName || media.title || 'Untitled',
-      // Ensure metadata exists for tags access, provide empty array as fallback
-      tags: media.metadata?.tags || [],
-    }));
-  }, [userMedia]);
 
   if (isUserLoading) {
     return (
@@ -192,7 +190,7 @@ const UserPage: React.FC = () => {
               gap: 3,
             }}
           >
-            {userMedia.map((media: MediaFile) => (
+            {transformedUserMedia.map((media: TransformedMediaFile) => (
               <Box key={media._id} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <MediaCard
                   file={media}
@@ -217,12 +215,8 @@ const UserPage: React.FC = () => {
         ) : (
           <Box sx={{ height: '70vh', width: '100%', mt: 2 }}> {/* Adjust height as needed */}
             <VirtualizedDataTable
-              rows={tableRows}
-              // onSelectionChange={(selection) => setSelectedTableRows(selection as string[])} // Removed unused prop
+              rows={transformedUserMedia}
               showCheckboxes={false}
-              // Note: VirtualizedDataTable handles its own row click navigation
-              // If you need additional actions on row click specific to UserPage,
-              // you might need to modify VirtualizedDataTable or pass another callback.
             />
           </Box>
         )

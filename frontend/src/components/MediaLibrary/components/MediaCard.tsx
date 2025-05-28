@@ -2,10 +2,10 @@ import React from 'react';
 import { Card, CardContent, Typography, Box} from '@mui/material';
 import '../MediaCard.scss';
 import { isImageFile, isVideoFile, getFileIcon } from '../utils';
-import { useMediaTypes, MediaType } from '../../../hooks/query-hooks';
+import { useMediaTypes, MediaType, TransformedMediaFile } from '../../../hooks/query-hooks';
 
 interface MediaCardProps {
-  file: any;
+  file: TransformedMediaFile;
   handleFileClick: () => void;
   onDeleteClick?: () => void;
 }
@@ -120,20 +120,20 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
       } 
       
       if (isVideoFile(file.fileExtension) || file.mediaType?.includes('Video')) {
-        if (file.metadata?.v_thumbnail) {
-          // Add a timestamp to always get the fresh thumbnail
-          const timestamp = file.metadata?.v_thumbnailTimestamp || Date.now();
-          const thumbnailUrl = file.metadata.v_thumbnail.split('?')[0]; // Get clean URL
+        if (file.metadata && typeof file.metadata.v_thumbnail === 'string') {
+          // Now file.metadata is confirmed to exist, and file.metadata.v_thumbnail is a string.
+          const timestamp = file.metadata.v_thumbnailTimestamp ?? Date.now(); 
+          const thumbnailUrl = file.metadata.v_thumbnail.split('?')[0]; 
           const thumbnailWithCacheBuster = `${thumbnailUrl}?t=${timestamp}&id=${file.id || ''}`;
           return (
             <img 
               src={thumbnailWithCacheBuster} 
-              alt={file.metadata?.fileName || file.title || 'Video'} 
+              alt={file.metadata.fileName || file.title || 'Video'} 
               className="preview-image"
               loading="lazy"
               key={`thumb-card-${file.id}-${timestamp}`} // Add key to force re-render
               onError={(e) => {
-                console.warn('Error loading video thumbnail:', file.metadata.v_thumbnail);
+                console.warn('Error loading video thumbnail:', file.metadata?.v_thumbnail); // Added optional chaining here
                 // Replace with fallback
                 e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzNiODJmNiI+PHBhdGggZD0iTTEyIDJjNS41MiAwIDEwIDQuNDggMTAgMTBzLTQuNDggMTAtMTAgMTAtMTAtNC40OC0xMC0xMCA0LjQ4LTEwIDEwLTEwem0wLTJjLTYuNjMgMC0xMiA1LjM3LTEyIDEyczUuMzcgMTIgMTIgMTIgMTItNS4zNyAxMi0xMi01LjM3LTEyLTEyLTEyem0tMyAxN3YtMTBsOSA1LjAxNC05IDQuOTg2eiIvPjwvc3ZnPg==';
               }}
