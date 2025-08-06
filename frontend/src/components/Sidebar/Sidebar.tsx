@@ -3,7 +3,7 @@ import { Sidebar, Menu, MenuItem } from "react-pro-sidebar";
 import { Box, Avatar, CircularProgress, Typography } from "@mui/material";
 import { motion } from "framer-motion";
 import "./sidebar.scss";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import logoLight from "../../assets/Omni-new-logo-revvity-grey.png";
 import logoDark from "../../assets/Omni-new-logo-revvity-white.png";
 import { useTheme } from "@mui/material/styles";
@@ -17,8 +17,7 @@ import {
   FaLayerGroup,
 } from "react-icons/fa";
 import { useEffect } from "react";
-import { useQueryClient } from '@tanstack/react-query';
-import { QueryKeys, useUserProfile } from '../../hooks/query-hooks';
+import { useUserProfile } from '../../hooks/query-hooks';
 import { useLogoutHandler } from "../../hooks/useAuthHandler";
 
 // Define CSS variables for the components
@@ -40,9 +39,7 @@ const setCssVariables = (theme: any) => {
 
 const CustomSidebar: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const theme = useTheme();
-  const queryClient = useQueryClient();
   const handleSignOut = useLogoutHandler();
 
   const { data: userProfile, isLoading: isUserLoading, error: userError } = useUserProfile();

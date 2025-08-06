@@ -38,7 +38,6 @@ import {
 } from './components';
 import {
   FileTypeCategory,
-  predefinedColors,
   normalizeTag
 } from '../../utils/mediaTypeUploaderUtils';
 import { transformConfigToApiData } from '../../types/mediaTypes';
@@ -444,7 +443,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       setIsSaving(true);
 
       // Make sure we have a color - use default if not specified
-      const catColor = mediaTypeConfig.catColor || '#2196f3';
+      mediaTypeConfig.catColor = mediaTypeConfig.catColor || '#2196f3';
       // const colorName = predefinedColors.find(c => c.hex === catColor)?.name || 'Default Blue'; // Assuming colorName might be used later or was part of original logging
       
       // Log settings before saving
@@ -465,7 +464,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
           // Use TanStack Query mutation to update media type
           await updateMediaTypeMutation({ 
             id: mediaTypeConfig._id as string, 
-            updates: apiData 
+            updates: apiData as any
           });
           
           // Also make a specific request to update the settings field
@@ -495,7 +494,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       } else {
         try {
           // Use TanStack Query mutation to create new media type
-          const createdMediaType = await createMediaTypeMutation(apiData);
+          const createdMediaType = await createMediaTypeMutation(apiData as any);
           
           // Also make a specific request to update the settings field
           if (mediaTypeConfig.settings && createdMediaType._id) {

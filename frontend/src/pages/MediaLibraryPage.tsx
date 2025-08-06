@@ -150,8 +150,8 @@ const MediaContainer: React.FC = () => {
         const libraryEntry: BaseMediaFile & { fileSize: number; modifiedDate: string; thumbnailUrl?: string; displayTitle?: string; } = {
           _id: file._id,
           id: file.id || file._id, 
-          title: file.displayTitle || file.title || 'Untitled', 
-          location: file.thumbnailUrl || file.location || '', 
+          title: String(file.displayTitle || file.title || 'Untitled'), 
+          location: String(file.thumbnailUrl || file.location || ''), 
           slug: file.slug || `media-${file._id}`, 
           fileExtension: file.fileExtension,
           mediaType: file.mediaType,
@@ -159,10 +159,10 @@ const MediaContainer: React.FC = () => {
           modifiedDate: file.modifiedDate, 
           metadata: { 
             ...(file.metadata || {}), 
-            fileName: file.metadata?.fileName || file.displayTitle || file.title || 'Untitled',
+            fileName: String(file.metadata?.fileName || file.displayTitle || file.title || 'Untitled'),
           },
-          thumbnailUrl: file.thumbnailUrl,
-          displayTitle: file.displayTitle,
+          thumbnailUrl: String(file.thumbnailUrl) as string | undefined,
+          displayTitle: String(file.displayTitle) as string | undefined,
         };
         return libraryEntry;
       });
@@ -192,8 +192,8 @@ const MediaContainer: React.FC = () => {
         const libraryEntry: BaseMediaFile & { fileSize: number; modifiedDate: string; thumbnailUrl?: string; displayTitle?: string; } = {
           _id: file._id,
           id: file.id || file._id, 
-          title: file.displayTitle || file.title || 'Untitled', 
-          location: file.thumbnailUrl || file.location || '', 
+          title: String(file.displayTitle || file.title || 'Untitled'), 
+          location: String(file.thumbnailUrl || file.location || ''), 
           slug: file.slug || `media-${file._id}`, 
           fileExtension: file.fileExtension,
           mediaType: file.mediaType,
@@ -201,10 +201,10 @@ const MediaContainer: React.FC = () => {
           modifiedDate: file.modifiedDate, 
           metadata: { 
             ...(file.metadata || {}), 
-            fileName: file.metadata?.fileName || file.displayTitle || file.title || 'Untitled',
+            fileName: String(file.metadata?.fileName || file.displayTitle || file.title || 'Untitled'),
           },
-          thumbnailUrl: file.thumbnailUrl,
-          displayTitle: file.displayTitle,
+          thumbnailUrl: String(file.thumbnailUrl) as string | undefined,
+          displayTitle: String(file.displayTitle) as string | undefined,
         };
         return libraryEntry;
       });

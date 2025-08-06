@@ -29,7 +29,7 @@ export default defineConfig(({ mode }) => {
           manualChunks: {
             vendor: ['react', 'react-dom', 'react-router-dom'],
             mui: ['@mui/material', '@mui/icons-material'],
-            redux: ['redux', 'react-redux', '@reduxjs/toolkit'],
+  
             // Simplified chunks with only packages we know are installed
             utils: ['axios']
           }

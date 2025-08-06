@@ -83,7 +83,7 @@ const MediaPicker: React.FC<MediaPickerProps> = ({
   // Render preview based on media type
   const renderPreview = (media: TransformedMediaFile) => {
     // Handle images
-    const extension = media.fileExtension || media.metadata?.fileExtension || '';
+    const extension = String(media.fileExtension || media.metadata?.fileExtension || '');
     if (isImageFile(extension)) {
       return (
         <CardMedia
@@ -121,7 +121,7 @@ const MediaPicker: React.FC<MediaPickerProps> = ({
         }}
       >
         <Typography variant="caption">
-          {extension.toUpperCase() || 'FILE'}
+          {extension ? extension.toUpperCase() : 'FILE'}
         </Typography>
       </Box>
     );
