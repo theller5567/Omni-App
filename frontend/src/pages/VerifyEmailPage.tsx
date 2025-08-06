@@ -1,6 +1,6 @@
 // frontend/src/pages/VerifyEmailPage.tsx
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useLocation, Link as RouterLink } from 'react-router-dom';
 import { Box, Typography, Button, CircularProgress, Container, Alert } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
