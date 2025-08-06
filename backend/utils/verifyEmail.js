@@ -19,7 +19,8 @@ export const verifyEmail = async (req, res) => {
     user.isVerified = true;
     await user.save();
 
-    res.redirect(`http://localhost:5173/password-setup?token=${token}`);
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${baseUrl}/password-setup?token=${token}`);
   } catch (error) {
     console.error("Error in verifyEmail:", error);
     res.status(500).json({ message: "Server error", error: error.message });

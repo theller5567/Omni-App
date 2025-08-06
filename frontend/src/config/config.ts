@@ -71,7 +71,7 @@ export const fieldConfigurations = {
 };
 
 // Application config
-export const API_BASE_URL = 'http://localhost:5002';
+export const API_BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5002';
 
 // Database settings
 export const DB_CONFIG = {

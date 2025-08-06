@@ -178,8 +178,8 @@ export const configureBucketCors = async () => {
             AllowedOrigins: [
               "http://localhost:5173",  // Development frontend
               "http://localhost:5002",  // Development backend
-              "https://omni-app.com",   // Production domain (adjust this)
-              "*"                       // Allow all origins for testing
+              "https://nerdycoder.com", // Production frontend
+              "https://omni-app-mern.onrender.com" // Production backend
             ],
             ExposeHeaders: ["ETag"],
             MaxAgeSeconds: 3000,
