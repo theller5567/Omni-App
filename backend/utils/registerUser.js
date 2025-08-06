@@ -14,7 +14,8 @@ export const registerUser = async (req, res) => {
     }
     const username = `${firstName.toLowerCase()}${lastName.toUpperCase()}`;
     const verificationToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: "2d" });
-    const verificationLink = `http://localhost:5002/api/auth/verify-email/${verificationToken}`;
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const verificationLink = `${baseUrl}/verify-email?token=${verificationToken}`;
 
     // Create properly encoded avatar URL with lowercase initials
     const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toLowerCase();
