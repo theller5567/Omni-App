@@ -133,7 +133,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
         frequency: formState.frequency as NotificationSettingsData['frequency'],
         scheduledTime: formState.scheduledTime,
         // Send recipients as an array of objects with _id
-        recipients: formState.recipients.map(r => ({ _id: r._id, username: r.username, email: r.email })),
+        recipients: formState.recipients.map((r: { _id: string; username?: string; email?: string }) => ({ _id: r._id, username: r.username, email: r.email })),
     };
 
     if (process.env.NODE_ENV === 'development') {
@@ -150,7 +150,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
       actionTypes: ['ALL'],
       resourceTypes: ['ALL'],
       triggerRoles: ['ALL'],
-      priority: 'normal',
+      priority: 'normal' as NotificationRule['priority'],
       includeDetails: true
     });
     setCurrentRule(null);
@@ -164,7 +164,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
       actionTypes: rule.actionTypes,
       resourceTypes: rule.resourceTypes,
       triggerRoles: rule.triggerRoles,
-      priority: rule.priority || 'normal',
+      priority: rule.priority || ('normal' as NotificationRule['priority']),
       includeDetails: rule.includeDetails !== undefined ? rule.includeDetails : true
     });
     setCurrentRule(rule);
@@ -189,7 +189,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
         actionTypes: ruleForm.actionTypes || ['ALL'],
         resourceTypes: ruleForm.resourceTypes || ['ALL'],
         triggerRoles: ruleForm.triggerRoles || ['ALL'],
-        priority: ruleForm.priority || 'normal',
+        priority: ruleForm.priority || ('normal' as NotificationRule['priority']),
         includeDetails: ruleForm.includeDetails !== undefined ? ruleForm.includeDetails : true,
       };
       addRuleMutation.mutate(newRuleData);
@@ -204,7 +204,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ userProfile
   };
 
   const handleTestNotification = async () => {
-    await sendTestNotificationMutation.mutate(formState.recipients.map(r => r._id));
+    await sendTestNotificationMutation.mutate(formState.recipients.map((r: { _id: string }) => r._id));
   };
 
   if (isLoading || isLoadingRecipients) {

@@ -56,9 +56,9 @@ export interface MediaFile {
     tags?: string[]; // Changed from any[]
     v_thumbnail?: string; // Added explicitly
     v_thumbnailTimestamp?: number; // Added explicitly
-    [key: string]: any;
+    [key: string]: unknown;
   };
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface MediaType {
@@ -66,7 +66,7 @@ export interface MediaType {
   name: string;
   description: string; // Assuming description is always present, if not, make it optional
   catColor: string;
-  fields?: Array<{ name: string; type: string; options?: string[]; required?: boolean; [key: string]: any; }>; // Added from schema
+  fields?: Array<{ name: string; type: string; options?: string[]; required?: boolean; [key: string]: unknown; }>; // Added from schema
   acceptedFileTypes?: string[]; // Added from schema
   status?: 'active' | 'deprecated' | 'archived'; // Added from schema
   usageCount?: number; // Added from schema
@@ -75,8 +75,8 @@ export interface MediaType {
   baseType?: 'BaseImage' | 'BaseVideo' | 'BaseAudio' | 'BaseDocument' | 'Media'; // Added from schema
   includeBaseFields?: boolean; // Added from schema
   defaultTags?: string[]; // Added from schema
-  settings?: { allowRelatedMedia?: boolean; [key: string]: any; }; // Added from schema
-  [key: string]: any;
+  settings?: { allowRelatedMedia?: boolean; [key: string]: unknown; }; // Added from schema
+  [key: string]: unknown;
 }
 
 // Tags and Tag Categories interfaces
@@ -111,7 +111,7 @@ export interface User {
   createdAt?: string;
   updatedAt?: string;
   token?: string;
-  profile?: any;
+  profile?: Record<string, unknown>;
 }
 
 // Auth-related types
@@ -129,7 +129,7 @@ export interface UserRegistrationData {
 }
 
 export interface AuthResponse {
-  token: string;
+  accessToken: string;
   refreshToken: string;
   user: User; // Use the existing User type
   message?: string;
@@ -212,6 +212,17 @@ export interface NotificationSettingsData {
   recipients: Array<{ _id: string; username?: string; email?: string }>; // Array of user-like objects with at least _id
   scheduledTime: string; // e.g., '09:00'
   rules?: NotificationRule[];
+}
+
+// Add ApiError interface for more specific error typing in mutations
+interface ApiError extends Error {
+  response?: {
+    data?: {
+      message?: string;
+      // Potentially other error fields like code, details etc.
+    };
+    status?: number;
+  };
 }
 
 // ======================
@@ -333,13 +344,21 @@ export const deleteMediaItem = async ({ mediaId, options }: { mediaId: string, o
       toast.success(response.data.message || `Media item ${mediaId} deleted successfully.`);
     }
     return response.data;
-  } catch (error: any) {
+  } catch (error: ApiError | Error | unknown) {
     console.error('Error deleting media item:', error);
     // Only show toast if not silent, or always show errors?
     // For now, let's assume errors should always be shown unless explicitly silenced for errors too.
     // If a silent option should also suppress error toasts, that logic would be added here.
     if (!options?.silent) { // Optional: make error toasts also respect silent flag
-      toast.error(`Error deleting media ${mediaId}: ${error.response?.data?.message || error.message}`);
+      let message = 'Unknown error';
+      if (typeof error === 'object' && error !== null) {
+        if ('response' in error && (error as ApiError).response?.data?.message) {
+          message = (error as ApiError).response!.data!.message!;
+        } else if ('message' in error) {
+          message = (error as Error).message;
+        }
+      }
+      toast.error(`Error deleting media ${mediaId}: ${message}`);
     }
     throw error;
   }
@@ -561,7 +580,7 @@ export const fetchMediaBySlug = async (slug: string | undefined): Promise<MediaF
         }
         
         return oldFormatResponse.data;
-      } catch (oldFormatError: any) {
+      } catch (_oldFormatError: unknown) { // Changed from any to unknown
         // Continue to ID extraction if old format also fails
         if (process.env.NODE_ENV === 'development') {
           console.log(`Original format endpoint also failed. Trying ID extraction.`);
@@ -607,11 +626,12 @@ export const fetchMediaBySlug = async (slug: string | undefined): Promise<MediaF
               
               successEndpoint = endpoint;
               break; // Exit the loop if successful
-            } catch (endpointError: any) {
+            } catch (endpointError: ApiError | Error | unknown) {
               // Log the failed endpoint attempt with status code if available
               if (process.env.NODE_ENV === 'development') {
-                const status = endpointError.response?.status;
-                console.log(`Endpoint ${endpoint} failed: ${status ? `Status ${status}` : endpointError.message}`);
+                const status = typeof endpointError === 'object' && endpointError !== null && 'response' in endpointError ? (endpointError as ApiError).response?.status : undefined;
+                const message = typeof endpointError === 'object' && endpointError !== null && 'message' in endpointError ? (endpointError as Error).message : 'Unknown error during endpoint check';
+                console.log(`Endpoint ${endpoint} failed: ${status ? `Status ${status}` : message}`);
               }
               // Continue to next endpoint
             }
@@ -630,13 +650,13 @@ export const fetchMediaBySlug = async (slug: string | undefined): Promise<MediaF
             }
             throw new Error(`Media not found: The file with ID "${extractedId}" could not be found on the server.`);
           }
-        } catch (idError: any) {
+        } catch (idError: ApiError | Error | unknown) {
           // Handle errors from the ID-based request
-          if (idError.response) {
-            const { status } = idError.response;
+          if (typeof idError === 'object' && idError !== null && 'response' in idError) {
+            const { status } = (idError as ApiError).response!;
             
             if (status === 500) {
-              console.error('Server error fetching media by ID:', idError.response.data);
+              console.error('Server error fetching media by ID:', (idError as ApiError).response!.data);
               throw new Error(`Server error: The media file could not be loaded. The server may be having issues with this specific media.`);
             } else if (status === 404) {
               throw new Error(`Media not found: The file with ID "${extractedId}" does not exist or has been deleted.`);
@@ -646,7 +666,8 @@ export const fetchMediaBySlug = async (slug: string | undefined): Promise<MediaF
           }
           
           // If no specific error was handled, throw a more detailed error
-          throw new Error(`Failed to fetch media with ID ${extractedId}: ${idError.message}`);
+          const message = typeof idError === 'object' && idError !== null && 'message' in idError ? (idError as Error).message : 'Unknown error during ID fallback';
+          throw new Error(`Failed to fetch media with ID ${extractedId}: ${message}`);
         }
       } else {
         // No UUID pattern found in the slug, so we can't try the ID fallback
@@ -655,11 +676,11 @@ export const fetchMediaBySlug = async (slug: string | undefined): Promise<MediaF
     }
     
     // Handle specific status codes from the original slug request
-    if (error.response) {
-      const { status } = error.response;
+    if (typeof error === 'object' && error !== null && 'response' in error) {
+      const { status } = (error as ApiError).response!;
       
       if (status === 500) {
-        console.error('Server error fetching media:', error.response.data);
+        console.error('Server error fetching media:', (error as ApiError).response!.data);
         throw new Error(`Server error: The media file could not be loaded. The server may be having issues with this specific media.`);
       } else if (status === 404) {
         throw new Error(`Media not found: The file with slug "${slug}" does not exist or has been deleted.`);
@@ -732,22 +753,46 @@ export const updateMediaItem = async (mediaData: Partial<MediaFile> & { changedF
         }
       }
     );
-  } catch (error: any) {
+  } catch (error: ApiError | Error | unknown) {
     // If ID endpoint fails with 404, try the slug endpoint
-    if (error.response && error.response.status === 404 && mediaSlug) {
+    let is404 = false;
+    if (typeof error === 'object' && error !== null && 'response' in error) {
+      const apiError = error as ApiError; // Safe to cast after check
+      if (apiError.response?.status === 404) {
+        is404 = true;
+      }
+    }
+
+    if (is404 && mediaSlug) {
       if (process.env.NODE_ENV === 'development') {
         console.log('ID endpoint failed, trying slug endpoint for:', mediaSlug);
       }
-      response = await axios.put<MediaFile>(
-        `${env.BASE_URL}/api/media/update/${mediaSlug}`,
-        updatePayload,
-        { 
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
+      try {
+        response = await axios.put<MediaFile>(
+          `${env.BASE_URL}/api/media/update/${mediaSlug}`,
+          updatePayload,
+          { 
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
           }
-        }
-      );
+        );
+      } catch (slugUpdateError: ApiError | Error | unknown) {
+         // If the slug update also fails, we should throw this more specific error.
+         // Or handle it, e.g., by logging and then re-throwing the original 'error'
+         // For now, let's re-throw the slugUpdateError to make it clear which step failed.
+         let message = 'Unknown error during slug update';
+         if (typeof slugUpdateError === 'object' && slugUpdateError !== null) {
+           if ('response' in slugUpdateError && (slugUpdateError as ApiError).response?.data?.message) {
+              message = (slugUpdateError as ApiError).response!.data!.message!;
+           } else if ('message' in slugUpdateError) {
+              message = (slugUpdateError as Error).message;
+           }
+         }
+         console.error(`Error updating media by slug (${mediaSlug}) after ID update failed:`, message, slugUpdateError);
+         throw slugUpdateError; // Re-throw the original error object for the mutation onError to handle
+      }
     } else {
       // Re-throw the error if it's not a 404 or we don't have a slug
       throw error;
@@ -761,7 +806,7 @@ export const updateMediaItem = async (mediaData: Partial<MediaFile> & { changedF
 export const checkApiHealth = async (): Promise<{ status: string }> => {
   try {
     // Try using the media-types endpoint which is more likely to exist
-    await axios.get<any>(`${env.BASE_URL}/api/media-types`, {
+    await axios.get<unknown>(`${env.BASE_URL}/api/media-types`, {
       timeout: 5000, // 5 second timeout for health check
       headers: {
         Authorization: `Bearer ${localStorage.getItem('authToken') || ''}`
@@ -770,24 +815,29 @@ export const checkApiHealth = async (): Promise<{ status: string }> => {
     
     // If we got a response, the API is working
     return { status: 'online' };
-  } catch (error: any) {
-    if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      
-      // If we get a 401/403, the API is working but we're not authorized
-      if (error.response.status === 401 || error.response.status === 403) {
-        return { status: 'online (auth required)' };
+  } catch (error: unknown) {
+    if (typeof error === 'object' && error !== null) {
+      const apiError = error as ApiError;
+      if (apiError.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        
+        // If we get a 401/403, the API is working but we're not authorized
+        if (apiError.response.status === 401 || apiError.response.status === 403) {
+          return { status: 'online (auth required)' };
+        }
+        
+        throw new Error(`API responded with status: ${apiError.response.status}`);
+      } else if ((error as any).request) { // axios specific error for no response
+        // The request was made but no response was received
+        throw new Error('API server is not responding');
+      } else if (error instanceof Error) {
+        // Something happened in setting up the request that triggered an Error
+        throw new Error(`API request setup error: ${error.message}`);
       }
-      
-      throw new Error(`API responded with status: ${error.response.status}`);
-    } else if (error.request) {
-      // The request was made but no response was received
-      throw new Error('API server is not responding');
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      throw new Error(`API request setup error: ${error.message}`);
     }
+    // Fallback for other types of errors or if error is not an object
+    throw new Error('An unknown error occurred during API health check');
   }
 };
 
@@ -838,16 +888,16 @@ export const useMedia = (options?: CustomQueryOptions<MediaFile[], Error>) => {
   };
   
   // Create a new options object with our custom callbacks
-  const queryOptions = {
+  const queryOptionsObj = { // Renamed to avoid conflict if options were named queryOptions
     queryKey: QueryKeys.allMedia,
     queryFn: fetchMedia,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false,
     ...options,
-    onSuccess: onSuccessCallback
+    onSuccess: onSuccessCallback,
   };
   
-  return useQuery<MediaFile[], Error, MediaFile[]>(queryOptions as any); // Cast to any to avoid linter error
+  return useQuery<MediaFile[], Error, MediaFile[], typeof QueryKeys.allMedia>(queryOptionsObj);
 };
 
 export const useDeleteMedia = () => {
@@ -922,8 +972,16 @@ export const useCreateMediaType = () => {
       queryClient.invalidateQueries({ queryKey: [QueryKeys.mediaTypes] });
       toast.success('Media type created successfully');
     },
-    onError: (error: any) => {
-      const message = error.response?.data?.message || 'Error creating media type';
+    onError: (error: unknown) => {
+      let message = 'Error creating media type';
+      if (typeof error === 'object' && error !== null) {
+        const apiError = error as ApiError;
+        if (apiError.response?.data?.message) {
+          message = apiError.response.data.message;
+        } else if (error instanceof Error && error.message) {
+          message = error.message;
+        }
+      }
       toast.error(message);
     }
   });
@@ -947,8 +1005,16 @@ export const useUpdateMediaType = () => {
       
       toast.success('Media type updated successfully');
     },
-    onError: (error: any) => {
-      const message = error.response?.data?.message || 'Error updating media type';
+    onError: (error: unknown) => {
+      let message = 'Error updating media type';
+      if (typeof error === 'object' && error !== null) {
+        const apiError = error as ApiError;
+        if (apiError.response?.data?.message) {
+          message = apiError.response.data.message;
+        } else if (error instanceof Error && error.message) {
+          message = error.message;
+        }
+      }
       toast.error(message);
     }
   });
@@ -972,8 +1038,16 @@ export const useDeleteMediaType = () => {
       
       toast.success('Media type deleted successfully');
     },
-    onError: (error: any) => {
-      const message = error.response?.data?.message || 'Error deleting media type';
+    onError: (error: unknown) => {
+      let message = 'Error deleting media type';
+      if (typeof error === 'object' && error !== null) {
+        const apiError = error as ApiError;
+        if (apiError.response?.data?.message) {
+          message = apiError.response.data.message;
+        } else if (error instanceof Error && error.message) {
+          message = error.message;
+        }
+      }
       toast.error(message);
     }
   });
@@ -1461,7 +1535,7 @@ export const useSendTestNotification = (_userProfile: User | null | undefined) =
 // ======================
 
 // Drastically simplified useUserProfile: No options, internal handlers only for now.
-export const useUserProfile = () => {
+export const useUserProfile = (enabled = true) => {
   const queryClient = useQueryClient(); // Get query client
   const hasToken = !!localStorage.getItem('authToken');
 
@@ -1469,7 +1543,7 @@ export const useUserProfile = () => {
     queryKey: QueryKeys.userProfile,
     queryFn: fetchUserProfile, // fetchUserProfile will throw if token is missing now
     staleTime: 1000 * 60 * 15, 
-    enabled: hasToken,
+    enabled: hasToken && enabled,
     retry: (failureCount: number, error: Error) => {
       // If it's an auth error (401/403), clear the query cache for userProfile
       if (error && typeof error === 'object' && 'response' in error && 
@@ -1512,7 +1586,10 @@ export const useUserProfile = () => {
     };
   }
 
-  return queryResult;
+  return {
+    ...queryResult,
+    data: queryResult.isSuccess ? queryResult.data : undefined,
+  };
 };
 
 export const useAllUsers = (options?: Omit<UseQueryOptions<User[], Error, User[], QueryKey>, 'queryKey' | 'queryFn'>) => {
@@ -1611,7 +1688,7 @@ export const loginUser = async (credentials: UserLoginCredentials): Promise<Auth
   const authData = response.data;
   
   // Store tokens in localStorage
-  localStorage.setItem("authToken", authData.token);
+  localStorage.setItem("authToken", authData.accessToken);
   localStorage.setItem("refreshToken", authData.refreshToken);
   
   if (process.env.NODE_ENV === 'development') {
@@ -1654,13 +1731,12 @@ export const useLogin = () => {
       toast.success(data.message || 'Login successful!');
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || error.message || 'Login failed. Please check your credentials.';
+      if (!error.response) {
+        toast.error('Unable to connect to the server. Please check your network connection.');
+      } else {
+        const message = error.response?.data?.message || 'Login failed. Please check your credentials.';
       toast.error(message);
-      // Optionally, clear user profile on certain auth errors if not handled by useUserProfile's own onError
-      // For example, if a 401/403 still gets through here:
-      // if (error.response?.status === 401 || error.response?.status === 403) {
-      //   queryClient.removeQueries({ queryKey: QueryKeys.userProfile });
-      // }
+      }
     },
   });
 };
@@ -1676,8 +1752,12 @@ export const useRegister = () => {
       // queryClient.invalidateQueries({ queryKey: QueryKeys.userProfile });
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || error.message || 'Registration failed. Please try again.';
+      if (!error.response) {
+        toast.error('Unable to connect to the server. Please check your network connection.');
+      } else {
+        const message = error.response?.data?.message || 'Registration failed. Please try again.';
       toast.error(message);
+      }
     },
   });
 };
@@ -2219,22 +2299,23 @@ export const requestRevisionMediaItem = async ({ mediaId, feedback }: { mediaId:
 // Hook to Approve Media
 export const useApproveMedia = () => {
   const queryClient = useQueryClient();
-  return useMutation<MediaFile, Error, string>({
+  return useMutation<MediaFile, Error, string, unknown>({
     mutationFn: approveMediaItem,
     onSuccess: (data) => {
       toast.success(`Media "${data.title || data.metadata?.fileName}" approved successfully.`);
       queryClient.invalidateQueries({ queryKey: QueryKeys.pendingMediaReviews });
-      // Potentially invalidate other queries if this media now appears in other lists
       queryClient.invalidateQueries({ queryKey: QueryKeys.allMedia });
-      if (data.mediaType) {
+      if (data.mediaType && typeof data.mediaType === 'string') {
         queryClient.invalidateQueries({ queryKey: QueryKeys.mediaByType(data.mediaType) });
       }
-      if (data.uploadedBy) {
-        queryClient.invalidateQueries({ queryKey: QueryKeys.mediaByUserId(data.uploadedBy) });
+      // Assuming data.uploadedBy might exist and should be a string if used
+      const uploadedBy = (data as any).uploadedBy;
+      if (uploadedBy && typeof uploadedBy === 'string') {
+        queryClient.invalidateQueries({ queryKey: QueryKeys.mediaByUserId(uploadedBy) });
       }
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to approve media.');
+    onError: (error: ApiError) => {
+      toast.error(error.response?.data?.message || error.message || 'Failed to approve media.');
     },
   });
 };
@@ -2242,17 +2323,19 @@ export const useApproveMedia = () => {
 // Hook to Reject Media
 export const useRejectMedia = () => {
   const queryClient = useQueryClient();
-  return useMutation<MediaFile, Error, { mediaId: string; feedback: string }>({
+  return useMutation<MediaFile, Error, { mediaId: string; feedback: string }, unknown>({
     mutationFn: rejectMediaItem,
     onSuccess: (data) => {
       toast.success(`Media "${data.title || data.metadata?.fileName}" rejected.`);
       queryClient.invalidateQueries({ queryKey: QueryKeys.pendingMediaReviews });
-      if (data.uploadedBy) { // Media might still be visible to uploader with rejected status
-        queryClient.invalidateQueries({ queryKey: QueryKeys.mediaByUserId(data.uploadedBy) });
+      // Assuming data.uploadedBy might exist and should be a string if used
+      const uploadedBy = (data as any).uploadedBy;
+      if (uploadedBy && typeof uploadedBy === 'string') { 
+        queryClient.invalidateQueries({ queryKey: QueryKeys.mediaByUserId(uploadedBy) });
       }
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to reject media.');
+    onError: (error: ApiError) => {
+      toast.error(error.response?.data?.message || error.message || 'Failed to reject media.');
     },
   });
 };
@@ -2260,17 +2343,19 @@ export const useRejectMedia = () => {
 // Hook to Request Revision for Media
 export const useRequestRevisionMedia = () => {
   const queryClient = useQueryClient();
-  return useMutation<MediaFile, Error, { mediaId: string; feedback: string }>({
+  return useMutation<MediaFile, Error, { mediaId: string; feedback: string }, unknown>({
     mutationFn: requestRevisionMediaItem,
     onSuccess: (data) => {
       toast.success(`Revision requested for media "${data.title || data.metadata?.fileName}".`);
       queryClient.invalidateQueries({ queryKey: QueryKeys.pendingMediaReviews });
-      if (data.uploadedBy) {
-        queryClient.invalidateQueries({ queryKey: QueryKeys.mediaByUserId(data.uploadedBy) });
+      // Assuming data.uploadedBy might exist and should be a string if used
+      const uploadedBy = (data as any).uploadedBy;
+      if (uploadedBy && typeof uploadedBy === 'string') {
+        queryClient.invalidateQueries({ queryKey: QueryKeys.mediaByUserId(uploadedBy) });
       }
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to request revision for media.');
+    onError: (error: ApiError) => {
+      toast.error(error.response?.data?.message || error.message || 'Failed to request revision for media.');
     },
   });
 };
@@ -2348,7 +2433,7 @@ export const useDeleteTagCategory = () => {
   const queryClient = useQueryClient();
   return useMutation<void, Error, { categoryId: string; hardDelete?: boolean }>({
     mutationFn: deleteTagCategory,
-    onSuccess: (_data, variables) => {
+    onSuccess: (_data, _variables) => {
       queryClient.invalidateQueries({ queryKey: [QueryKeys.tagCategories] });
       toast.success(`Tag category deleted successfully.`);
     },

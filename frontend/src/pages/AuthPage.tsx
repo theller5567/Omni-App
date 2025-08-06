@@ -5,7 +5,7 @@ import { TextField, Button, Typography, Box, CircularProgress, Container, Alert,
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useLogin, useRegister } from '../hooks/query-hooks'; // Import TanStack Query hooks
+import { useLogin, useRegister, useUserProfile } from '../hooks/query-hooks'; // Import TanStack Query hooks
 
 const AuthPage: React.FC = () => {
   const navigate = useNavigate();
@@ -14,6 +14,15 @@ const AuthPage: React.FC = () => {
   const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [showForm, setShowForm] = useState(true);
   const [emailVerified, setEmailVerified] = useState(false);
+
+  // Check if the user is already logged in
+  const { data: userProfile, isSuccess } = useUserProfile();
+
+  useEffect(() => {
+    if (isSuccess && userProfile) {
+      navigate('/media-library', { replace: true });
+    }
+  }, [isSuccess, userProfile, navigate]);
 
   // Instantiate mutation hooks
   const { mutate: loginMutate, isPending: isPendingLogin } = useLogin();

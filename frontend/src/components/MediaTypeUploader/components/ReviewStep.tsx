@@ -188,6 +188,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ mediaTypeConfig, inputOptions, 
                     }
                   </Box>
                 }
+                secondaryTypographyProps={{ component: 'div' }}
                 secondary={
                   <>
                     <Typography component="span" variant="body2">

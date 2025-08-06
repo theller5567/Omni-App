@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useLogin, useRegister, UserLoginCredentials, UserRegistrationData } from './query-hooks';
 import { useQueryClient } from '@tanstack/react-query';
-import { QueryKeys } from './query-hooks';
 
 export const useAuthHandler = (formData: any, isSignUp: boolean) => {
   const navigate = useNavigate();
@@ -21,7 +20,7 @@ export const useAuthHandler = (formData: any, isSignUp: boolean) => {
       };
       registerUser(registrationData, {
         onSuccess: () => {
-          navigate('/login');
+          navigate('/');
         },
         onError: (error: any) => {
           console.error('Registration failed from useAuthHandler:', error);
@@ -56,10 +55,20 @@ export const useAuthHandler = (formData: any, isSignUp: boolean) => {
 
 export const useLogoutHandler = () => {
   const queryClient = useQueryClient();
-  queryClient.invalidateQueries({ queryKey: [QueryKeys.userProfile] });
-  queryClient.removeQueries();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
+    
+    queryClient.clear();
 
   if (process.env.NODE_ENV === 'development') {
-    console.log('Logout successful');
+      console.log('Logout successful, tokens and cache cleared.');
   }
+
+    navigate('/');
+  };
+
+  return handleLogout;
 }; 

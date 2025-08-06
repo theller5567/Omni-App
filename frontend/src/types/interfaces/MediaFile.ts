@@ -17,8 +17,8 @@ export interface MediaFile {
         altText: string;
         description: string;
         mediaType: string;
-        [key: string]: any;
+        [key: string]: unknown;
     };
 }
-export interface BaseMediaMetadata {
+export interface BaseMediaMetadata extends Record<string, unknown> {
 }

@@ -25,7 +25,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import EmailIcon from '@mui/icons-material/Email';
 import BrushIcon from '@mui/icons-material/Brush';
 import ThemeToggle from '../components/ThemeToggle/ThemeToggle';
-import { ThemeContext } from '../App';
+import { ThemeContext } from '../contexts/ThemeContext';
 import ViewModeToggle from '../components/ViewModeToggle/ViewModeToggle';
 import { useUserProfile, useUpdateUserProfile, User as UserProfileType } from '../hooks/query-hooks';
 import { Link as RouterLink } from 'react-router-dom';

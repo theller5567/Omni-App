@@ -352,7 +352,16 @@ export const updateMediaType = async (req, res) => {
     if (count > 0) {
       // For media types in use, we can only update acceptedFileTypes, catColor, defaultTags, and settings
       // Cannot change fields or name as it could break existing media files
-      let updated = false;
+      
+      let updated = false; // Declare 'updated' at the beginning of the block
+      
+      // MODIFICATION: Allow adding/updating fields even if in use.
+      // Exercise caution: modifying or removing existing fields could impact existing media files.
+      // This change assumes the frontend sends the complete, intended list of fields.
+      if (fields) {
+        mediaType.fields = fields;
+        updated = true;
+      }
       
       if (acceptedFileTypes) {
         mediaType.acceptedFileTypes = acceptedFileTypes;

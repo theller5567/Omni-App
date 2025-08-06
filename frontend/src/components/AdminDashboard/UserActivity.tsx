@@ -162,7 +162,7 @@ const UserActivity: React.FC = () => {
                       <Chip 
                         label={activity.action}
                         size="small"
-                        color={getActionColor(activity.action) as any} // Cast needed if getActionColor returns string not matching ChipProps color
+                        color={getActionColor(activity.action)}
                       />
                     </TableCell>
                     <TableCell>

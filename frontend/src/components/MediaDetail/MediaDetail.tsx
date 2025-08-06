@@ -50,17 +50,17 @@ const MediaInformation = lazy(() => import('./components/MediaInformation'));
 const EditMediaDialog = lazy(() => import('./components/EditMediaDialog'));
 
 // Helper function to safely get metadata fields from either root or metadata object
-const getMetadataField = (mediaFile: any, fieldName: string, defaultValue: any = undefined) => {
+const getMetadataField = (mediaFile: BaseMediaFile | MediaFileType | undefined | null, fieldName: string, defaultValue: any = undefined) => {
   if (!mediaFile) return defaultValue;
   
-  // First check in metadata object
-  if (mediaFile.metadata && mediaFile.metadata[fieldName] !== undefined) {
+  // Check for metadata property and then the specific fieldName
+  if ('metadata' in mediaFile && mediaFile.metadata && typeof mediaFile.metadata === 'object' && Object.prototype.hasOwnProperty.call(mediaFile.metadata, fieldName)) {
     return mediaFile.metadata[fieldName];
   }
   
   // Then check in root object
-  if (mediaFile[fieldName] !== undefined) {
-    return mediaFile[fieldName];
+  if (Object.prototype.hasOwnProperty.call(mediaFile, fieldName)) {
+    return (mediaFile as any)[fieldName]; // Use type assertion after check
   }
   
   // Return default if not found anywhere
@@ -884,7 +884,7 @@ const MediaDetail: React.FC = () => {
       }
       
       // Use the mutation function
-      await updateMediaMutation(updatePayload as any);
+      await updateMediaMutation(updatePayload);
       
       // Handle successful update
       handleSuccessfulUpdate(updatePayload);
@@ -896,19 +896,30 @@ const MediaDetail: React.FC = () => {
     }
   };
   
-  const handleSuccessfulUpdate = (_updatedMediaFile: Partial<BaseMediaFile> & { metadata?: Record<string, any> }) => {
-    // Close the edit dialog 
-    setIsEditDialogOpen(false);
-    
-    // Invalidate activity logs query to refresh the Recent Activity component
-    queryClient.invalidateQueries({ queryKey: [QueryKeys.activityLogs] });
-    
-    // Refetch data to ensure we have the most up-to-date version
-    refetch();
+  const handleSuccessfulUpdate = (_updatedMediaFile: Partial<MediaFileType> & { metadata?: Record<string, any> }) => {
+    toast.success("Media file updated successfully!");
+    if (isEditDialogOpen) {
+      setIsEditDialogOpen(false);
+    }
+    queryClient.invalidateQueries({ queryKey: [QueryKeys.mediaDetail, slug] });
+    queryClient.invalidateQueries({ queryKey: [QueryKeys.allMedia] });
   };
   
-  const handleFailedUpdate = (payload: unknown) => {
-    console.error('Error updating media:', payload);
+  const handleFailedUpdate = (error: Error | unknown) => {
+    let errorMessage = "Failed to update media file.";
+    if (typeof error === 'object' && error !== null) {
+      const errObj = error as any; // Cast to any to check for common error properties
+      if (errObj.response && errObj.response.data && errObj.response.data.message) {
+        errorMessage += ` Server responded with ${errObj.response.status || 'unknown status'}: ${errObj.response.data.message}`;
+      } else if (errObj.response && errObj.response.message) {
+        errorMessage += ` Server responded with ${errObj.response.status || 'unknown status'}: ${errObj.response.message}`;
+      } else if (errObj.message) {
+        errorMessage += ` ${errObj.message}`;
+      }
+    } else if (typeof error === 'string') {
+      errorMessage += ` ${error}`;
+    }
+    toast.error(errorMessage);
   };
   
   const handleThumbnailUpdate = (thumbnailUrl: string) => {
@@ -1026,12 +1037,12 @@ const MediaDetail: React.FC = () => {
         </Box>
       </Box>
 
-      {isEditDialogOpen && (
+      {isEditDialogOpen && mediaTypeConfig && (
         <Suspense fallback={<CircularProgress size={24} />}>
           <EditMediaDialog
             open={isEditDialogOpen}
             onClose={() => setIsEditDialogOpen(false)}
-            mediaFile={mediaFile as any}
+            mediaFile={mediaFile}
             mediaType={mediaTypeConfig as any}
             onSave={async (data) => {
               await handleSave(data);

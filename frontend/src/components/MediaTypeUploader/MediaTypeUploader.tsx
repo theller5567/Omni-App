@@ -167,6 +167,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
   const [mediaTypeConfig, setMediaTypeConfig] = useState<MediaTypeConfig>(initialMediaTypeConfig);
   const [newTag, setNewTag] = useState(''); // For handling tag input
   const [isEditMode, setIsEditMode] = useState(false);
+  const [originalMediaTypeForEdit, setOriginalMediaTypeForEdit] = useState<MediaTypeConfig | null>(null);
 
   // State for field editing
   const [currentField, setCurrentField] = useState<MediaTypeField>(createField('Text'));
@@ -229,13 +230,28 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
           defaultTags: mediaTypeToEdit.defaultTags || [],
           settings: mediaTypeToEdit.settings || { allowRelatedMedia: false }
         });
+        setOriginalMediaTypeForEdit({ // Store the original loaded config
+          _id: mediaTypeToEdit._id,
+          name: mediaTypeToEdit.name,
+          fields: convertedFields,
+          baseType: mediaTypeToEdit.baseType || 'Media',
+          includeBaseFields: mediaTypeToEdit.includeBaseFields !== false,
+          acceptedFileTypes: mediaTypeToEdit.acceptedFileTypes || [],
+          status: mediaTypeToEdit.status || 'active',
+          catColor: mediaTypeToEdit.catColor || '#2196f3',
+          defaultTags: mediaTypeToEdit.defaultTags || [],
+          settings: mediaTypeToEdit.settings || { allowRelatedMedia: false }
+        });
         setIsEditMode(true);
+        setActiveStep(STEP_NAME); // Explicitly reset step when opening for edit
       }
       setIsLoading(false);
     } else if (open && !editMediaTypeId) {
       // Reset for creating a new media type
       setMediaTypeConfig(initialMediaTypeConfig);
+      setOriginalMediaTypeForEdit(null); // Clear original for new mode
       setIsEditMode(false);
+      setActiveStep(STEP_NAME); // Explicitly reset step when opening for new
     }
     
     // Reset unsaved changes when dialog opens
@@ -283,16 +299,51 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
   
   // Track changes
   useEffect(() => {
-    if (open && 
-      (mediaTypeConfig.name !== initialMediaTypeConfig.name ||
-       mediaTypeConfig.fields.length > 0 ||
-       mediaTypeConfig.acceptedFileTypes.length > 0 ||
-       (mediaTypeConfig.defaultTags?.length || 0) > 0 ||
-       mediaTypeConfig.catColor !== initialMediaTypeConfig.catColor)
-    ) {
-      setHasUnsavedChanges(true);
+    if (!open) {
+      // If dialog is not open, ensure hasUnsavedChanges is false
+      // This can prevent it being true if component re-renders while closed
+      if (hasUnsavedChanges) setHasUnsavedChanges(false);
+      return;
     }
-  }, [open, mediaTypeConfig]);
+
+    let changed = false;
+    const comparisonSource = isEditMode && originalMediaTypeForEdit ? originalMediaTypeForEdit : initialMediaTypeConfig;
+
+    // Deep comparison for fields array as objects might be structurally same but different instances
+    if (mediaTypeConfig.fields.length !== comparisonSource.fields.length || 
+        !mediaTypeConfig.fields.every((field, index) => 
+          JSON.stringify(field) === JSON.stringify(comparisonSource.fields[index])
+        )) {
+      changed = true;
+    }
+
+    // Deep comparison for acceptedFileTypes and defaultTags arrays
+    if (JSON.stringify(mediaTypeConfig.acceptedFileTypes.slice().sort()) !== JSON.stringify(comparisonSource.acceptedFileTypes.slice().sort())) {
+      changed = true;
+    }
+    if (JSON.stringify(mediaTypeConfig.defaultTags?.slice().sort() || []) !== JSON.stringify(comparisonSource.defaultTags?.slice().sort() || [])) {
+      changed = true;
+    }
+    
+    // Comparison for other properties
+    if (
+      mediaTypeConfig.name !== comparisonSource.name ||
+      mediaTypeConfig.catColor !== comparisonSource.catColor ||
+      mediaTypeConfig.baseType !== comparisonSource.baseType ||
+      mediaTypeConfig.includeBaseFields !== comparisonSource.includeBaseFields ||
+      mediaTypeConfig.status !== comparisonSource.status ||
+      // Deep compare settings object
+      JSON.stringify(mediaTypeConfig.settings) !== JSON.stringify(comparisonSource.settings)
+    ) {
+      changed = true;
+    }
+
+    // Only update if the changed state is different from current hasUnsavedChanges
+    // This prevents an infinite loop if setHasUnsavedChanges itself causes a re-render that re-triggers this effect.
+    if (changed !== hasUnsavedChanges) {
+        setHasUnsavedChanges(changed);
+    }
+  }, [open, mediaTypeConfig, isEditMode, originalMediaTypeForEdit, initialMediaTypeConfig, hasUnsavedChanges]);
 
   const steps = ['Name Media Type', 'Add Fields', 'Review & Submit'];
 
@@ -371,8 +422,14 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
   };
 
   const handleFieldUpdate = (field: MediaTypeField) => {
-    setCurrentField(field);
-    setIsEditing(true);
+    // This function should set the field to be edited in a form/modal
+    // The actual update to mediaTypeConfig.fields happens in handleAddField or a similar function
+    // when the field editor form is submitted.
+    setCurrentField(field); 
+    // setIsEditing(true); // This might open a modal or show a form section for the currentField
+    // The provided diff changed this function, this is an attempt to restore its likely original purpose
+    // based on common patterns for such handlers. The actual update of the field in the array
+    // is usually done by another function after editing is complete.
   };
 
   const handleSaveMediaType = async () => {
@@ -388,17 +445,21 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
 
       // Make sure we have a color - use default if not specified
       const catColor = mediaTypeConfig.catColor || '#2196f3';
-      const colorName = predefinedColors.find(c => c.hex === catColor)?.name || 'Default Blue';
+      // const colorName = predefinedColors.find(c => c.hex === catColor)?.name || 'Default Blue'; // Assuming colorName might be used later or was part of original logging
       
       // Log settings before saving
       logSettings('Before creating API data, settings', mediaTypeConfig.settings);
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[MediaTypeUploader] handleSaveMediaType: Current mediaTypeConfig before transform:', JSON.stringify(mediaTypeConfig, null, 2));
+      }
       
-      // Create API data from the media type config
       const apiData = transformConfigToApiData(mediaTypeConfig);
-      
-      // Log API data
-      console.log('API data being sent:', JSON.stringify(apiData, null, 2));
-      
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[MediaTypeUploader] handleSaveMediaType: Transformed apiData for mutation:', JSON.stringify(apiData, null, 2));
+      }
+
       if (isEditMode && mediaTypeConfig._id) {
         try {
           // Use TanStack Query mutation to update media type
@@ -420,8 +481,9 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
             }
           }
           
-          // Success message is already handled by the mutation hook
-          console.log(`Media Type '${mediaTypeConfig.name}' updated successfully`);
+          // Show success toast
+          // toast.success(`Media type '${apiData.name}' (Color: ${colorName}) ${isEditMode ? 'updated' : 'created'} successfully`);
+          toast.success(`Media type '${apiData.name}' ${isEditMode ? 'updated' : 'created'} successfully`);
           
           // Invalidate queries to ensure data is refreshed
           queryClient.invalidateQueries({ queryKey: ['mediaTypes'] });
@@ -448,8 +510,9 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
             }
           }
           
-          // Success message is already handled by the mutation hook
-          console.log(`Media Type '${mediaTypeConfig.name}' added successfully with color: ${colorName}`);
+          // Show success toast
+          // toast.success(`Media type '${apiData.name}' (Color: ${colorName}) ${isEditMode ? 'updated' : 'created'} successfully`);
+          toast.success(`Media type '${apiData.name}' ${isEditMode ? 'updated' : 'created'} successfully`);
           
           // Invalidate queries to ensure data is refreshed
           queryClient.invalidateQueries({ queryKey: ['mediaTypes'] });
@@ -476,9 +539,12 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
   };
 
   const handleClose = () => {
+    console.log('[MediaTypeUploader] handleClose triggered. Current activeStep:', activeStep);
     resetFieldForm();
     setMediaTypeConfig(initialMediaTypeConfig);
+    setOriginalMediaTypeForEdit(null); // Reset original on close
     setActiveStep(STEP_NAME);
+    console.log('[MediaTypeUploader] activeStep set to STEP_NAME. New activeStep should be:', STEP_NAME);
     setActiveField(null);
     setIsEditMode(false);
     setHasUnsavedChanges(false);

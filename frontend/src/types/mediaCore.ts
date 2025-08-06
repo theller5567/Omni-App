@@ -7,7 +7,7 @@ export interface MediaMetadata {
   description?: string;
   visibility: 'public' | 'private';
   tags: string[];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface UploadState {
@@ -80,11 +80,11 @@ export const mediaLogger = (component: string) => ({
     });
   },
 
-  error: (action: string, error: any) => {
+  error: (action: string, error: Error | unknown) => {
     console.error(`[${component}] Error in ${action}:`, {
-      message: error.message,
-      code: error.code,
-      details: error.response?.data
+      message: (error as Error)?.message || 'Unknown error',
+      code: (error as any)?.code,
+      details: (error as any)?.response?.data,
     });
   }
 }); 

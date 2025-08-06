@@ -43,7 +43,7 @@ import "./accountTags.scss";
 const TAGS_PER_PAGE = 30;
 
 const AccountTags: React.FC = () => {
-  // --- User Profile ---
+  // --- User Profile & Data Hooks (All hooks must be at the top) ---
   const { 
     data: userProfile, 
     isLoading: isLoadingUserProfile, 
@@ -51,17 +51,20 @@ const AccountTags: React.FC = () => {
   } = useUserProfile();
 
   const { 
-    data: tags = [], 
+    data: rawTags = [], // Renamed to rawTags to avoid confusion with processed tags
     isLoading: isTagsLoading,
     refetch: refetchTags 
   } = useTags(userProfile);
   
   const {
-    data: tagCategories = [],
+    data: rawTagCategories = [], // Renamed to rawTagCategories
     isLoading: isCategoriesLoading,
     refetch: refetchCategories
   } = useTagCategories(userProfile);
-  
+
+  const { mutate: createTagMutation, isPending: isCreatingTag } = useCreateTag();
+
+  // --- State Hooks ---
   const [searchTerm, setSearchTerm] = useState("");
   const [newTagName, setNewTagName] = useState("");
   const [editingTag, setEditingTag] = useState<{ id: string; name: string } | null>(null);
@@ -73,10 +76,132 @@ const AccountTags: React.FC = () => {
   const [page, setPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Get the mutation function from useCreateTag
-  const { mutate: createTagMutation, isPending: isCreatingTag } = useCreateTag();
+  // --- Memoized Values & Callbacks (Defined after all hooks) ---
+  
+  // Cast rawTags and rawTagCategories to the correct type if necessary, or ensure useTags/useTagCategories return correctly typed arrays.
+  // For now, assuming they are Tag[] and TagCategory[] respectively.
+  const tags: Array<{ _id: string; name: string; }> = useMemo(() => rawTags.map(tag => ({ _id: tag._id, name: tag.name })), [rawTags]);
+  // const tagCategories = useMemo(() => rawTagCategories, [rawTagCategories]); // If no transformation is needed
 
-  // --- Top-level Loading and Auth Checks ---
+  const isLoading = useMemo(() => 
+    isLoadingUserProfile || // Keep user profile loading in the main isLoading check
+    isTagsLoading || 
+    isCategoriesLoading || 
+    isResetting || 
+    isRefreshing ||
+    isCreatingTag,
+  [isLoadingUserProfile, isTagsLoading, isCategoriesLoading, isResetting, isRefreshing, isCreatingTag]);
+
+  const totalTagCount = useMemo(() => tags.length, [tags]);
+
+  const fetchData = useCallback(async (force = false) => {
+    if (isLoading && !force) return;
+    
+    try {
+      setIsRefreshing(true);
+      await Promise.all([
+        typeof refetchTags === 'function' ? refetchTags() : Promise.resolve(),
+        typeof refetchCategories === 'function' ? refetchCategories() : Promise.resolve(),
+      ]);
+    } catch (error) {
+      console.error('Error fetching tag data:', error);
+      if (!(error instanceof TypeError && (error.message.includes('refetchTags is not a function') || error.message.includes('refetchCategories is not a function')))) {
+        toast.error('Error refreshing data.');
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isLoading, refetchTags, refetchCategories]);
+
+  const validateNewTag = useCallback((tagName: string): string | null => {
+    if (!tagName) return null;
+    const validation = validateTag(tagName);
+    if (validation.valid && tags.some(tag => areTagsEquivalent(tag.name, tagName))) {
+      return `Tag "${tagName}" already exists`;
+    }
+    return validation.valid ? null : validation.message || null;
+  }, [tags]);
+
+  React.useEffect(() => {
+    setTagError(validateNewTag(newTagName));
+  }, [newTagName, validateNewTag]);
+
+  const handleCreateTag = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTagName.trim() || !!tagError || isCreatingTag) {
+      if (tagError) {
+        toast.error(tagError);
+      }
+      return;
+    }
+    createTagMutation(normalizeTag(newTagName), {
+      onSuccess: () => {
+        setNewTagName("");
+        // Optionally refetch tags here if createTagMutation doesn't invalidate QueryKeys.tags
+        // refetchTags(); 
+      },
+    });
+  }, [newTagName, tagError, isCreatingTag, createTagMutation]);
+
+  const handleKeyPress = useCallback((event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleCreateTag(event as unknown as React.FormEvent); // Cast needed if FormEvent is stricter
+    }
+  }, [handleCreateTag]);
+
+  const handleDeleteTag = useCallback(async () => {
+    toast.info("Tag deletion is temporarily disabled.");
+    setTagToDelete(null);
+  }, []);
+
+  const handleUpdateTag = useCallback(async () => {
+    toast.info("Tag update is temporarily disabled.");
+    setEditingTag(null);
+  }, []);
+
+  const filteredTags = useMemo(() => {
+    return tags.filter(tag =>
+      normalizeTagForComparison(tag.name).includes(normalizeTagForComparison(searchTerm))
+    );
+  }, [tags, searchTerm]);
+
+  const totalPages = Math.ceil(filteredTags.length / TAGS_PER_PAGE);
+  const paginatedTags = useMemo(() => {
+    const startIndex = (page - 1) * TAGS_PER_PAGE;
+    return filteredTags.slice(startIndex, startIndex + TAGS_PER_PAGE);
+  }, [filteredTags, page]);
+
+  const handleChangePage = useCallback((_event: React.ChangeEvent<unknown>, value: number) => {
+    setPage(value);
+  }, []);
+
+  const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchTerm('');
+    setPage(1);
+  }, []);
+  
+  // handleResetData was defined later, moving its useCallback wrapper here as well
+  const handleResetData = useCallback(async () => {
+    if (isResetting) return;
+    try {
+      setIsResetting(true);
+      await fetchData(true);
+      toast.success('Tag data refreshed successfully');
+    } catch (err) {
+      console.error('Failed to refresh data:', err);
+      toast.error('Failed to refresh tag data');
+    } finally {
+      setIsResetting(false);
+    }
+  }, [isResetting, fetchData]);
+
+
+  // --- Conditional Returns (Now after all hooks) ---
   if (isLoadingUserProfile) {
     return (
       <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
@@ -101,143 +226,79 @@ const AccountTags: React.FC = () => {
       </Container>
     );
   }
-  // --- End Top-level Loading and Auth Checks ---
 
   // Combine loading states
-  const isLoading = useMemo(() => 
-    isTagsLoading || 
-    isCategoriesLoading || 
-    isResetting || 
-    isRefreshing ||
-    isCreatingTag,
-  [isTagsLoading, isCategoriesLoading, isResetting, isRefreshing, isCreatingTag]);
+  // const isLoading = useMemo(() =>  // MOVED UP
+  //   isTagsLoading || 
+  //   isCategoriesLoading || 
+  //   isResetting || 
+  //   isRefreshing ||
+  //   isCreatingTag,
+  // [isTagsLoading, isCategoriesLoading, isResetting, isRefreshing, isCreatingTag]);
 
   // Memoized value for total tag count
-  const totalTagCount = useMemo(() => tags.length, [tags]);
+  // const totalTagCount = useMemo(() => tags.length, [tags]); // MOVED UP
 
   // Fetch data function to refresh both tags and categories
-  const fetchData = useCallback(async (force = false) => {
-    if (isLoading && !force) return;
-    
-    try {
-      setIsRefreshing(true);
-      // Only call refetchTags if it's a function (i.e., useTags is implemented)
-      // For now, we will only refetch categories as useTags is a placeholder.
-      await Promise.all([
-        typeof refetchTags === 'function' ? refetchTags() : Promise.resolve(),
-        refetchCategories()
-      ]);
-    } catch (error) {
-      console.error('Error fetching tag data:', error);
-      // Avoid showing toast if the error is due to refetchTags not being a function
-      if (!(error instanceof TypeError && error.message.includes('refetchTags is not a function'))) {
-        toast.error('Error refreshing data.');
-      }
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [isLoading, refetchTags, refetchCategories]); // Removed refetchTags from dependencies for now
+  // const fetchData = useCallback(async (force = false) => { // MOVED UP
+  // ...
+  // }, [isLoading, refetchTags, refetchCategories]);
 
   // Tag validation logic
-  const validateNewTag = useCallback((tagName: string) => {
-    if (!tagName) return null;
-    
-    const validation = validateTag(tagName);
-    
-    // Check for duplicate tags (case-insensitive)
-    if (validation.valid && (tags as any[]).some((tag: any) => 
-      areTagsEquivalent(tag.name, tagName)
-    )) {
-      return `Tag "${tagName}" already exists`;
-    } 
-    
-    return validation.valid ? null : validation.message || null;
-  }, [tags]);
+  // const validateNewTag = useCallback((tagName: string) => { // MOVED UP
+  // ...
+  // }, [tags]);
 
   // Update tag error when tag name changes
-  React.useEffect(() => {
-    setTagError(validateNewTag(newTagName));
-  }, [newTagName, validateNewTag]);
+  // React.useEffect(() => { // MOVED UP
+  //   setTagError(validateNewTag(newTagName));
+  // }, [newTagName, validateNewTag]);
 
   // Reset tag data function
-  const handleResetData = async () => {
-    if (isResetting) return;
-    
-    try {
-      setIsResetting(true);
-      
-      // Refresh data with force flag
-      await fetchData(true);
-      
-      toast.success('Tag data refreshed successfully');
-    } catch (err) {
-      console.error('Failed to refresh data:', err);
-      toast.error('Failed to refresh tag data');
-    } finally {
-      setIsResetting(false);
-    }
-  };
+  // const handleResetData = async () => { // MOVED UP and wrapped with useCallback
+  // ...
+  // };
 
   // Create tag handler - using memoized validation
-  const handleCreateTag = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTagName.trim() || !!tagError || isCreatingTag) {
-      if (tagError) {
-        toast.error(tagError);
-      }
-      return;
-    }
-    createTagMutation(normalizeTag(newTagName), {
-      onSuccess: () => {
-        setNewTagName("");
-      },
-    });
-  }, [newTagName, tagError, isCreatingTag, createTagMutation]);
+  // const handleCreateTag = useCallback(async (e: React.FormEvent) => { // MOVED UP
+  // ...
+  // }, [newTagName, tagError, isCreatingTag, createTagMutation]);
 
-  const handleKeyPress = useCallback((event: React.KeyboardEvent) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      handleCreateTag(event);
-    }
-  }, [handleCreateTag]);
+  // const handleKeyPress = useCallback((event: React.KeyboardEvent) => { // MOVED UP
+  // ...
+  // }, [handleCreateTag]);
 
-  const handleDeleteTag = useCallback(async () => {
-    toast.info("Tag deletion is temporarily disabled.");
-    setTagToDelete(null);
-  }, []);
+  // const handleDeleteTag = useCallback(async () => { // MOVED UP
+  // ...
+  // }, []);
 
-  const handleUpdateTag = useCallback(async () => {
-    toast.info("Tag update is temporarily disabled.");
-    setEditingTag(null);
-  }, []);
+  // const handleUpdateTag = useCallback(async () => { // MOVED UP
+  // ...
+  // }, []);
 
   // Memoized filtered tags to prevent recalculation on each render
-  const filteredTags = useMemo(() => {
-    return (tags as any[]).filter((tag: any) =>
-      normalizeTagForComparison(tag.name).includes(normalizeTagForComparison(searchTerm))
-    );
-  }, [tags, searchTerm]);
+  // const filteredTags = useMemo(() => { // MOVED UP
+  // ...
+  // }, [tags, searchTerm]);
 
   // Pagination logic
-  const totalPages = Math.ceil(filteredTags.length / TAGS_PER_PAGE);
-  const paginatedTags = useMemo(() => {
-    const startIndex = (page - 1) * TAGS_PER_PAGE;
-    return filteredTags.slice(startIndex, startIndex + TAGS_PER_PAGE);
-  }, [filteredTags, page]);
+  // const totalPages = Math.ceil(filteredTags.length / TAGS_PER_PAGE); // MOVED UP (Calculation based on memoized filteredTags)
+  // const paginatedTags = useMemo(() => { // MOVED UP
+  // ...
+  // }, [filteredTags, page]);
 
-  const handleChangePage = useCallback((_event: React.ChangeEvent<unknown>, value: number) => {
-    setPage(value);
-  }, []);
+  // const handleChangePage = useCallback((_event: React.ChangeEvent<unknown>, value: number) => { // MOVED UP
+  // ...
+  // }, []);
 
-  const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-  }, []);
+  // const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => { // MOVED UP
+  // ...
+  // }, []);
 
   // Clear search handler
-  const handleClearSearch = useCallback(() => {
-    setSearchTerm('');
-    setPage(1); // Reset to first page when search changes
-  }, []);
+  // const handleClearSearch = useCallback(() => { // MOVED UP
+  // ...
+  // }, []);
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -281,14 +342,11 @@ const AccountTags: React.FC = () => {
           <Tabs 
             value={activeTab} 
             onChange={handleTabChange} 
-            sx={{ 
-              borderBottom: 1, 
-              borderColor: 'divider',
-              bgcolor: theme => alpha(theme.palette.primary.main, 0.05)
-            }}
+            indicatorColor="primary"
+            textColor="primary"
             variant="fullWidth"
           >
-            <Tab label={`Tag Categories (${tagCategories.length})`} />
+            <Tab label={`Tag Categories (${rawTagCategories.length})`} />
             <Tab label={`Create & Manage Tags (${totalTagCount})`} />
           </Tabs>
 
@@ -422,7 +480,7 @@ const AccountTags: React.FC = () => {
                       },
                       gap: 1.5
                     }}>
-                      {paginatedTags.map((tag: any) => (
+                      {paginatedTags.map((tag: { _id: string; name: string; }) => (
                         <motion.div
                           key={tag._id}
                           initial={{ opacity: 0, y: 5 }}
@@ -534,7 +592,7 @@ const AccountTags: React.FC = () => {
           </Typography>
           {tagToDelete && (
             <Typography variant="subtitle1" sx={{ mt: 2, fontWeight: 'bold' }}>
-              {tags.find((tag: any) => tag._id === tagToDelete)?.name || 'Unknown Tag'}
+              {tags.find((tag: { _id: string; name: string; }) => tag._id === tagToDelete)?.name || 'Unknown Tag'}
             </Typography>
           )}
         </DialogContent>

@@ -23,17 +23,25 @@ router.get('/', authenticate, async (req, res) => {
 
 // Route to get user profile
 router.get('/profile', authenticate, async (req, res) => {
+  if (!req.user || !req.user.id) {
+    return res.status(401).json({ message: 'Authentication error: User ID not found in token' });
+  }
+  
   try {
-    // Assuming req.user contains the authenticated user's info
-    const user = await User.findOne({ email: req.user.email });
+    const userId = req.user.id;
+    console.log(`Fetching profile for user ID: ${userId}`);
+    const user = await User.findById(userId);
+
     if (!user) {
-      console.log('User not found');
+      console.log(`User with ID ${userId} not found in database.`);
       return res.status(404).json({ message: 'User not found' });
     }
+    
+    // Return the user object, which includes all necessary fields
     res.json(user);
   } catch (error) {
-    console.error('Error fetching user profile:', error); // Log the error for debugging
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'Server error while fetching user profile.' });
   }
 });
 

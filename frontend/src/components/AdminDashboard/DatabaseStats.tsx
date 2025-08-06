@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Paper, 
   Typography, 
@@ -21,8 +21,6 @@ import { formatFileSize } from '../../utils/formatFileSize';
 import { useDatabaseStats, useUserProfile, DatabaseStatsData } from '../../hooks/query-hooks';
 
 const DatabaseStats: React.FC = () => {
-  const [_queryError, setDisplayError] = useState<string | null>(null);
-  
   // Get userProfile for enabling the query
   const { data: userProfile } = useUserProfile();
   
@@ -31,7 +29,6 @@ const DatabaseStats: React.FC = () => {
     data: stats, 
     isLoading, 
     isError, 
-    error: queryError,
     refetch 
   } = useDatabaseStats(userProfile);
   
@@ -89,8 +86,6 @@ const DatabaseStats: React.FC = () => {
   
   // Show error state with fallback data
   if (isError) {
-    setDisplayError(queryError instanceof Error ? queryError.message : 'Failed to load database stats');
-    
     // If we have no stats data, create mock data
     if (!stats) {
       const mockStats = createMockData();

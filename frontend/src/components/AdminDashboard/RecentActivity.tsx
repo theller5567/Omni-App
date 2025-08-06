@@ -49,6 +49,7 @@ interface ActivityLog {
   resourceType?: string;
   tagName?: string;
   tagCategoryName?: string;
+  resourceName?: string; // Added for fallback category name
 }
 
 const RecentActivity: React.FC = () => {
@@ -197,7 +198,7 @@ const RecentActivity: React.FC = () => {
     if (activity.resourceType === 'tagCategory') {
       let actionText = 'Tag category activity:';
       // Use tagCategoryName if available, otherwise try to parse from details or use a default
-      const categoryName = activity.tagCategoryName || (activity as any).resourceName || 'Unnamed Category';
+      const categoryName = activity.tagCategoryName || activity.resourceName || 'Unnamed Category';
       let associatedTags: Array<{ id?: string; name: string }> = [];
 
       // Check if backend provides a direct array of tags in the log (ideal scenario)

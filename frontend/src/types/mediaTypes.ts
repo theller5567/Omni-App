@@ -63,7 +63,7 @@ export interface MediaFormData {
   description?: string;
   visibility: 'public' | 'private';
   tags: string[];
-  customFields: Record<string, any>;
+  customFields: Record<string, unknown>;
 }
 
 // API data interfaces
@@ -74,6 +74,7 @@ export interface ApiMediaTypeRequest {
   includeBaseFields: boolean;
   acceptedFileTypes: string[];
   status: 'active' | 'deprecated' | 'archived';
+  catColor?: string;
   defaultTags?: string[];
   settings?: {
     allowRelatedMedia?: boolean;
@@ -103,7 +104,7 @@ export interface ApiMediaData {
     description?: string;
     visibility: 'public' | 'private';
     tags: string[];
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -169,7 +170,7 @@ export const transformFormToApiData = (formData: MediaFormData): ApiMediaData =>
 };
 
 export const transformConfigToApiData = (config: MediaTypeConfig): ApiMediaTypeRequest => {
-  const { name, fields, baseType, includeBaseFields, acceptedFileTypes, status, defaultTags, settings } = config;
+  const { name, fields, baseType, includeBaseFields, acceptedFileTypes, status, defaultTags, settings, catColor } = config;
   return {
     name,
     fields,
@@ -177,6 +178,7 @@ export const transformConfigToApiData = (config: MediaTypeConfig): ApiMediaTypeR
     includeBaseFields: includeBaseFields ?? true,
     acceptedFileTypes,
     status: status ?? 'active',
+    catColor,
     defaultTags,
     settings
   };
@@ -219,11 +221,11 @@ export const createLogger = (component: string) => ({
     console.log(`[${component}] ${action}:`, data);
   },
   
-  error: (action: string, error: any) => {
+  error: (action: string, error: Error | unknown) => {
     console.error(`[${component}] Error in ${action}:`, {
-      message: error.message,
-      code: error.code,
-      details: error.response?.data
+      message: (error as Error)?.message || 'Unknown error',
+      code: (error as any)?.code,
+      details: (error as any)?.response?.data,
     });
   }
 }); 

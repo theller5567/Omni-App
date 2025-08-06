@@ -3,6 +3,13 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import LoggerService from '../services/loggerService.js';
 import ActivityTrackingService from '../services/activityTrackingService.js';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
@@ -38,11 +45,15 @@ export const loginUser = async (req, res) => {
     }
 
     // Include important user info in the token payload
-    const token = jwt.sign({ 
+    const accessToken = jwt.sign({ 
       email: user.email,
       id: user._id,
       role: user.role
-    }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    }, process.env.JWT_SECRET, { expiresIn: '15m' });
+
+    const refreshToken = jwt.sign({ 
+      id: user._id 
+    }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
 
     console.log('Generated token with payload:', {
       email: user.email,
@@ -64,7 +75,12 @@ export const loginUser = async (req, res) => {
     });
 
     // Include user information in the response
-    res.status(200).json({ message: 'Login successful', token, user });
+    res.status(200).json({ 
+      message: 'Login successful', 
+      accessToken, 
+      refreshToken, 
+      user 
+    });
   } catch (error) {
     console.error('Error logging in:', error);
     res.status(500).json({ error: 'Error logging in' });

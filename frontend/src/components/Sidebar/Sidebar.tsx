@@ -19,6 +19,7 @@ import {
 import { useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { QueryKeys, useUserProfile } from '../../hooks/query-hooks';
+import { useLogoutHandler } from "../../hooks/useAuthHandler";
 
 // Define CSS variables for the components
 const setCssVariables = (theme: any) => {
@@ -42,6 +43,7 @@ const CustomSidebar: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const queryClient = useQueryClient();
+  const handleSignOut = useLogoutHandler();
 
   const { data: userProfile, isLoading: isUserLoading, error: userError } = useUserProfile();
 
@@ -51,27 +53,6 @@ const CustomSidebar: React.FC = () => {
   useEffect(() => {
     setCssVariables(theme);
   }, [theme]);
-
-  const handleSignOut = () => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log("Sidebar: User signing out...");
-    }
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("refreshToken");
-
-    // Clear the user profile from TanStack Query cache
-    queryClient.removeQueries({ queryKey: QueryKeys.userProfile });
-    // Optionally, clear allUsers cache as well
-    queryClient.removeQueries({ queryKey: QueryKeys.allUsers });
-    
-    // Consider invalidating other queries that depend on auth state if necessary
-    // queryClient.invalidateQueries(); // Or more specific keys
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Sidebar: User and auth tokens cleared, navigating to login.');
-    }
-    navigate("/login");
-  };
 
   const renderUserProfileDisplay = () => {
     if (isUserLoading) {

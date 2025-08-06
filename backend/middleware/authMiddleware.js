@@ -11,28 +11,46 @@ dotenv.config({ path: envPath });
 
 
 export const authenticate = (req, res, next) => {
-  console.log('AUTH MIDDLEWARE - Headers:', req.headers);
-  
   const authHeader = req.headers.authorization;
   if (!authHeader) {
-    console.log('AUTH MIDDLEWARE - No authorization header found');
+    LoggerService.logUserActivity({
+      action: 'AUTHENTICATION_FAILURE',
+      details: 'No authorization header',
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
     return res.status(401).json({ error: 'Authorization header missing' });
   }
 
   const token = authHeader.split(' ')[1];
   if (!token) {
-    console.log('AUTH MIDDLEWARE - No token found in authorization header');
+    LoggerService.logUserActivity({
+      action: 'AUTHENTICATION_FAILURE',
+      details: 'No token in header',
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
     return res.status(401).json({ error: 'Access denied, token missing!' });
   }
 
   try {
-    console.log('AUTH MIDDLEWARE - Verifying token');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('AUTH MIDDLEWARE - Token verified, user:', decoded);
-    req.user = decoded; // Attach user info to req
+    req.user = decoded;
+    LoggerService.logUserActivity({
+      userId: decoded.id,
+      username: decoded.username,
+      action: 'AUTHENTICATION_SUCCESS',
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
     next();
   } catch (error) {
-    console.error('AUTH MIDDLEWARE - Token verification failed:', error);
+    LoggerService.logUserActivity({
+      action: 'AUTHENTICATION_FAILURE',
+      details: `Token verification failed: ${error.message}`,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
     res.status(401).json({ error: 'Invalid token' });
   }
 }

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Box, ToggleButtonGroup, ToggleButton, Button, ButtonGroup, useMediaQuery, Theme } from '@mui/material';
+import { Box, ToggleButtonGroup, ToggleButton, Button, useMediaQuery, Theme, Select, MenuItem } from '@mui/material';
 import '../HeaderComponent.scss';
 import SearchInput from '../../SearchInput/SearchInput';
 import { BaseMediaFile } from '../../../interfaces/MediaFile';
@@ -43,7 +43,19 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, med
     >
       <Box display="flex" alignItems={isMobile ? "stretch" : "center"} gap={2} flexDirection={isMobile ? "column" : "row"} width="100%">
         <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
-        <ButtonGroup 
+        <span>Filter by Media Type:</span>
+        <Select
+          value={selectedMediaType}
+          onChange={(e) => handleMediaTypeChange(e.target.value)}
+          displayEmpty
+          sx={{ minWidth: isMobile ? '100%' : 200, textAlign: 'left', height: '100%' }}
+          renderValue={(value) => value || 'All'}
+        >
+          {availableMediaTypes.map((type) => (
+            <MenuItem key={type} value={type}>{type}</MenuItem>
+          ))}
+        </Select>
+        {/* <ButtonGroup 
           variant="outlined" 
           aria-label="Media type filters"
           orientation={isMobile ? "vertical" : "horizontal"}
@@ -60,14 +72,17 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, med
               {type}
             </Button>
           ))}
-        </ButtonGroup>
+        </ButtonGroup> */}
         <Button 
           variant="contained" 
           color="secondary" 
           onClick={onAddMedia} 
           startIcon={<FaPlus />}
           fullWidth={isMobile}
-          sx={{ order: isMobile ? -1 : 0 }}
+          sx={{ 
+            order: isMobile ? -1 : 0,
+            height: '100%',
+          }}
         >
           Add Media
         </Button>

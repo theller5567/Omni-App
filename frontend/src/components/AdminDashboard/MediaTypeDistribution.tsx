@@ -1,6 +1,6 @@
 import React from 'react';
 import { Paper, Typography, Box, CircularProgress } from '@mui/material';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LegendType } from 'recharts';
 import { useTransformedMedia, useMediaTypesWithUsageCounts, TransformedMediaFile, useUserProfile } from '../../hooks/query-hooks';
 
 const COLORS: Record<string, string> = {
@@ -28,6 +28,7 @@ const DEFAULT_COLORS = [
 interface LegendPayloadEntry {
   value: string;
   color: string;
+  type?: LegendType;
   [key: string]: any; // For other Recharts properties
 }
 
@@ -80,6 +81,7 @@ interface ChartDataItemForTooltip {
   name: string;
   value: number;
   totalCount?: number; // From your data structure
+  color?: string;
   [key: string]: any; // Original data item might have more fields
 }
 
@@ -189,7 +191,7 @@ const MediaTypeDistribution: React.FC = () => {
   // Calculate distribution data
   const getDistributionData = () => {
     // Create a count map of media types
-    const mediaTypeCounts = allMedia.reduce((acc: {[key: string]: number}, media: TransformedMediaFile) => {
+    const mediaTypeCounts = allMedia.reduce((acc: Record<string, number>, media: TransformedMediaFile) => {
       const type = media.mediaType || 'Uncategorized';
       acc[type] = (acc[type] || 0) + 1;
       return acc;
@@ -248,59 +250,28 @@ const MediaTypeDistribution: React.FC = () => {
           <ResponsiveContainer width="100%" height="100%" minHeight={350}>
             <PieChart 
               width={500} 
-              height={350} 
-              margin={{ top: 20, right: 20, bottom: 40, left: 20 }}
+              height={360}
+              margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
             >
               <Pie
                 data={data}
                 cx="50%"
-                cy="45%"
+                cy="50%"
                 labelLine={false}
-                outerRadius={110}
+                label={(entry: ChartDataItemForTooltip) => `${entry.name} (${((entry.value / allMedia.length) * 100).toFixed(0)}%)`}
+                outerRadius={100}
                 innerRadius={60}
                 paddingAngle={2}
-                cornerRadius={3}
                 dataKey="value"
-                stroke="rgba(0, 0, 0, 0.2)"
-                strokeWidth={1}
-                // Add labels directly to the Pie component
-                label={({ 
-                  cx, cy, midAngle, outerRadius, percent, name, index
-                }: any) => {
-                  if (index >= 5 || percent < 0.08) return null;  // Only show for top 5 and significant slices
-                  const RADIAN = Math.PI / 180;
-                  const radius = outerRadius * 1.1;
-                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                  
-                  return (
-                    <text
-                      x={x}
-                      y={y}
-                      fill="var(--color-text-primary)"
-                      textAnchor={x > cx ? 'start' : 'end'}
-                      dominantBaseline="central"
-                      fontSize={12}
-                    >
-                      {`${name} ${(percent * 100).toFixed(0)}%`}
-                    </text>
-                  );
-                }}
+                nameKey="name"
+                stroke="none"
               >
-                {data.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.color} 
-                  />
+                {data.map((_entry: ChartDataItemForTooltip, index: number) => (
+                  <Cell key={`cell-${index}`} fill={_entry.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
-              <Legend 
-                content={<CustomLegend />}
-                layout="horizontal"
-                verticalAlign="bottom"
-                align="center"
-              />
+              <Legend content={<CustomLegend />} verticalAlign="bottom" wrapperStyle={{ marginTop: 20 }} />
             </PieChart>
           </ResponsiveContainer>
         </Box>

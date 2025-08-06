@@ -1,5 +1,6 @@
 import express from "express";
 import { loginUser, logoutUser, verifyEmail, setupPassword, registerUser } from "../controllers/authController.js";  // ✅ Import the functions
+import { handleRefreshToken } from "../controllers/refreshTokenController.js";
 import { authenticate } from '../middleware/authMiddleware.js';
 import dotenv from 'dotenv';
 
@@ -24,6 +25,9 @@ router.post('/login', loginUser);
 
 // Logout route (requires authentication)
 router.post('/logout', authenticate, logoutUser);
+
+// New route for refreshing tokens
+router.post('/refresh-token', handleRefreshToken);
 
 // Email verification route
 router.get('/verify-email/:token', verifyEmail);

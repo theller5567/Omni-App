@@ -7,7 +7,7 @@ export interface MediaFile {
   altText?: string;
   description?: string;
   tags: string[];
-  customFields: Record<string, any>;
+  customFields: Record<string, unknown>;
   fileType?: string;
   fileSize?: number;
   uploadDate?: string;
@@ -22,7 +22,7 @@ export interface MediaTypeField {
   type: string;
   required?: boolean;
   options?: string[];
-  defaultValue?: any;
+  defaultValue?: unknown;
 }
 
 export interface MediaType {
