@@ -9,13 +9,13 @@ import env from '../config/env';
 
 interface VerifyEmailResponse {
   message: string;
+  redirectUrl: string;
 }
 
 const VerifyEmailPage: React.FC = () => {
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [message, setMessage] = useState('');
   const location = useLocation();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -31,12 +31,14 @@ const VerifyEmailPage: React.FC = () => {
       try {
         const response = await axios.get<VerifyEmailResponse>(`${env.BASE_URL}/api/auth/verify-email/${token}`);
         setVerificationStatus('success');
-        setMessage(response.data.message || 'Email verified successfully! You can now log in.');
+        setMessage(response.data.message || 'Email verified successfully! Redirecting...');
         
-        // Redirect to login page with a success query param
-        setTimeout(() => {
-          navigate('/?emailVerified=true');
-        }, 3000);
+        // Use the redirectUrl from the backend response
+        if (response.data.redirectUrl) {
+          setTimeout(() => {
+            window.location.href = response.data.redirectUrl;
+          }, 2000);
+        }
 
       } catch (error: any) {
         setVerificationStatus('error');
@@ -45,7 +47,7 @@ const VerifyEmailPage: React.FC = () => {
     };
 
     verifyToken();
-  }, [location, navigate]);
+  }, [location]);
 
   return (
     <Container component="main" maxWidth="sm" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
@@ -74,7 +76,7 @@ const VerifyEmailPage: React.FC = () => {
             <CheckCircleOutlineIcon sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
             <Typography variant="h4" gutterBottom>Success!</Typography>
             <Alert severity="success" sx={{ mb: 3 }}>{message}</Alert>
-            <Typography color="text.secondary">You will be redirected to the login page shortly.</Typography>
+            <Typography color="text.secondary">You will be redirected shortly.</Typography>
           </>
         )}
 

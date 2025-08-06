@@ -20,7 +20,8 @@ export const verifyEmail = async (req, res) => {
     await user.save();
 
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    res.redirect(`${baseUrl}/password-setup?token=${token}`);
+    const redirectUrl = `${baseUrl}/password-setup?token=${token}`;
+    res.status(200).json({ message: "Email verified successfully. Please set up your password.", redirectUrl });
   } catch (error) {
     console.error("Error in verifyEmail:", error);
     res.status(500).json({ message: "Server error", error: error.message });
