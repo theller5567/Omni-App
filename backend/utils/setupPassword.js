@@ -16,8 +16,8 @@ export const setupPassword = async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired token" });
     }
 
-    // Hash the password before saving
-    user.password = await bcrypt.hash(password, 10);
+    // Set the plain text password; the pre-save hook will hash it
+    user.password = password;
 
     // Debugging: Log the hashed password
     console.log('Hashed password:', user.password);
