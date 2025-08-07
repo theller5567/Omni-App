@@ -30,6 +30,13 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials - email' });
     }
 
+    // Check if the user has a password set
+    if (!user.password) {
+      // This case handles users who have registered but not completed password setup
+      await ActivityTrackingService.trackFailedLogin(email, ip, userAgent);
+      return res.status(401).json({ error: 'Invalid credentials - password setup not complete' });
+    }
+
     // Use bcrypt to compare the plain text password with the hashed password from the database
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
