@@ -30,9 +30,7 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials - email' });
     }
 
-    // Debugging: Log the plain text password and hashed password
-    user.password = await bcrypt.hash(password, 10);
-    // Use bcrypt to compare the plain text password with the hashed password
+    // Use bcrypt to compare the plain text password with the hashed password from the database
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     // Debugging: Log the result of the password comparison
