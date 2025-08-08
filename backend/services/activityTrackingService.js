@@ -516,22 +516,32 @@ class ActivityTrackingService {
   static async trackFailedLogin(email, ip = '0.0.0.0', userAgent = 'Unknown') {
     if (!email) return;
     
-    // Look up the user ID if possible, but don't require it
-    let userId = null;
+    // Look up the user record (optional)
     let username = email;
-    
-    // Log the failed login attempt
-    await LoggerService.logUserActivity({
-      userId: userId || 'unknown',
+    let userRecord = null;
+    try {
+      userRecord = await User.findOne({ email }).select('_id username email');
+      if (userRecord && userRecord.username) {
+        username = userRecord.username;
+      }
+    } catch (_e) {
+      // Ignore lookup errors for logging
+    }
+
+    // Build payload without invalid ObjectId when user not found
+    const activityPayload = {
       username,
       email,
       action: 'FAILED_LOGIN',
       ip,
       userAgent,
-      details: {
-        success: false
-      }
-    });
+      details: { success: false }
+    };
+    if (userRecord && userRecord._id) {
+      // Only include userId when valid
+      activityPayload.userId = userRecord._id;
+    }
+    await LoggerService.logUserActivity(activityPayload);
   }
   
   /**

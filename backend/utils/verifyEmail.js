@@ -12,15 +12,19 @@ export const verifyEmail = async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired token" });
     }
 
+    // If already verified, still allow redirect to password setup so users who never completed
+    // password creation can finish the flow.
+    const rawBase = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const baseUrl = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
+    const redirectUrl = `${baseUrl}/password-setup?token=${token}`;
+
     if (user.isVerified) {
-      return res.status(400).json({ message: "Email is already verified" });
+      return res.status(200).json({ message: "Email is already verified. Please set up your password.", redirectUrl });
     }
 
     user.isVerified = true;
     await user.save();
 
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const redirectUrl = `${baseUrl}/password-setup?token=${token}`;
     res.status(200).json({ message: "Email verified successfully. Please set up your password.", redirectUrl });
   } catch (error) {
     console.error("Error in verifyEmail:", error);

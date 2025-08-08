@@ -184,7 +184,7 @@ const Account: React.FC = () => {
     return (
         <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100vh">
             <Typography>User not found. You may need to log in.</Typography>
-            <Button component={RouterLink} to="/login" variant="contained" sx={{mt: 2}}>Go to Login</Button>
+            <Button component={RouterLink} to="/" variant="contained" sx={{mt: 2}}>Go to Login</Button>
         </Box>
     );
   }

@@ -244,7 +244,7 @@ const MediaContainer: React.FC = () => {
         <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
           {isUserProfileError ? 'Could not load your profile. Please try again later.' : 'Please log in to view the media library.'}
         </Typography>
-        <Button variant="contained" onClick={() => window.location.href = '/login'}>
+        <Button variant="contained" onClick={() => window.location.href = '/'}>
           Go to Login
         </Button>
       </Box>

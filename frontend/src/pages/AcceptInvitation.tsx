@@ -171,7 +171,7 @@ const AcceptInvitation: React.FC = () => {
   
   // Handle navigating to login page
   const handleGoToLogin = () => {
-    navigate('/login');
+    navigate('/');
   };
   
   // Render content based on current step

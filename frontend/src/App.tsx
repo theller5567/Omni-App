@@ -81,8 +81,8 @@ axios.interceptors.response.use(
           localStorage.removeItem('authToken');
           localStorage.removeItem('refreshToken');
           queryClient.clear();
-          if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
+          if (!window.location.pathname.includes('/')) {
+            window.location.href = '/';
           }
           return Promise.reject(refreshError);
         }
@@ -102,7 +102,7 @@ const AppContent: React.FC = () => {
   const isMobile = useMediaQuery('(max-width:600px)');
   
   const location = useLocation();
-  const isAuthPage = location.pathname === '/' || location.pathname === '/login' || location.pathname.startsWith('/accept-invitation');
+  const isAuthPage = location.pathname === '/' || location.pathname.startsWith('/accept-invitation');
 
   // --- User Profile with TanStack Query ---
   const { 
@@ -145,7 +145,7 @@ const AppContent: React.FC = () => {
             localStorage.removeItem('authToken');
             localStorage.removeItem('refreshToken');
             queryClient.clear();
-            window.location.href = '/login';
+            window.location.href = '/';
         }
       }
     }
@@ -217,7 +217,7 @@ const AppContent: React.FC = () => {
                   )}
                   <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} adminOnly />} />
                   <Route path="/accept-invitation/:token" element={<AcceptInvitation />} /> {/* Consider if this needs protection */}
-                  <Route path="/password-setup" element={<ProtectedRoute element={<PasswordSetupPage />} />} />
+                  <Route path="/password-setup" element={<PasswordSetupPage />} />
                   <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} adminOnly />} />
                   <Route path="/verify-email" element={<VerifyEmailPage />} />
                   <Route path="/" element={<AuthPage />} />

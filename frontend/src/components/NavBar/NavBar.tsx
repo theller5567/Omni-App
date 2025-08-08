@@ -21,7 +21,7 @@ export const useLogout = () => {
     if (process.env.NODE_ENV === 'development') {
       console.log('User and auth tokens cleared, navigating to login.');
     }
-    navigate('/login');
+    navigate('/');
   };
 };
 

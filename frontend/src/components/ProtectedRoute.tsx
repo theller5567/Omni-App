@@ -27,13 +27,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ element, requiredRole, 
   }
 
   if (isUserError || !userProfile) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   const isAuthenticated = !!userProfile?._id;
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   let hasRequiredRole = true;

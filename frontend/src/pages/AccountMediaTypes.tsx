@@ -386,7 +386,7 @@ const AccountMediaTypes = () => {
         <Typography>
           {userError?.message || "Could not load user profile. Please try logging in again."}
         </Typography>
-        <Button component="a" href="/login" variant="contained" sx={{ mt: 2 }}>
+        <Button component="a" href="/" variant="contained" sx={{ mt: 2 }}>
           Go to Login
         </Button>
       </Box>

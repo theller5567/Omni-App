@@ -220,7 +220,7 @@ const AccountTags: React.FC = () => {
         <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
           {isUserProfileError ? 'Could not load your profile. Please try again later.' : 'Please log in to manage tags.'}
         </Typography>
-        <Button variant="contained" onClick={() => window.location.href = '/login'}>
+        <Button variant="contained" onClick={() => window.location.href = '/'}>
           Go to Login
         </Button>
       </Container>

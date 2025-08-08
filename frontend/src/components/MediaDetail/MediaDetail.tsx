@@ -697,7 +697,7 @@ const MediaDetail: React.FC = () => {
       <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100vh" className="media-detail-container error-container">
         <Typography variant="h5" color="textSecondary" gutterBottom>Access Denied</Typography>
         <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>Please log in to view this content.</Typography>
-        <Button variant="contained" onClick={() => navigate('/login')}>Go to Login</Button>
+        <Button variant="contained" onClick={() => navigate('/')}>Go to Login</Button>
       </Box>
     );
   }
