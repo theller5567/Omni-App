@@ -22,7 +22,7 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
   const navigate = useNavigate();
   
   // Get media types using TanStack Query instead of Redux
-  const { data: mediaTypes = [] } = useMediaTypes();
+  const { data: mediaTypes = [] } = useMediaTypes({ enabled: true });
   
   // Handle row click to navigate to detail view
   const handleRowClick = (params: GridRowParams) => {

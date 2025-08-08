@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import Sidebar from './components/Sidebar/Sidebar';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { lightTheme, darkTheme } from './theme';
+import { lightTheme, darkTheme, createThemeFromCssVars } from './theme';
 import './App.scss';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Box, CircularProgress, useMediaQuery } from '@mui/material';
@@ -123,10 +123,11 @@ const AppContent: React.FC = () => {
     }
   }, [isUserFetchError, userError]);
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
-    // Save preference to localStorage
-    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+  // Remove effect-based theme attribute update; we'll set it synchronously in toggleTheme
+
+  const computedTheme = React.useMemo(() => {
+    // Recompute theme after data-theme switch so CSS variables are read fresh
+    return createThemeFromCssVars(isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
   // useEffect to manage overall app initialization status
@@ -149,6 +150,11 @@ const AppContent: React.FC = () => {
 
   // Updated to handle direct theme changes
   const toggleTheme = (newTheme: 'light' | 'dark') => {
+    // Set attribute BEFORE state update so theme reads fresh CSS vars in the next render
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', newTheme);
+    }
+    localStorage.setItem('theme', newTheme);
     setIsDarkMode(newTheme === 'dark');
   };
 
@@ -159,7 +165,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
+    <ThemeProvider theme={computedTheme}>
       <CssBaseline />
       <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
           <div id="app-container" style={{ display: 'flex', flexDirection: 'row', width: '100vw', height: '100vh', overflow: 'hidden' }}>

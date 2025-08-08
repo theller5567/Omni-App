@@ -598,7 +598,7 @@ const MediaDetail: React.FC = () => {
   
   const queryClient = useQueryClient();
   
-  const { data: mediaTypes = [] } = useMediaTypes();
+  const { data: mediaTypes = [] } = useMediaTypes({ enabled: true });
   
   const { data: userProfile, isLoading: isUserLoading, isError: isUserProfileError } = useUserProfile(); 
   const { 

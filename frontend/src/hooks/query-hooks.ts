@@ -849,11 +849,12 @@ export const useDeleteMedia = () => {
 };
 
 // -- Media Types --
-export const useMediaTypes = () => {
+export const useMediaTypes = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: [QueryKeys.mediaTypes],
     queryFn: fetchMediaTypes,
     staleTime: 10 * 60 * 1000, // 10 minutes
+    enabled: options?.enabled ?? true,
   });
 };
 

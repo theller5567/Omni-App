@@ -55,7 +55,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
   }, [file]);
   
   // Get media types to find the color
-  const { data: mediaTypes = [], isLoading: isLoadingMediaTypes, isError: isMediaTypesError } = useMediaTypes();
+  const { data: mediaTypes = [], isLoading: isLoadingMediaTypes, isError: isMediaTypesError } = useMediaTypes({ enabled: true });
   // Get current user role
   
   // Find the media type color

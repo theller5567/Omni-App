@@ -3,6 +3,13 @@ import { fontFamily, fontWeights } from './utils/fontUtils';
 // Ensure CSS variables are loaded BEFORE computing theme values
 import './styles/variables.scss';
 
+// Ensure latest CSS variables are available before fetching them
+const forceStyleRecalc = () => {
+  if (typeof document === 'undefined') return;
+  // Read a computed style to force the browser to flush pending style changes
+  getComputedStyle(document.documentElement).getPropertyValue('--color-primary');
+};
+
 // Import our font CSS to ensure it's included in the bundle
 import './assets/fonts/fonts.css';
 
@@ -22,7 +29,8 @@ const getCssVar = (varName: string, fallback: string = ''): string => {
 };
 
 // Function to create a theme based on the CSS variables
-const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
+export const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
+  forceStyleRecalc();
   // First set the data-theme attribute to ensure correct CSS variables are used
   // REMOVED: if (typeof document !== 'undefined') {
   // REMOVED:   document.documentElement.setAttribute('data-theme', mode);
@@ -404,4 +412,4 @@ const createThemeFromCssVars = (mode: 'light' | 'dark'): Theme => {
 const lightTheme = createThemeFromCssVars('light');
 const darkTheme = createThemeFromCssVars('dark');
 
-export { lightTheme, darkTheme }; 
+export { lightTheme, darkTheme };

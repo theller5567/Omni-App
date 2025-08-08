@@ -155,7 +155,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
 const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, editMediaTypeId }) => {
   // Set up TanStack Query hooks
   const queryClient = useQueryClient();
-  const { data: mediaTypes = [] } = useMediaTypes();
+  const { data: mediaTypes = [] } = useMediaTypes({ enabled: true });
   const { mutateAsync: createMediaTypeMutation } = useCreateMediaType();
   const { mutateAsync: updateMediaTypeMutation } = useUpdateMediaType();
   const { data: userProfile } = useUserProfile();

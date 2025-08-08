@@ -53,7 +53,7 @@ const MediaContainer: React.FC = () => {
   const { 
     data: mediaTypes = [], 
     isLoading: isLoadingMediaTypes
-  } = useMediaTypes();
+  } = useMediaTypes({ enabled: !!userProfile });
 
   // Use enhanced mutation hooks
   const { mutateAsync: deleteMediaMutation } = useDeleteMedia();

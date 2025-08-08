@@ -124,7 +124,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   const { data: userProfile } = useUserProfile();
   
   // Replace Redux selector with TanStack Query hook
-  const { data: mediaTypesData = [], isLoading: isLoadingMediaTypes } = useMediaTypes();
+  const { data: mediaTypesData = [], isLoading: isLoadingMediaTypes } = useMediaTypes({ enabled: true });
   
   // Adapt the TanStack MediaType to the InternalMediaType shape
   const mediaTypes: InternalMediaType[] = useMemo(() => {

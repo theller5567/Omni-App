@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'react-toastify';
 import env from '../config/env';
 
 // Create axios instance with default config
@@ -10,13 +11,14 @@ const apiClient = axios.create({
   },
 });
 
-// Simple global toast without importing UI libs here; callers can show their own as well
-const showSessionExpiredNotice = () => {
-  try {
-    // Minimal, non-blocking browser alert substitute
-    console.warn('Session expired. Redirecting to sign in.');
-  } catch {}
+// Helper to detect auth pages we should not spam with toasts
+const isAuthPage = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const p = window.location.pathname;
+  return p === '/' || p.startsWith('/accept-invitation');
 };
+
+let refreshToastId: string | number | null = null;
 
 // Request interceptor - add auth token
 apiClient.interceptors.request.use(
@@ -32,6 +34,10 @@ apiClient.interceptors.request.use(
   }
 );
 
+// In-flight refresh control so multiple 401s share one refresh
+let isRefreshing = false;
+let pendingRequests: Array<(token: string) => void> = [];
+
 // Response interceptor - handle token refresh
 apiClient.interceptors.response.use(
   (response) => {
@@ -45,36 +51,68 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
-        // Try refreshing token
         const refreshToken = localStorage.getItem('refreshToken');
-        
-        if (!refreshToken) {
-          // No refresh token available
-          throw new Error('No refresh token');
+        if (!refreshToken) throw new Error('No refresh token');
+
+        if (isRefreshing) {
+          // Queue the request until refresh completes
+          return new Promise((resolve) => {
+            pendingRequests.push((newToken: string) => {
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              }
+              resolve(apiClient(originalRequest));
+            });
+          });
         }
-        
-        // Align with backend: POST /auth/refresh-token expects { refreshToken } and returns { accessToken }
+
+        isRefreshing = true;
+        // Non-intrusive UX: show one-time notice while refreshing
+        if (!isAuthPage()) {
+          refreshToastId = toast.info('Refreshing your session…', {
+            toastId: 'session-refreshing',
+            autoClose: 1500,
+            position: 'bottom-center',
+          });
+        }
         const response = await axios.post(`${env.BASE_URL}/api/auth/refresh-token`, { refreshToken });
-        
         const { accessToken } = response.data as { accessToken: string };
         localStorage.setItem('authToken', accessToken);
-        
-        // Retry original request with new token
+
+        // Retry current
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        }
+
+        // Flush queued requests
+        pendingRequests.forEach((cb) => cb(accessToken));
+        pendingRequests = [];
+        isRefreshing = false;
+        if (refreshToastId && !isAuthPage()) {
+          toast.update('session-refreshing', {
+            render: 'Session refreshed',
+            type: 'success',
+            autoClose: 1200,
+          });
+          refreshToastId = null;
         }
         return apiClient(originalRequest);
       } catch (refreshError) {
         // Refresh failed, handle logout + soft redirect to auth page
         localStorage.removeItem('authToken');
         localStorage.removeItem('refreshToken');
-        showSessionExpiredNotice();
+        if (!isAuthPage()) {
+          toast.error('Session expired. Please sign in again.', { position: 'bottom-center' });
+        }
         if (typeof window !== 'undefined') {
           const path = window.location.pathname;
           if (path !== '/' && !path.startsWith('/accept-invitation')) {
             window.location.href = '/';
           }
         }
+        // Fail all queued requests
+        pendingRequests = [];
+        isRefreshing = false;
         return Promise.reject(refreshError);
       }
     }
