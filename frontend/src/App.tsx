@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import Sidebar from './components/Sidebar/Sidebar';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { lightTheme, darkTheme, createThemeFromCssVars } from './theme';
+import { createThemeFromCssVars } from './theme';
 import './App.scss';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Box, CircularProgress, useMediaQuery } from '@mui/material';
