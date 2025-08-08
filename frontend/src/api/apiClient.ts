@@ -57,9 +57,15 @@ apiClient.interceptors.response.use(
         }
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, handle logout
+        // Refresh failed, handle logout + soft redirect to auth page
         localStorage.removeItem('authToken');
         localStorage.removeItem('refreshToken');
+        if (typeof window !== 'undefined') {
+          const path = window.location.pathname;
+          if (path !== '/' && !path.startsWith('/accept-invitation')) {
+            window.location.href = '/';
+          }
+        }
         return Promise.reject(refreshError);
       }
     }

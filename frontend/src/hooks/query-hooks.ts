@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, QueryKey } from '@tanstack/react-query';
 import axios from 'axios';
+import apiClient from '../api/apiClient';
 import env from '../config/env';
 import { toast } from 'react-toastify';
 
@@ -236,11 +237,7 @@ export const fetchMedia = async (): Promise<MediaFile[]> => {
     throw new Error('Authentication token missing');
   }
   
-  const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/api/media/all`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
+  const response = await apiClient.get<MediaFile[]>(`/media/all`);
   
   // Log in development only
   if (process.env.NODE_ENV === 'development') {
@@ -288,11 +285,7 @@ export const fetchMediaByType = async (typeId: string): Promise<MediaFile[]> => 
     return fetchMedia(); // This will use the updated fetchMedia logic
   }
   
-  const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/api/media/byType/${typeId}`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
+  const response = await apiClient.get<MediaFile[]>(`/media/byType/${typeId}`);
   
   if (process.env.NODE_ENV === 'development') {
     console.log(`Fetched ${response.data.length} media items for type ${typeId}`);
@@ -334,11 +327,7 @@ export const deleteMediaItem = async ({ mediaId, options }: { mediaId: string, o
     throw new Error('Authentication token missing'); 
   }
   try {
-    const response = await axios.delete<DeleteMediaResponse>(`${env.BASE_URL}/api/media/delete/${mediaId}`, {
-    headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await apiClient.delete<DeleteMediaResponse>(`/media/delete/${mediaId}`);
     // Only show toast if not silent
     if (!options?.silent) {
       toast.success(response.data.message || `Media item ${mediaId} deleted successfully.`);
@@ -371,11 +360,7 @@ export const fetchMediaTypes = async (): Promise<MediaType[]> => {
     throw new Error('Authentication token missing');
   }
   
-  const response = await axios.get<MediaType[]>(`${env.BASE_URL}/api/media-types`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
+  const response = await apiClient.get<MediaType[]>(`/media-types`);
   
   // Log in development only
   if (process.env.NODE_ENV === 'development') {
@@ -394,17 +379,14 @@ export const fetchMediaTypesWithUsageCounts = async (): Promise<MediaType[]> => 
   
   // Add timestamp to prevent caching
   const timestamp = new Date().getTime();
-  const response = await axios.get<MediaType[]>(
-    `${env.BASE_URL}/api/media-types/with-usage-counts?_t=${timestamp}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    }
-  );
+  const response = await apiClient.get<MediaType[]>(`/media-types/with-usage-counts`, {
+    params: { _t: timestamp },
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
+    },
+  });
   
   if (process.env.NODE_ENV === 'development') {
     console.log(`Fetched ${response.data.length} media types with usage counts`);
@@ -429,17 +411,14 @@ export const checkMediaTypeUsage = async (id: string): Promise<{ id: string, cou
   
   // Add timestamp to URL to force fresh response
   const timestamp = new Date().getTime();
-  const response = await axios.get<{ count: number }>(
-    `${env.BASE_URL}/api/media-types/${id}/usage?_t=${timestamp}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    }
-  );
+  const response = await apiClient.get<{ count: number }>(`/media-types/${id}/usage`, {
+    params: { _t: timestamp },
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
+    },
+  });
   
   return { id, count: response.data.count };
 };
@@ -451,16 +430,7 @@ export const createMediaType = async (mediaTypeData: Partial<MediaType>): Promis
     throw new Error('Authentication token missing');
   }
   
-  const response = await axios.post<MediaType>(
-    `${env.BASE_URL}/api/media-types`,
-    mediaTypeData,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
+  const response = await apiClient.post<MediaType>(`/media-types`, mediaTypeData);
   
   return response.data;
 };
@@ -472,16 +442,7 @@ export const updateMediaType = async ({ id, updates }: { id: string, updates: Pa
     throw new Error('Authentication token missing');
   }
   
-  const response = await axios.put<MediaType>(
-    `${env.BASE_URL}/api/media-types/${id}`,
-    updates,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
+  const response = await apiClient.put<MediaType>(`/media-types/${id}`, updates);
   
   return response.data;
 };
@@ -493,11 +454,7 @@ export const deleteMediaType = async (id: string): Promise<string> => {
     throw new Error('Authentication token missing');
   }
   
-  await axios.delete(`${env.BASE_URL}/api/media-types/${id}`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
+  await apiClient.delete(`/media-types/${id}`);
   
   return id;
 };
@@ -509,16 +466,7 @@ export const archiveMediaType = async (id: string): Promise<MediaType> => {
     throw new Error('Authentication token missing');
   }
   
-  const response = await axios.put<MediaType>(
-    `${env.BASE_URL}/api/media-types/${id}/archive`,
-    {},
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
+  const response = await apiClient.put<MediaType>(`/media-types/${id}/archive`, {});
   
   return response.data;
 };
@@ -530,16 +478,7 @@ export const deprecateMediaType = async (id: string): Promise<MediaType> => {
     throw new Error('Authentication token missing');
   }
   
-  const response = await axios.put<MediaType>(
-    `${env.BASE_URL}/api/media-types/${id}/deprecate`,
-    {},
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
+  const response = await apiClient.put<MediaType>(`/media-types/${id}/deprecate`, {});
   
   return response.data;
 };
@@ -552,7 +491,7 @@ export const fetchMediaBySlug = async (slug: string | undefined): Promise<MediaF
   // No token check here, assuming public accessibility for direct slug links or specific auth handling elsewhere
 
   try {
-    const response = await axios.get<MediaFile>(`${env.BASE_URL}/api/media/slug/${slug}`);
+    const response = await apiClient.get<MediaFile>(`/media/slug/${slug}`);
     
     // Log in development only
     if (process.env.NODE_ENV === 'development') {
@@ -569,11 +508,7 @@ export const fetchMediaBySlug = async (slug: string | undefined): Promise<MediaF
       }
       
       try {
-        const oldFormatResponse = await axios.get<MediaFile>(`${env.BASE_URL}/media/${slug}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const oldFormatResponse = await apiClient.get<MediaFile>(`/media/${slug}`);
         
         if (process.env.NODE_ENV === 'development') {
           console.log(`Successfully fetched media with original format endpoint`);
@@ -618,10 +553,9 @@ export const fetchMediaBySlug = async (slug: string | undefined): Promise<MediaF
                 console.log(`Trying endpoint: ${endpoint}`);
               }
               
+              // Use base axios for flexible fallback endpoints outside apiClient baseURL
               idResponse = await axios.get<MediaFile>(endpoint, {
-                headers: {
-                  Authorization: `Bearer ${token}`
-                }
+                headers: { Authorization: `Bearer ${token}` },
               });
               
               successEndpoint = endpoint;
@@ -743,16 +677,7 @@ export const updateMediaItem = async (mediaData: Partial<MediaFile> & { changedF
     if (process.env.NODE_ENV === 'development') {
       console.log('Trying to update media using ID endpoint for:', mediaId);
     }
-    response = await axios.put<MediaFile>(
-      `${env.BASE_URL}/api/media/update-by-id/${mediaId}`,
-      updatePayload,
-      { 
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+    response = await apiClient.put<MediaFile>(`/media/update-by-id/${mediaId}`, updatePayload);
   } catch (error: ApiError | Error | unknown) {
     // If ID endpoint fails with 404, try the slug endpoint
     let is404 = false;
@@ -768,16 +693,7 @@ export const updateMediaItem = async (mediaData: Partial<MediaFile> & { changedF
         console.log('ID endpoint failed, trying slug endpoint for:', mediaSlug);
       }
       try {
-        response = await axios.put<MediaFile>(
-          `${env.BASE_URL}/api/media/update/${mediaSlug}`,
-          updatePayload,
-          { 
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
+        response = await apiClient.put<MediaFile>(`/media/update/${mediaSlug}`, updatePayload);
       } catch (slugUpdateError: ApiError | Error | unknown) {
          // If the slug update also fails, we should throw this more specific error.
          // Or handle it, e.g., by logging and then re-throwing the original 'error'
@@ -1630,11 +1546,8 @@ export const fetchUserProfile = async (): Promise<User> => {
     console.error('[fetchUserProfile] Attempted to fetch profile without a token.');
     throw new Error('Authentication token missing'); 
   }
-  const response = await axios.get<User>(`${env.BASE_URL}/api/user/profile`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  // Use centralized apiClient so 401s trigger refresh-token flow
+  const response = await apiClient.get<User>(`/user/profile`);
   // The response might be directly the user object, or nested under 'data' or 'user'
   // Adjust based on your actual API response structure
   // For now, assuming the response.data is the User object
