@@ -46,12 +46,13 @@ const AuthPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isSignUp) {
+      // Registration does not include a password; it will be set after email verification
       registerMutate({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
-        username: formData.email, // Assuming username is email as before
-        password: formData.password, // Use actual password for sign up now
+        username: formData.email,
+        password: '' as unknown as string, // placeholder ignored by backend
       }, {
         onSuccess: () => {
           setShowForm(false); // Keep this specific UI logic
@@ -174,8 +175,8 @@ const AuthPage: React.FC = () => {
                 value={formData.email}
                 onChange={handleChange}
               />
-              {/* Show password field for both sign-up and sign-in if isSignUp is true, or if it's sign-in mode*/}
-              {(isSignUp || !isSignUp) && (
+              {/* Show password only for sign-in. For sign-up, password is set after email verification. */}
+              {!isSignUp && (
                 <TextField
                   margin="normal"
                   required
@@ -184,7 +185,7 @@ const AuthPage: React.FC = () => {
                   label="Password"
                   type="password"
                   id="password"
-                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                  autoComplete="current-password"
                   value={formData.password}
                   onChange={handleChange}
                 />
