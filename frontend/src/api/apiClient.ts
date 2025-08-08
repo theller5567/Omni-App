@@ -45,15 +45,15 @@ apiClient.interceptors.response.use(
           throw new Error('No refresh token');
         }
         
-        const response = await axios.post(`${env.BASE_URL}/api/auth/refresh`, { token: refreshToken });
+        // Align with backend: POST /auth/refresh-token expects { refreshToken } and returns { accessToken }
+        const response = await axios.post(`${env.BASE_URL}/api/auth/refresh-token`, { refreshToken });
         
-        // Extract token from response with type assertion
-        const { token } = response.data as { token: string };
-        localStorage.setItem('authToken', token);
+        const { accessToken } = response.data as { accessToken: string };
+        localStorage.setItem('authToken', accessToken);
         
         // Retry original request with new token
         if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         }
         return apiClient(originalRequest);
       } catch (refreshError) {

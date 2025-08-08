@@ -7,7 +7,6 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { lightTheme, darkTheme } from './theme';
 import './App.scss';
 import ProtectedRoute from './components/ProtectedRoute';
-import axios from 'axios';
 import { Box, CircularProgress, useMediaQuery } from '@mui/material';
 // React Query imports
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -18,7 +17,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useMediaTypesWithUsageCounts, useUserProfile } from './hooks/query-hooks';
 import type { User } from './hooks/query-hooks';
 import { ThemeContext } from './contexts/ThemeContext'; // Import ThemeContext
-import { AuthResponse } from './types/types';
 
 // Create React Query client with improved configuration
 const queryClient = new QueryClient({
@@ -61,36 +59,7 @@ const LoadingFallback = () => (
   </Box>
 );
 
-// Create an axios interceptor to handle auth errors globally
-axios.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    if (error.response.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (refreshToken) {
-        try {
-          const response = await axios.post<AuthResponse>('/api/auth/refresh-token', { refreshToken });
-          const { accessToken } = response.data;
-          localStorage.setItem('authToken', accessToken);
-          axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-          originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
-          return axios(originalRequest);
-        } catch (refreshError) {
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('refreshToken');
-          queryClient.clear();
-          if (!window.location.pathname.includes('/')) {
-            window.location.href = '/';
-          }
-          return Promise.reject(refreshError);
-        }
-      }
-    }
-    return Promise.reject(error);
-  }
-);
+// Remove duplicate global axios interceptor in favor of centralized apiClient
 
 // This is needed because the main App component provides the QueryClientProvider
 const AppContent: React.FC = () => {
@@ -141,12 +110,15 @@ const AppContent: React.FC = () => {
             }
           }
         }
-        if (isAuthFailure) {
+          if (isAuthFailure) {
             localStorage.removeItem('authToken');
             localStorage.removeItem('refreshToken');
             queryClient.clear();
-            window.location.href = '/';
-        }
+            const path = window.location.pathname;
+            if (path !== '/' && !path.startsWith('/accept-invitation')) {
+              window.location.href = '/';
+            }
+          }
       }
     }
   }, [isUserFetchError, userError]);
