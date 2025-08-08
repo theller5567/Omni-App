@@ -1,5 +1,7 @@
 import { createTheme, Theme } from '@mui/material/styles';
 import { fontFamily, fontWeights } from './utils/fontUtils';
+// Ensure CSS variables are loaded BEFORE computing theme values
+import './styles/variables.scss';
 
 // Import our font CSS to ensure it's included in the bundle
 import './assets/fonts/fonts.css';
