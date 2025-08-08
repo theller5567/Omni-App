@@ -469,12 +469,14 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
           </Button>
           
           {isEditingEnabled && onEdit && (
-            <Button
+              <Button
               variant="outlined"
               color="primary"
               startIcon={<EditIcon />}
               onClick={(e) => {
-                console.log('Edit button clicked');
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('Edit button clicked');
+                }
                 e.stopPropagation();
                 if (onEdit) onEdit();
               }}
@@ -823,7 +825,9 @@ const MediaDetail: React.FC = () => {
           // This prevents registering a non-meaningful change when a field goes from undefined to empty string
           if (oldValue === undefined && (newValue === '' || newValue === null)) {
             // Skip adding this to changedFields since undefined to empty string is not a real change
-            console.log(`Field ${key} changed from undefined to empty string, ignoring as non-meaningful change`);
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`Field ${key} changed from undefined to empty string, ignoring as non-meaningful change`);
+            }
             return;
           }
           
@@ -879,7 +883,9 @@ const MediaDetail: React.FC = () => {
       
       // Don't proceed if there are no changes to make
       if (changedFields.length === 0) {
-        console.log('No changes detected, skipping update');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('No changes detected, skipping update');
+        }
         return true;
       }
       

@@ -90,9 +90,9 @@ const MediaContainer: React.FC = () => {
 
   const handleUploadComplete = useCallback((newFile: any | null) => {
     if (newFile && !processingUploadRef.current) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Upload complete, new file added to state');
-      }
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Upload complete, new file added to state');
+    }
       
       // Set processing flag to prevent multiple refreshes
       processingUploadRef.current = true;
@@ -113,9 +113,9 @@ const MediaContainer: React.FC = () => {
 
   const handleDeleteMedia = useCallback(async (id: string): Promise<boolean> => {
     try {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Deleting media with ID:', id);
-      }
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Deleting media with ID:', id);
+    }
       
       // Pass silent option to prevent the hook from showing a toast
       await deleteMediaMutation({ mediaId: id, options: { silent: true } });

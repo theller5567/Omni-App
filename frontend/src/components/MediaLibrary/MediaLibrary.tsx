@@ -93,7 +93,9 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
     if (toastSettings.disableTagNotifications &&
         !toastSettings.initialLoadComplete &&
         (message.includes('tag') || message.includes('Tag') || message.includes('category') || message.includes('Category'))) {
-      console.log('Suppressing tag-related toast:', message);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Suppressing tag-related toast:', message);
+      }
       return;
     }
     toast[type](message, {
@@ -132,10 +134,12 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
 
     const dataString = JSON.stringify({ count: newRows.length, types: [...new Set(newRows.map(row => row.mediaType))] });
     if (newRows.length > 0 && dataString !== prevDataRef.current) {
-      console.log('MediaLibrary - Data ready:', {
-        count: newRows.length,
-        types: [...new Set(newRows.map(row => row.mediaType))]
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('MediaLibrary - Data ready:', {
+          count: newRows.length,
+          types: [...new Set(newRows.map(row => row.mediaType))]
+        });
+      }
       prevDataRef.current = dataString;
     }
     return newRows;
@@ -386,7 +390,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
       id="media-library"
       {...motionProps}
     >
-      <Box className="media-library" sx={{ width: '100%', overflow: 'hidden' }}>
+      <Box className="media-library" sx={{ width: '100%', overflow: 'hidden', minWidth: 0, minHeight: 0 }}>
         <Typography variant="h1" align="left" sx={{ paddingBottom: isMobile ? '1rem' : '2rem' }}>
           OMNI Media Library
         </Typography>
@@ -401,10 +405,12 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
             onAddMedia={onAddMedia}
           />
         </Suspense>
-        <Box sx={{ 
+        <Box sx={{
           width: '100%', 
           height: 'calc(100% - 4rem)', 
           overflow: 'hidden',
+          minWidth: 0,
+          minHeight: 0,
           mt: isMobile ? 1 : 2
         }}>
           {selected.length > 0 && (
@@ -421,7 +427,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
               />
             </Suspense>
           ) : (
-            <Box className="media-card-grid" sx={{ p: 2, overflow: 'auto' }}>
+            <Box className="media-card-grid" sx={{ p: 2, overflow: 'auto', minWidth: 0, minHeight: 0 }}>
               <Box sx={{ 
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',

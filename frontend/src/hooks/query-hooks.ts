@@ -1681,7 +1681,9 @@ export const updateUserProfile = async (userData: Partial<User> & { _id: string 
 // === Auth API Functions ===
 
 export const loginUser = async (credentials: UserLoginCredentials): Promise<AuthResponse> => {
-  console.log("Logging in with:", credentials.email);
+  if (process.env.NODE_ENV === 'development') {
+    console.log("Logging in with:", credentials.email);
+  }
   const response = await axios.post<AuthResponse>(`${env.BASE_URL}/api/auth/login`, credentials);
   
   // Type assertion for response data
@@ -1698,7 +1700,9 @@ export const loginUser = async (credentials: UserLoginCredentials): Promise<Auth
 };
 
 export const registerUser = async (userData: UserRegistrationData): Promise<RegistrationResponse> => {
-  console.log("Sending registration data:", userData);
+  if (process.env.NODE_ENV === 'development') {
+    console.log("Sending registration data:", userData);
+  }
   // Assuming the register endpoint returns a message, not full AuthResponse for immediate login
   // Based on authSlice, it expects { message: string }
   const response = await axios.post<RegistrationResponse>(`${env.BASE_URL}/api/auth/register`, userData);

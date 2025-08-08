@@ -13,6 +13,8 @@
   margin: 0;
   box-sizing: border-box;
   overflow: hidden;
+  min-width: 0; // Prevent grid content from forcing container wider than viewport
+  min-height: 0;
   
   @media (max-width: 768px) {
     padding: 0.5rem;

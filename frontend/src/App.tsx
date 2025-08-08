@@ -165,14 +165,7 @@ const AppContent: React.FC = () => {
           <div id="app-container" style={{ display: 'flex', flexDirection: 'row', width: '100vw', height: '100vh', overflow: 'hidden' }}>
             {/* Sidebar is shown if user profile fetch was successful and userProfile has an _id and it's not an auth page */}
            {(!isAuthPage && isUserSuccess && userProfile && userProfile._id && (<Sidebar /> as React.ReactNode))}
-            <div
-              style={{
-                flexGrow: 1,
-                height: '100vh', // Ensure the content area can scroll independently
-                overflow: 'auto', // Allows content to scroll
-                // Removed position: 'absolute' and related top, left, right, bottom, width properties
-              }}
-            >
+            <div id="content-container">
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>
                   {/* Pass userProfile to ProtectedRoutes */}

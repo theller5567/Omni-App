@@ -84,12 +84,14 @@ const fileTypeCategories: FileTypeCategory[] = [
 
 // Debug logging function
 const logSettings = (action: string, settings: any) => {
-  console.log(`[MediaTypeUploader] ${action}:`, {
-    settings,
-    allowRelatedMedia: settings?.allowRelatedMedia,
-    type: typeof settings,
-    isObject: settings !== null && typeof settings === 'object'
-  });
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[MediaTypeUploader] ${action}:`, {
+      settings,
+      allowRelatedMedia: settings?.allowRelatedMedia,
+      type: typeof settings,
+      isObject: settings !== null && typeof settings === 'object'
+    });
+  }
 };
 
 // Initial media type configuration
@@ -474,7 +476,9 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
                 `${env.BASE_URL}/api/media-types/update-settings/${mediaTypeConfig._id}`,
                 { allowRelatedMedia: mediaTypeConfig.settings.allowRelatedMedia }
               );
-              console.log('Successfully updated settings separately');
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Successfully updated settings separately');
+              }
             } catch (settingsError) {
               console.error('Error updating settings separately:', settingsError);
             }
@@ -503,7 +507,9 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
                 `${env.BASE_URL}/api/media-types/update-settings/${createdMediaType._id}`,
                 { allowRelatedMedia: mediaTypeConfig.settings.allowRelatedMedia }
               );
-              console.log('Successfully added settings separately for new media type');
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Successfully added settings separately for new media type');
+              }
             } catch (settingsError) {
               console.error('Error adding settings separately for new media type:', settingsError);
             }
@@ -538,12 +544,16 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
   };
 
   const handleClose = () => {
-    console.log('[MediaTypeUploader] handleClose triggered. Current activeStep:', activeStep);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[MediaTypeUploader] handleClose triggered. Current activeStep:', activeStep);
+    }
     resetFieldForm();
     setMediaTypeConfig(initialMediaTypeConfig);
     setOriginalMediaTypeForEdit(null); // Reset original on close
     setActiveStep(STEP_NAME);
-    console.log('[MediaTypeUploader] activeStep set to STEP_NAME. New activeStep should be:', STEP_NAME);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[MediaTypeUploader] activeStep set to STEP_NAME. New activeStep should be:', STEP_NAME);
+    }
     setActiveField(null);
     setIsEditMode(false);
     setHasUnsavedChanges(false);

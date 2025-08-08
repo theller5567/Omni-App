@@ -475,7 +475,9 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   // Effect to fetch tag categories when component opens
   useEffect(() => {
     if (open && tagCategories.length === 0 && !tagCategoriesFetchedRef.current) {
-      console.log('Fetching tag categories on first open');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Fetching tag categories on first open');
+      }
       tagCategoriesFetchedRef.current = true;
       refetchTagCategories();
     }
@@ -553,7 +555,9 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
       // Call the callback once with a small delay to avoid React state update issues
       const timer = setTimeout(() => {
         if (!uploaderStateRef.current.isClosing) {
-          console.log('Calling onUploadComplete with data, slug:', slug);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Calling onUploadComplete with data, slug:', slug);
+          }
           onUploadComplete(uploadedFile);
         }
       }, 100);
@@ -682,7 +686,9 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     };
     
     const videoUrl = URL.createObjectURL(file);
-    console.log('Created video URL:', videoUrl);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Created video URL:', videoUrl);
+    }
     video.src = videoUrl;
   };
 
@@ -798,7 +804,9 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     
     // Default to returning empty array if no categories loaded
     if (tagCategories.length === 0) {
-      console.log('No tag categories available');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('No tag categories available');
+      }
       return [];
     }
     
@@ -962,7 +970,9 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     
     // Prevent state reset while in the middle of a transition
     if (isProcessing) {
-      console.log('Cannot add more while processing');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Cannot add more while processing');
+      }
       return;
     }
     
