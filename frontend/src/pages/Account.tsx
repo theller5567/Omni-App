@@ -152,7 +152,8 @@ const Account: React.FC = () => {
 
   // Add state for the view mode
   const [preferredViewMode, setPreferredViewMode] = useState<'list' | 'card'>(() => {
-    return localStorage.getItem('mediaLibraryViewMode') as 'list' | 'card' || 'card';
+    const stored = localStorage.getItem('mediaLibraryViewMode');
+    return (stored === 'list' || stored === 'card') ? (stored as 'list' | 'card') : 'list';
   });
   
   // Add a function to handle view mode changes

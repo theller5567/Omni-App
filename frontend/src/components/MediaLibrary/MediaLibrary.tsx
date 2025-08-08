@@ -51,7 +51,9 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
 }) => {
   // Move all hook calls to the top level
   const [viewMode, setViewMode] = useState<'list' | 'card'>(() => {
-    return localStorage.getItem('mediaLibraryViewMode') as 'list' | 'card' || 'card';
+    // Default to 'list' when nothing stored
+    const stored = localStorage.getItem('mediaLibraryViewMode');
+    return (stored === 'list' || stored === 'card') ? (stored as 'list' | 'card') : 'list';
   });
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
