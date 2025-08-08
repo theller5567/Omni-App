@@ -10,6 +10,14 @@ const apiClient = axios.create({
   },
 });
 
+// Simple global toast without importing UI libs here; callers can show their own as well
+const showSessionExpiredNotice = () => {
+  try {
+    // Minimal, non-blocking browser alert substitute
+    console.warn('Session expired. Redirecting to sign in.');
+  } catch {}
+};
+
 // Request interceptor - add auth token
 apiClient.interceptors.request.use(
   (config) => {
@@ -60,6 +68,7 @@ apiClient.interceptors.response.use(
         // Refresh failed, handle logout + soft redirect to auth page
         localStorage.removeItem('authToken');
         localStorage.removeItem('refreshToken');
+        showSessionExpiredNotice();
         if (typeof window !== 'undefined') {
           const path = window.location.pathname;
           if (path !== '/' && !path.startsWith('/accept-invitation')) {

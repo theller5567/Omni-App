@@ -1261,9 +1261,7 @@ export const useDatabaseStats = (userProfile: User | null | undefined) => {
 export const fetchNotificationSettings = async (): Promise<NotificationSettingsData> => {
   const token = localStorage.getItem('authToken');
   if (!token) throw new Error('Authentication token missing');
-  const response = await axios.get<NotificationSettingsData>(`${env.BASE_URL}/api/admin/notification-settings`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const response = await apiClient.get<NotificationSettingsData>(`/admin/notification-settings`);
   // Ensure recipients is always an array
   return {
     ...response.data,
@@ -1275,9 +1273,7 @@ export const fetchNotificationSettings = async (): Promise<NotificationSettingsD
 export const updateNotificationSettings = async (settings: Partial<NotificationSettingsData>): Promise<NotificationSettingsData> => {
   const token = localStorage.getItem('authToken');
   if (!token) throw new Error('Authentication token missing');
-  const response = await axios.put<NotificationSettingsData>(`${env.BASE_URL}/api/admin/notification-settings`, settings, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const response = await apiClient.put<NotificationSettingsData>(`/admin/notification-settings`, settings);
   return response.data;
 };
 
@@ -1285,9 +1281,7 @@ export const updateNotificationSettings = async (settings: Partial<NotificationS
 export const addNotificationRule = async (rule: Omit<NotificationRule, '_id'>): Promise<NotificationRule> => {
   const token = localStorage.getItem('authToken');
   if (!token) throw new Error('Authentication token missing');
-  const response = await axios.post<NotificationRule>(`${env.BASE_URL}/api/admin/notification-settings/rules`, rule, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const response = await apiClient.post<NotificationRule>(`/admin/notification-settings/rules`, rule);
   return response.data;
 };
 
@@ -1295,9 +1289,7 @@ export const addNotificationRule = async (rule: Omit<NotificationRule, '_id'>): 
 export const updateNotificationRule = async ({ ruleId, updates }: { ruleId: string, updates: Partial<NotificationRule> }): Promise<NotificationRule> => {
   const token = localStorage.getItem('authToken');
   if (!token) throw new Error('Authentication token missing');
-  const response = await axios.put<NotificationRule>(`${env.BASE_URL}/api/admin/notification-settings/rules/${ruleId}`, updates, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const response = await apiClient.put<NotificationRule>(`/admin/notification-settings/rules/${ruleId}`, updates);
   return response.data;
 };
 
@@ -1308,11 +1300,7 @@ export const deleteNotificationRule = async (ruleId: string): Promise<void> => {
     throw new Error('Authentication token missing');
   }
   
-  await axios.delete(`${env.BASE_URL}/api/admin/notification-settings/rules/${ruleId}`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
+  await apiClient.delete(`/admin/notification-settings/rules/${ruleId}`);
 };
 
 // Get eligible recipients for notifications
@@ -1322,11 +1310,7 @@ export const fetchEligibleRecipients = async (): Promise<any[]> => {
     throw new Error('Authentication token missing');
   }
   
-  const response = await axios.get<{success: boolean, data: any[]}>(`${env.BASE_URL}/api/admin/notification-settings/eligible-recipients`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
+  const response = await apiClient.get<{success: boolean, data: any[]}>(`/admin/notification-settings/eligible-recipients`);
   
   return response.data.data;
 };
@@ -1338,15 +1322,7 @@ export const sendTestNotification = async (recipients?: string[]): Promise<void>
     throw new Error('Authentication token missing');
   }
   
-  await axios.post(`${env.BASE_URL}/api/admin/notification-settings/test`, 
-    { recipients },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
+  await apiClient.post(`/admin/notification-settings/test`, { recipients });
 };
 
 // =====================
@@ -2333,16 +2309,12 @@ export const deleteTagCategory = async ({ categoryId, hardDelete }: { categoryId
     throw new Error('Authentication token missing');
   }
   
-  let url = `${env.BASE_URL}/api/tag-categories/${categoryId}`;
+  let url = `/tag-categories/${categoryId}`;
   if (hardDelete) {
     url += '?hardDelete=true';
   }
   
-  await axios.delete(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  await apiClient.delete(url);
 };
 
 // Hook to delete a tag category
