@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { TextField, Button, Typography, Box, CircularProgress, Container, Alert, Grid, Link } from '@mui/material';
+import ThreeBillboardParticles from '../components/ThreeBillboardParticles';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -83,18 +84,24 @@ const AuthPage: React.FC = () => {
   const overallIsLoading = isPendingLogin || isPendingRegister;
 
   return (
-    <Container 
-      component="main" 
-      maxWidth="xs" 
-      sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        minHeight: '100vh',
-        padding: 3
-      }}
-    >
+    <Box sx={{ position: 'relative', minHeight: '100vh' }}>
+      {/* Background billboard particles */}
+      <ThreeBillboardParticles count={700} baseSizePx={1.6} maxBoostPx={2.4} interactionRadius={7} />
+      <Container 
+        component="main" 
+        maxWidth="xs" 
+        sx={{ 
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          minHeight: '100vh',
+          padding: 3,
+          
+        }}
+      >
       <Box
         sx={{
           padding: 3,
@@ -104,6 +111,8 @@ const AuthPage: React.FC = () => {
           borderRadius: 2,
           boxShadow: 3,
           width: '100%',
+          backgroundColor: 'rgba(0,0,0,0.5)', // subtle glass effect over background
+          //backdropFilter: 'blur(4px)'
         }}
       >
         <Typography component="h1" variant="h5" sx={{ mb: 3 }}>
@@ -194,7 +203,7 @@ const AuthPage: React.FC = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
-                sx={{ mt: 3, mb: 2 }}
+                sx={{ mt: 3, mb: 2, color: 'black' }}
                 disabled={overallIsLoading}
               >
                 {overallIsLoading ? (
@@ -232,7 +241,8 @@ const AuthPage: React.FC = () => {
           </Alert>
         )} */}
       </Box>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 
