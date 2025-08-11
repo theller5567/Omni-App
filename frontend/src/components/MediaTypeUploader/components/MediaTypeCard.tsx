@@ -28,7 +28,7 @@ const MediaTypeCard: React.FC<MediaTypeCardProps> = ({
     <Card 
       className={`media-type-card ${mediaType.status && mediaType.status !== 'active' ? 'media-type-card--' + mediaType.status : ''}`}
       sx={{
-        backgroundColor: 'var(--secondary-color)',
+        backgroundColor: 'var(--color-surface-elevated)',
         borderRadius: '8px',
         boxShadow: '0 4px 8px rgba(0, 0, 0, 0.15)',
         overflow: 'visible'
@@ -118,7 +118,7 @@ const MediaTypeCard: React.FC<MediaTypeCardProps> = ({
         <Box 
           className="fields-preview" 
           sx={{ 
-            backgroundColor: 'rgba(0,0,0,0.2)',
+            backgroundColor: 'var(--color-surface)',
             p: 1.5,
             borderRadius: '6px',
             mb: 1.5

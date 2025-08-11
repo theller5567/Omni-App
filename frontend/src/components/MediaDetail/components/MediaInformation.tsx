@@ -156,23 +156,7 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
         </Accordion>
       )}
 
-      {mediaFile.metadata?.tags && mediaFile.metadata?.tags.length > 0 && (
-        <Accordion>
-          <AccordionSummary
-            expandIcon={<ExpandMoreIcon fontSize={isMobile ? "small" : "medium"} />}
-          >
-            <Typography variant={isMobile ? "body1" : "subtitle1"}>Tags</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Box>
-            <MediaDetailTags 
-            tags={getMetadataField(mediaFile, 'tags', []) as string[] | undefined} 
-            isMobile={isMobile}
-            />
-            </Box>
-          </AccordionDetails>
-        </Accordion>
-      )}
+     
 
       {displayableStandardMetadata.length > 0 && (
         <Accordion defaultExpanded>
@@ -219,6 +203,8 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
           </AccordionDetails>
         </Accordion>
       )}
+      
+      
 
       {/* Show the accordion if there are ANY custom fields defined for the type (after initial filtering) */}
       {mediaTypeConfig && mediaTypeConfig.fields && 
@@ -245,6 +231,24 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
                   <Typography variant="body2">{info.value as string}</Typography>
                 </Box>
               ))}
+            </Box>
+          </AccordionDetails>
+        </Accordion>
+      )}
+
+{mediaFile.metadata?.tags && mediaFile.metadata?.tags.length > 0 && (
+        <Accordion>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon fontSize={isMobile ? "small" : "medium"} />}
+          >
+            <Typography variant={isMobile ? "body1" : "subtitle1"}>Tags</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box>
+            <MediaDetailTags 
+            tags={getMetadataField(mediaFile, 'tags', []) as string[] | undefined} 
+            isMobile={isMobile}
+            />
             </Box>
           </AccordionDetails>
         </Accordion>

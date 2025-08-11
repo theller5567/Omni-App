@@ -17,6 +17,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useMediaTypesWithUsageCounts, useUserProfile } from './hooks/query-hooks';
 import type { User } from './hooks/query-hooks';
 import { ThemeContext } from './contexts/ThemeContext'; // Import ThemeContext
+import SessionExpiredDialog from './components/SessionExpiredDialog';
+import { subscribeSessionPrompt, resolveSessionPrompt } from './services/sessionManager';
 
 // Create React Query client with improved configuration
 const queryClient = new QueryClient({
@@ -72,6 +74,13 @@ const AppContent: React.FC = () => {
   
   const location = useLocation();
   const isAuthPage = location.pathname === '/' || location.pathname.startsWith('/accept-invitation');
+  const [sessionPromptOpen, setSessionPromptOpen] = useState(false);
+
+  useEffect(() => {
+    // Subscribe to session prompt events
+    const unsubscribe = subscribeSessionPrompt((open) => setSessionPromptOpen(open));
+    return () => unsubscribe();
+  }, []);
 
   // --- User Profile with TanStack Query ---
   const { 
@@ -199,6 +208,14 @@ const AppContent: React.FC = () => {
             </div>
           </div>
       </ThemeContext.Provider>
+      <SessionExpiredDialog
+        open={sessionPromptOpen}
+        onContinue={() => resolveSessionPrompt(true)}
+        onSignIn={() => {
+          resolveSessionPrompt(false);
+          window.location.href = '/';
+        }}
+      />
       
       {/* Centralized ToastContainer for the entire application */}
       <ToastContainer

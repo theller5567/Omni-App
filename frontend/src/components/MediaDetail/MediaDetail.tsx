@@ -515,7 +515,7 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
       {/* Tabs only shown if related media exists */}
       {hasRelatedMedia ? (
         <>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 2 }}>
+          <Box className="media-detail-tabs-container" sx={{ borderBottom: 1, borderColor: 'divider', mt: 2 }}>
             <Tabs value={activeTab} onChange={handleTabChange} aria-label="media content tabs">
               <Tab label="Main File" id="tab-0" aria-controls="tabpanel-0" />
               <Tab label="Related Files" id="tab-1" aria-controls="tabpanel-1" />

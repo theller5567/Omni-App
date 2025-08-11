@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import env from '../config/env';
+import { promptUserToContinueSession } from '../services/sessionManager';
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -53,6 +54,15 @@ apiClient.interceptors.response.use(
       try {
         const refreshToken = localStorage.getItem('refreshToken');
         if (!refreshToken) throw new Error('No refresh token');
+
+        // Ask the user immediately instead of waiting on multiple timeouts
+        const proceed = await Promise.race<boolean>([
+          promptUserToContinueSession(),
+          new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 4000)), // quick fallback
+        ]);
+        if (!proceed) {
+          throw new Error('User declined session continuation');
+        }
 
         if (isRefreshing) {
           // Queue the request until refresh completes

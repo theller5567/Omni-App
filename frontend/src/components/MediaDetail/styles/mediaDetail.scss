@@ -223,7 +223,7 @@ $border-radius: 0.5rem;
       display: flex;
       justify-content: center;
       align-items: center;
-      background-color: #000;
+      background-color: var(--color-surface-elevated);
       overflow: hidden;
       padding: 1rem;
       
@@ -505,6 +505,10 @@ $border-radius: 0.5rem;
   &.MuiChip-root {
     font-weight: 400;
   }
+}
+
+.media-detail-tabs-container {
+  background-color: var(--color-surface-gradient);
 }
 
 .tab-content-container {

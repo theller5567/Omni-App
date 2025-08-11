@@ -78,6 +78,14 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+.MuiInputLabel-root.MuiInputLabel-outlined.MuiInputLabel-shrink {
+  background-color: var(--color-surface-elevated) !important;
+}
+
+.MuiInputBase-root {
+  background-color: var(--color-surface-elevated) !important;
+}
+
 @keyframes logo-spin {
   from {
     transform: rotate(0deg);
