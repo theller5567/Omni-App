@@ -24,7 +24,8 @@ export const logoutUser = async (req, res) => {
     
     // Clear cookies
     const isProd = process.env.NODE_ENV === 'production';
-    const opts = { httpOnly: true, secure: isProd, sameSite: 'lax', path: '/' };
+    const sameSite = isProd ? 'none' : 'lax';
+    const opts = { httpOnly: true, secure: isProd, sameSite, path: '/' };
     res.clearCookie('accessToken', opts);
     res.clearCookie('refreshToken', opts);
 

@@ -25,10 +25,11 @@ export const handleRefreshToken = async (req, res) => {
     );
 
     const isProd = process.env.NODE_ENV === 'production';
+    const sameSite = isProd ? 'none' : 'lax';
     res.cookie('accessToken', newAccessToken, {
       httpOnly: true,
       secure: isProd,
-      sameSite: 'lax',
+      sameSite,
       maxAge: 60 * 60 * 1000,
       path: '/',
     });

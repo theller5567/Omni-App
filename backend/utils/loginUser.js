@@ -81,17 +81,18 @@ export const loginUser = async (req, res) => {
 
     // Set HttpOnly cookies for access and refresh tokens
     const isProd = process.env.NODE_ENV === 'production';
+    const sameSite = isProd ? 'none' : 'lax';
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: isProd,
-      sameSite: 'lax',
+      sameSite,
       maxAge: 60 * 60 * 1000, // 60m
       path: '/',
     });
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: isProd,
-      sameSite: 'lax',
+      sameSite,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
       path: '/',
     });

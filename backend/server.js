@@ -54,7 +54,6 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  // Use a wildcard to allow all headers - this is the most permissive option
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'Pragma', 'Expires', 'X-Auth-Token'],
   exposedHeaders: ['Content-Length', 'Content-Type', 'X-Auth-Token', 'Cache-Control', 'Pragma', 'Expires'],
   preflightContinue: false,
