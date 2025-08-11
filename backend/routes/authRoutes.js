@@ -23,8 +23,8 @@ router.use(express.json());
 // Sign-in route
 router.post('/login', loginUser);
 
-// Logout route (requires authentication)
-router.post('/logout', authenticate, logoutUser);
+// Logout route: do not require auth so we can always clear cookies
+router.post('/logout', logoutUser);
 
 // New route for refreshing tokens
 router.post('/refresh-token', handleRefreshToken);

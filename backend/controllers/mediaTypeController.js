@@ -54,11 +54,6 @@ export const getMediaTypes = async (req, res) => {
     const mediaTypes = await MediaType.find().lean();
     console.log(`✅ Found ${mediaTypes.length} media types`);
     
-    // Add CORS headers to ensure proper response
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    
     res.status(200).json(mediaTypes);
   } catch (error) {
     console.error('❌ Error fetching media types:', error);
@@ -372,6 +367,23 @@ export const updateMediaType = async (req, res) => {
         mediaType.catColor = catColor;
         updated = true;
       }
+
+      // Allow renaming even when in use by cascading to documents storing the name
+      if (name && name !== mediaType.name) {
+        const oldName = mediaType.name;
+        mediaType.name = name;
+        updated = true;
+        try {
+          // Update media documents that reference the media type by its name
+          const cascadeResult = await Media.updateMany(
+            { mediaType: oldName },
+            { $set: { mediaType: name } }
+          );
+          console.log('Cascaded name change to Media documents:', cascadeResult);
+        } catch (cascadeError) {
+          console.warn('Warning: Failed to cascade media type name change to Media documents:', cascadeError?.message || cascadeError);
+        }
+      }
       
       if (updated || defaultTags !== undefined || settings !== undefined) {
         const savedMediaType = await mediaType.save();
@@ -401,7 +413,7 @@ export const updateMediaType = async (req, res) => {
     }
     
     // If not in use, we can update everything
-    if (name) mediaType.name = name;
+      if (name) mediaType.name = name;
     if (fields) mediaType.fields = fields;
     if (acceptedFileTypes) mediaType.acceptedFileTypes = acceptedFileTypes;
     if (catColor) mediaType.catColor = catColor;

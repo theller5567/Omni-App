@@ -21,8 +21,7 @@ import {
   Delete as DeleteIcon,
   DeleteForever as DeleteForeverIcon
 } from '@mui/icons-material';
-import axios from 'axios';
-import { API_BASE_URL } from '../../config/config';
+import apiClient from '../../api/apiClient';
 import { formatDistance } from 'date-fns';
 import './invitationList.scss'; // Import the new SCSS file
 
@@ -68,21 +67,7 @@ const InvitationList: React.FC<InvitationListProps> = ({ refreshTrigger, onRefre
       setLoading(true);
       setError(null);
       
-      // Get token
-      const token = localStorage.getItem('authToken');
-      
-      if (!token) {
-        setError('You must be logged in to view invitations');
-        setLoading(false);
-        return;
-      }
-      
-      // Fetch invitations
-      const response = await axios.get<Invitation[]>(`${API_BASE_URL}/api/invitations`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await apiClient.get<Invitation[]>(`/invitations`);
       
       setInvitations(response.data);
       
@@ -111,21 +96,7 @@ const InvitationList: React.FC<InvitationListProps> = ({ refreshTrigger, onRefre
     try {
       setActionLoading(`cancel-${invitationToCancel._id}`);
       
-      // Get token
-      const token = localStorage.getItem('authToken');
-      
-      if (!token) {
-        setError('You must be logged in to cancel invitations');
-        setActionLoading(null);
-        return;
-      }
-      
-      // Cancel invitation
-      await axios.delete(`${API_BASE_URL}/api/invitations/${invitationToCancel._id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      await apiClient.delete(`/invitations/${invitationToCancel._id}`);
       
       // Update local state
       setInvitations(prev => 
@@ -159,21 +130,7 @@ const InvitationList: React.FC<InvitationListProps> = ({ refreshTrigger, onRefre
     try {
       setActionLoading(`resend-${invitationToResend._id}`);
       
-      // Get token
-      const token = localStorage.getItem('authToken');
-      
-      if (!token) {
-        setError('You must be logged in to resend invitations');
-        setActionLoading(null);
-        return;
-      }
-      
-      // Resend invitation
-      await axios.post(`${API_BASE_URL}/api/invitations/${invitationToResend._id}/resend`, {}, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      await apiClient.post(`/invitations/${invitationToResend._id}/resend`, {});
       
       // Update local state to refresh expiration date
       fetchInvitations();
@@ -205,16 +162,7 @@ const InvitationList: React.FC<InvitationListProps> = ({ refreshTrigger, onRefre
 
     try {
       setActionLoading(`delete-perm-${invitationToDeletePermanently._id}`);
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        setError('You must be logged in to delete invitations');
-        setActionLoading(null);
-        return;
-      }
-
-      await axios.delete(`${API_BASE_URL}/api/invitations/${invitationToDeletePermanently._id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await apiClient.delete(`/invitations/${invitationToDeletePermanently._id}`);
 
       setInvitations(prev => prev.filter(inv => inv._id !== invitationToDeletePermanently._id));
       setActionSuccess(`Invitation to ${invitationToDeletePermanently.email} has been permanently deleted.`);

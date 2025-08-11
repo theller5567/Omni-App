@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, QueryKey } from '@tanstack/react-query';
+import { startAccessTokenRefreshSchedule } from '../services/tokenScheduler';
 import axios from 'axios';
 import apiClient from '../api/apiClient';
 import env from '../config/env';
@@ -232,10 +233,6 @@ interface ApiError extends Error {
 
 // -- Media --
 export const fetchMedia = async (): Promise<MediaFile[]> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
   
   const response = await apiClient.get<MediaFile[]>(`/media/all`);
   
@@ -276,10 +273,6 @@ export const fetchMedia = async (): Promise<MediaFile[]> => {
 
 // Enhanced function to fetch media by type
 export const fetchMediaByType = async (typeId: string): Promise<MediaFile[]> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
   
   if (typeId === 'All') {
     return fetchMedia(); // This will use the updated fetchMedia logic
@@ -320,12 +313,6 @@ interface DeleteMediaResponse {
 }
 
 export const deleteMediaItem = async ({ mediaId, options }: { mediaId: string, options?: { silent?: boolean } }): Promise<DeleteMediaResponse> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    // Avoid direct toast here if we want full control via options.silent
-    // The onError in useMutation is a better place for user-facing errors.
-    throw new Error('Authentication token missing'); 
-  }
   try {
     const response = await apiClient.delete<DeleteMediaResponse>(`/media/delete/${mediaId}`);
     // Only show toast if not silent
@@ -355,11 +342,7 @@ export const deleteMediaItem = async ({ mediaId, options }: { mediaId: string, o
 
 // -- Media Types --
 export const fetchMediaTypes = async (): Promise<MediaType[]> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
+  // Cookie-based auth; no localStorage gate
   const response = await apiClient.get<MediaType[]>(`/media-types`);
   
   // Log in development only
@@ -372,11 +355,7 @@ export const fetchMediaTypes = async (): Promise<MediaType[]> => {
 
 // New function to fetch media types with usage counts
 export const fetchMediaTypesWithUsageCounts = async (): Promise<MediaType[]> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
+  // Cookie-based auth; no localStorage gate
   // Add timestamp to prevent caching
   const timestamp = new Date().getTime();
   const response = await apiClient.get<MediaType[]>(`/media-types/with-usage-counts`, {
@@ -404,11 +383,7 @@ export const fetchMediaTypesWithUsageCounts = async (): Promise<MediaType[]> => 
 
 // Function to check a specific media type's usage
 export const checkMediaTypeUsage = async (id: string): Promise<{ id: string, count: number }> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
+  // Cookie-based auth; no localStorage gate
   // Add timestamp to URL to force fresh response
   const timestamp = new Date().getTime();
   const response = await apiClient.get<{ count: number }>(`/media-types/${id}/usage`, {
@@ -425,11 +400,6 @@ export const checkMediaTypeUsage = async (id: string): Promise<{ id: string, cou
 
 // Function to create a new media type
 export const createMediaType = async (mediaTypeData: Partial<MediaType>): Promise<MediaType> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
   const response = await apiClient.post<MediaType>(`/media-types`, mediaTypeData);
   
   return response.data;
@@ -437,11 +407,6 @@ export const createMediaType = async (mediaTypeData: Partial<MediaType>): Promis
 
 // Function to update a media type
 export const updateMediaType = async ({ id, updates }: { id: string, updates: Partial<MediaType> }): Promise<MediaType> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
   const response = await apiClient.put<MediaType>(`/media-types/${id}`, updates);
   
   return response.data;
@@ -449,11 +414,6 @@ export const updateMediaType = async ({ id, updates }: { id: string, updates: Pa
 
 // Function to delete a media type
 export const deleteMediaType = async (id: string): Promise<string> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
   await apiClient.delete(`/media-types/${id}`);
   
   return id;
@@ -461,11 +421,6 @@ export const deleteMediaType = async (id: string): Promise<string> => {
 
 // Function to archive a media type
 export const archiveMediaType = async (id: string): Promise<MediaType> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
   const response = await apiClient.put<MediaType>(`/media-types/${id}/archive`, {});
   
   return response.data;
@@ -473,11 +428,6 @@ export const archiveMediaType = async (id: string): Promise<MediaType> => {
 
 // Function to deprecate a media type
 export const deprecateMediaType = async (id: string): Promise<MediaType> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
   const response = await apiClient.put<MediaType>(`/media-types/${id}/deprecate`, {});
   
   return response.data;
@@ -487,8 +437,7 @@ export const deprecateMediaType = async (id: string): Promise<MediaType> => {
 export const fetchMediaBySlug = async (slug: string | undefined): Promise<MediaFile> => {
   if (!slug) throw new Error('Slug is undefined, cannot fetch media by slug.');
 
-  const token = localStorage.getItem('authToken');
-  // No token check here, assuming public accessibility for direct slug links or specific auth handling elsewhere
+  // Cookie-based auth; no localStorage token needed
 
   try {
     const response = await apiClient.get<MediaFile>(`/media/slug/${slug}`);
@@ -553,10 +502,10 @@ export const fetchMediaBySlug = async (slug: string | undefined): Promise<MediaF
                 console.log(`Trying endpoint: ${endpoint}`);
               }
               
-              // Use base axios for flexible fallback endpoints outside apiClient baseURL
-              idResponse = await axios.get<MediaFile>(endpoint, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
+              // Use fetch for flexible fallback endpoints outside apiClient baseURL
+              const res = await fetch(endpoint, { credentials: 'include' });
+              if (!res.ok) throw new Error(`Status ${res.status}`);
+              idResponse = await res.json();
               
               successEndpoint = endpoint;
               break; // Exit the loop if successful
@@ -629,11 +578,6 @@ export const fetchMediaBySlug = async (slug: string | undefined): Promise<MediaF
 };
 
 export const updateMediaItem = async (mediaData: Partial<MediaFile> & { changedFields?: string[] }): Promise<MediaFile> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
   const mediaId = mediaData._id || '';
   const mediaSlug = mediaData.slug || '';
   
@@ -722,11 +666,8 @@ export const updateMediaItem = async (mediaData: Partial<MediaFile> & { changedF
 export const checkApiHealth = async (): Promise<{ status: string }> => {
   try {
     // Try using the media-types endpoint which is more likely to exist
-    await axios.get<unknown>(`${env.BASE_URL}/api/media-types`, {
+    await apiClient.get<unknown>(`/media-types`, {
       timeout: 5000, // 5 second timeout for health check
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken') || ''}`
-      }
     });
     
     // If we got a response, the API is working
@@ -1129,7 +1070,7 @@ export const useUpdateMedia = () => {
         console.log('DEBUG: useUpdateMedia onSuccess - Thumbnail from server data:', data.metadata?.v_thumbnail);
       }
 
-      toast.success('Media updated successfully');
+      // Do not show a toast here; the calling component (e.g., MediaDetail) owns user messaging
     }
   });
 };
@@ -1150,18 +1091,8 @@ export const useApiHealth = () => {
 
 // -- Activity Logs --
 export const fetchActivityLogs = async (limit = 20): Promise<any[]> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
-  const response = await axios.get<{data: any[], success: boolean}>(`${env.BASE_URL}/api/admin/activity-logs`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    },
-    params: {
-      limit
-    }
+  const response = await apiClient.get<{data: any[], success: boolean}>(`/admin/activity-logs`, {
+    params: { limit }
   });
   
   if (process.env.NODE_ENV === 'development') {
@@ -1173,19 +1104,8 @@ export const fetchActivityLogs = async (limit = 20): Promise<any[]> => {
 
 // -- User Activities --
 export const fetchUserActivities = async (page = 1, limit = 10): Promise<{data: any[], total: number}> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
-  const response = await axios.get<{data: any[], total: number, success: boolean}>(`${env.BASE_URL}/api/admin/user-activities`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    },
-    params: {
-      page,
-      limit
-    }
+  const response = await apiClient.get<{data: any[], total: number, success: boolean}>(`/admin/user-activities`, {
+    params: { page, limit }
   });
   
   if (process.env.NODE_ENV === 'development') {
@@ -1201,11 +1121,7 @@ export const fetchUserActivities = async (page = 1, limit = 10): Promise<{data: 
 // -- Database Stats --
 export const fetchDatabaseStats = async (): Promise<DatabaseStatsData> => {
   try {
-    const response = await axios.get<{ data: DatabaseStatsData }>(`${env.BASE_URL}/api/admin/database-stats`, { // Adjusted type for response
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken') || ''}`
-      }
-    });
+    const response = await apiClient.get<{ data: DatabaseStatsData }>(`/admin/database-stats`);
     if (process.env.NODE_ENV === 'development') {
       console.log("Raw database stats response (query-hooks):", response);
       console.log("Attempting to return response.data.data:", response.data.data);
@@ -1260,8 +1176,6 @@ export const useDatabaseStats = (userProfile: User | null | undefined) => {
 
 // Fetch notification settings
 export const fetchNotificationSettings = async (): Promise<NotificationSettingsData> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) throw new Error('Authentication token missing');
   const response = await apiClient.get<NotificationSettingsData>(`/admin/notification-settings`);
   // Ensure recipients is always an array
   return {
@@ -1272,45 +1186,29 @@ export const fetchNotificationSettings = async (): Promise<NotificationSettingsD
 
 // Update notification settings
 export const updateNotificationSettings = async (settings: Partial<NotificationSettingsData>): Promise<NotificationSettingsData> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) throw new Error('Authentication token missing');
   const response = await apiClient.put<NotificationSettingsData>(`/admin/notification-settings`, settings);
   return response.data;
 };
 
 // Add a new notification rule
 export const addNotificationRule = async (rule: Omit<NotificationRule, '_id'>): Promise<NotificationRule> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) throw new Error('Authentication token missing');
   const response = await apiClient.post<NotificationRule>(`/admin/notification-settings/rules`, rule);
   return response.data;
 };
 
 // Update a notification rule
 export const updateNotificationRule = async ({ ruleId, updates }: { ruleId: string, updates: Partial<NotificationRule> }): Promise<NotificationRule> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) throw new Error('Authentication token missing');
   const response = await apiClient.put<NotificationRule>(`/admin/notification-settings/rules/${ruleId}`, updates);
   return response.data;
 };
 
 // Delete a notification rule
 export const deleteNotificationRule = async (ruleId: string): Promise<void> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
   await apiClient.delete(`/admin/notification-settings/rules/${ruleId}`);
 };
 
 // Get eligible recipients for notifications
 export const fetchEligibleRecipients = async (): Promise<any[]> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
   const response = await apiClient.get<{success: boolean, data: any[]}>(`/admin/notification-settings/eligible-recipients`);
   
   return response.data.data;
@@ -1318,11 +1216,6 @@ export const fetchEligibleRecipients = async (): Promise<any[]> => {
 
 // Send a test notification
 export const sendTestNotification = async (recipients?: string[]): Promise<void> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
   await apiClient.post(`/admin/notification-settings/test`, { recipients });
 };
 
@@ -1429,55 +1322,28 @@ export const useSendTestNotification = (_userProfile: User | null | undefined) =
 
 // Drastically simplified useUserProfile: No options, internal handlers only for now.
 export const useUserProfile = (enabled = true) => {
-  const queryClient = useQueryClient(); // Get query client
-  const hasToken = !!localStorage.getItem('authToken');
+  const queryClient = useQueryClient();
 
   const queryResult = useQuery<User, Error, User>({
     queryKey: QueryKeys.userProfile,
-    queryFn: fetchUserProfile, // fetchUserProfile will throw if token is missing now
-    staleTime: 1000 * 60 * 15, 
-    enabled: hasToken && enabled,
+    queryFn: fetchUserProfile, // relies on cookies; 401 handled by global logic
+    staleTime: 1000 * 60 * 15,
+    enabled,
     retry: (failureCount: number, error: Error) => {
-      // If it's an auth error (401/403), clear the query cache for userProfile
-      if (error && typeof error === 'object' && 'response' in error && 
+      if (error && typeof error === 'object' && 'response' in error &&
           (error as any).response && typeof (error as any).response.status === 'number') {
         const status = (error as any).response.status;
         if (status === 401 || status === 403) {
           if (process.env.NODE_ENV === 'development') {
             console.warn('Auth error in useUserProfile (401/403). Clearing userProfile cache.');
           }
-          queryClient.removeQueries({ queryKey: QueryKeys.userProfile }); // Proactive clear
-          return false; // Don't retry auth errors that will clear cache
+          queryClient.removeQueries({ queryKey: QueryKeys.userProfile });
+          return false;
         }
       }
       return failureCount < 2;
     },
   });
-
-  if (!hasToken) {
-    // If no token, ensure data is undefined and isSuccess is false.
-    // Also, if the query cache somehow still has data for userProfile, remove it.
-    // This can happen if the token was just deleted and RQ hasn't fully processed the disabled query.
-    if (queryClient.getQueryData(QueryKeys.userProfile)) {
-        if (process.env.NODE_ENV === 'development') {
-            console.log('[useUserProfile] No token, but cached data found. Removing userProfile from cache.');
-        }
-        queryClient.removeQueries({ queryKey: QueryKeys.userProfile });
-    }
-    return {
-      data: undefined,
-      isLoading: false,
-      isSuccess: false,
-      isError: false, // Explicitly false, as it's not an API error but lack of token
-      error: null,    // Explicitly null
-      refetch: queryResult.refetch, // Keep refetch available
-      status: 'idle' as const,
-      // Include other relevant fields from QueryObserverResult if needed, with default/empty states
-      fetchStatus: 'idle' as const,
-      isFetching: false,
-      isInitialLoading: false,
-    };
-  }
 
   return {
     ...queryResult,
@@ -1515,16 +1381,8 @@ export const useUpdateUserProfile = () => {
 
 // -- User API Functions --
 export const fetchUserProfile = async (): Promise<User> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    // This will be caught by React Query and set the query to an error state if enabled:true but no token
-    // Or, if enabled:false, the queryFn just won't run.
-    // If this is called directly when hasToken is false (which it shouldn't be by useUserProfile), it's an issue.
-    console.error('[fetchUserProfile] Attempted to fetch profile without a token.');
-    throw new Error('Authentication token missing'); 
-  }
-  // Use centralized apiClient so 401s trigger refresh-token flow
-  const response = await apiClient.get<User>(`/user/profile`);
+  // With cookies, we rely on withCredentials; localStorage token is optional during migration
+  const response = await apiClient.get<User>(`/user/profile`, { withCredentials: true });
   // The response might be directly the user object, or nested under 'data' or 'user'
   // Adjust based on your actual API response structure
   // For now, assuming the response.data is the User object
@@ -1535,15 +1393,7 @@ export const fetchUserProfile = async (): Promise<User> => {
 };
 
 export const fetchAllUsers = async (): Promise<User[]> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  const response = await axios.get<User[]>(`${env.BASE_URL}/api/users`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const response = await apiClient.get<User[]>(`/users`);
   if (process.env.NODE_ENV === 'development') {
     console.log(`Fetched ${response.data.length} users`);
   }
@@ -1551,17 +1401,8 @@ export const fetchAllUsers = async (): Promise<User[]> => {
 };
 
 export const updateUserProfile = async (userData: Partial<User> & { _id: string }): Promise<User> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
   const { _id, ...updateData } = userData;
-  const response = await axios.put<User>(`${env.BASE_URL}/api/users/${_id}`, updateData, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
+  const response = await apiClient.put<User>(`/users/${_id}`, updateData);
   if (process.env.NODE_ENV === 'development') {
     console.log('Updated user profile:', response.data);
   }
@@ -1574,14 +1415,14 @@ export const loginUser = async (credentials: UserLoginCredentials): Promise<Auth
   if (process.env.NODE_ENV === 'development') {
     console.log("Logging in with:", credentials.email);
   }
-  const response = await axios.post<AuthResponse>(`${env.BASE_URL}/api/auth/login`, credentials);
+  const response = await axios.post<AuthResponse>(`${env.BASE_URL}/api/auth/login`, credentials, { withCredentials: true });
   
   // Type assertion for response data
   const authData = response.data;
   
-  // Store tokens in localStorage
-  localStorage.setItem("authToken", authData.accessToken);
-  localStorage.setItem("refreshToken", authData.refreshToken);
+  // Cookies now store tokens; keep localStorage fallback only if present
+  if (authData.accessToken) localStorage.setItem("authToken", authData.accessToken);
+  if (authData.refreshToken) localStorage.setItem("refreshToken", authData.refreshToken);
   
   if (process.env.NODE_ENV === 'development') {
     console.log('Login successful, tokens stored. User data:', authData.user);
@@ -1621,6 +1462,10 @@ export const useLogin = () => {
       // Prefetch related data if user is admin/superAdmin
       if (data.user && (data.user.role === 'admin' || data.user.role === 'superAdmin')) {
         queryClient.prefetchQuery({ queryKey: QueryKeys.allUsers, queryFn: fetchAllUsers, staleTime: 1000 * 60 * 5 });
+      }
+      // Start preemptive refresh scheduler
+      if (data.accessToken) {
+        startAccessTokenRefreshSchedule(data.accessToken);
       }
       toast.success(data.message || 'Login successful!');
     },
@@ -1680,18 +1525,38 @@ export const useTransformedMedia = (userProfile: User | null | undefined, mediaT
       const approvedMedia = data.filter(media => media.approvalStatus === 'approved');
       
       // Then map to TransformedMediaFile
-      return approvedMedia.map(media => ({
-        ...media,
-        id: media.id || media._id, // Ensure id for DataGrid
-        displayTitle: media.title || media.metadata?.fileName || 'Untitled',
-        thumbnailUrl: media.metadata?.v_thumbnail || media.location,
-        fileSize: typeof media.fileSize === 'number' ? media.fileSize : 0,
-        modifiedDate: typeof media.modifiedDate === 'string' && media.modifiedDate.length > 0
-                        ? media.modifiedDate
-                        : new Date().toISOString(),
-        // approvalStatus will be 'approved' due to the filter, but keep it if needed downstream
-        // approvalFeedback is unlikely to be relevant for approved items in public view
-      }));
+      return approvedMedia.map(media => {
+        // Normalize mediaType fields for downstream UI (handles string id, populated object, or ObjectId-like object)
+        const mt: any = (media as any).mediaType;
+        let mediaTypeId: string | undefined = (media as any).mediaTypeId;
+        let mediaTypeName: string | undefined = (media as any).mediaTypeName;
+
+        if (!mediaTypeId) {
+          if (typeof mt === 'string') mediaTypeId = mt;
+          else if (mt && typeof mt === 'object') {
+            mediaTypeId = mt._id || (typeof mt.toString === 'function' ? mt.toString() : undefined) || mt.id;
+          }
+        }
+
+        if (!mediaTypeName) {
+          if (mt && typeof mt === 'object') mediaTypeName = mt.name;
+          // Do NOT default name to id; leave undefined so UI can resolve via id against mediaTypes
+        }
+        return {
+          ...media,
+          id: media.id || media._id, // Ensure id for DataGrid
+          displayTitle: media.title || media.metadata?.fileName || 'Untitled',
+          thumbnailUrl: media.metadata?.v_thumbnail || media.location,
+          fileSize: typeof media.fileSize === 'number' ? media.fileSize : 0,
+          modifiedDate: typeof media.modifiedDate === 'string' && media.modifiedDate.length > 0
+                          ? media.modifiedDate
+                          : new Date().toISOString(),
+          mediaTypeId,
+          mediaTypeName,
+          // Keep legacy mediaType for compatibility, prefer mediaTypeName for display
+          mediaType: mediaTypeName || (typeof media.mediaType === 'string' ? media.mediaType : 'Unknown'),
+        } as unknown as TransformedMediaFile;
+      });
     },
   });
 };
@@ -1778,15 +1643,7 @@ export const useAddMedia = () => {
 
 // -- Tags and Tag Categories API Functions --
 export const fetchTagCategories = async (): Promise<TagCategory[]> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  const response = await axios.get<TagCategory[]>(`${env.BASE_URL}/api/tag-categories`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const response = await apiClient.get<TagCategory[]>(`/tag-categories`);
   if (process.env.NODE_ENV === 'development') {
     console.log(`Fetched ${response.data.length} tag categories`);
   }
@@ -1798,15 +1655,7 @@ export const fetchTagCategories = async (): Promise<TagCategory[]> => {
 
 // New fetchTags function - REPLACING THE PLACEHOLDER ABOVE
 export const fetchTags = async (): Promise<Tag[]> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  const response = await axios.get<Tag[]>(`${env.BASE_URL}/api/tags`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const response = await apiClient.get<Tag[]>(`/tags`);
   if (process.env.NODE_ENV === 'development') {
     console.log(`Fetched ${response.data.length} tags`);
   }
@@ -1815,20 +1664,7 @@ export const fetchTags = async (): Promise<Tag[]> => {
 
 // New createTag function - ADDED HERE
 export const createTag = async (tagName: string): Promise<Tag> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  const response = await axios.post<Tag>(
-    `${env.BASE_URL}/api/tags`,
-    { name: tagName }, // Send name in the request body
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    }
-  );
+  const response = await apiClient.post<Tag>(`/tags`, { name: tagName });
   if (process.env.NODE_ENV === 'development') {
     console.log('Created tag:', response.data);
   }
@@ -1889,25 +1725,8 @@ export const fetchUserById = async (userId: string): Promise<User | null> => {
     console.warn('fetchUserById called without a userId');
     return null;
   }
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    // Depending on whether this is a public or private route,
-    // you might allow this or throw an error.
-    // For now, let's assume it might be used for public profiles,
-    // but usually, an API would handle auth internally.
-    // Consider if a token is always required for /api/users/:userId
-    // For consistency with other user fetches, let's require a token for now.
-    // If a public version is needed, a separate endpoint/logic might be better.
-    // throw new Error('Authentication token missing for fetchUserById');
-  }
   try {
-    // Expecting the API to return the User object directly
-    const response = await axios.get<User>(`${env.BASE_URL}/api/users/${userId}`, {
-      headers: {
-        // Conditionally add Authorization header if token exists
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-    });
+    const response = await apiClient.get<User>(`/users/${userId}`);
     return response.data;
   } catch (error: any) {
     console.error(`Error fetching user by ID (${userId}):`, error.response?.data?.message || error.message);
@@ -1997,20 +1816,7 @@ export const useCreateTagCategory = () => {
 
 // API function to send an invitation
 export const sendInvitation = async (invitationData: InvitationData): Promise<InvitationResponse> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing. You must be logged in to send invitations.');
-  }
-  const response = await axios.post<InvitationResponse>(
-    `${env.BASE_URL}/api/invitations`,
-    invitationData,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    }
-  );
+  const response = await apiClient.post<InvitationResponse>(`/invitations`, invitationData);
   if (process.env.NODE_ENV === 'development') {
     console.log('Invitation sent successfully:', response.data);
   }
@@ -2041,21 +1847,8 @@ export const useSendInvitation = () => {
 // ... existing code ... 
 
 export const fetchMediaByUserId = async (userId: string): Promise<MediaFile[]> => {
-  const token = localStorage.getItem('authToken');
-  // No token, no fetching user-specific media that might require permission checks
-  if (!token) {
-    // Or, if public profiles can show some approved media, this logic might change.
-    // For now, assume token is required to know who is asking.
-    console.warn('Auth token needed to fetch media by user ID.');
-    return []; 
-  }
-
   try {
-    const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/api/media/user/${userId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await apiClient.get<MediaFile[]>(`/media/user/${userId}`);
     // Assuming the backend already filters by approvalStatus based on the requester's role
     // and ownership. The frontend just gets the list it's allowed to see.
     // We will still process it to ensure consistency, similar to fetchMedia.
@@ -2106,20 +1899,10 @@ export const useMediaByUserId = (userId: string | undefined) => {
 // ... existing code ...
 
 export const fetchPendingMediaReviews = async (): Promise<MediaFile[]> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    toast.error('Authentication required to fetch pending media reviews.');
-    return [];
-  }
-
   try {
     // This endpoint needs to be created on the backend.
     // It should return media files with status 'pending' or 'needs_revision'.
-    const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/api/media/admin/pending-review`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await apiClient.get<MediaFile[]>(`/media/admin/pending-review`);
 
     if (process.env.NODE_ENV === 'development') {
       console.log(`Fetched ${response.data.length} media items pending review`);
@@ -2156,36 +1939,27 @@ export const usePendingMediaReviews = (userProfile: User | null | undefined) => 
 
 // API function to Approve a Media Item
 export const approveMediaItem = async (mediaId: string): Promise<MediaFile> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) throw new Error('Authentication required.');
-  const response = await axios.post<MediaFile>(
-    `${env.BASE_URL}/api/media/admin/${mediaId}/approve`,
-    {},
-    { headers: { Authorization: `Bearer ${token}` } }
+  const response = await apiClient.post<MediaFile>(
+    `/media/admin/${mediaId}/approve`,
+    {}
   );
   return response.data;
 };
 
 // API function to Reject a Media Item
 export const rejectMediaItem = async ({ mediaId, feedback }: { mediaId: string; feedback: string }): Promise<MediaFile> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) throw new Error('Authentication required.');
-  const response = await axios.post<MediaFile>(
-    `${env.BASE_URL}/api/media/admin/${mediaId}/reject`,
-    { feedback },
-    { headers: { Authorization: `Bearer ${token}` } }
+  const response = await apiClient.post<MediaFile>(
+    `/media/admin/${mediaId}/reject`,
+    { feedback }
   );
   return response.data;
 };
 
 // API function to Request Revision for a Media Item
 export const requestRevisionMediaItem = async ({ mediaId, feedback }: { mediaId: string; feedback: string }): Promise<MediaFile> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) throw new Error('Authentication required.');
-  const response = await axios.post<MediaFile>(
-    `${env.BASE_URL}/api/media/admin/${mediaId}/request-revision`,
-    { feedback },
-    { headers: { Authorization: `Bearer ${token}` } }
+  const response = await apiClient.post<MediaFile>(
+    `/media/admin/${mediaId}/request-revision`,
+    { feedback }
   );
   return response.data;
 };
@@ -2255,20 +2029,10 @@ export const useRequestRevisionMedia = () => {
 };
 
 export const fetchRejectedMedia = async (): Promise<MediaFile[]> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    toast.error('Authentication required to fetch rejected media.');
-    return [];
-  }
-
   try {
     // This endpoint needs to be created on the backend.
     // It should return media files with status 'rejected'.
-    const response = await axios.get<MediaFile[]>(`${env.BASE_URL}/api/media/admin/rejected`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await apiClient.get<MediaFile[]>(`/media/admin/rejected`);
 
     if (process.env.NODE_ENV === 'development') {
       console.log(`Fetched ${response.data.length} rejected media items`);
@@ -2305,11 +2069,6 @@ export const useRejectedMedia = (userProfile: User | null | undefined) => {
 
 // API function to delete a tag category
 export const deleteTagCategory = async ({ categoryId, hardDelete }: { categoryId: string; hardDelete?: boolean }): Promise<void> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  
   let url = `/tag-categories/${categoryId}`;
   if (hardDelete) {
     url += '?hardDelete=true';
@@ -2339,16 +2098,7 @@ export const useDeleteTagCategory = () => {
 
 // API function to update a tag category
 export const updateTagCategory = async ({ categoryId, data }: { categoryId: string, data: Partial<Pick<TagCategory, 'name' | 'description' | 'tags' | 'isActive'>> }): Promise<TagCategory> => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Authentication token missing');
-  }
-  const response = await axios.put<TagCategory>(`${env.BASE_URL}/api/tag-categories/${categoryId}`, data, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
+  const response = await apiClient.put<TagCategory>(`/tag-categories/${categoryId}`, data);
   return response.data;
 };
 

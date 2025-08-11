@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
+import cookieParser from 'cookie-parser';
 import userRoutes from './routes/userRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
 import hubspotRoutes from './routes/hubspotRoutes.js';
@@ -54,7 +55,7 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   // Use a wildcard to allow all headers - this is the most permissive option
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'Pragma', 'Expires', 'X-Auth-Token', '*'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'Pragma', 'Expires', 'X-Auth-Token'],
   exposedHeaders: ['Content-Length', 'Content-Type', 'X-Auth-Token', 'Cache-Control', 'Pragma', 'Expires'],
   preflightContinue: false,
   optionsSuccessStatus: 204,
@@ -67,6 +68,7 @@ app.options('*', cors());
 // Middleware
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+app.use(cookieParser());
 
 // Add request start time for performance tracking
 app.use((req, res, next) => {

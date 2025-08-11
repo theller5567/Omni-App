@@ -119,6 +119,7 @@ router.post('/upload', authenticate, uploadFields, async (req, res, next) => {
   console.log('Files:', req.files);
   console.log('Body:', {
     mediaType: req.body.mediaType,
+    mediaTypeId: req.body.mediaTypeId,
     metadata: req.body.metadata,
     title: req.body.title
   });
@@ -131,16 +132,29 @@ router.post('/upload', authenticate, uploadFields, async (req, res, next) => {
   }
 
   try {
-    const mediaType = req.body.mediaType;
-    console.log('Received media type:', mediaType);
+    const mediaTypeName = req.body.mediaType;
+    const mediaTypeId = req.body.mediaTypeId;
+    console.log('Received media type:', { mediaTypeName, mediaTypeId });
     
     // Fetch media types using the MediaType model
     const mediaTypes = await MediaType.find();
     console.log('Available media types:', mediaTypes.map(t => t.name));
     
-    if (!mediaType || !mediaTypes.some(type => type.name === mediaType)) {
-      console.error(`Invalid media type: ${mediaType}`);
-      return res.status(400).json({ error: `Invalid media type: ${mediaType}` });
+    let selectedType = null;
+    if (mediaTypeId) {
+      selectedType = await MediaType.findById(mediaTypeId).lean();
+      if (!selectedType) {
+        console.error(`Invalid media type id: ${mediaTypeId}`);
+        return res.status(400).json({ error: `Invalid media type id: ${mediaTypeId}` });
+      }
+    } else if (mediaTypeName) {
+      selectedType = await MediaType.findOne({ name: mediaTypeName }).lean();
+      if (!selectedType) {
+        console.error(`Invalid media type: ${mediaTypeName}`);
+        return res.status(400).json({ error: `Invalid media type: ${mediaTypeName}` });
+      }
+    } else {
+      return res.status(400).json({ error: 'mediaTypeId or mediaType (name) is required' });
     }
 
     next();

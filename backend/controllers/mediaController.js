@@ -173,7 +173,13 @@ export const uploadMedia = async (req, res) => {
     const parsedMetadata = parseMetadata(req.body.metadata);
     
     // Find the media type to get default tags
-    const mediaType = await MediaType.findOne({ name: req.body.mediaType });
+    // Determine media type by id or name
+    let mediaType = null;
+    if (req.body.mediaTypeId) {
+      mediaType = await MediaType.findById(req.body.mediaTypeId);
+    } else if (req.body.mediaType) {
+      mediaType = await MediaType.findOne({ name: req.body.mediaType });
+    }
     if (!mediaType) {
       throw new Error('Media type not found');
     }
@@ -207,7 +213,7 @@ export const uploadMedia = async (req, res) => {
       fileSize: file.size,
       fileExtension: req.body.fileExtension,
       modifiedDate: new Date(),
-      mediaType: req.body.mediaType,
+      mediaType: mediaType._id,
       metadata: {
         ...parsedMetadata,
         tags: combinedTags, // Use the combined tags with defaults
@@ -637,12 +643,6 @@ export const fixTagsForMediaType = async (req, res) => {
 };
 
 export const updateMedia = async (req, res) => {
-  // Add CORS headers
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma, Expires, X-Auth-Token');
-  res.header('Access-Control-Expose-Headers', 'Cache-Control, Pragma, Expires, Content-Length, Content-Type, X-Auth-Token');
-
   const { slug } = req.params;
   console.log('Received update request for slug:', slug);
   console.log('Request body:', JSON.stringify(req.body, null, 2));

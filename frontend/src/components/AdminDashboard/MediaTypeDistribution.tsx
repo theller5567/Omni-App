@@ -192,8 +192,13 @@ const MediaTypeDistribution: React.FC = () => {
   const getDistributionData = () => {
     // Create a count map of media types
     const mediaTypeCounts = allMedia.reduce((acc: Record<string, number>, media: TransformedMediaFile) => {
-      const type = media.mediaType || 'Uncategorized';
-      acc[type] = (acc[type] || 0) + 1;
+      const mtId = (media as any).mediaTypeId as string | undefined;
+      const mtName = (media as any).mediaTypeName as string | undefined;
+      const resolvedName = mtName
+        || (mtId ? mediaTypes.find(t => (t as any)._id === mtId)?.name : undefined)
+        || (typeof media.mediaType === 'string' ? media.mediaType : undefined)
+        || 'Uncategorized';
+      acc[resolvedName] = (acc[resolvedName] || 0) + 1;
       return acc;
     }, {});
     

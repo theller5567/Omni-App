@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useLogin, useRegister, UserLoginCredentials, UserRegistrationData } from './query-hooks';
 import { useQueryClient } from '@tanstack/react-query';
+import apiClient from '../api/apiClient';
+import { stopAccessTokenRefreshSchedule } from '../services/tokenScheduler';
 
 export const useAuthHandler = (formData: any, isSignUp: boolean) => {
   const navigate = useNavigate();
@@ -58,16 +60,19 @@ export const useLogoutHandler = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    // Tell server to clear HttpOnly cookies
+    apiClient.post('/auth/logout').catch(() => {});
+    // Stop any scheduled refresh timers and clear local fallbacks
+    stopAccessTokenRefreshSchedule();
     localStorage.removeItem('authToken');
     localStorage.removeItem('refreshToken');
-    
     queryClient.clear();
 
   if (process.env.NODE_ENV === 'development') {
       console.log('Logout successful, tokens and cache cleared.');
   }
 
-    navigate('/');
+    navigate('/', { replace: true });
   };
 
   return handleLogout;

@@ -26,8 +26,9 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, med
     
     // Add unique media types from data
     mediaFilesData.forEach(file => {
-      if (file.mediaType && !types.includes(file.mediaType)) {
-        types.push(file.mediaType);
+      const label = (file as any).mediaTypeName || file.mediaType;
+      if (label && !types.includes(label)) {
+        types.push(label);
       }
     });
     

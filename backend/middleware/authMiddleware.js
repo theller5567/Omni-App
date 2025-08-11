@@ -12,7 +12,8 @@ dotenv.config({ path: envPath });
 
 export const authenticate = (req, res, next) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader) {
+  const cookieToken = req.cookies?.accessToken;
+  if (!authHeader && !cookieToken) {
     LoggerService.logUserActivity({
       action: 'AUTHENTICATION_FAILURE',
       details: 'No authorization header',
@@ -22,7 +23,7 @@ export const authenticate = (req, res, next) => {
     return res.status(401).json({ error: 'Authorization header missing' });
   }
 
-  const token = authHeader.split(' ')[1];
+  const token = cookieToken || (authHeader ? authHeader.split(' ')[1] : null);
   if (!token) {
     LoggerService.logUserActivity({
       action: 'AUTHENTICATION_FAILURE',

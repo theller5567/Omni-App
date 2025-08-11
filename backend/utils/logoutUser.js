@@ -2,31 +2,32 @@ import LoggerService from '../services/loggerService.js';
 
 export const logoutUser = async (req, res) => {
   try {
-    // Get the user info from the authentication middleware
+    // Always attempt to clear cookies regardless of auth state
     const user = req.user;
-    
-    // If no user is found, just return success
-    if (!user) {
-      return res.status(200).json({ message: 'Logged out' });
-    }
     
     // Get client info for logging
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     const userAgent = req.headers['user-agent'];
     
-    // Track logout activity
-    await LoggerService.logUserActivity({
-      userId: user.id,
-      username: user.username || user.email,
-      email: user.email,
-      action: 'LOGOUT',
-      ip,
-      userAgent,
-      details: {
-        success: true
-      }
-    });
+    // Track logout activity if we have a user
+    if (user) {
+      await LoggerService.logUserActivity({
+        userId: user.id,
+        username: user.username || user.email,
+        email: user.email,
+        action: 'LOGOUT',
+        ip,
+        userAgent,
+        details: { success: true }
+      });
+    }
     
+    // Clear cookies
+    const isProd = process.env.NODE_ENV === 'production';
+    const opts = { httpOnly: true, secure: isProd, sameSite: 'lax', path: '/' };
+    res.clearCookie('accessToken', opts);
+    res.clearCookie('refreshToken', opts);
+
     // Return success
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {

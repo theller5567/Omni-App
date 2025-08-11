@@ -12,7 +12,7 @@ import {
   Tab,
   Tooltip,
 } from "@mui/material";
-import axios from "axios";
+// axios not needed; using fetch for downloads and apiClient for API calls elsewhere
 import { BaseMediaFile } from "../../interfaces/MediaFile";
 import { MediaFile as MediaFileType } from '../../types/media';
 import { motion } from 'framer-motion';
@@ -641,30 +641,32 @@ const MediaDetail: React.FC = () => {
   
   // Set CSS variables for theming (MOVED UP)
   useEffect(() => {
-    if (mediaFile && mediaTypes && mediaTypes.length > 0) {
-      const mediaTypeInfo = mediaTypes.find(
-        (type) => type.name === mediaFile.mediaType
-      );
-      const accentColor = '#4dabf5';
-      const catColor = mediaTypeInfo?.catColor || '#4dabf5';
-      
-      const root = document.documentElement;
-      root.style.setProperty('--accent-color', accentColor);
-      root.style.setProperty('--cat-color', catColor);
-      
-      return () => {
-        root.style.setProperty('--accent-color', '#4dabf5'); // Reset
-        root.style.setProperty('--cat-color', '#4dabf5');
-      };
-    } else {
-      const root = document.documentElement;
-      root.style.setProperty('--accent-color', '#4dabf5'); // Default if no mediaFile/mediaTypes  
-      root.style.setProperty('--cat-color', '#4dabf5');
-      return () => { // Ensure a cleanup function is always returned
-          root.style.setProperty('--accent-color', '#4dabf5');
-          root.style.setProperty('--cat-color', '#4dabf5');
-      };
+    const root = document.documentElement;
+    const accentColor = '#4dabf5';
+    let catColor = '#4dabf5';
+
+    if (mediaFile && Array.isArray(mediaTypes) && mediaTypes.length > 0) {
+      const mt: any = (mediaFile as any).mediaType;
+      const mtId: string | undefined = (mediaFile as any).mediaTypeId;
+      let mediaTypeInfo = null as any;
+      if (mt && typeof mt === 'object') {
+        mediaTypeInfo = mediaTypes.find(t => t._id === mt._id) || mediaTypes.find(t => t.name === mt.name);
+      } else if (typeof mt === 'string' || typeof mtId === 'string') {
+        const byId = mediaTypes.find(t => t._id === (mtId || mt));
+        mediaTypeInfo = byId || mediaTypes.find(t => t.name === ((mediaFile as any).mediaTypeName || mt));
+      } else if ((mediaFile as any).mediaTypeName) {
+        mediaTypeInfo = mediaTypes.find(t => t.name === (mediaFile as any).mediaTypeName);
+      }
+      catColor = mediaTypeInfo?.catColor || '#4dabf5';
     }
+
+    root.style.setProperty('--accent-color', accentColor);
+    root.style.setProperty('--cat-color', catColor);
+
+    return () => {
+      root.style.setProperty('--accent-color', '#4dabf5');
+      root.style.setProperty('--cat-color', '#4dabf5');
+    };
   }, [mediaFile, mediaTypes]);
 
   // Determine if editing is enabled based on userProfile role
@@ -771,12 +773,10 @@ const MediaDetail: React.FC = () => {
     
     try {
       // Fetch file with responseType: 'blob' to get binary data
-      const response = await axios.get(mediaFile.location, {
-          responseType: 'blob'
+      const response = await fetch(mediaFile.location, {
+          // Use fetch to download external S3 files; no cookies/headers
         });
-        
-      // Create a blob URL for the file
-        const blob = new Blob([response.data as BlobPart]);
+      const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         
       // Create a temporary link element and click it to download
@@ -903,7 +903,9 @@ const MediaDetail: React.FC = () => {
   };
   
   const handleSuccessfulUpdate = (_updatedMediaFile: Partial<MediaFileType> & { metadata?: Record<string, any> }) => {
-    toast.success("Media file updated successfully!");
+    // Single toast with longer duration to ensure readability
+    toast.dismiss('media-update-success');
+    toast.success('Media updated successfully', { toastId: 'media-update-success', autoClose: 5000 });
     if (isEditDialogOpen) {
       setIsEditDialogOpen(false);
     }
@@ -948,8 +950,9 @@ const MediaDetail: React.FC = () => {
         // Close dialog
         setIsThumbnailDialogOpen(false);
         
-        // Show success toast notification
-        toast.success('Thumbnail updated successfully');
+        // Show success toast notification (single toast)
+        toast.dismiss('thumbnail-update-success');
+        toast.success('Thumbnail updated successfully', { toastId: 'thumbnail-update-success', autoClose: 5000 });
       
         // Invalidate activity logs query to refresh the Recent Activity component
         queryClient.invalidateQueries({ queryKey: [QueryKeys.activityLogs] });
@@ -972,8 +975,18 @@ const MediaDetail: React.FC = () => {
   
   // Convert mediaTypeInfo to MediaTypeConfig format
   const mediaTypeConfig = mediaFile && mediaTypes && mediaTypes.length > 0 ? (() => {
-    const mtInfo = mediaTypes.find((type) => type.name === mediaFile.mediaType);
-    return mtInfo ? { ...mtInfo, fields: mtInfo.fields || [] } : null;
+    const mt: any = (mediaFile as any).mediaType;
+    const mtId: string | undefined = (mediaFile as any).mediaTypeId;
+    let found = null as any;
+    if (mt && typeof mt === 'object') {
+      found = mediaTypes.find(t => t._id === mt._id) || mediaTypes.find(t => t.name === mt.name);
+    } else if (typeof mt === 'string' || typeof mtId === 'string') {
+      const idToUse = (mtId || mt) as string;
+      found = mediaTypes.find(t => t._id === idToUse) || mediaTypes.find(t => t.name === ((mediaFile as any).mediaTypeName || mt));
+    } else if ((mediaFile as any).mediaTypeName) {
+      found = mediaTypes.find(t => t.name === (mediaFile as any).mediaTypeName);
+    }
+    return found ? { ...found, fields: found.fields || [] } : null;
   })() : null;
 
   // Get metadata description (from either root or metadata object)
@@ -986,9 +999,20 @@ const MediaDetail: React.FC = () => {
   // const accentColor = mediaTypeInfo?.catColor || '#4dabf5'; // REMOVED - Logic moved to useEffect
   
   // Prepare data for MediaInformation component according to its expected props
+  const displayMediaTypeName = mediaFile ? (() => {
+    const mt: any = (mediaFile as any).mediaType;
+    const mtId: string | undefined = (mediaFile as any).mediaTypeId;
+    if (mt && typeof mt === 'object') return mt.name || mediaTypes.find(t => t._id === mt._id)?.name || '';
+    if (typeof mt === 'string' || typeof mtId === 'string') {
+      const idToUse = (mtId || mt) as string;
+      return mediaTypes.find(t => t._id === idToUse)?.name || (mediaFile as any).mediaTypeName || (mt as string);
+    }
+    return (mediaFile as any).mediaTypeName || '';
+  })() : '';
+
   const baseFieldsArray = mediaFile ? [
     { name: 'File Name', value: getMetadataField(mediaFile, 'fileName', mediaFile.title) },
-    { name: 'Media Type', value: mediaFile.mediaType },
+    { name: 'Media Type', value: displayMediaTypeName },
     { name: 'File Size', value: formatFileSize(mediaFile.fileSize || 0) },
     { name: 'File Extension', value: mediaFile.fileExtension?.toUpperCase() },
     { name: 'Upload Date', value: new Date(modifiedDate).toLocaleDateString() },
@@ -1043,13 +1067,19 @@ const MediaDetail: React.FC = () => {
         </Box>
       </Box>
 
-      {isEditDialogOpen && mediaTypeConfig && (
-        <Suspense fallback={<CircularProgress size={24} />}>
+      {isEditDialogOpen && (
+        <Suspense fallback={<CircularProgress size={24} />}> 
           <EditMediaDialog
             open={isEditDialogOpen}
             onClose={() => setIsEditDialogOpen(false)}
             mediaFile={mediaFile}
-            mediaType={mediaTypeConfig as any}
+            mediaType={(mediaTypeConfig || ({
+              _id: (mediaFile as any)?.mediaTypeId || (typeof (mediaFile as any)?.mediaType === 'string' ? (mediaFile as any)?.mediaType : undefined),
+              name: displayMediaTypeName || 'Media',
+              fields: [],
+              defaultTags: [],
+              settings: { allowRelatedMedia: false }
+            } as any))}
             onSave={async (data) => {
               await handleSave(data);
               return;

@@ -75,7 +75,8 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
         );
       }
       
-      if (isVideoFile(params.row.fileExtension) || params.row.mediaType?.includes('Video')) {
+      const mtName = (params.row as any).mediaTypeName || params.row.mediaType;
+      if (isVideoFile(params.row.fileExtension) || (typeof mtName === 'string' && mtName.includes('Video'))) {
         console.log("HIIIIIIIII",params.row.metadata);
         if (params.row.metadata?.v_thumbnail) {
           // Add a cache-busting parameter using timestamp to ensure fresh image on every render
@@ -152,22 +153,15 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
       </Link>
     )},
     { field: 'mediaType', headerName: 'Media Type', flex: 0.5, renderCell: (params) => {
-      // Get media type and its color
-      const mediaTypeColor = mediaTypes.find(type => type.name === params.row.mediaType)?.catColor || '#999';
-      
+      const mtId = (params.row as any).mediaTypeId;
+      const mtName = (params.row as any).mediaTypeName || params.row.mediaType;
+      const found = mtId ? mediaTypes.find(t => (t as any)._id === mtId) : mediaTypes.find(t => t.name === mtName);
+      const mediaTypeColor = found?.catColor || '#999';
+      const label = found?.name || mtName || 'Unknown';
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box 
-            sx={{ 
-              width: 10, 
-              height: 10, 
-              bgcolor: mediaTypeColor, 
-              borderRadius: '50%',
-              border: '1px solid rgba(0,0,0,0.1)',
-              boxShadow: `0 0 3px ${mediaTypeColor}`
-            }}
-          />
-          <span>{params.row.mediaType}</span>
+          <Box sx={{ width: 10, height: 10, bgcolor: mediaTypeColor, borderRadius: '50%', border: '1px solid rgba(0,0,0,0.1)', boxShadow: `0 0 3px ${mediaTypeColor}` }} />
+          <span>{label}</span>
         </Box>
       );
     }},
@@ -207,8 +201,9 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
     { field: 'tags', headerName: 'Tags', flex: 1, renderCell: (params) => {
       const tags = params.row.metadata.tags;
       if (Array.isArray(tags) && tags.length > 0) {
-        // Get the media type to check for default tags
-        const mediaType = mediaTypes.find(type => type.name === params.row.mediaType);
+        const mtId = (params.row as any).mediaTypeId;
+        const mtName = (params.row as any).mediaTypeName || params.row.mediaType;
+        const mediaType = mtId ? mediaTypes.find(type => (type as any)._id === mtId) : mediaTypes.find(type => type.name === mtName);
         const defaultTags = mediaType?.defaultTags || [];
         
         // Sort tags to display default tags first

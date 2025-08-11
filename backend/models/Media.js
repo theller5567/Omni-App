@@ -10,7 +10,8 @@ const mediaSchema = new mongoose.Schema({
   modifiedDate: Date,
   uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   modifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  mediaType: String,
+  // Store mediaType as ObjectId going forward; keep string compatibility via migration and read helpers
+  mediaType: { type: mongoose.Schema.Types.ObjectId, ref: 'MediaType' },
   approvalStatus: {
     type: String,
     enum: ['pending', 'approved', 'rejected', 'needs_revision'],

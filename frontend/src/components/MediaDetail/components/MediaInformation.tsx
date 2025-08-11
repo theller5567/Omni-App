@@ -68,12 +68,20 @@ const MediaInformation: React.FC<MediaInformationProps> = ({
   const userId = getMetadataField(mediaFile, 'uploadedBy', '') as string;
   const { username: uploaderUsername, loading: uploaderLoading } = useUsername(userId);
 
+  const mediaTypeLabel = (() => {
+    const mt: any = (mediaFile as any).mediaType;
+    const mtId: string | undefined = (mediaFile as any).mediaTypeId;
+    if (mt && typeof mt === 'object') return mt.name || (mediaFile as any).mediaTypeName || 'Unknown';
+    if (typeof mt === 'string' || typeof mtId === 'string') return (mediaFile as any).mediaTypeName || mt || 'Unknown';
+    return (mediaFile as any).mediaTypeName || 'Unknown';
+  })();
+
   const basicFileInfoRaw = [
     { label: 'Title', value: mediaFile.title || 'Untitled' },
     { label: 'File Name', value: getMetadataField(mediaFile, 'fileName') || mediaFile.title || 'Unknown' },
     { label: 'File Size', value: mediaFile.fileSize ? formatFileSize(mediaFile.fileSize) : 'Unknown' },
     { label: 'File Type', value: mediaFile.fileExtension ? `.${mediaFile.fileExtension}` : 'Unknown' },
-    { label: 'Media Type', value: mediaFile.mediaType || 'Unknown' },
+    { label: 'Media Type', value: mediaTypeLabel },
     { label: 'Visibility', value: getMetadataField(mediaFile, 'visibility', 'Public') },
     { label: 'Uploaded By', value: uploaderLoading ? 'Loading...' : (uploaderUsername || userId || 'Unknown') },
     { label: 'Uploaded On', value: getMetadataField(mediaFile, 'modifiedDate', 'Unknown') 

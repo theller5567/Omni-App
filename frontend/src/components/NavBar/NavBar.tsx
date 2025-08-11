@@ -1,27 +1,33 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { QueryKeys } from '../../hooks/query-hooks';
+import apiClient from '../../api/apiClient';
+import { stopAccessTokenRefreshSchedule } from '../../services/tokenScheduler';
 
 // Create a standalone hook for logout functionality
 export const useLogout = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  return () => {
+  return async () => {
     if (process.env.NODE_ENV === 'development') {
       console.log('Executing logout via useLogout hook...');
     }
+    // Call backend to clear HttpOnly cookies and wait for it to complete
+    try {
+      await apiClient.post('/auth/logout');
+    } catch {}
+    // Stop any scheduled refresh timers and clear local storage fallbacks
+    stopAccessTokenRefreshSchedule();
     localStorage.removeItem('authToken');
     localStorage.removeItem('refreshToken');
     
-    queryClient.removeQueries({ queryKey: QueryKeys.userProfile });
-    queryClient.removeQueries({ queryKey: QueryKeys.allUsers });
+    queryClient.clear();
 
     if (process.env.NODE_ENV === 'development') {
       console.log('User and auth tokens cleared, navigating to login.');
     }
-    navigate('/');
+    navigate('/', { replace: true });
   };
 };
 

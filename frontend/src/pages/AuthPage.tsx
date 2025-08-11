@@ -84,7 +84,7 @@ const AuthPage: React.FC = () => {
   const overallIsLoading = isPendingLogin || isPendingRegister;
 
   return (
-    <Box sx={{ position: 'relative', minHeight: '100vh' }}>
+    <Box sx={{ position: 'relative', minHeight: '100vh', backgroundImage: 'linear-gradient(to bottom, #000000, #1a1a1a)' }}>
       {/* Background billboard particles */}
       <ThreeBillboardParticles count={700} baseSizePx={1.6} maxBoostPx={2.4} interactionRadius={7} />
       <Container 
@@ -111,11 +111,12 @@ const AuthPage: React.FC = () => {
           borderRadius: 2,
           boxShadow: 3,
           width: '100%',
+          border: '1px solid rgba(255,255,255,0.2)',
           backgroundColor: 'rgba(0,0,0,0.5)', // subtle glass effect over background
           //backdropFilter: 'blur(4px)'
         }}
       >
-        <Typography component="h1" variant="h5" sx={{ mb: 3 }}>
+        <Typography component="h1" variant="h5" sx={{ mb: 3, color: 'white', fontWeight: 'bold' }}>
           {isSignUp ? 'Create Account' : 'Sign In'}
         </Typography>
 

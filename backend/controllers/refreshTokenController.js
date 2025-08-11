@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
 export const handleRefreshToken = async (req, res) => {
-  const { refreshToken } = req.body;
+  const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
   if (!refreshToken) {
     return res.status(401).json({ error: 'Refresh token is required' });
   }
@@ -21,8 +21,17 @@ export const handleRefreshToken = async (req, res) => {
     const newAccessToken = jwt.sign(
       { email: user.email, id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '45m' }
+      { expiresIn: '60m' }
     );
+
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie('accessToken', newAccessToken, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 1000,
+      path: '/',
+    });
 
     res.json({ accessToken: newAccessToken });
   } catch (error) {

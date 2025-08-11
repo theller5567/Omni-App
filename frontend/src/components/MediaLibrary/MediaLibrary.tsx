@@ -107,7 +107,10 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
 
   const rows = useMemo(() => {
     const newRows = mediaFilesData
-      .filter(file => selectedMediaType === 'All' || file.mediaType === selectedMediaType)
+      .filter(file => {
+        const label = (file as any).mediaTypeName || (typeof file.mediaType === 'string' ? file.mediaType : '');
+        return selectedMediaType === 'All' || label === selectedMediaType;
+      })
       .map((file) => ({
         _id: file._id || file.id || crypto.randomUUID(),
         id: file._id || file.id || crypto.randomUUID(),
@@ -129,7 +132,9 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
           v_thumbnailTimestamp: file.metadata?.v_thumbnailTimestamp || null
         },
         slug: file.slug || '',
-        mediaType: file.mediaType || 'Unknown'
+        mediaTypeId: (file as any).mediaTypeId || (typeof (file as any).mediaType === 'string' ? (file as any).mediaType : undefined),
+        mediaTypeName: (file as any).mediaTypeName || (typeof file.mediaType === 'string' ? file.mediaType : 'Unknown'),
+        mediaType: (file as any).mediaTypeName || (typeof file.mediaType === 'string' ? file.mediaType : 'Unknown')
       }));
 
     const dataString = JSON.stringify({ count: newRows.length, types: [...new Set(newRows.map(row => row.mediaType))] });

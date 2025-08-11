@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, Typography, Box} from '@mui/material';
 import '../MediaCard.scss';
 import { isImageFile, isVideoFile, getFileIcon } from '../utils';
-import { useMediaTypes, MediaType, TransformedMediaFile } from '../../../hooks/query-hooks';
+import { useMediaTypes, TransformedMediaFile } from '../../../hooks/query-hooks';
 
 interface MediaCardProps {
   file: TransformedMediaFile;
@@ -59,11 +59,17 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
   // Get current user role
   
   // Find the media type color
-  const mediaTypeColor = React.useMemo(() => {
-    if (isLoadingMediaTypes || isMediaTypesError || !mediaTypes) return '#4dabf5'; // Default color during load/error
-    const mediaType = mediaTypes.find((type: MediaType) => type.name === file.mediaType || type._id === file.mediaType);
-    return mediaType?.catColor || '#4dabf5';
-  }, [file.mediaType, mediaTypes, isLoadingMediaTypes, isMediaTypesError]);
+  const { mediaTypeLabel, mediaTypeColor } = React.useMemo(() => {
+    const fallback = { mediaTypeLabel: typeof file.mediaType === 'string' ? file.mediaType : 'Unknown', mediaTypeColor: '#4dabf5' };
+    if (isLoadingMediaTypes || isMediaTypesError || !mediaTypes) return fallback;
+    const mt: any = (file as any).mediaType;
+    const mtId: string | undefined = (file as any).mediaTypeId;
+    let found = null as any;
+    if (mt && typeof mt === 'object') found = mediaTypes.find((t: any) => t._id === mt._id) || mediaTypes.find((t: any) => t.name === mt.name);
+    else if (typeof mt === 'string' || typeof mtId === 'string') found = mediaTypes.find((t: any) => t._id === (mtId || mt)) || mediaTypes.find((t: any) => t.name === ((file as any).mediaTypeName || mt));
+    else if ((file as any).mediaTypeName) found = mediaTypes.find((t: any) => t.name === (file as any).mediaTypeName);
+    return { mediaTypeLabel: found?.name || (file as any).mediaTypeName || (typeof mt === 'string' ? mt : 'Unknown'), mediaTypeColor: found?.catColor || '#4dabf5' };
+  }, [file.mediaType, (file as any).mediaTypeId, (file as any).mediaTypeName, mediaTypes, isLoadingMediaTypes, isMediaTypesError]);
 
   // If there was an error rendering, show a placeholder
   if (hasError) {
@@ -179,7 +185,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
               className="media-type"
               style={{ backgroundColor: mediaTypeColor }}
             >
-              {file.mediaType}
+              {mediaTypeLabel}
             </Typography>
           
           </Box>

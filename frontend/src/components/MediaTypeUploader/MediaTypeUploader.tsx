@@ -18,7 +18,7 @@ import {
   Backdrop
 } from '@mui/material';
 import { toast } from 'react-toastify';
-import axios from 'axios';
+import apiClient from '../../api/apiClient';
 import { FaArrowRight, FaArrowLeft, FaSave, FaQuestionCircle } from 'react-icons/fa';
 import CloseIcon from '@mui/icons-material/Close';
 import { 
@@ -28,7 +28,7 @@ import {
   createField,
 } from '../../types/mediaTypes';
 import '../MediaTypeUploader.scss';
-import env from '../../config/env';
+// env unused; apiClient baseURL handles paths
 import { 
   ColorPicker, 
   FieldEditor, 
@@ -472,8 +472,8 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
           // Also make a specific request to update the settings field
           if (mediaTypeConfig.settings) {
             try {
-              await axios.post(
-                `${env.BASE_URL}/api/media-types/update-settings/${mediaTypeConfig._id}`,
+              await apiClient.post(
+                `/media-types/update-settings/${mediaTypeConfig._id}`,
                 { allowRelatedMedia: mediaTypeConfig.settings.allowRelatedMedia }
               );
               if (process.env.NODE_ENV === 'development') {
@@ -503,8 +503,8 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
           // Also make a specific request to update the settings field
           if (mediaTypeConfig.settings && createdMediaType._id) {
             try {
-              await axios.post(
-                `${env.BASE_URL}/api/media-types/update-settings/${createdMediaType._id}`,
+              await apiClient.post(
+                `/media-types/update-settings/${createdMediaType._id}`,
                 { allowRelatedMedia: mediaTypeConfig.settings.allowRelatedMedia }
               );
               if (process.env.NODE_ENV === 'development') {
@@ -515,9 +515,9 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
             }
           }
           
-          // Show success toast
-          // toast.success(`Media type '${apiData.name}' (Color: ${colorName}) ${isEditMode ? 'updated' : 'created'} successfully`);
-          toast.success(`Media type '${apiData.name}' ${isEditMode ? 'updated' : 'created'} successfully`);
+          // Show a single success toast (suppress additional toasts from mutations)
+          toast.dismiss('media-type-success');
+          toast.success(`Media type '${apiData.name}' created successfully`, { toastId: 'media-type-success' });
           
           // Invalidate queries to ensure data is refreshed
           queryClient.invalidateQueries({ queryKey: ['mediaTypes'] });

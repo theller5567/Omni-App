@@ -22,8 +22,7 @@ import {
   Replay
 } from '@mui/icons-material';
 import './VideoThumbnailSelector.scss';
-import axios from 'axios';
-import env from '../../config/env';
+import apiClient from '../../api/apiClient';
 import { toast } from 'react-toastify';
 
 interface MediaDetailThumbnailSelectorProps {
@@ -225,16 +224,9 @@ const MediaDetailThumbnailSelector: React.FC<MediaDetailThumbnailSelectorProps> 
       // Start progress simulation
       const stopProgressSimulation = simulateProgress();
       
-      const response = await axios.post<ThumbnailResponse>(
-        `${env.BASE_URL}/api/media/update/timestamp-thumbnail/${mediaId}`,
-        { timestamp },
-        { 
-          withCredentials: true,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-          }
-        }
+      const response = await apiClient.post<ThumbnailResponse>(
+        `/media/update/timestamp-thumbnail/${mediaId}`,
+        { timestamp }
       );
       
       // Stop progress simulation

@@ -1,5 +1,4 @@
-import axios from 'axios';
-import env from '../../../config/env';
+import apiClient from '../../../api/apiClient';
 import { MetadataState } from '../types';
 import { BaseMediaFile } from '../../../interfaces/MediaFile';
 
@@ -132,11 +131,8 @@ export const uploadMedia = async ({
     }
     
     // Make the API call with proper type annotations
-    const config = {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-      },
+    const config: any = {
+      // Let axios/browser set the proper multipart boundary; don't set Content-Type manually
       onUploadProgress: (progressEvent: any) => {
         if (progressEvent.total && onProgress) {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -145,7 +141,8 @@ export const uploadMedia = async ({
       }
     };
     
-    const response = await axios.post<UploadedFile>(`${env.BASE_URL}/api/media/upload`, formData, config);
+    // Use cookie-aware client so HttpOnly cookies are sent
+    const response = await apiClient.post<UploadedFile>(`/media/upload`, formData, config);
     
     // Handle successful upload
     if (response.data && response.data.slug) {

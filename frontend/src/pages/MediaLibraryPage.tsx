@@ -154,7 +154,7 @@ const MediaContainer: React.FC = () => {
           location: String(file.thumbnailUrl || file.location || ''), 
           slug: file.slug || `media-${file._id}`, 
           fileExtension: file.fileExtension,
-          mediaType: file.mediaType,
+          mediaType: (file as any).mediaTypeName || (typeof file.mediaType === 'string' ? file.mediaType : 'Unknown'),
           fileSize: file.fileSize, 
           modifiedDate: file.modifiedDate, 
           metadata: { 
@@ -173,7 +173,8 @@ const MediaContainer: React.FC = () => {
     return allMediaData // Start with all media data
       .filter((file: QueryHooksMediaFile) => { 
         // 1. Filter by selectedMediaType
-        if (selectedMediaType !== 'All' && file.mediaType !== selectedMediaType) {
+        const label = (file as any).mediaTypeName || (typeof file.mediaType === 'string' ? file.mediaType : '');
+        if (selectedMediaType !== 'All' && label !== selectedMediaType) {
           return false;
         }
 
@@ -196,7 +197,7 @@ const MediaContainer: React.FC = () => {
           location: String(file.thumbnailUrl || file.location || ''), 
           slug: file.slug || `media-${file._id}`, 
           fileExtension: file.fileExtension,
-          mediaType: file.mediaType,
+          mediaType: (file as any).mediaTypeName || (typeof file.mediaType === 'string' ? file.mediaType : 'Unknown'),
           fileSize: file.fileSize, 
           modifiedDate: file.modifiedDate, 
           metadata: { 

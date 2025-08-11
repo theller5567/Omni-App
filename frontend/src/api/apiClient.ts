@@ -6,10 +6,8 @@ import { promptUserToContinueSession } from '../services/sessionManager';
 // Create axios instance with default config
 const apiClient = axios.create({
   baseURL: `${env.BASE_URL}/api`,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  timeout: 8000, // faster fail for critical requests
+  withCredentials: true,
 });
 
 // Helper to detect auth pages we should not spam with toasts
@@ -24,9 +22,21 @@ let refreshToastId: string | number | null = null;
 // Request interceptor - add auth token
 apiClient.interceptors.request.use(
   (config) => {
+    // If still using bearer during migration, attach it; cookies are sent automatically
     const token = localStorage.getItem('authToken');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Set appropriate Content-Type: if FormData, let browser set boundary; otherwise default to JSON
+    const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData;
+    if (isFormData) {
+      if (config.headers) {
+        delete (config.headers as any)['Content-Type'];
+      }
+    } else {
+      if (config.headers && !('Content-Type' in config.headers)) {
+        (config.headers as any)['Content-Type'] = 'application/json';
+      }
     }
     return config;
   },
@@ -49,12 +59,14 @@ apiClient.interceptors.response.use(
     
     // If 401 error and not already retrying
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // Do not show session prompt on auth pages or for auth endpoints
+      const url: string = originalRequest?.url || '';
+      if (isAuthPage() || url.includes('/auth/refresh-token') || url.includes('/auth/login')) {
+        return Promise.reject(error);
+      }
       originalRequest._retry = true;
       
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) throw new Error('No refresh token');
-
         // Ask the user immediately instead of waiting on multiple timeouts
         const proceed = await Promise.race<boolean>([
           promptUserToContinueSession(),
@@ -85,17 +97,20 @@ apiClient.interceptors.response.use(
             position: 'bottom-center',
           });
         }
-        const response = await axios.post(`${env.BASE_URL}/api/auth/refresh-token`, { refreshToken });
-        const { accessToken } = response.data as { accessToken: string };
-        localStorage.setItem('authToken', accessToken);
+        // Use cookie-based refresh only; no body token
+        const response = await axios.post(
+          `${env.BASE_URL}/api/auth/refresh-token`,
+          {},
+          { withCredentials: true }
+        );
+        const { accessToken } = response.data as { accessToken?: string };
+        // With cookies, no need to persist or attach Authorization; cookies will be sent automatically
 
         // Retry current
-        if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        }
+        // Do not override Authorization header; rely on cookie
 
         // Flush queued requests
-        pendingRequests.forEach((cb) => cb(accessToken));
+        pendingRequests.forEach((cb) => cb(accessToken || ''));
         pendingRequests = [];
         isRefreshing = false;
         if (refreshToastId && !isAuthPage()) {

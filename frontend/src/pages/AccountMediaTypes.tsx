@@ -86,7 +86,7 @@ const ActionBar = ({
       alignItems="center"
       justifyContent="space-between"
       padding="1rem"
-      bgcolor="var(--secondary-color)"
+      bgcolor="var(--color-surface-gradient)"
       mb={2}
     >
       <div className="media-types-container">

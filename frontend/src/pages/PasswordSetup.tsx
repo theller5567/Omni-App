@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../api/apiClient';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { TextField, Button, Typography, Box } from '@mui/material';
-import env from '../config/env';
 
 const PasswordSetup: React.FC = () => {
   const [error, setError] = useState('');
@@ -36,7 +35,7 @@ const PasswordSetup: React.FC = () => {
         return;
       }
       try {
-        const response = await axios.post(`${env.BASE_URL}/api/auth/password-setup`, { password: values.password, token });
+        const response = await apiClient.post(`/auth/password-setup`, { password: values.password, token });
         console.log('Password set successfully:', response.data);
         navigate('/');
       } catch (error) {
