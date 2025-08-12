@@ -44,8 +44,6 @@ router.post('/sendgrid', express.json({ type: '*/*' }), async (req, res) => {
   }
 });
 
-export default router;
-
 // Admin-only: fetch recent events
 router.get(
   '/sendgrid/recent',
@@ -64,5 +62,7 @@ router.get(
     }
   }
 );
+
+export default router;
 
 
