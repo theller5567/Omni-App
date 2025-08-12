@@ -19,7 +19,16 @@ const userActivitySchema = new mongoose.Schema({
   },
   action: {
     type: String,
-    enum: ['LOGIN', 'LOGOUT', 'PASSWORD_CHANGE', 'PROFILE_UPDATE', 'FAILED_LOGIN'],
+    enum: [
+      'LOGIN',
+      'LOGOUT',
+      'PASSWORD_CHANGE',
+      'PROFILE_UPDATE',
+      'FAILED_LOGIN',
+      // Added to support middleware authentication logs
+      'AUTHENTICATION_SUCCESS',
+      'AUTHENTICATION_FAILURE'
+    ],
     required: true
   },
   ip: {

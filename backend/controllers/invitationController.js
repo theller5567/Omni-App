@@ -406,3 +406,35 @@ export const resendInvitation = async (req, res) => {
     res.status(500).json({ message: 'Server error resending invitation' });
   }
 }; 
+
+/**
+ * Permanently deletes an invitation
+ * @route DELETE /api/invitations/:id/permanent
+ * @access Private - superAdmin, admin
+ */
+export const deleteInvitationPermanently = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const invitation = await Invitation.findById(id);
+
+    if (!invitation) {
+      return res.status(404).json({ message: 'Invitation not found' });
+    }
+
+    // Check access if not superAdmin
+    if (
+      req.user.role !== 'superAdmin' &&
+      invitation.invitedBy.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({ message: 'Not authorized to delete this invitation' });
+    }
+
+    await Invitation.deleteOne({ _id: id });
+
+    return res.status(200).json({ message: 'Invitation deleted permanently' });
+  } catch (error) {
+    console.error('Error permanently deleting invitation:', error);
+    res.status(500).json({ message: 'Server error permanently deleting invitation' });
+  }
+};

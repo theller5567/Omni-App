@@ -14,6 +14,7 @@ import utilityRoutes from './routes/utilityRoutes.js';
 import tagCategoryRoutes from './routes/tagCategoryRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import invitationRoutes from './routes/invitationRoutes.js';
+import sendgridWebhook from './routes/sendgridWebhook.js';
 import { configureBucketCors } from './services/awsService.js';
 // Load environment variables from .env file
 dotenv.config();
@@ -133,6 +134,7 @@ app.use('/api/utility', utilityRoutes);
 app.use('/api/tag-categories', tagCategoryRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/invitations', invitationRoutes);
+app.use('/api/webhooks', sendgridWebhook);
 
 // Root route
 app.get('/', (req, res) => {

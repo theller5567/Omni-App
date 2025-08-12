@@ -6,7 +6,8 @@ import {
   validateInvitation,
   acceptInvitation,
   cancelInvitation,
-  resendInvitation
+  resendInvitation,
+  deleteInvitationPermanently
 } from '../controllers/invitationController.js';
 import { authenticate } from '../middleware/authMiddleware.js';
 import { authorize } from '../middleware/authorizationMiddleware.js';
@@ -22,6 +23,7 @@ router.get('/', authenticate, authorize(['superAdmin', 'admin']), getInvitations
 router.get('/:id', authenticate, authorize(['superAdmin', 'admin']), getInvitationById);
 router.delete('/:id', authenticate, authorize(['superAdmin', 'admin']), cancelInvitation);
 router.post('/:id/resend', authenticate, authorize(['superAdmin', 'admin']), resendInvitation);
+router.delete('/:id/permanent', authenticate, authorize(['superAdmin', 'admin']), deleteInvitationPermanently);
 
 // Public routes
 router.get('/validate/:token', validateInvitation);

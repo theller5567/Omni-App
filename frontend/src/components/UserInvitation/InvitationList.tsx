@@ -162,7 +162,7 @@ const InvitationList: React.FC<InvitationListProps> = ({ refreshTrigger, onRefre
 
     try {
       setActionLoading(`delete-perm-${invitationToDeletePermanently._id}`);
-      await apiClient.delete(`/invitations/${invitationToDeletePermanently._id}`);
+      await apiClient.delete(`/invitations/${invitationToDeletePermanently._id}/permanent`);
 
       setInvitations(prev => prev.filter(inv => inv._id !== invitationToDeletePermanently._id));
       setActionSuccess(`Invitation to ${invitationToDeletePermanently.email} has been permanently deleted.`);
