@@ -3,6 +3,7 @@ import { Card, CardContent, Typography, Box} from '@mui/material';
 import '../MediaCard.scss';
 import { isImageFile, isVideoFile, getFileIcon } from '../utils';
 import { useMediaTypes, TransformedMediaFile } from '../../../hooks/query-hooks';
+import { cdnUrl, cdnSrcSet } from '../../../utils/imageCdn';
 
 interface MediaCardProps {
   file: TransformedMediaFile;
@@ -109,12 +110,30 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
       if (isImageFile(file.fileExtension)) {
         // Only render image if URL exists
         if (file.location) {
+          // Use known intrinsic dimensions when available to prevent CLS
+          const intrinsicWidth = (file.metadata as any)?.imageWidth || (file as any).imageWidth || undefined;
+          const intrinsicHeight = (file.metadata as any)?.imageHeight || (file as any).imageHeight || undefined;
+          const aspectRatio = intrinsicWidth && intrinsicHeight ? intrinsicWidth / intrinsicHeight : 16 / 9;
+          const [loaded, setLoaded] = React.useState(false);
           return (
             <img 
-              src={file.location} 
+              src={cdnUrl(file.location, { w: 640 })} 
+              srcSet={cdnSrcSet(file.location)}
+              sizes="(max-width: 600px) 50vw, (max-width: 1200px) 33vw, 240px"
               alt={file.metadata?.fileName || file.title || 'Image'} 
               className="preview-image"
               loading="lazy"
+              decoding="async"
+              fetchPriority="low"
+              width={intrinsicWidth || undefined}
+              height={intrinsicHeight || undefined}
+              style={{
+                aspectRatio: `${aspectRatio}`,
+                filter: loaded ? 'none' : 'blur(12px)',
+                transform: loaded ? 'none' : 'scale(1.03)',
+                transition: 'filter 320ms ease, transform 320ms ease'
+              }}
+              onLoad={() => setLoaded(true)}
               onError={(e) => {
                 console.warn('Error loading image:', file.location);
                 // Replace with fallback
@@ -131,12 +150,29 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
           const timestamp = file.metadata.v_thumbnailTimestamp ?? Date.now(); 
           const thumbnailUrl = file.metadata.v_thumbnail.split('?')[0]; 
           const thumbnailWithCacheBuster = `${thumbnailUrl}?t=${timestamp}&id=${file.id || ''}`;
+          const intrinsicWidth = (file.metadata as any)?.imageWidth || undefined;
+          const intrinsicHeight = (file.metadata as any)?.imageHeight || undefined;
+          const aspectRatio = intrinsicWidth && intrinsicHeight ? intrinsicWidth / intrinsicHeight : 16 / 9;
+          const [loaded, setLoaded] = React.useState(false);
           return (
             <img 
-              src={thumbnailWithCacheBuster} 
+              src={cdnUrl(thumbnailWithCacheBuster, { w: 640 })} 
+              srcSet={cdnSrcSet(thumbnailWithCacheBuster)}
+              sizes="(max-width: 600px) 50vw, (max-width: 1200px) 33vw, 240px"
               alt={file.metadata.fileName || file.title || 'Video'} 
               className="preview-image"
               loading="lazy"
+              decoding="async"
+              fetchPriority="low"
+              width={intrinsicWidth || undefined}
+              height={intrinsicHeight || undefined}
+              style={{
+                aspectRatio: `${aspectRatio}`,
+                filter: loaded ? 'none' : 'blur(12px)',
+                transform: loaded ? 'none' : 'scale(1.03)',
+                transition: 'filter 320ms ease, transform 320ms ease'
+              }}
+              onLoad={() => setLoaded(true)}
               key={`thumb-card-${file.id}-${timestamp}`} // Add key to force re-render
               onError={(e) => {
                 console.warn('Error loading video thumbnail:', file.metadata?.v_thumbnail); // Added optional chaining here

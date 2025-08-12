@@ -690,14 +690,27 @@ export const EditMediaDialog: React.FC<EditMediaDialogProps> = ({
                 <Controller
                   name="fileName"
                   control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="File Name"
-                      fullWidth
-                      size="small"
-                    />
-                  )}
+                  render={({ field }) => {
+                    // Prevent editing/removing file extension; lock extension suffix
+                    const original = originalValues?.fileName || mediaFile.fileName || '';
+                    const originalExt = (original.match(/\.[^.]+$/) || [''])[0];
+                    const baseValue = String(field.value || '');
+                    const currentExt = (baseValue.match(/\.[^.]+$/) || [''])[0];
+                    const baseName = currentExt ? baseValue.slice(0, -currentExt.length) : baseValue;
+                    return (
+                      <TextField
+                        value={baseName}
+                        onChange={(e) => {
+                          const nextBase = e.target.value || '';
+                          field.onChange(nextBase + originalExt);
+                        }}
+                        label="File Name"
+                        fullWidth
+                        size="small"
+                        helperText={originalExt ? `Extension locked to ${originalExt}` : undefined}
+                      />
+                    );
+                  }}
                 />
               </Box>
               <Box>

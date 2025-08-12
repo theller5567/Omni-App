@@ -5,6 +5,7 @@ import { Box, Chip, Stack } from '@mui/material';
 import { formatFileSize } from '../../../utils/formatFileSize';
 import { useMediaTypes, TransformedMediaFile } from '../../../hooks/query-hooks';
 import { isImageFile, isVideoFile, getFileIcon } from '../utils';
+import { cdnUrl, cdnSrcSet } from '../../../utils/imageCdn';
 
 interface VirtualizedDataTableProps {
   rows: TransformedMediaFile[];
@@ -59,7 +60,9 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
               position: 'relative',
             }}>
               <img 
-                src={params.row.location} 
+                src={cdnUrl(params.row.location, { w: 80 })}
+                srcSet={cdnSrcSet(params.row.location, [40, 60, 80, 120])}
+                sizes="40px"
                 alt={params.row.title} 
                 style={{ 
                   position: 'absolute',
@@ -69,6 +72,13 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
                   objectPosition: 'center',
                 }} 
                 loading="lazy" // Add lazy loading for images
+                decoding="async"
+                width={40}
+                height={40}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = params.row.location;
+                  (e.currentTarget as HTMLImageElement).srcset = '';
+                }}
               />
             </div>
           </div>
@@ -105,7 +115,9 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
                 position: 'relative',
               }}>
                 <img 
-                  src={thumbnailWithCacheBuster} 
+                  src={cdnUrl(thumbnailWithCacheBuster, { w: 80 })}
+                  srcSet={cdnSrcSet(thumbnailWithCacheBuster, [40, 60, 80, 120])}
+                  sizes="40px"
                   alt={params.row.title} 
                   style={{ 
                     position: 'absolute',
@@ -116,6 +128,13 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
                   }} 
                   loading="lazy" 
                   key={`thumb-${params.row.id}-${timestamp}`} // Add key to force re-render
+                  decoding="async"
+                  width={40}
+                  height={40}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = thumbnailWithCacheBuster;
+                    (e.currentTarget as HTMLImageElement).srcset = '';
+                  }}
                 />
               </div>
             </div>

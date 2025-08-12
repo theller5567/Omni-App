@@ -92,11 +92,14 @@ export const uploadMedia = async ({
     formData.append('mediaTypeId', metadata.mediaTypeId || ''); // Ensure we have a string value
     
     // Set explicit title value
-    const title = metadata.fileName || file.name;
+    // Lock extension: if user-provided fileName changes, keep original file extension
+    const origExt = (file.name.match(/\.[^.]+$/) || [''])[0];
+    const userBase = (metadata.fileName || file.name).replace(/\.[^.]+$/, '');
+    const title = `${userBase}${origExt}`;
     formData.append('title', title);
     
     // Extract and add file extension
-    const fileExtension = file.name.split('.').pop() || '';
+    const fileExtension = (origExt.replace('.', '')) || (file.name.split('.').pop() || '');
     formData.append('fileExtension', fileExtension);
     
     // Add all metadata as JSON

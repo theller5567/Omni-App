@@ -21,6 +21,7 @@ import "./styles/mediaDetail.scss";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useUsername } from '../../hooks/useUsername';
+import { cdnUrl, cdnSrcSet } from '../../utils/imageCdn';
 import { 
   FaFileAudio, 
   FaFileWord, 
@@ -135,10 +136,31 @@ export const MediaDetailPreview: React.FC<MediaDetailPreviewProps> = ({
         mediaFile.fileExtension.toLowerCase()
       )) {
       // Image preview
+      const w = (mediaFile.metadata as any)?.imageWidth;
+      const h = (mediaFile.metadata as any)?.imageHeight;
+      const aspectRatio = w && h ? w / h : undefined;
       return (
         <img
-          src={mediaFile.location}
-          alt={mediaFile.metadata?.altText || ""}
+          src={cdnUrl(mediaFile.location, { w: 1280 })}
+          srcSet={cdnSrcSet(mediaFile.location)}
+          sizes="(max-width: 900px) 90vw, 1200px"
+          alt={mediaFile.metadata?.altText || mediaFile.title || ''}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          width={w || undefined}
+          height={h || undefined}
+          style={{
+            maxWidth: '100%',
+            height: 'auto',
+            borderRadius: 4,
+            aspectRatio: aspectRatio ? `${aspectRatio}` : undefined
+          }}
+          onError={(e) => {
+            // Fallback to original origin URL if CDN fetch fails in dev
+            (e.currentTarget as HTMLImageElement).src = mediaFile.location;
+            (e.currentTarget as HTMLImageElement).srcset = '';
+          }}
         />
       );
     } else if (mediaFile.fileExtension &&
