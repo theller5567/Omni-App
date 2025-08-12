@@ -12,13 +12,17 @@ import nodemailer from 'nodemailer';
  * @returns {Promise<void>}
  */
 export async function sendInvitationEmail(email, firstName, lastName, inviterName, invitationLink, role, message = '') {
-  const transporter = nodemailer.createTransport({
-    service: "Gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  const transporter = process.env.SENDGRID_API_KEY
+    ? nodemailer.createTransport({
+        host: 'smtp.sendgrid.net',
+        port: 587,
+        secure: false,
+        auth: { user: 'apikey', pass: process.env.SENDGRID_API_KEY },
+      })
+    : nodemailer.createTransport({
+        service: 'Gmail',
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+      });
 
   // Format role for display (capitalize first letter)
   const formattedRole = role.charAt(0).toUpperCase() + role.slice(1);
@@ -51,8 +55,9 @@ export async function sendInvitationEmail(email, firstName, lastName, inviterNam
     </div>
   `;
 
+  const fromAddress = process.env.EMAIL_FROM || process.env.SENDGRID_FROM || process.env.EMAIL_USER;
   const mailOptions = {
-    from: `"Omni Media Library" <${process.env.EMAIL_USER}>`,
+    from: `"Omni Media Library" <${fromAddress}>`,
     to: email,
     subject: 'Invitation to Join Omni Media Library',
     text: `Hello ${firstName} ${lastName},

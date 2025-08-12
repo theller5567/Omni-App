@@ -30,3 +30,63 @@ Handle complex loading states
 Provide consistent patterns for your entire app
 Are optimized for performance
 The manual approach we implemented works fine, but transitioning to one of these solutions would give you better scalability, reduced complexity, and improved user experience with minimal code.
+
+
+
+Here’s a concise, high‑impact checklist I’d prioritize.
+
+- Stronger auth UX
+  - Preemptive refresh: decode access token exp and refresh a bit before expiry; avoid mid-action 401s.
+  - Fast failure: set shorter request timeouts on critical boot calls (e.g., 6–8s) with quick retry/backoff.
+  - HttpOnly cookies: migrate tokens from localStorage to HttpOnly cookies (SameSite=Lax, short access, rotating refresh).
+
+- Frontend performance
+  - Dynamic import 3D background on the auth route to keep initial bundle smaller.
+  - Add a mobile cutoff: reduce DPR and particle count on narrow screens or low-end devices.
+  - Bundle hygiene: run a bundle analyzer; tree-shake MUI imports; ensure “sideEffects: false” where safe.
+  - Image UX: use responsive srcset, width/height hints, and blur-up placeholders for media thumbnails.
+
+- Data fetching and caching
+  - Cache-aware API: set ETag/Last-Modified on backend GETs; let axios use If-None-Match.
+  - Query orchestration: stagger prefetches (idle callbacks) and set meaningful staleTime per resource.
+  - Background hydration: revalidate on network regain, not just focus.
+
+- Error handling and resiliency
+  - Unify toast policies to avoid spam; delink success toasts from non-critical actions.
+  - Add an ErrorBoundary and a “Try again” button for key pages.
+  - Centralize API error mapping to human-friendly messages.
+
+- Accessibility and UX polish
+  - Confirm all toasts and dialogs are keyboard accessible; trap focus in dialogs.
+  - Respect prefers-reduced-motion across large animations (already started).
+  - Ensure color-contrast and visible focus states in dark and light themes.
+
+- Security hardening
+  - Rate limiting, Helmet, CORS tightening, and payload size limits on the backend.
+  - Refresh token rotation with reuse detection (invalidate on replay).
+  - Validate all inputs (zod/yup on FE, celebrate/Joi on BE).
+
+- Backend performance
+  - Add/verify Mongo indexes for frequent filters/sorts; use .lean() for read-heavy endpoints.
+  - Paginate everywhere; return projections, not full docs.
+  - Direct-to-S3 uploads from the client via pre-signed URLs to bypass the server.
+
+- Observability
+  - Add Sentry (FE+BE) for errors and performance; structured logs (pino) with request IDs.
+  - Track API latency percentiles and error rates; budget SLOs for critical endpoints.
+
+- Testing and CI/CD
+  - E2E smoke tests (Playwright/Cypress) for login/session flows and uploads.
+  - Contract tests with MSW for client; GitHub Actions to run lint/tests on PRs.
+  - Netlify: enable build caching; deploy previews on PRs.
+
+- Developer experience
+  - TypeScript strict mode where feasible; path aliases; ESLint + Prettier + Husky pre-commit.
+  - Storybook (or Ladle) for key components (dialogs, cards) to speed iteration.
+
+If you want, I can implement:
+- Preemptive token refresh timer and shorter API timeouts (quick win).
+- Dynamic import + adaptive settings for the Three background.
+- A small analyzer pass to identify largest bundles and low-effort tree-shaking gains.
+
+Twilio / sendgrid recovery code: PTFY5NCC45MC4TBK62526DVL

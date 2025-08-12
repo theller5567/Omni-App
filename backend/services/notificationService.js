@@ -13,8 +13,20 @@ class NotificationService {
    * @returns {Object} Nodemailer transporter
    */
   static getTransporter() {
-    // For production, replace with actual SMTP configuration
-    // For testing/development, we can use the ethereal test account or console logging
+    // Prefer SendGrid SMTP if API key is present.
+    if (process.env.SENDGRID_API_KEY) {
+      return nodemailer.createTransport({
+        host: 'smtp.sendgrid.net',
+        port: 587,
+        secure: false,
+        auth: {
+          user: 'apikey',
+          pass: process.env.SENDGRID_API_KEY,
+        },
+      });
+    }
+
+    // Otherwise fall back to custom SMTP env in production
     if (process.env.NODE_ENV === 'production') {
       return nodemailer.createTransport({
         host: process.env.SMTP_HOST,
@@ -22,10 +34,13 @@ class NotificationService {
         secure: process.env.SMTP_SECURE === 'true',
         auth: {
           user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASSWORD
-        }
+          pass: process.env.SMTP_PASSWORD,
+        },
       });
-    } else {
+    }
+
+    // Development: log emails to console
+    else {
       // For development, just log emails to console
       return {
         sendMail: async (mailOptions) => {
