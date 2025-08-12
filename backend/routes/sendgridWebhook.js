@@ -52,7 +52,10 @@ router.get(
   async (req, res) => {
     try {
       const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
-      const events = await SendgridEvent.find({})
+      const query = {};
+      if (req.query.email) query.email = req.query.email;
+      if (req.query.event) query.event = req.query.event;
+      const events = await SendgridEvent.find(query)
         .sort({ createdAt: -1 })
         .limit(limit);
       res.status(200).json(events);
