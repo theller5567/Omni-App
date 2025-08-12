@@ -1,8 +1,11 @@
 export function generateAvatarUrl(firstName: string, lastName: string): string {
-  const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  const color = getRandomColor();
-  return `https://api.dicebear.com/9.x/initials/svg?seed=${initials}&radius=50&backgroundType=solid,gradientLinear&background=${color}`;
-} 
+  const initials = `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`
+    .toLowerCase();
+  const seed = encodeURIComponent(initials);
+  // Match the preferred DiceBear style
+  // https://api.dicebear.com/9.x/initials/svg?seed=pt&radius=50&backgroundType=gradientLinear&fontSize=26&backgroundRotation=-205
+  return `https://api.dicebear.com/9.x/initials/svg?seed=${seed}&radius=50&backgroundType=gradientLinear&fontSize=26&backgroundRotation=-205`;
+}
 
 const colors = [
   '#00acc1',
