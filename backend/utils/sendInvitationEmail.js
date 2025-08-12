@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 
 /**
  * Sends an invitation email to a user
@@ -12,17 +12,10 @@ import nodemailer from 'nodemailer';
  * @returns {Promise<void>}
  */
 export async function sendInvitationEmail(email, firstName, lastName, inviterName, invitationLink, role, message = '') {
-  const transporter = process.env.SENDGRID_API_KEY
-    ? nodemailer.createTransport({
-        host: 'smtp.sendgrid.net',
-        port: 587,
-        secure: false,
-        auth: { user: 'apikey', pass: process.env.SENDGRID_API_KEY },
-      })
-    : nodemailer.createTransport({
-        service: 'Gmail',
-        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-      });
+  if (!process.env.SENDGRID_API_KEY) {
+    throw new Error('SENDGRID_API_KEY not set');
+  }
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
   // Format role for display (capitalize first letter)
   const formattedRole = role.charAt(0).toUpperCase() + role.slice(1);
@@ -55,27 +48,17 @@ export async function sendInvitationEmail(email, firstName, lastName, inviterNam
     </div>
   `;
 
-  const fromAddress = process.env.EMAIL_FROM || process.env.SENDGRID_FROM || process.env.EMAIL_USER;
+  const fromAddress = process.env.EMAIL_FROM || process.env.SENDGRID_FROM;
   const mailOptions = {
-    from: `"Omni Media Library" <${fromAddress}>`,
+    from: { email: fromAddress, name: 'Omni Media Library' },
     to: email,
     subject: 'Invitation to Join Omni Media Library',
-    text: `Hello ${firstName} ${lastName},
-
-${inviterName} has invited you to join Omni's Media Library as a ${formattedRole}.
-
-${message ? `Message from ${inviterName}: "${message}"` : ''}
-
-Please click the following link to accept this invitation and create your account: ${invitationLink}
-
-This invitation will expire in 7 days.
-
-If you believe this invitation was sent to you by mistake, please disregard this email.`,
+    text: `Hello ${firstName} ${lastName},\n\n${inviterName} has invited you to join Omni's Media Library as a ${formattedRole}.\n\n${message ? `Message from ${inviterName}: "${message}"` : ''}\n\nPlease click the following link to accept this invitation and create your account: ${invitationLink}\n\nThis invitation will expire in 7 days.\n\nIf you believe this invitation was sent to you by mistake, please disregard this email.`,
     html: htmlContent
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await sgMail.send(mailOptions);
     console.log(`Invitation email sent to ${email}`);
   } catch (error) {
     console.error('Error sending invitation email:', error);

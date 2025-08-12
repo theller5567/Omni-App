@@ -1,23 +1,22 @@
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 
 export async function sendVerificationEmail(email, verificationLink) {
-  const transporter = nodemailer.createTransport({
-    service: "Gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  if (!process.env.SENDGRID_API_KEY) {
+    throw new Error('SENDGRID_API_KEY not set');
+  }
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
+  const fromAddress = process.env.EMAIL_FROM || process.env.SENDGRID_FROM;
+  const msg = {
     to: email,
+    from: { email: fromAddress, name: 'Omni Media Library' },
     subject: 'Email Verification',
     text: `Please verify your email by clicking the following link: ${verificationLink}`,
+    html: `<p>Please verify your email by clicking the following link:</p><p><a href="${verificationLink}">Verify Email</a></p>`,
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await sgMail.send(msg);
     console.log('Verification email sent');
   } catch (error) {
     console.error('Error sending email:', error);
