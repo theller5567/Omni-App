@@ -1,7 +1,8 @@
 import React from 'react';
 import { DataGrid, GridColDef, GridToolbar, GridRowSelectionModel, GridRowParams } from '@mui/x-data-grid';
 import { Link, useNavigate } from 'react-router-dom';
-import { Box, Chip, Stack } from '@mui/material';
+import { Box, Chip, Stack, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { formatFileSize } from '../../../utils/formatFileSize';
 import { useMediaTypes, TransformedMediaFile } from '../../../hooks/query-hooks';
 import { isImageFile, isVideoFile, getFileIcon } from '../utils';
@@ -29,6 +30,8 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
   selectionModel
 }) => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   // Get media types using TanStack Query instead of Redux
   const { data: mediaTypes = [] } = useMediaTypes({ enabled: true });
@@ -79,7 +82,7 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
     );
   };
 
-  const columns: GridColDef[] = [
+  const baseColumns: GridColDef[] = [
     { field: 'image', headerName: 'Preview', flex: 0.5, renderCell: (params) => {
       if (isImageFile(params.row.fileExtension)) {
         const url = hasFileExtension(params.row.location) ? cdnUrl(params.row.location, { w: 80 }) : params.row.location;
@@ -123,10 +126,19 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
         </div>
       );
     }},
-    { field: 'fileName', headerName: 'Title', flex: 0.5, renderCell: (params) => (
-      <Link to={params.row.slug ? `/media/slug/${params.row.slug}` : `/media/id/${params.row.id}`}>
-        {params.row.metadata.fileName || params.row.title || 'Untitled'}
-      </Link>
+    { field: 'fileName', headerName: 'Title', flex: 1, renderCell: (params) => (
+      <Box sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <Link to={params.row.slug ? `/media/slug/${params.row.slug}` : `/media/id/${params.row.id}`} style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          {params.row.metadata.fileName || params.row.title || 'Untitled'}
+        </Link>
+        {isMobile && (
+          <Box sx={{ display: 'flex', gap: 1, color: 'text.secondary', fontSize: '0.75rem', mt: 0.25 }}>
+            <span>{(params.row.fileExtension || '').toUpperCase()}</span>
+            <span>•</span>
+            <span>{new Date(params.row.modifiedDate || Date.now()).toLocaleDateString()}</span>
+          </Box>
+        )}
+      </Box>
     )},
     { field: 'mediaType', headerName: 'Media Type', flex: 0.5, renderCell: (params) => {
       const mtId = (params.row as any).mediaTypeId;
@@ -141,7 +153,7 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
         </Box>
       );
     }},
-    { 
+    !isMobile && { 
       field: 'fileSize', 
       headerName: 'Size', 
       flex: 0.5, 
@@ -150,7 +162,7 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
         return formatFileSize(value);
       }
     },
-    { field: 'fileExtension', headerName: 'Extension', flex: 0.5 },
+    !isMobile && { field: 'fileExtension', headerName: 'Ext', flex: 0.3 },
     { 
       field: 'modifiedDate', 
       headerName: 'Modified Date',
@@ -174,7 +186,7 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
         }
       }
     },
-    { field: 'tags', headerName: 'Tags', flex: 1, renderCell: (params) => {
+    !isMobile && { field: 'tags', headerName: 'Tags', flex: 1, renderCell: (params) => {
       const tags = params.row.metadata.tags;
       if (Array.isArray(tags) && tags.length > 0) {
         const mtId = (params.row as any).mediaTypeId;
@@ -256,6 +268,8 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
       }
     }},
   ];
+
+  const columns: GridColDef[] = baseColumns.filter(Boolean) as GridColDef[];
 
   // Set up DataGrid with virtualization features
   return (

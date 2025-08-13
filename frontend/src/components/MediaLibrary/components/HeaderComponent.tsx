@@ -39,57 +39,41 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, med
     <Box
       className="header-component"
       display="flex"
-      alignItems="center"
-      justifyContent="space-between"
-      sx={{ px: isMobile ? 1 : 0 }}
+      flexDirection="column"
+      gap={isMobile ? 1 : 2}
+      sx={{ px: isMobile ? 1 : 0, width: '100%' }}
     >
-      <Box display="flex" alignItems={isMobile ? "stretch" : "center"} gap={isMobile ? 1 : 2} flexDirection={isMobile ? "column" : "row"} width="100%">
-        <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
-        {!isMobile && <span>Filter by Media Type:</span>}
-        <Select
-          value={selectedMediaType}
-          onChange={(e) => handleMediaTypeChange(e.target.value)}
-          displayEmpty
-          sx={{ minWidth: isMobile ? '100%' : 200, textAlign: 'left', height: '100%' }}
-          renderValue={(value) => value || 'All'}
-        >
-          {availableMediaTypes.map((type) => (
-            <MenuItem key={type} value={type}>{type}</MenuItem>
-          ))}
-        </Select>
-        {/* <ButtonGroup 
-          variant="outlined" 
-          aria-label="Media type filters"
-          orientation={isMobile ? "vertical" : "horizontal"}
-          sx={{ width: isMobile ? '100%' : 'auto' }}
-        >
-          {availableMediaTypes.map((type) => (
-            <Button
-              key={type}
-              variant={selectedMediaType === type ? 'contained' : 'outlined'}
-              color="primary"
-              onClick={() => handleMediaTypeChange(type)}
-              fullWidth={isMobile}
-            >
-              {type}
-            </Button>
-          ))}
-        </ButtonGroup> */}
+      {/* Row 1: Add Media (full) + Search (full) on mobile; on desktop they sit inline */}
+      <Box display="flex" gap={isMobile ? 1 : 2} flexDirection={isMobile ? 'column' : 'row'} width="100%">
         <Button 
           variant="contained" 
           color="secondary" 
           onClick={onAddMedia} 
           startIcon={<FaPlus />}
           fullWidth={isMobile}
-          sx={{ 
-            order: isMobile ? -1 : 0,
-            height: '100%',
-          }}
+          sx={{ height: 44 }}
         >
           Add Media
         </Button>
+        <Box sx={{ flex: 1 }}>
+          <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
+        </Box>
       </Box>
-      <Box display="flex" alignItems="center" sx={{ mt: isMobile ? 1 : 0 }}>
+
+      {/* Row 2: MediaType Select + View Toggle on same row */}
+      <Box display="flex" alignItems="center" gap={1} width="100%">
+        <Select
+          value={selectedMediaType}
+          onChange={(e) => handleMediaTypeChange(e.target.value)}
+          displayEmpty
+          aria-label="Filter by media type"
+          sx={{ flex: 1, minWidth: isMobile ? 'auto' : 220, height: 44 }}
+          renderValue={(value) => value || 'All'}
+        >
+          {availableMediaTypes.map((type) => (
+            <MenuItem key={type} value={type}>{type}</MenuItem>
+          ))}
+        </Select>
         <ToggleButtonGroup
           value={view}
           exclusive
