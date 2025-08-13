@@ -82,7 +82,7 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
     );
   };
 
-  const baseColumns: GridColDef[] = [
+  const baseColumns: (GridColDef | false)[] = [
     { field: 'image', headerName: 'Preview', flex: 0.5, renderCell: (params) => {
       if (isImageFile(params.row.fileExtension)) {
         const url = hasFileExtension(params.row.location) ? cdnUrl(params.row.location, { w: 80 }) : params.row.location;
