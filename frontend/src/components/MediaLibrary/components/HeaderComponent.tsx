@@ -41,10 +41,11 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, med
       display="flex"
       alignItems="center"
       justifyContent="space-between"
+      sx={{ px: isMobile ? 1 : 0 }}
     >
-      <Box display="flex" alignItems={isMobile ? "stretch" : "center"} gap={2} flexDirection={isMobile ? "column" : "row"} width="100%">
+      <Box display="flex" alignItems={isMobile ? "stretch" : "center"} gap={isMobile ? 1 : 2} flexDirection={isMobile ? "column" : "row"} width="100%">
         <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
-        <span>Filter by Media Type:</span>
+        {!isMobile && <span>Filter by Media Type:</span>}
         <Select
           value={selectedMediaType}
           onChange={(e) => handleMediaTypeChange(e.target.value)}
@@ -88,7 +89,7 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, med
           Add Media
         </Button>
       </Box>
-      <Box display="flex" alignItems="center" sx={{ mt: isMobile ? 2 : 0 }}>
+      <Box display="flex" alignItems="center" sx={{ mt: isMobile ? 1 : 0 }}>
         <ToggleButtonGroup
           value={view}
           exclusive

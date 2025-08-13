@@ -5,6 +5,15 @@ import { isImageFile, isVideoFile, getFileIcon } from '../utils';
 import { useMediaTypes, TransformedMediaFile } from '../../../hooks/query-hooks';
 import { cdnUrl, cdnSrcSet } from '../../../utils/imageCdn';
 
+const hasFileExtension = (url: string): boolean => {
+  try {
+    const path = url.split('?')[0];
+    return /\.[a-zA-Z0-9]{2,5}$/.test(path);
+  } catch {
+    return false;
+  }
+};
+
 interface MediaCardProps {
   file: TransformedMediaFile;
   handleFileClick: () => void;
@@ -12,12 +21,16 @@ interface MediaCardProps {
 }
 
 const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
-  // Add error boundary
+  // Error boundary flag
   const [hasError, setHasError] = React.useState(false);
+  const cdnTriedRef = React.useRef(false);
+  const [failed, setFailed] = React.useState(false);
   
   // Add lazy loading with Intersection Observer
   const [isVisible, setIsVisible] = React.useState(false);
   const cardRef = React.useRef<HTMLDivElement>(null);
+  // Single loaded flag used for both image and video thumbnail to avoid hooks-in-branches
+  const [loaded, setLoaded] = React.useState(false);
   
   React.useEffect(() => {
     const currentRef = cardRef.current;
@@ -107,17 +120,33 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
         );
       }
       
+      if (failed) {
+        return (
+          <div className="icon-container">
+            {getFileIcon(file.fileExtension, file.mediaType, 48)}
+          </div>
+        );
+      }
+
       if (isImageFile(file.fileExtension)) {
         // Only render image if URL exists
         if (file.location) {
+          // Skip Cloudinary fetch if the source URL lacks a proper extension
+          if (!hasFileExtension(file.location)) {
+            return (
+              <div className="icon-container">
+                {getFileIcon(file.fileExtension, file.mediaType, 48)}
+              </div>
+            );
+          }
           // Use known intrinsic dimensions when available to prevent CLS
           const intrinsicWidth = (file.metadata as any)?.imageWidth || (file as any).imageWidth || undefined;
           const intrinsicHeight = (file.metadata as any)?.imageHeight || (file as any).imageHeight || undefined;
           const aspectRatio = intrinsicWidth && intrinsicHeight ? intrinsicWidth / intrinsicHeight : 16 / 9;
-          const [loaded, setLoaded] = React.useState(false);
+          const primarySrc = cdnUrl(file.location, { w: 640 });
           return (
             <img 
-              src={cdnUrl(file.location, { w: 640 })} 
+              src={primarySrc}
               srcSet={cdnSrcSet(file.location)}
               sizes="(max-width: 600px) 50vw, (max-width: 1200px) 33vw, 240px"
               alt={file.metadata?.fileName || file.title || 'Image'} 
@@ -135,10 +164,18 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
               }}
               onLoad={() => setLoaded(true)}
               onError={(e) => {
-                console.warn('Error loading image:', file.location);
-                // Replace with fallback
-                e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2NjYyI+PHBhdGggZD0iTTIxIDV2MTRoLTE4di0xNGgxOHptMC0yaC0xOGMtMS4xIDAtMiAuOS0yIDJ2MTRjMCAxLjEuOSAyIDIgMmgxOGMxLjEgMCAyLS45IDItMnYtMTRjMC0xLjEtLjktMi0yLTJ6bS0xMCA3YzAgMS4xLS45IDItMiAycy0yLS45LTItMiAuOS0yIDItMiAyIC45IDIgMnptNCAxLjQzYzAtLjYyLjMzLTEuMjkgMS0xLjQuNzgtLjEzIDEuNS40NiAxLjUgMS4yNHY0LjczaC0xM3YtMmgzLjY3Yy40MiAwIC43Ny0uMTYgMS4wMi0uNDZsMS41LTEuODNjLjM5LS40OCAxLjEtLjUgMS41NiAwbC40LjQ3Yy4zMS4zNi44OS4zNiAxLjIgMGwxLjA1LTEuMjhjLjQuNDkuOS43NC45LjczeiIvPjwvc3ZnPg==';
+                const img = e.currentTarget as HTMLImageElement;
+                if (!cdnTriedRef.current) {
+                  cdnTriedRef.current = true;
+                  img.src = file.location; // fallback to original
+                  img.srcset = '';
+                  return;
+                }
+                setFailed(true);
+                img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+                img.srcset = '';
               }}
+              referrerPolicy="no-referrer"
             />
           );
         }
@@ -146,17 +183,17 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
       
       if (isVideoFile(file.fileExtension) || file.mediaType?.includes('Video')) {
         if (file.metadata && typeof file.metadata.v_thumbnail === 'string') {
-          // Now file.metadata is confirmed to exist, and file.metadata.v_thumbnail is a string.
-          const timestamp = file.metadata.v_thumbnailTimestamp ?? Date.now(); 
-          const thumbnailUrl = file.metadata.v_thumbnail.split('?')[0]; 
-          const thumbnailWithCacheBuster = `${thumbnailUrl}?t=${timestamp}&id=${file.id || ''}`;
+          // Build a stable URL (avoid Date.now() which causes re-fetch loops)
+          const timestamp = (file.metadata as any)?.v_thumbnailTimestamp as number | undefined;
+          const thumbnailUrl = file.metadata.v_thumbnail.split('?')[0];
+          const thumbnailWithCacheBuster = `${thumbnailUrl}?${timestamp ? `t=${timestamp}&` : ''}id=${file.id || ''}`;
           const intrinsicWidth = (file.metadata as any)?.imageWidth || undefined;
           const intrinsicHeight = (file.metadata as any)?.imageHeight || undefined;
           const aspectRatio = intrinsicWidth && intrinsicHeight ? intrinsicWidth / intrinsicHeight : 16 / 9;
-          const [loaded, setLoaded] = React.useState(false);
+          const primarySrc = cdnUrl(thumbnailWithCacheBuster, { w: 640 });
           return (
             <img 
-              src={cdnUrl(thumbnailWithCacheBuster, { w: 640 })} 
+              src={primarySrc}
               srcSet={cdnSrcSet(thumbnailWithCacheBuster)}
               sizes="(max-width: 600px) 50vw, (max-width: 1200px) 33vw, 240px"
               alt={file.metadata.fileName || file.title || 'Video'} 
@@ -175,10 +212,18 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
               onLoad={() => setLoaded(true)}
               key={`thumb-card-${file.id}-${timestamp}`} // Add key to force re-render
               onError={(e) => {
-                console.warn('Error loading video thumbnail:', file.metadata?.v_thumbnail); // Added optional chaining here
-                // Replace with fallback
-                e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzNiODJmNiI+PHBhdGggZD0iTTEyIDJjNS41MiAwIDEwIDQuNDggMTAgMTBzLTQuNDggMTAtMTAgMTAtMTAtNC40OC0xMC0xMCA0LjQ4LTEwIDEwLTEwem0wLTJjLTYuNjMgMC0xMiA1LjM3LTEyIDEyczUuMzcgMTIgMTIgMTIgMTItNS4zNyAxMi0xMi01LjM3LTEyLTEyLTEyem0tMyAxN3YtMTBsOSA1LjAxNC05IDQuOTg2eiIvPjwvc3ZnPg==';
+                const img = e.currentTarget as HTMLImageElement;
+                if (!cdnTriedRef.current) {
+                  cdnTriedRef.current = true;
+                  img.src = thumbnailWithCacheBuster; // fallback to original URL
+                  img.srcset = '';
+                  return;
+                }
+                setFailed(true);
+                img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+                img.srcset = '';
               }}
+              referrerPolicy="no-referrer"
             />
           );
         }

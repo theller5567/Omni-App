@@ -2,6 +2,7 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar/Sidebar';
+import ResponsiveNav from './components/Navigation/ResponsiveNav';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { createThemeFromCssVars } from './theme';
@@ -70,7 +71,7 @@ const AppContent: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(savedTheme ? savedTheme === 'dark' : true);
   const [isAuthCheckComplete, setIsAuthCheckComplete] = useState(false);
   // Check for mobile view to determine toast position
-  const isMobile = useMediaQuery('(max-width:600px)');
+  const isMobile = useMediaQuery('(max-width:900px)');
   
   const location = useLocation();
   const isAuthPage = location.pathname === '/' || location.pathname.startsWith('/accept-invitation');
@@ -178,9 +179,22 @@ const AppContent: React.FC = () => {
       <CssBaseline />
       <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
           <div id="app-container" style={{ display: 'flex', flexDirection: 'row', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-            {/* Sidebar is shown if user profile fetch was successful and userProfile has an _id and it's not an auth page */}
-           {(!isAuthPage && isUserSuccess && userProfile && userProfile._id && (<Sidebar /> as React.ReactNode))}
-            <div id="content-container">
+            {/* Mobile app bar + bottom nav */}
+            {!isAuthPage && <ResponsiveNav />}
+
+            {/* Desktop sidebar (md+) */}
+            {(!isAuthPage && isUserSuccess && userProfile && userProfile._id && !isMobile && (<Sidebar /> as React.ReactNode))}
+            <div
+              id="content-container"
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                paddingTop: isMobile ? 64 : 0,
+                paddingBottom: isMobile ? 56 : 0,
+                paddingLeft: 0,
+                paddingRight: 0,
+              }}
+            >
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>
                   {/* Pass userProfile to ProtectedRoutes */}

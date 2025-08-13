@@ -6,6 +6,14 @@ import { formatFileSize } from '../../../utils/formatFileSize';
 import { useMediaTypes, TransformedMediaFile } from '../../../hooks/query-hooks';
 import { isImageFile, isVideoFile, getFileIcon } from '../utils';
 import { cdnUrl, cdnSrcSet } from '../../../utils/imageCdn';
+const hasFileExtension = (url: string): boolean => {
+  try {
+    const path = url.split('?')[0];
+    return /\.[a-zA-Z0-9]{2,5}$/.test(path);
+  } catch {
+    return false;
+  }
+};
 
 interface VirtualizedDataTableProps {
   rows: TransformedMediaFile[];
@@ -35,110 +43,59 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
     }
   };
   
+  const ThumbnailCell: React.FC<{ url?: string; alt: string; fallbackUrl?: string }> = ({ url, alt, fallbackUrl }) => {
+    const [failed, setFailed] = React.useState(false);
+    const triedRef = React.useRef(false);
+    if (!url || failed) {
+      return (
+        <div style={{
+          width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%'
+        }}>
+          {getFileIcon('', '', 24)}
+        </div>
+      );
+    }
+    return (
+      <img
+        src={url}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        width={40}
+        height={40}
+        style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }}
+        onError={(e) => {
+          const img = e.currentTarget as HTMLImageElement;
+          if (!triedRef.current && fallbackUrl) {
+            triedRef.current = true;
+            img.src = fallbackUrl;
+            return;
+          }
+          setFailed(true);
+          img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+        }}
+        referrerPolicy="no-referrer"
+      />
+    );
+  };
+
   const columns: GridColDef[] = [
     { field: 'image', headerName: 'Preview', flex: 0.5, renderCell: (params) => {
       if (isImageFile(params.row.fileExtension)) {
-        return (
-          <div style={{
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'flex-start',
-            alignItems: 'center',
-            height: '100%',
-          }}>
-            <div style={{
-              width: 'calc(100% - 10px)',
-              height: 'calc(100% - 10px)',
-              maxWidth: '40px',
-              maxHeight: '40px',
-              borderRadius: '4px',
-              overflow: 'hidden',
-              backgroundColor: '#f0f0f0',
-              display: 'flex',
-              justifyContent: 'flex-start',
-              alignItems: 'center',
-              position: 'relative',
-            }}>
-              <img 
-                src={cdnUrl(params.row.location, { w: 80 })}
-                srcSet={cdnSrcSet(params.row.location, [40, 60, 80, 120])}
-                sizes="40px"
-                alt={params.row.title} 
-                style={{ 
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  objectPosition: 'center',
-                }} 
-                loading="lazy" // Add lazy loading for images
-                decoding="async"
-                width={40}
-                height={40}
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = params.row.location;
-                  (e.currentTarget as HTMLImageElement).srcset = '';
-                }}
-              />
-            </div>
-          </div>
-        );
+        const url = hasFileExtension(params.row.location) ? cdnUrl(params.row.location, { w: 80 }) : params.row.location;
+        const fallbackUrl = hasFileExtension(params.row.location) ? params.row.location : undefined;
+        return <ThumbnailCell url={url} alt={params.row.title} fallbackUrl={fallbackUrl} />;
       }
       
       const mtName = (params.row as any).mediaTypeName || params.row.mediaType;
       if (isVideoFile(params.row.fileExtension) || (typeof mtName === 'string' && mtName.includes('Video'))) {
-        console.log("HIIIIIIIII",params.row.metadata);
         if (params.row.metadata?.v_thumbnail) {
-          // Add a cache-busting parameter using timestamp to ensure fresh image on every render
-          const timestamp = params.row.metadata?.v_thumbnailTimestamp || Date.now();
-          const thumbnailUrl = params.row.metadata.v_thumbnail.split('?')[0]; // Get clean URL
-          const thumbnailWithCacheBuster = `${thumbnailUrl}?t=${timestamp}&id=${params.row.id || ''}`;
-          return (
-            <div style={{
-              width: '100%',
-              display: 'flex',
-              justifyContent: 'flex-start',
-              alignItems: 'center',
-              height: '100%',
-            }}>
-              <div style={{
-                width: 'calc(100% - 10px)',
-                height: 'calc(100% - 10px)',
-                maxWidth: '40px',
-                maxHeight: '40px',
-                borderRadius: '4px',
-                overflow: 'hidden',
-                backgroundColor: '#f0f0f0',
-                display: 'flex',
-                justifyContent: 'flex-start',
-                alignItems: 'center',
-                position: 'relative',
-              }}>
-                <img 
-                  src={cdnUrl(thumbnailWithCacheBuster, { w: 80 })}
-                  srcSet={cdnSrcSet(thumbnailWithCacheBuster, [40, 60, 80, 120])}
-                  sizes="40px"
-                  alt={params.row.title} 
-                  style={{ 
-                    position: 'absolute',
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    objectPosition: 'center',
-                  }} 
-                  loading="lazy" 
-                  key={`thumb-${params.row.id}-${timestamp}`} // Add key to force re-render
-                  decoding="async"
-                  width={40}
-                  height={40}
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = thumbnailWithCacheBuster;
-                    (e.currentTarget as HTMLImageElement).srcset = '';
-                  }}
-                />
-              </div>
-            </div>
-          );
+          // Build a stable URL using stored timestamp only (avoid Date.now())
+          const timestamp = params.row.metadata?.v_thumbnailTimestamp as number | undefined;
+          const thumbnailUrl = params.row.metadata.v_thumbnail.split('?')[0];
+          const thumbnailWithCacheBuster = `${thumbnailUrl}?${timestamp ? `t=${timestamp}&` : ''}id=${params.row.id || ''}`;
+          const url = cdnUrl(thumbnailWithCacheBuster, { w: 80 });
+          return <ThumbnailCell url={url} alt={params.row.title} fallbackUrl={thumbnailWithCacheBuster} />;
         }
       }
       

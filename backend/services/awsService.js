@@ -13,7 +13,7 @@ const s3Client = new S3Client({
 
 const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
 
-// Helper function to format the filename
+// Helper function to format the filename while preserving correct extension
 const formatFileName = (originalName) => {
   // Get the file extension
   const ext = path.extname(originalName).toLowerCase().slice(1);
@@ -32,8 +32,9 @@ const formatFileName = (originalName) => {
     year: 'numeric'
   }).replace(/\//g, '');
   
-  // Combine all parts with underscores
-  return `${baseName}_${ext}_${dateStr}`;
+  // Combine base + ext token + date, and ensure extension is appended once at the end
+  const baseWithTokens = `${baseName}_${ext}_${dateStr}`;
+  return `${baseWithTokens}.${ext || 'bin'}`;
 };
 
 // Validate AWS configuration
@@ -59,7 +60,24 @@ export const uploadFileToS3 = async (file, prefix = '') => {
     const isThumbnail = file.originalname.includes('_thumbnail_');
 
     // Use the original thumbnail name if it's a thumbnail, otherwise format the filename
-    const finalFilename = isThumbnail ? file.originalname : formatFileName(file.originalname);
+    let finalFilename = isThumbnail ? file.originalname : formatFileName(file.originalname);
+    // Hard guard: ensure extension present on key
+    let extOnKey = path.extname(finalFilename).toLowerCase().slice(1);
+    if (!extOnKey) {
+      const mime = (file.mimetype || '').toLowerCase();
+      const mimeToExt = {
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+        'image/gif': 'gif',
+        'video/mp4': 'mp4',
+        'video/quicktime': 'mov',
+        'application/pdf': 'pdf',
+      };
+      const resolved = mimeToExt[mime] || 'bin';
+      finalFilename = `${finalFilename}.${resolved}`;
+    }
 
     // Generate the unique filename with prefix
     const uniqueFilename = prefix ? `${prefix}${finalFilename}` : finalFilename;

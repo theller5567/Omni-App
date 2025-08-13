@@ -307,6 +307,13 @@
   }
 }
 
+/* Ensure the desktop sidebar is hidden entirely on small screens when mobile nav is active */
+@media (max-width: 900px) {
+  #sidebar {
+    display: none !important;
+  }
+}
+
 /* Global styles to force active classes to always work */
 #sidebar {
   .ps-menu-button:has(.active-menu-item),
