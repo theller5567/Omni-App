@@ -42,6 +42,7 @@ const ResponsiveNav: React.FC = () => {
             aria-label="open navigation menu"
             aria-controls="mobile-drawer"
             aria-expanded={open}
+            sx={{ ml: 1 }}
             onClick={() => setOpen(true)}
           >
             <MenuIcon />

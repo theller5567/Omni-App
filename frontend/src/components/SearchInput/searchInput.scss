@@ -6,6 +6,7 @@
         width: 100%;
     }
     .MuiInputBase-root {
+        height: 56px; // match button/select height
         background-color: var(--search-input-background);
         border-radius: 8px;
         transition: all 0.2s ease;

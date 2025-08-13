@@ -1,5 +1,5 @@
 import React from 'react';
-import { DataGrid, GridColDef, GridToolbar, GridRowSelectionModel, GridRowParams } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridRowSelectionModel, GridRowParams, GridToolbarContainer, GridToolbarColumnsButton, GridToolbarFilterButton, GridToolbarDensitySelector, GridToolbarExport } from '@mui/x-data-grid';
 import { Link, useNavigate } from 'react-router-dom';
 import { Box, Chip, Stack, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
@@ -140,16 +140,16 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
         )}
       </Box>
     )},
-    { field: 'mediaType', headerName: 'Media Type', flex: 0.5, renderCell: (params) => {
+    { field: 'mediaType', headerName: 'Media Type', flex: isMobile ? 0.8 : 0.5, minWidth: 120, renderCell: (params) => {
       const mtId = (params.row as any).mediaTypeId;
       const mtName = (params.row as any).mediaTypeName || params.row.mediaType;
       const found = mtId ? mediaTypes.find(t => (t as any)._id === mtId) : mediaTypes.find(t => t.name === mtName);
       const mediaTypeColor = found?.catColor || '#999';
       const label = found?.name || mtName || 'Unknown';
       return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box sx={{ width: 10, height: 10, bgcolor: mediaTypeColor, borderRadius: '50%', border: '1px solid rgba(0,0,0,0.1)', boxShadow: `0 0 3px ${mediaTypeColor}` }} />
-          <span>{label}</span>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+          <Box sx={{ width: 12, height: 12, bgcolor: mediaTypeColor, borderRadius: '50%', border: '1px solid rgba(0,0,0,0.1)', boxShadow: `0 0 3px ${mediaTypeColor}` }} />
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
         </Box>
       );
     }},
@@ -271,6 +271,28 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
 
   const columns: GridColDef[] = baseColumns.filter(Boolean) as GridColDef[];
 
+  // Custom toolbar without Export on mobile, with even button widths
+  const CustomToolbar: React.FC = () => (
+    <GridToolbarContainer sx={{ px: 1, gap: 1, display: 'flex', width: '100%' }}>
+      <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <GridToolbarColumnsButton />
+        </Box>
+        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <GridToolbarFilterButton />
+        </Box>
+        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <GridToolbarDensitySelector />
+        </Box>
+        {!isMobile && (
+          <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+            <GridToolbarExport />
+          </Box>
+        )}
+      </Box>
+    </GridToolbarContainer>
+  );
+
   // Set up DataGrid with virtualization features
   return (
     <div style={{ height: '100%', width: '100%', overflow: 'auto' }}>
@@ -288,7 +310,7 @@ const VirtualizedDataTable: React.FC<VirtualizedDataTableProps> = ({
           },
         }}
         slots={{
-          toolbar: GridToolbar,
+          toolbar: CustomToolbar,
         }}
         checkboxSelection={showCheckboxes}
         onRowClick={handleRowClick}

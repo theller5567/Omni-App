@@ -189,8 +189,8 @@ const AppContent: React.FC = () => {
               style={{
                 flex: 1,
                 overflow: 'auto',
-                paddingTop: isMobile ? 64 : 0,
-                paddingBottom: isMobile ? 56 : 0,
+                paddingTop: (!isAuthPage && isMobile) ? 64 : 0,
+                paddingBottom: (!isAuthPage && isMobile) ? 56 : 0,
                 paddingLeft: 0,
                 paddingRight: 0,
               }}

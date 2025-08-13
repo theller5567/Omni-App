@@ -39,35 +39,36 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, med
     <Box
       className="header-component"
       display="flex"
-      flexDirection="column"
+      flexDirection={isMobile ? 'column' : 'row'}
+      alignItems={isMobile ? 'stretch' : 'center'}
       gap={isMobile ? 1 : 2}
       sx={{ px: isMobile ? 1 : 0, width: '100%' }}
     >
-      {/* Row 1: Add Media (full) + Search (full) on mobile; on desktop they sit inline */}
-      <Box display="flex" gap={isMobile ? 1 : 2} flexDirection={isMobile ? 'column' : 'row'} width="100%">
-        <Button 
-          variant="contained" 
-          color="secondary" 
-          onClick={onAddMedia} 
-          startIcon={<FaPlus />}
-          fullWidth={isMobile}
-          sx={{ height: 44 }}
-        >
-          Add Media
-        </Button>
-        <Box sx={{ flex: 1 }}>
-          <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
-        </Box>
+      {/* Add Media */}
+      <Button 
+        variant="contained" 
+        color="secondary" 
+        onClick={onAddMedia} 
+        startIcon={<FaPlus />}
+        fullWidth={isMobile}
+        sx={{ height: 56 }}
+      >
+        Add Media
+      </Button>
+
+      {/* Search */}
+      <Box sx={{ flex: 1 }}>
+        <SearchInput mediaFiles={mediaFilesData} setSearchQuery={setSearchQuery} />
       </Box>
 
-      {/* Row 2: MediaType Select + View Toggle on same row */}
-      <Box display="flex" alignItems="center" gap={1} width="100%">
+      {/* MediaType + Toggle on the same row segment */}
+      <Box display="flex" alignItems="center" gap={1} minWidth={isMobile ? 'auto' : 320} sx={{ width: isMobile ? '100%' : 'auto' }}>
         <Select
           value={selectedMediaType}
           onChange={(e) => handleMediaTypeChange(e.target.value)}
           displayEmpty
           aria-label="Filter by media type"
-          sx={{ flex: 1, minWidth: isMobile ? 'auto' : 220, height: 44 }}
+          sx={{ flex: 1, minWidth: isMobile ? 'auto' : 220, height: 56 }}
           renderValue={(value) => value || 'All'}
         >
           {availableMediaTypes.map((type) => (
