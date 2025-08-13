@@ -8,7 +8,7 @@ import SellIcon from '@mui/icons-material/Sell';
 import PeopleIcon from '@mui/icons-material/People';
 import CategoryIcon from '@mui/icons-material/Category';
 import LogoutIcon from '@mui/icons-material/Logout';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 import { useUserProfile } from '../../hooks/query-hooks';
 import { useLogout } from '../NavBar/NavBar';

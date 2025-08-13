@@ -32,6 +32,10 @@ export const cdnUrl = (originUrl: string, opts: CdnOpts = {}): string =>
 export const cdnSrcSet = (
   originUrl: string,
   widths: number[] = [240, 320, 480, 640, 800, 1024]
-): string => widths.map((w) => `${cdnUrl(originUrl, { w })} ${w}w`).join(', ');
+): string => {
+  return widths
+    .map((w) => `${cdnUrl(originUrl, { w })} ${w}w`)
+    .join(', ');
+};
 
 
