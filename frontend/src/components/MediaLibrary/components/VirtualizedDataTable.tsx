@@ -5,7 +5,7 @@ import { Box, Chip, Stack } from '@mui/material';
 import { formatFileSize } from '../../../utils/formatFileSize';
 import { useMediaTypes, TransformedMediaFile } from '../../../hooks/query-hooks';
 import { isImageFile, isVideoFile, getFileIcon } from '../utils';
-import { cdnUrl, cdnSrcSet } from '../../../utils/imageCdn';
+import { cdnUrl } from '../../../utils/imageCdn';
 const hasFileExtension = (url: string): boolean => {
   try {
     const path = url.split('?')[0];
