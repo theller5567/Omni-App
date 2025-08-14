@@ -158,13 +158,13 @@ const UserActivity: React.FC = () => {
                         </Box>
                       </Box>
                     </TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={activity.action}
-                        size="small"
-                        color={getActionColor(activity.action)}
-                      />
-                    </TableCell>
+                <TableCell>
+                  <Chip 
+                    label={activity.action === 'AUTHENTICATION_SUCCESS' ? 'LOGIN' : activity.action}
+                    size="small"
+                    color={getActionColor(activity.action === 'AUTHENTICATION_SUCCESS' ? 'LOGIN' : activity.action)}
+                  />
+                </TableCell>
                     <TableCell>
                       <Typography variant="caption" display="block">IP: {activity.ip || 'N/A'}</Typography>
                       <Typography variant="caption" display="block">Agent: {activity.userAgent ? activity.userAgent.substring(0, 50) + '...' : 'N/A'}</Typography>

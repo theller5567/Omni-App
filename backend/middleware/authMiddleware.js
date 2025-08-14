@@ -37,13 +37,6 @@ export const authenticate = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
-    LoggerService.logUserActivity({
-      userId: decoded.id,
-      username: decoded.username,
-      action: 'AUTHENTICATION_SUCCESS',
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-    });
     next();
   } catch (error) {
     LoggerService.logUserActivity({
