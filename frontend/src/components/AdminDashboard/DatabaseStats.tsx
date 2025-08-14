@@ -10,6 +10,7 @@ import {
   IconButton,
   Divider
 } from '@mui/material';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import StorageIcon from '@mui/icons-material/Storage';
 import CloudIcon from '@mui/icons-material/Cloud';
@@ -21,6 +22,9 @@ import { formatFileSize } from '../../utils/formatFileSize';
 import { useDatabaseStats, useUserProfile, DatabaseStatsData } from '../../hooks/query-hooks';
 
 const DatabaseStats: React.FC = () => {
+  // Responsive breakpoints
+  const isTablet = useMediaQuery('(max-width:900px)');
+  const isPhone = useMediaQuery('(max-width:600px)');
   // Get userProfile for enabling the query
   const { data: userProfile } = useUserProfile();
   
@@ -132,20 +136,20 @@ const DatabaseStats: React.FC = () => {
           </Box>
         )}
         
-        <div className="grid-container" style={{ gridTemplateRows: 'auto auto', minHeight: '450px' }}>
+        <div className="grid-container" style={{ gridTemplateRows: 'auto auto', gridTemplateColumns: '1fr', minHeight: '450px' }}>
           {/* Storage Usage */}
-          <div className="grid-item" style={{ gridColumn: 'span 12' }}>
+          <div className="grid-item" style={{ gridColumn: '1 / -1' }}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <StorageIcon color="primary" sx={{ mr: 1 }} />
                   <Typography variant="subtitle1" fontWeight="medium">Storage Usage</Typography>
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, flexWrap: 'wrap', rowGap: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
                     {formatFileSize(statsData.storageUsed)} used of {formatFileSize(statsData.storageLimit)}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
                     {storagePercentage.toFixed(1)}%
                   </Typography>
                 </Box>
@@ -165,81 +169,82 @@ const DatabaseStats: React.FC = () => {
           
           <div className="cards-grid" style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(3, 1fr)', 
-            gap: '16px',
-            marginTop: '16px'
+            gridTemplateColumns: isPhone ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+            gap: 16,
+            marginTop: 16,
+            width: '100%'
           }}>
             {/* Database Metrics */}
-            <Card sx={{ height: '100%' }}>
+            <Card sx={{ height: '100%', width: '100%' }}>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <CloudIcon color="info" sx={{ mr: 1 }} />
-                  <Typography variant="subtitle1" fontWeight="medium">Database</Typography>
+                  <Typography variant="subtitle1" fontWeight="medium" sx={{ whiteSpace: 'nowrap' }}>Database</Typography>
                 </Box>
                 
-                <Box sx={{ mb: 1 }}>
+                <Box sx={{ mb: 0.5 }}>
                   <Typography variant="body2" color="text.secondary">Database Size</Typography>
-                  <Typography variant="h6">{formatFileSize(statsData.dbSize)}</Typography>
+                  <Typography variant="subtitle1">{formatFileSize(statsData.dbSize)}</Typography>
                 </Box>
                 
-                <Box sx={{ mb: 1 }}>
+                <Box sx={{ mb: 0.5 }}>
                   <Typography variant="body2" color="text.secondary">Last Backup</Typography>
-                  <Typography variant="h6">
+                  <Typography variant="subtitle1" sx={{ whiteSpace: 'nowrap' }}>
                     {statsData.lastBackup ? new Date(statsData.lastBackup).toLocaleDateString() : 'Never'}
                   </Typography>
                 </Box>
                 
                 <Box>
                   <Typography variant="body2" color="text.secondary">Uptime</Typography>
-                  <Typography variant="h6">{formatUptime(statsData.uptime)}</Typography>
+                  <Typography variant="subtitle1">{formatUptime(statsData.uptime)}</Typography>
                 </Box>
               </CardContent>
             </Card>
             
             {/* Users */}
-            <Card sx={{ height: '100%' }}>
+            <Card sx={{ height: '100%', width: '100%' }}>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <GroupIcon color="success" sx={{ mr: 1 }} />
                   <Typography variant="subtitle1" fontWeight="medium">Users</Typography>
                 </Box>
                 
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                  <Typography variant="body1">Total Users</Typography>
-                  <Typography variant="h5" fontWeight="medium">{statsData.totalUsers}</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2">Total Users</Typography>
+                  <Typography variant="h6" fontWeight="medium">{statsData.totalUsers}</Typography>
                 </Box>
                 
                 <Divider sx={{ my: 1 }} />
                 
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Typography variant="body1">Active Users</Typography>
-                  <Typography variant="h5" fontWeight="medium">{statsData.activeUsers}</Typography>
+                  <Typography variant="body2">Active Users</Typography>
+                  <Typography variant="h6" fontWeight="medium">{statsData.activeUsers}</Typography>
                 </Box>
               </CardContent>
             </Card>
             
             {/* Content */}
-            <Card sx={{ height: '100%' }}>
+            <Card sx={{ height: '100%', width: '100%' }}>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <CollectionsIcon color="secondary" sx={{ mr: 1 }} />
                   <Typography variant="subtitle1" fontWeight="medium">Content</Typography>
                 </Box>
                 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <CollectionsIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.7 }} />
                     <Typography variant="body2">Media Files</Typography>
                   </Box>
-                  <Typography variant="body1" fontWeight="medium">{statsData.totalMediaFiles}</Typography>
+                  <Typography variant="body2" fontWeight="medium">{statsData.totalMediaFiles}</Typography>
                 </Box>
                 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <CategoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.7 }} />
                     <Typography variant="body2">Media Types</Typography>
                   </Box>
-                  <Typography variant="body1" fontWeight="medium">{statsData.totalMediaTypes}</Typography>
+                  <Typography variant="body2" fontWeight="medium">{statsData.totalMediaTypes}</Typography>
                 </Box>
                 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -247,7 +252,7 @@ const DatabaseStats: React.FC = () => {
                     <TagIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.7 }} />
                     <Typography variant="body2">Tags</Typography>
                   </Box>
-                  <Typography variant="body1" fontWeight="medium">{statsData.totalTags}</Typography>
+                  <Typography variant="body2" fontWeight="medium">{statsData.totalTags}</Typography>
                 </Box>
               </CardContent>
             </Card>

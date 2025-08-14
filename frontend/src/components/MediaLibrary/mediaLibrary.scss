@@ -4,12 +4,15 @@
   
   @media (max-width: 768px) {
     overflow-x: hidden;
+    h1 {
+      text-align: center;
+    }
   }
 }
 .media-library {
   width: 100%;
   flex-grow: 1;
-  padding: 1rem;
+  padding: 0 1rem 1rem 1rem;
   margin: 0;
   box-sizing: border-box;
   overflow: hidden;
@@ -17,18 +20,15 @@
   min-height: 0;
   
   @media (max-width: 768px) {
-    padding: 0.5rem;
+    padding: 0 8px 8px 8px;
   }
   
-  .toolbar {
-    padding: 0.5rem 1rem;
-    margin:0;
-    max-width: calc(100% - 16px);
-    
-    @media (max-width: 768px) {
-      padding: 0.5rem;
-    }
-  }
+.toolbar {
+  padding: 0.5rem 0.5rem;
+  margin: 0;
+  max-width: 100%;
+  width: 100%;
+}
     h6 {
         margin-bottom: 2rem;
     }

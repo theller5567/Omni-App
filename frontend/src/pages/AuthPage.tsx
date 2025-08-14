@@ -16,8 +16,8 @@ const AuthPage: React.FC = () => {
   const [showForm, setShowForm] = useState(true);
   const [emailVerified, setEmailVerified] = useState(false);
 
-  // Check if the user is already logged in
-  const { data: userProfile, isSuccess } = useUserProfile();
+  // Avoid hitting /user/profile while typing on the auth page
+  const { data: userProfile, isSuccess } = useUserProfile(false);
 
   useEffect(() => {
     if (isSuccess && userProfile) {

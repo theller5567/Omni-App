@@ -118,7 +118,7 @@ const MediaTypeCard: React.FC<MediaTypeCardProps> = ({
         <Box 
           className="fields-preview" 
           sx={{ 
-            backgroundColor: 'var(--color-surface)',
+            backgroundColor: 'var(--color-surface--)',
             p: 1.5,
             borderRadius: '6px',
             mb: 1.5
