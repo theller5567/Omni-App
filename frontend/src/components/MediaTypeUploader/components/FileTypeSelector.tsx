@@ -41,12 +41,11 @@ const FileTypeSelector: React.FC<FileTypeSelectorProps> = ({
 
   return (
     <Box sx={{ mt: 3 }}>
-      <Typography variant="h6">Accepted File Types</Typography>
       <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
         Select which file types this media type will accept during uploads
       </Typography>
     
-      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      <Box sx={{ display: {xs: 'block', sm: 'grid'}, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, overflowX: 'hidden' }}>
         {fileTypeCategories.map((category) => (
           <div key={category.name} className="file-type-category">
             <FormControlLabel
@@ -66,7 +65,7 @@ const FileTypeSelector: React.FC<FileTypeSelectorProps> = ({
               }
             />
             
-            <Box sx={{ pl: 4, pb: 2 }}>
+            <Box sx={{ pl: { xs: 2, sm: 4 }, pb: 2, pr: 0, display: 'flex', flexWrap: 'wrap', overflowX: 'hidden' }}>
               {category.mimeTypes.map((type) => (
                 <Chip 
                   key={type}
@@ -74,7 +73,19 @@ const FileTypeSelector: React.FC<FileTypeSelectorProps> = ({
                   label={type}
                   variant={acceptedFileTypes.includes(type) ? "filled" : "outlined"}
                   onClick={() => handleTypeClick(type)}
-                  sx={{ m: 0.5 }}
+                  title={type}
+                  sx={{ 
+                    m: 0.5,
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    '& .MuiChip-label': {
+                      maxWidth: '100%',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      fontSize: { xs: '0.72rem', sm: '0.75rem' }
+                    }
+                  }}
                 />
               ))}
             </Box>

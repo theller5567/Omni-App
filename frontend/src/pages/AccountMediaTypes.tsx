@@ -26,6 +26,7 @@ import {
   useUserProfile,
 } from '../hooks/query-hooks';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTheme } from '@mui/material/styles';
 
 // Separate Loading State Component
 const LoadingState = () => (
@@ -68,16 +69,16 @@ const Header = () => {
 const ActionBar = ({ 
   mediaTypes,
   userRole,
-  refreshCounts,
-  hardRefresh,
+  onRefresh,
   onCreateNew
 }: { 
   mediaTypes: MediaType[],
   userRole: string | undefined,
-  refreshCounts: () => void,
-  hardRefresh: () => void,
+  onRefresh: () => void,
   onCreateNew: () => void
 }) => {
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
   return (
     <Box
       className="header-component"
@@ -86,7 +87,8 @@ const ActionBar = ({
       alignItems="center"
       justifyContent="space-between"
       padding="1rem"
-      bgcolor="var(--color-surface-gradient)"
+      borderRadius={1}
+      bgcolor={isDarkMode ? 'var(--color-surface-elevated)' : 'var(--color-surface-gradient-light)'}
       mb={2}
     >
       <div className="media-types-container">
@@ -107,13 +109,14 @@ const ActionBar = ({
         </Typography>
       </div>
       
-      <div className="actions-container" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+      <Box className="actions-container" sx={{ display: 'flex', gap: 1, mt: 1, width: '100%', flexDirection: { xs: 'column', sm: 'row' } }}>
         <Button
           variant="contained"
           color="secondary"
           onClick={onCreateNew}
           startIcon={<FaPlus />}
           disabled={userRole !== 'superAdmin'}
+          sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: 'initial' }, mb: { xs: 2, sm: 0 }, mt: { xs: 2, sm: 2 } }}
         >
           Create New Media Type
         </Button>
@@ -121,20 +124,13 @@ const ActionBar = ({
         <Button
           variant="outlined"
           color="primary"
-          onClick={refreshCounts}
+          onClick={onRefresh}
           startIcon={<FaSync />}
+          sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: 'initial' }, mt: { xs: 2, sm: 2 } }}
         >
-          Refresh Counts
+          Refresh
         </Button>
-        
-        <Button
-          variant="contained"
-          color="error"
-          onClick={hardRefresh}
-        >
-          Hard Refresh
-        </Button>
-      </div>
+      </Box>
     </Box>
   );
 };
@@ -336,32 +332,17 @@ const AccountMediaTypes = () => {
     setSelectedMediaTypeId(null);
   };
 
-  // Handle manual refresh of counts
-  const handleRefreshCounts = async () => {
-    toast.info('Refreshing media type counts...');
-    
+  // Unified refresh: invalidate cache and refetch
+  const handleUnifiedRefresh = async () => {
     try {
-      await refetch();
-      toast.success('All media type counts updated');
-    } catch (error: any) {
-      console.error('Error refreshing counts:', error);
-      toast.error('Error updating counts: ' + (error.message || 'Unknown error'));
-    }
-  };
-  
-  // Handle hard refresh - clear cache and refetch
-  const handleHardRefresh = async () => {
-    try {
-      // Clear all media types from the query cache
+      toast.info('Refreshing media types...');
+      // Invalidate and refetch to ensure counts and items are up-to-date
       queryClient.invalidateQueries({ queryKey: ['mediaTypes'] });
-      
-      // Refetch fresh data
       await refetch();
-      
-      toast.success('Media types reloaded');
+      toast.success('Media types refreshed');
     } catch (error: any) {
-      console.error('Error during hard refresh:', error);
-      toast.error('Failed to reload media types: ' + (error.message || 'Unknown error'));
+      console.error('Error refreshing media types:', error);
+      toast.error('Failed to refresh: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -421,7 +402,7 @@ const AccountMediaTypes = () => {
 
   // Render empty state
   if (mediaTypes.length === 0) {
-    return <EmptyState onRefresh={handleHardRefresh} />;
+    return <EmptyState onRefresh={handleUnifiedRefresh} />;
   }
 
   // Main render
@@ -447,8 +428,7 @@ const AccountMediaTypes = () => {
         <ActionBar 
           mediaTypes={mediaTypes}
           userRole={userRole}
-          refreshCounts={handleRefreshCounts}
-          hardRefresh={handleHardRefresh}
+          onRefresh={handleUnifiedRefresh}
           onCreateNew={() => handleEditClick('')}
         />
         

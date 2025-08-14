@@ -15,8 +15,11 @@ import {
   Chip,
   CircularProgress,
   Tooltip,
-  Backdrop
+  Backdrop,
+  Divider
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/apiClient';
 import { FaArrowRight, FaArrowLeft, FaSave, FaQuestionCircle } from 'react-icons/fa';
@@ -153,6 +156,8 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
 );
 
 const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, editMediaTypeId }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   // Set up TanStack Query hooks
   const queryClient = useQueryClient();
   const { data: mediaTypes = [] } = useMediaTypes({ enabled: true });
@@ -484,9 +489,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
             }
           }
           
-          // Show success toast
-          // toast.success(`Media type '${apiData.name}' (Color: ${colorName}) ${isEditMode ? 'updated' : 'created'} successfully`);
-          toast.success(`Media type '${apiData.name}' ${isEditMode ? 'updated' : 'created'} successfully`);
+          // Success notification handled by useUpdateMediaType hook
           
           // Invalidate queries to ensure data is refreshed
           queryClient.invalidateQueries({ queryKey: ['mediaTypes'] });
@@ -515,9 +518,7 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
             }
           }
           
-          // Show a single success toast (suppress additional toasts from mutations)
-          toast.dismiss('media-type-success');
-          toast.success(`Media type '${apiData.name}' created successfully`, { toastId: 'media-type-success' });
+          // Success notification handled by useCreateMediaType hook
           
           // Invalidate queries to ensure data is refreshed
           queryClient.invalidateQueries({ queryKey: ['mediaTypes'] });
@@ -632,6 +633,15 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       />
       
       <Box sx={{ mt: 3, mb: 2 }}>
+      <Divider 
+          sx={{ 
+            mb: 5, 
+            mt: 5, 
+            height: '2px', 
+            backgroundColor: 'darkgray', 
+            display: { xs: 'block', sm: 'none' } // Only show on mobile
+          }} 
+        />
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
           <Typography variant="h6">Default Tags</Typography>
           <Tooltip title="These tags will automatically be applied to all media uploaded with this type">
@@ -691,6 +701,15 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       </Box>
       
       <Box>
+      <Divider 
+          sx={{ 
+            mb: 5, 
+            mt: 5, 
+            height: '2px', 
+            backgroundColor: 'darkgray', 
+            display: { xs: 'block', sm: 'none' } // Only show on mobile
+          }} 
+        />
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
           <Typography variant="h6">Select Color for Media Type</Typography>
           <Tooltip title="This color will help users identify this media type visually in the interface">
@@ -713,6 +732,15 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
       </Box>
       
       <Box sx={{ mt: 3 }}>
+        <Divider 
+          sx={{ 
+            mb: 5, 
+            mt: 5, 
+            height: '2px', 
+            backgroundColor: 'darkgray', 
+            display: { xs: 'block', sm: 'none' } // Only show on mobile
+          }} 
+        />
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
           <Typography variant="h6">Select Accepted File Types</Typography>
           <Tooltip title="Choose which file types this media type will accept for upload">
@@ -783,8 +811,9 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
         open={open} 
         onClose={confirmClose}
         aria-labelledby="media-type-dialog-title"
-        maxWidth="md"
+        maxWidth={isMobile ? 'xs' : 'md'}
         fullWidth
+        fullScreen={isMobile}
       >
         <DialogTitle id="media-type-dialog-title" sx={{ m: 0, p: 2 }}>
           {dialogTitle}
@@ -808,8 +837,8 @@ const MediaTypeUploader: React.FC<MediaTypeUploaderProps> = ({ open, onClose, ed
           </DialogContent>
         ) : open && (
           <>
-            <DialogContent className='dialog-inner' style={{width: '100%', height: '600px'}}>
-              <Stepper activeStep={activeStep} alternativeLabel sx={{marginBottom: '3rem'}}>
+            <DialogContent className='dialog-inner' style={{width: '100%', height: isMobile ? 'auto' : '600px'}}>
+              <Stepper activeStep={activeStep} alternativeLabel={!isMobile} sx={{marginBottom: isMobile ? '1rem' : '3rem'}}>
                 {steps.map((label, index) => (
                   <Step key={label}>
                     <StepLabel
