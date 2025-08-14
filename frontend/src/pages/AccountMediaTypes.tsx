@@ -433,7 +433,7 @@ const AccountMediaTypes = () => {
       exit={{ opacity: 0, y: -50 }}
       transition={{ duration: 0.3 }}
     >
-      <Box className="account-media-types" sx={{ width: "100%", overflow: "hidden" }}>
+      <Box className="account-media-types" sx={{ width: "100%", overflow: "visible" }}>
         <Header />
 
         {/* Media Type Uploader Dialog */}
