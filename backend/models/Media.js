@@ -30,6 +30,11 @@ const mediaSchema = new mongoose.Schema({
     description: { type: String },
     // Other metadata will be added dynamically
   },
+  // AI-enriched fields
+  aiTags: { type: [String], default: [] },
+  aiDescription: { type: String },
+  aiAltText: { type: String },
+  embedding: { type: [Number], default: [] },
 }, { 
   discriminatorKey: '__t', // This is the key that will identify the specific media type
   timestamps: true,

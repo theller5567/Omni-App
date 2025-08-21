@@ -129,25 +129,18 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
       }
 
       if (isImageFile(file.fileExtension)) {
-        // Only render image if URL exists
         if (file.location) {
-          // Skip Cloudinary fetch if the source URL lacks a proper extension
-          if (!hasFileExtension(file.location)) {
-            return (
-              <div className="icon-container">
-                {getFileIcon(file.fileExtension, file.mediaType, 48)}
-              </div>
-            );
-          }
+          const useCdn = hasFileExtension(file.location);
           // Use known intrinsic dimensions when available to prevent CLS
           const intrinsicWidth = (file.metadata as any)?.imageWidth || (file as any).imageWidth || undefined;
           const intrinsicHeight = (file.metadata as any)?.imageHeight || (file as any).imageHeight || undefined;
           const aspectRatio = intrinsicWidth && intrinsicHeight ? intrinsicWidth / intrinsicHeight : 16 / 9;
-          const primarySrc = cdnUrl(file.location, { w: 640 });
+          const primarySrc = useCdn ? cdnUrl(file.location, { w: 640 }) : file.location;
+          const srcSetAttr = useCdn ? cdnSrcSet(file.location) : undefined;
           return (
             <img 
               src={primarySrc}
-              srcSet={cdnSrcSet(file.location)}
+              srcSet={srcSetAttr}
               sizes="(max-width: 600px) 50vw, (max-width: 1200px) 33vw, 240px"
               alt={file.metadata?.fileName || file.title || 'Image'} 
               className="preview-image"
@@ -165,7 +158,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ file, handleFileClick }) => {
               onLoad={() => setLoaded(true)}
               onError={(e) => {
                 const img = e.currentTarget as HTMLImageElement;
-                if (!cdnTriedRef.current) {
+                if (!cdnTriedRef.current && useCdn) {
                   cdnTriedRef.current = true;
                   img.src = file.location; // fallback to original
                   img.srcset = '';

@@ -12,6 +12,7 @@ import { promises as fsPromises } from 'fs';
 import path from 'path';
 import os from 'os';
 import ActivityTrackingService from '../services/activityTrackingService.js';
+import { describeAndTagImageByUrl, generateEmbedding } from '../services/aiService.js';
 import axios from 'axios';
 
 // Set ffmpeg path
@@ -278,6 +279,41 @@ export const uploadMedia = async (req, res) => {
     if (req.user) {
       await ActivityTrackingService.trackMediaUpload(req.user, savedMedia);
     }
+
+    // Non-blocking AI enrichment for images; basic heuristic based on extension/mimetype in metadata
+    (async () => {
+      try {
+        const looksLikeImage = (req.body.fileExtension || '').toLowerCase().match(/^(png|jpe?g|gif|webp|svg)$/) || (file.mimetype || '').startsWith('image/');
+        if (looksLikeImage) {
+          const analysis = await describeAndTagImageByUrl(s3UploadResult.Location);
+          const aiTags = (analysis.tags || []).map((t) => String(t));
+          const combinedTags = Array.from(new Set([...(savedMedia.metadata?.tags || []), ...aiTags]));
+          const aiAltText = analysis.altText || '';
+          const altText = aiAltText || savedMedia.metadata?.altText || '';
+          const aiDescription = analysis.description || '';
+          const textForEmbedding = [savedMedia.title, savedMedia.metadata?.description, aiDescription, combinedTags.join(' ')].filter(Boolean).join(' ');
+          const vector = await generateEmbedding(textForEmbedding);
+          const existingDescription = (savedMedia.metadata && typeof savedMedia.metadata.description === 'string') 
+            ? savedMedia.metadata.description
+            : '';
+          await Media.updateOne({ _id: savedMedia._id }, {
+            $set: {
+              aiTags,
+              aiDescription,
+              aiAltText,
+              'metadata.altText': altText,
+              'metadata.description': existingDescription && existingDescription.trim() !== '' 
+                ? existingDescription 
+                : aiDescription,
+              embedding: vector,
+              'metadata.tags': combinedTags
+            }
+          });
+        }
+      } catch (aiErr) {
+        console.warn('AI enrichment failed:', aiErr?.message || aiErr);
+      }
+    })();
 
     // Return the complete response
     const response = {

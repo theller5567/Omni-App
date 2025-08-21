@@ -69,11 +69,14 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({ view, toggleView, med
           displayEmpty
           aria-label="Filter by media type"
           sx={{ flex: 1, minWidth: isMobile ? 'auto' : 220, height: 56 }}
-          renderValue={(value) => value || 'All'}
+          renderValue={(value) => (!value || value === 'All' ? 'All media types' : String(value))}
         >
-          {availableMediaTypes.map((type) => (
-            <MenuItem key={type} value={type}>{type}</MenuItem>
-          ))}
+          {availableMediaTypes.map((type) => {
+            const label = type === 'All' ? 'All media types' : type;
+            return (
+              <MenuItem key={type} value={type}>{label}</MenuItem>
+            );
+          })}
         </Select>
         <ToggleButtonGroup
           value={view}

@@ -87,8 +87,8 @@ label {
   // Ensure tables scroll horizontally on small screens
   .MuiDataGrid-root {
     width: 100%;
-    max-width: 100vw;
-    overflow-x: auto;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 }
 
@@ -131,7 +131,7 @@ label {
     width: 100% !important;
     
     @media (max-width: 768px) {
-      overflow-x: auto;
+      overflow-x: hidden;
     }
   }
 }
@@ -192,8 +192,8 @@ label {
 
 .MuiDataGrid-root {
   width: 100%;
-  max-width: 100vw;
-  overflow-x: auto;
+  max-width: 100%;
+  overflow-x: hidden;
   
   // Support different density settings
   &.MuiDataGrid-densityStandard .MuiDataGrid-cell {

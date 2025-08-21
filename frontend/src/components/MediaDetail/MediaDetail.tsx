@@ -639,6 +639,28 @@ const MediaDetail: React.FC = () => {
     refetch: recheckHealth 
   } = useApiHealth();
 
+  // Briefly poll for AI-enriched fields right after initial load if missing
+  useEffect(() => {
+    if (!mediaFile) return;
+    const missingDescription = !(getMetadataField(mediaFile, 'description', '') as string);
+    const missingAlt = !(getMetadataField(mediaFile, 'altText', '') as string);
+    const tags = (getMetadataField(mediaFile, 'tags', []) as string[]) || [];
+    const missingTags = tags.length === 0;
+    if (!(missingDescription || missingAlt || missingTags)) return; // nothing to do
+
+    let attempts = 0;
+    const id = setInterval(async () => {
+      attempts += 1;
+      try {
+        await refetch();
+      } catch {}
+      if (attempts >= 10) {
+        clearInterval(id);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [mediaFile, refetch]);
+
   // MOVED HOOKS UP: Define userId and call useUsername and useEffect before conditional returns.
   // Ensure userId is derived safely, defaulting to empty string if mediaFile or uploadedBy is not yet available.
   const userId = mediaFile ? (getMetadataField(mediaFile, 'uploadedBy', '') || '') : '';
@@ -994,6 +1016,7 @@ const MediaDetail: React.FC = () => {
     }
     return Promise.resolve(false);
   };
+
   
   // Convert mediaTypeInfo to MediaTypeConfig format
   const mediaTypeConfig = mediaFile && mediaTypes && mediaTypes.length > 0 ? (() => {

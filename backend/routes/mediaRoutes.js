@@ -28,6 +28,7 @@ import {
 } from '../controllers/mediaController.js';
 import mongoose from 'mongoose';
 import LoggerService from '../services/loggerService.js';
+import { semanticSearch } from '../services/searchService.js';
 
 const router = express.Router();
 
@@ -171,6 +172,20 @@ router.get('/', getAllMedia);
 
 // Search media (must come before ID routes)
 router.get('/search/:query', searchMedia);
+router.get('/semantic-search', async (req, res) => {
+  try {
+    const q = (req.query.q || '').toString();
+    const limit = Math.min(parseInt((req.query.limit || '20').toString(), 10) || 20, 50);
+    if (!q || q.length < 2) {
+      return res.status(400).json({ error: 'Query parameter q is required and must be >= 2 chars' });
+    }
+    const results = await semanticSearch(q, limit);
+    return res.status(200).json(results);
+  } catch (err) {
+    console.error('Semantic search error:', err);
+    return res.status(500).json({ error: 'Failed to run semantic search' });
+  }
+});
 
 // Get media by user ID (must come before generic ID routes)
 router.get('/user/:userId', authenticate, getMediaByUserId);
