@@ -147,7 +147,13 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
       }
       prevDataRef.current = dataString;
     }
-    return newRows;
+    // Sort newest to oldest by modifiedDate for consistent grid/card order
+    const sortedRows = [...newRows].sort((a, b) => {
+      const ta = a.modifiedDate ? new Date(a.modifiedDate as any).getTime() : 0;
+      const tb = b.modifiedDate ? new Date(b.modifiedDate as any).getTime() : 0;
+      return tb - ta; // desc
+    });
+    return sortedRows;
   }, [mediaFilesData, selectedMediaType]);
 
   // If children are provided (compound usage), render them directly

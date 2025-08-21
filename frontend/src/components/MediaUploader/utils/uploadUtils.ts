@@ -134,6 +134,16 @@ export const uploadMedia = async ({
     }
     
     // Make the API call with proper type annotations
+    // Dynamic timeout: longer for large files and videos
+    const isVideo = file && typeof file.type === 'string' && file.type.startsWith('video/');
+    const sizeBytes = file?.size || 0;
+    const sizeMB = Math.round(sizeBytes / (1024 * 1024));
+    const timeoutForUpload = isVideo
+      ? 300_000 // 5 minutes for videos
+      : sizeMB > 25
+        ? 180_000 // 3 minutes for large non-video files
+        : 60_000; // 1 minute for small files
+
     const config: any = {
       // Let axios/browser set the proper multipart boundary; don't set Content-Type manually
       onUploadProgress: (progressEvent: any) => {
@@ -141,7 +151,11 @@ export const uploadMedia = async ({
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           onProgress(percentCompleted);
         }
-      }
+      },
+      // Uploads can be large/slow: override short global timeout and size limits
+      timeout: timeoutForUpload,
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
     };
     
     // Use cookie-aware client so HttpOnly cookies are sent

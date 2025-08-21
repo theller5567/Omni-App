@@ -54,6 +54,7 @@ const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
 const UserPage = lazy(() => import('./pages/User'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
+const LearningThree = lazy(() => import('./pages/LearningThree'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -213,6 +214,7 @@ const AppContent: React.FC = () => {
                   <Route path="/accept-invitation/:token" element={<AcceptInvitation />} /> {/* Consider if this needs protection */}
                   <Route path="/password-setup" element={<PasswordSetupPage />} />
                   <Route path="/style-guide" element={<ProtectedRoute element={<StyleGuidePage />} adminOnly />} />
+                  <Route path="/learning-three" element={<ProtectedRoute element={<LearningThree />} adminOnly={false} />} />
                   <Route path="/verify-email" element={<VerifyEmailPage />} />
                   <Route path="/" element={<AuthPage />} />
                   <Route path="*" element={<NotFoundPage />} />
