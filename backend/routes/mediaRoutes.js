@@ -26,6 +26,7 @@ import {
   getMediaByUserId,
   getMediaByTypeName
 } from '../controllers/mediaController.js';
+import { describeAndTagImageFromBuffer } from '../services/aiService.js';
 import mongoose from 'mongoose';
 import LoggerService from '../services/loggerService.js';
 import { semanticSearch } from '../services/searchService.js';
@@ -38,6 +39,23 @@ const uploadFields = upload.fields([
   { name: 'file', maxCount: 1 },
   { name: 'v_thumbnail', maxCount: 1 }
 ]);
+
+// Lightweight endpoint to get AI suggestions before full upload
+router.post('/ai/suggest', authenticate, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    if (!req.file.mimetype.startsWith('image/')) {
+      return res.status(400).json({ error: 'Only images are supported for AI suggestions' });
+    }
+    const analysis = await describeAndTagImageFromBuffer(req.file.buffer, req.file.mimetype);
+    return res.status(200).json(analysis);
+  } catch (err) {
+    console.error('AI suggest error:', err);
+    return res.status(500).json({ error: 'Failed to generate suggestions' });
+  }
+});
 
 router.put('/update/:slug', authenticate, updateMedia);
 

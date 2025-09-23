@@ -45,6 +45,7 @@ const CustomSidebar: React.FC = () => {
   const { data: userProfile, isLoading: isUserLoading, error: userError } = useUserProfile();
 
   const isAdmin = userProfile && (userProfile.role === "admin" || userProfile.role === "superAdmin");
+  const isSuperAdmin = userProfile && userProfile.role === "superAdmin";
 
   // Apply CSS variables when theme changes
   useEffect(() => {
@@ -147,13 +148,15 @@ const CustomSidebar: React.FC = () => {
                 >
                   User Management
                 </MenuItem>
-                <MenuItem 
-                  icon={<FaLayerGroup />} 
-                  className={location.pathname === "/admin-media-types" ? "active-item" : ""}
-                  component={<NavLink to="/admin-media-types" className={({isActive}) => isActive ? "active-menu-item" : ""} end/>}
-                >
-                  Media Types
-                </MenuItem>
+                {isSuperAdmin && (
+                  <MenuItem 
+                    icon={<FaLayerGroup />} 
+                    className={location.pathname === "/admin-media-types" ? "active-item" : ""}
+                    component={<NavLink to="/admin-media-types" className={({isActive}) => isActive ? "active-menu-item" : ""} end/>}
+                  >
+                    Media Types
+                  </MenuItem>
+                )}
               </>
             )}
 

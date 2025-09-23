@@ -11,6 +11,7 @@ interface MediaUploadConfig {
   metadata: MetadataState;
   videoThumbnailTimestamp?: string;
   videoThumbnail?: string;
+  aiAutoApply?: boolean;
   onProgress?: UploadProgressCallback;
   onError?: (error: any) => void;
 }
@@ -81,6 +82,7 @@ export const uploadMedia = async ({
   metadata,
   videoThumbnailTimestamp,
   videoThumbnail,
+  aiAutoApply,
   onProgress,
   onError
 }: MediaUploadConfig): Promise<UploadedFile> => {
@@ -90,6 +92,10 @@ export const uploadMedia = async ({
     formData.append('file', file);
     formData.append('mediaType', metadata.mediaTypeName || ''); // Ensure we have a string value
     formData.append('mediaTypeId', metadata.mediaTypeId || ''); // Ensure we have a string value
+    // Append AI auto-apply preference so backend can respect user choice
+    if (typeof aiAutoApply !== 'undefined') {
+      formData.append('aiAutoApply', aiAutoApply ? 'true' : 'false');
+    }
     
     // Set explicit title value
     // Lock extension: if user-provided fileName changes, keep original file extension

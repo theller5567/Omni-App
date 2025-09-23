@@ -205,10 +205,10 @@ const AppContent: React.FC = () => {
                   <Route path="/user/:id" element={<ProtectedRoute element={<UserPage />} />} />
                   <Route path="/admin-users" element={<ProtectedRoute element={<AccountUsers />} adminOnly />} />
                   <Route path="/admin-tags" element={<ProtectedRoute element={<AccountTags />} adminOnly />} />
-                  <Route path="/admin-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} adminOnly />} />
+                  <Route path="/admin-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} requiredRole="superAdmin" />} />
                   {/* Conditional route based on userProfile role */}
                   {(userProfile as User | null | undefined)?.role === 'superAdmin' && (
-                    <Route path="/manage-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} adminOnly />} />
+                    <Route path="/manage-media-types" element={<ProtectedRoute element={<AccountMediaTypes />} requiredRole="superAdmin" />} />
                   )}
                   <Route path="/admin-dashboard" element={<ProtectedRoute element={<AccountAdminDashboard />} adminOnly />} />
                   <Route path="/accept-invitation/:token" element={<AcceptInvitation />} /> {/* Consider if this needs protection */}
@@ -253,7 +253,7 @@ const AppContent: React.FC = () => {
 // Main App component that provides the QueryClientProvider
 const App: React.FC = () => {
   return (
-    <Router>
+    <Router basename={import.meta.env.BASE_URL || '/projects/omniapp/'}>
       <QueryClientProvider client={queryClient}>
         <AppContent />
         {/* Only show React Query Devtools in development */}

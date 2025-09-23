@@ -291,24 +291,39 @@ export const uploadMedia = async (req, res) => {
           const aiAltText = analysis.altText || '';
           const altText = aiAltText || savedMedia.metadata?.altText || '';
           const aiDescription = analysis.description || '';
-          const textForEmbedding = [savedMedia.title, savedMedia.metadata?.description, aiDescription, combinedTags.join(' ')].filter(Boolean).join(' ');
+          // Respect user preference: only auto-apply AI to live metadata when opted in
+          const autoApplyAi = String(req.body.aiAutoApply) === 'true';
+          const descriptionForEmbedding = autoApplyAi
+            ? (savedMedia.metadata?.description && savedMedia.metadata.description.trim() !== ''
+                ? savedMedia.metadata.description
+                : aiDescription)
+            : (savedMedia.metadata?.description || '');
+          const tagsForEmbedding = autoApplyAi ? combinedTags : (savedMedia.metadata?.tags || []);
+          const textForEmbedding = [
+            savedMedia.title,
+            descriptionForEmbedding,
+            tagsForEmbedding.join(' ')
+          ].filter(Boolean).join(' ');
           const vector = await generateEmbedding(textForEmbedding);
-          const existingDescription = (savedMedia.metadata && typeof savedMedia.metadata.description === 'string') 
+          const existingDescription = (savedMedia.metadata && typeof savedMedia.metadata.description === 'string')
             ? savedMedia.metadata.description
             : '';
-          await Media.updateOne({ _id: savedMedia._id }, {
+          const updateDoc = {
             $set: {
               aiTags,
               aiDescription,
               aiAltText,
-              'metadata.altText': altText,
-              'metadata.description': existingDescription && existingDescription.trim() !== '' 
-                ? existingDescription 
-                : aiDescription,
-              embedding: vector,
-              'metadata.tags': combinedTags
+              embedding: vector
             }
-          });
+          };
+          if (autoApplyAi) {
+            updateDoc.$set['metadata.altText'] = altText;
+            updateDoc.$set['metadata.description'] = existingDescription && existingDescription.trim() !== ''
+              ? existingDescription
+              : aiDescription;
+            updateDoc.$set['metadata.tags'] = combinedTags;
+          }
+          await Media.updateOne({ _id: savedMedia._id }, updateDoc);
         }
       } catch (aiErr) {
         console.warn('AI enrichment failed:', aiErr?.message || aiErr);

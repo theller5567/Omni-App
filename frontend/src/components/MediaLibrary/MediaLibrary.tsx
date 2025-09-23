@@ -1,17 +1,18 @@
 import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
-import { Box, Typography, Toolbar, IconButton, Tooltip, useMediaQuery, Theme, CircularProgress } from '@mui/material';
+import { Box, Typography, useMediaQuery, Theme } from '@mui/material';
 import { motion } from 'framer-motion';
 import './mediaLibrary.scss';
 import { useNavigate } from 'react-router-dom';
-import { FaTrash, FaDownload, FaSpinner } from 'react-icons/fa';
 import { BaseMediaFile } from '../../interfaces/MediaFile';
-import { alpha } from '@mui/material/styles';
+// import { alpha } from '@mui/material/styles';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import LoadingFallback from '../common/LoadingFallback';
 import { GridRowSelectionModel } from '@mui/x-data-grid';
-import axios from 'axios';
-import env from '../../config/env';
+import EnhancedTableToolbar from './components/EnhancedTableToolbar';
+import { handleDownloadSelected as doHandleDownloadSelected, handleConfirmDelete as doHandleConfirmDelete, handleDeleteSelected as doHandleDeleteSelected } from './utils/handlers';
 import { useTagCategories, useUserProfile } from '../../hooks/query-hooks';
+import { buildMediaRows } from '../../utils/mediaRows';
 // import { MediaCardViewSwitcher } from './components/MediaCardViewSwitcher'; // Removed
 // import { DebugMediaData } from './components/DebugMediaData'; // Removed
 
@@ -21,12 +22,7 @@ const VirtualizedDataTable = lazy(() => import('./components/VirtualizedDataTabl
 const MediaCard = lazy(() => import('./components/MediaCard'));
 const ConfirmationModal = lazy(() => import('./components/ConfirmationModal'));
 
-// Loading fallback component
-const LoadingFallback = () => (
-  <Box display="flex" justifyContent="center" alignItems="center" p={2}>
-    <CircularProgress size={24} />
-  </Box>
-);
+// Loading fallback moved to common component
 
 interface MediaLibraryProps {
   mediaFilesData: BaseMediaFile[];
@@ -105,38 +101,8 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
     });
   };
 
-  const rows = useMemo(() => {
-    const newRows = mediaFilesData
-      .filter(file => {
-        const label = (file as any).mediaTypeName || (typeof file.mediaType === 'string' ? file.mediaType : '');
-        return selectedMediaType === 'All' || label === selectedMediaType;
-      })
-      .map((file) => ({
-        _id: file._id || file.id || crypto.randomUUID(),
-        id: file._id || file.id || crypto.randomUUID(),
-        location: file.location || '',
-        title: file.title || '',
-        displayTitle: file.metadata?.fileName || file.title || 'Untitled',
-        thumbnailUrl: file.metadata?.v_thumbnail || file.location,
-        fileSize: file.fileSize || 0,
-        fileExtension: file.fileExtension || '',
-        modifiedDate: file.modifiedDate,
-        metadata: {
-          fileName: file.metadata?.fileName || 'Untitled',
-          altText: file.metadata?.altText || '',
-          description: file.metadata?.description || '',
-          tags: file.metadata?.tags || [],
-          visibility: file.metadata?.visibility || 'public',
-          catColor: file.metadata?.catColor || null,
-          v_thumbnail: file.metadata?.v_thumbnail || null,
-          v_thumbnailTimestamp: file.metadata?.v_thumbnailTimestamp || null
-        },
-        slug: file.slug || '',
-        mediaTypeId: (file as any).mediaTypeId || (typeof (file as any).mediaType === 'string' ? (file as any).mediaType : undefined),
-        mediaTypeName: (file as any).mediaTypeName || (typeof file.mediaType === 'string' ? file.mediaType : 'Unknown'),
-        mediaType: (file as any).mediaTypeName || (typeof file.mediaType === 'string' ? file.mediaType : 'Unknown')
-      }));
-
+  const rows = useMemo<any[]>(() => {
+    const newRows = buildMediaRows(mediaFilesData, selectedMediaType) as any[];
     const dataString = JSON.stringify({ count: newRows.length, types: [...new Set(newRows.map(row => row.mediaType))] });
     if (newRows.length > 0 && dataString !== prevDataRef.current) {
       if (process.env.NODE_ENV === 'development') {
@@ -147,13 +113,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
       }
       prevDataRef.current = dataString;
     }
-    // Sort newest to oldest by modifiedDate for consistent grid/card order
-    const sortedRows = [...newRows].sort((a, b) => {
-      const ta = a.modifiedDate ? new Date(a.modifiedDate as any).getTime() : 0;
-      const tb = b.modifiedDate ? new Date(b.modifiedDate as any).getTime() : 0;
-      return tb - ta; // desc
-    });
-    return sortedRows;
+    return newRows as any[];
   }, [mediaFilesData, selectedMediaType]);
 
   // If children are provided (compound usage), render them directly
@@ -168,7 +128,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
     localStorage.setItem('mediaLibraryViewMode', newViewMode);
   };
 
-  const handleFileClick = (file: BaseMediaFile) => {
+  const handleFileClick = (file: any) => {
     if (file.slug) {
       navigate(`/media/slug/${file.slug}`);
     } else if (file._id || file.id) {
@@ -182,152 +142,22 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleConfirmDelete = async () => {
-    let successfullyDeletedIds: string[] = [];
-    if (isToolbarDelete) {
-      // Handle multiple deletions
-      const numSelected = selected.length;
-      if (numSelected === 0) {
-        safeToast('info', 'No files were selected for deletion.');
-        setIsModalOpen(false);
-        setIsToolbarDelete(false);
-        return;
-      }
+  const handleConfirmDelete = async () => doHandleConfirmDelete(
+    isToolbarDelete,
+    selected,
+    rows as any[],
+    onDeleteMedia,
+    (type, message) => safeToast(type as any, message),
+    selectedFileId,
+    setSelectedFileId,
+    setSelected,
+    setIsModalOpen,
+    setIsToolbarDelete
+  );
 
-      const promises = selected.map(id => onDeleteMedia(id as string).then(success => ({ id: id as string, success })));
-      const results = await Promise.all(promises);
+  const handleDeleteSelected = () => doHandleDeleteSelected(selected, setIsToolbarDelete, setIsModalOpen);
 
-      successfullyDeletedIds = results.filter(r => r.success).map(r => r.id);
-      const successfulDeletionsCount = successfullyDeletedIds.length;
-
-      if (successfulDeletionsCount === numSelected && numSelected > 0) {
-        safeToast('success', `${successfulDeletionsCount} media file${successfulDeletionsCount > 1 ? 's' : ''} deleted successfully.`);
-      } else if (successfulDeletionsCount > 0 && successfulDeletionsCount < numSelected) {
-        safeToast('warning', `${successfulDeletionsCount} out of ${numSelected} media files deleted. Some deletions may have failed.`);
-      } else if (numSelected > 0 && successfulDeletionsCount === 0) {
-        safeToast('error', `Failed to delete ${numSelected} selected media file${numSelected > 1 ? 's' : ''}.`);
-      }
-    } else if (selectedFileId) {
-      // Handle single deletion
-      const fileToDelete = rows.find(row => row.id === selectedFileId);
-      const fileName = fileToDelete?.title || fileToDelete?.metadata?.fileName || 'this media file';
-
-      const success = await onDeleteMedia(selectedFileId);
-      if (success) {
-        successfullyDeletedIds = [selectedFileId];
-        safeToast('success', `Media file '${fileName}' deleted successfully.`);
-        setSelectedFileId(null); // Clear the selected file ID
-      } else {
-        safeToast('error', `Failed to delete media file '${fileName}'.`);
-      }
-    }
-
-    // After deletions, filter the 'selected' state to remove IDs of deleted items
-    // This requires knowing the updated rows data. 
-    // Since onDeleteMedia updates the parent (MediaContainer) which then updates mediaFilesData (and thus rows),
-    // we might need a slight delay or ensure 'rows' is fresh before this filter.
-    // For now, let's assume 'rows' will be updated by the time this runs or shortly after.
-    // A more robust way would be to get the updated list of rows or rely on the parent to clear selection.
-    
-    // Update the selected state by removing successfully deleted IDs
-    setSelected(currentSelected => currentSelected.filter(id => !successfullyDeletedIds.includes(id as string)));
-
-    setIsModalOpen(false);
-    setIsToolbarDelete(false); // Reset the toolbar delete flag
-  };
-
-  const handleDeleteSelected = () => {
-    if (selected.length > 0) {
-      setIsToolbarDelete(true);
-      setIsModalOpen(true);
-    }
-  };
-
-  const handleDownloadSelected = async () => {
-    if (selected.length === 0) {
-      safeToast('info', 'No files selected for download', {
-        autoClose: 2000
-      });
-      return;
-    }
-
-    try {
-      setDownloading(true);
-      
-      // Get file IDs from selected items
-      const fileIds = selected.map(id => {
-        const file = rows.find(row => row.id === id);
-        return file?.id || '';
-      }).filter(id => id !== '');
-      
-      if (fileIds.length > 0) {
-        safeToast('info', `Preparing ${fileIds.length} files for download...`, {
-          autoClose: 2000
-        });
-        
-        try {
-          // Use axios to make the request with responseType blob
-          const response = await axios.post<Blob>(
-            `${env.BASE_URL}/api/media/batch-download`,
-            { fileIds }, // Send as JSON in request body
-            { 
-              responseType: 'blob',
-              timeout: fileIds.length > 10 ? 60000 : 30000 // Longer timeout for larger batches
-            }
-          );
-          
-          // Create a download link for the blob
-          const blob = new Blob([response.data]);
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.setAttribute('download', `omni_media_${Date.now()}.zip`);
-          document.body.appendChild(link);
-          link.click();
-          
-          // Clean up
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(link);
-          
-          safeToast('success', `Downloaded ${selected.length} files`, {
-            autoClose: 3000
-          });
-        } catch (downloadError: unknown) {
-          console.error('Download error:', downloadError);
-          
-          // Check if error is an object with a code property
-          if (downloadError && typeof downloadError === 'object' && 'code' in downloadError) {
-            const error = downloadError as { code?: string, response?: { status?: number } };
-            
-            if (error.code === 'ECONNABORTED') {
-              safeToast('error', 'Download timed out. Please try downloading fewer files at once.', {
-                autoClose: 4000
-              });
-            } else if (error.response && error.response.status === 413) {
-              safeToast('error', 'Batch too large. Please select fewer files and try again.', {
-                autoClose: 4000
-              });
-            } else {
-              safeToast('error', 'Failed to download files. Please try again.', {
-                autoClose: 4000
-              });
-            }
-          } else {
-            safeToast('error', 'Failed to download files. Please try again.', {
-              autoClose: 4000
-            });
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Download preparation error:', error);
-      safeToast('error', 'Failed to prepare files for download. Please try again.', {
-        autoClose: 4000
-      });
-    } finally {
-      setDownloading(false);
-    }
-  };
+  const handleDownloadSelected = async () => doHandleDownloadSelected(selected, rows as any[], safeToast, setDownloading);
 
   // Motion animation adjusted for mobile
   const motionProps = {
@@ -346,55 +176,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
     });
   }
 
-  // Restore EnhancedTableToolbar as a local component
-  const EnhancedTableToolbar = ({ numSelected, onDelete }: { numSelected: number, onDelete: () => void }) => (
-    <Toolbar
-      className="toolbar"
-      sx={{
-        ...(numSelected > 0 && {
-          bgcolor: (theme) =>
-            alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
-        }),
-      }}
-    >
-      {numSelected > 0 && (
-        <Typography
-          sx={{ flex: '1 1 100%' }}
-          color="inherit"
-          variant="subtitle1"
-          component="div"
-        >
-          {numSelected} selected
-        </Typography>
-      )}
-      {numSelected > 0 && (
-        <>
-          <Tooltip title={downloading ? "Downloading..." : "Download"}>
-            <IconButton 
-              onClick={handleDownloadSelected} 
-              size={isMobile ? "small" : "medium"} 
-              color="primary"
-              disabled={downloading}
-            >
-              {downloading ? <FaSpinner className="fa-spin" /> : <FaDownload />}
-            </IconButton>
-          </Tooltip>
-          {(userRole === 'superAdmin' || userRole === 'admin') && (
-            <Tooltip title="Delete">
-              <IconButton 
-                onClick={onDelete} // Use the passed onDelete prop
-                size={isMobile ? "small" : "medium"} 
-                color="error" 
-                disabled={downloading}
-              >
-                <FaTrash />
-              </IconButton>
-            </Tooltip>
-          )}
-        </>
-      )}
-    </Toolbar>
-  );
+  // Externalized toolbar via static import
 
   return (
     <motion.div
@@ -425,7 +207,14 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
           mt: isMobile ? 1 : 2
         }}>
           {selected.length > 0 && (
-            <EnhancedTableToolbar numSelected={selected.length} onDelete={handleDeleteSelected} />
+            <EnhancedTableToolbar 
+              numSelected={selected.length} 
+              onDelete={handleDeleteSelected}
+              onDownload={handleDownloadSelected}
+              isMobile={isMobile}
+              downloading={downloading}
+              canDelete={userRole === 'superAdmin' || userRole === 'admin'}
+            />
           )}
           
           {viewMode === 'list' ? (

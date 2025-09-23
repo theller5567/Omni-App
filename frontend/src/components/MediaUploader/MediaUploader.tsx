@@ -18,6 +18,9 @@ import {
   DialogActions,
   IconButton,
   CircularProgress,
+  Switch,
+  FormControlLabel,
+  Alert
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -27,6 +30,7 @@ import "./MediaUploader.scss";
 import { useNavigate } from "react-router-dom";
 import { BaseMediaFile } from "../../interfaces/MediaFile";
 import { toast } from "react-toastify";
+import apiClient from '../../api/apiClient';
 // Import TanStack Query hooks and types
 import { useMediaTypes, useTagCategories, useUserProfile, MediaType as HookMediaType } from "../../hooks/query-hooks";
 // Keep the import for Field and specific MediaType shape from Redux
@@ -175,6 +179,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
   // Video thumbnail state
   const [videoThumbnail, setVideoThumbnail] = useState<string | undefined>();
   const [videoThumbnailTimestamp, setVideoThumbnailTimestamp] = useState('00:00:01');
+  const [aiLoading, setAiLoading] = useState<boolean>(false);
   
   // Metadata state
   const [metadata, setMetadata] = useState<MetadataState>({
@@ -193,6 +198,28 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     relatedMedia: []
   });
   const [showTagFilter, setShowTagFilter] = useState(false);
+  const [aiAutoApply, setAiAutoApply] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('uploader.aiAutoApply');
+      return stored ? stored === 'true' : false;
+    } catch {
+      return false;
+    }
+  });
+  const [aiNoticeDismissed, setAiNoticeDismissed] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('uploader.aiNoticeDismissed');
+      return stored ? stored === 'true' : false;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('uploader.aiAutoApply', aiAutoApply ? 'true' : 'false');
+    } catch {}
+  }, [aiAutoApply]);
 
   // =============== REFS ===============
   // Refs to handle state between renders
@@ -450,6 +477,37 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
       };
 
       reader.readAsDataURL(file);
+      // Kick off AI suggestions in background for images
+      if (file.type.startsWith('image/')) {
+        setAiLoading(true);
+        // Build FormData for lightweight suggest endpoint
+        const fd = new FormData();
+        fd.append('file', file);
+        apiClient.post('/media/ai/suggest', fd)
+          .then((resp) => {
+            type AiSuggestResponse = { tags?: unknown[]; description?: string; altText?: string };
+            const data = (resp.data || {}) as AiSuggestResponse;
+            // Auto-apply if user opted in and fields are empty
+            if (aiAutoApply) {
+              setMetadata((prev) => ({
+                ...prev,
+                description: (prev.description && String(prev.description).trim() !== '') ? prev.description : ((data.description as string) || prev.description),
+                altText: (prev.altText && String(prev.altText).trim() !== '') ? prev.altText : ((data.altText as string) || prev.altText),
+                tags: (() => {
+                  const existing = Array.isArray(prev.tags) ? prev.tags : [];
+                  const suggestions = Array.isArray(data.tags) ? (data.tags as unknown[]).map((t: any) => String(t)) : [];
+                  return Array.from(new Set([...(existing || []), ...suggestions]));
+                })()
+              }));
+            }
+            setAiLoading(false);
+          })
+          .catch((err) => {
+            console.warn('AI suggest failed:', err?.message || err);
+            setAiLoading(false);
+          })
+        ;
+      }
       
       // Set the filename in metadata
       handleMetadataChange("fileName", file.name || "");
@@ -794,12 +852,15 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
 
   // Handle tag category selection
   const handleTagCategoryChange = (event: SelectChangeEvent) => {
-    setShowTagFilter(!!event.target.value);
+    const categoryId = event.target.value as string;
+    // Store selected category on metadata and show the filter panel
+    handleMetadataChange("selectedTagCategoryId", categoryId);
+    setShowTagFilter(!!categoryId);
   };
 
   // Filter and return available tags based on selected category
   const getAvailableTags = (): string[] => {
-    const currentTagInput = metadata.tagsInput || '';
+    const currentTagInput = (metadata as any).tagSearchQuery || '';
     const searchLower = currentTagInput.toLowerCase().trim();
     
     // Default to returning empty array if no categories loaded
@@ -813,14 +874,20 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
     // Map of category names to tags
     const availableTags: string[] = [];
     
-    // Combine all tags from all categories
-    tagCategories.forEach((category: any) => {
+    // Determine which categories to use (selected or all)
+    const categoriesToScan = (metadata as any).selectedTagCategoryId
+      ? tagCategories.filter((c: any) => c._id === (metadata as any).selectedTagCategoryId)
+      : tagCategories;
+
+    // Combine tags from chosen categories
+    categoriesToScan.forEach((category: any) => {
       if (category.tags && Array.isArray(category.tags)) {
         category.tags.forEach((tag: any) => {
-          if (typeof tag === 'string' && !availableTags.includes(tag)) {
-            // Filter tags by the search term if provided
-            if (!searchLower || tag.toLowerCase().includes(searchLower)) {
-              availableTags.push(tag);
+          // tag can be a string or an object with "name"
+          const tagName = typeof tag === 'string' ? tag : tag?.name;
+          if (typeof tagName === 'string' && !availableTags.includes(tagName)) {
+            if (!searchLower || tagName.toLowerCase().includes(searchLower)) {
+              availableTags.push(tagName);
             }
           }
         });
@@ -832,7 +899,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
 
   // Handle tag search input
   const handleTagSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    handleMetadataChange("tagsInput", event.target.value);
+    handleMetadataChange("tagSearchQuery", event.target.value);
   };
 
   // Handle file upload process
@@ -880,6 +947,7 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
         metadata: preparedMetadata,
         videoThumbnailTimestamp: videoThumbnailTimestamp,
         videoThumbnail: videoThumbnail,
+        aiAutoApply,
         onProgress: (progress) => {
           setUploadProgress(progress);
         },
@@ -1548,9 +1616,23 @@ const MediaUploader: React.FC<MediaTypeUploaderProps> = ({
                 transition={{ duration: 0.3 }}
                 style={{ width: "100%" }}
               >
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Upload File
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6">
+                    Upload File
+                  </Typography>
+                  <FormControlLabel 
+                    control={<Switch size="small" color="primary" checked={aiAutoApply} onChange={(e) => setAiAutoApply(e.target.checked)} />}
+                    label={<Typography variant="body2">Use AI to fill missing fields</Typography>}
+                  />
+                </Box>
+                {!aiNoticeDismissed && (
+                  <Alert severity="info" onClose={() => { setAiNoticeDismissed(true); try { localStorage.setItem('uploader.aiNoticeDismissed', 'true'); } catch {} }} sx={{ mb: 2 }}>
+                    We can suggest description, alt text, and tags from your image. You can always edit them. Toggle this on to auto-apply suggestions, or leave it off to review first.
+                  </Alert>
+                )}
+                {aiLoading && (
+                  <Typography variant="caption" color="textSecondary" sx={{ mb: 1 }}>Generating AI suggestions…</Typography>
+                )}
                 {renderDropzone()}
               </motion.div>
             )}

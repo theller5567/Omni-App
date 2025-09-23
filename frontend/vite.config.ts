@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
   
   return {
     plugins: [react()],
+    base: '/projects/omniapp/',
     server: {
       proxy: {
         '/api': {
@@ -23,6 +24,8 @@ export default defineConfig(({ mode }) => {
       sourcemap: true,
       // Increase the warning limit to avoid the warning
       chunkSizeWarningLimit: 1200,
+      // Place the app under the subpath in the published output so Netlify serves it correctly
+      outDir: 'dist/projects/omniapp',
       // Improve output file structure
       rollupOptions: {
         output: {

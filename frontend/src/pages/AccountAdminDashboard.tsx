@@ -75,6 +75,7 @@ const AccountAdminDashboard: React.FC = () => {
     data: userProfile, 
     isLoading: isLoadingUserProfile,
   } = useUserProfile();
+  const isSuperAdmin = userProfile?.role === 'superAdmin';
   
   // Get media data using TanStack Query
   const { 
@@ -178,7 +179,7 @@ const AccountAdminDashboard: React.FC = () => {
           />
           <Tab 
             key="tab-1"
-            label="Storage Usage" 
+            label="Storage & Database" 
             {...a11yProps(1)} 
           />
           <Tab 
@@ -186,26 +187,22 @@ const AccountAdminDashboard: React.FC = () => {
             label="User Activity" 
             {...a11yProps(2)} 
           />
-          <Tab 
-            key="tab-3"
-            label="Database Stats" 
-            {...a11yProps(3)} 
-          />
+          {/* Removed separate Database Stats tab; combined in Storage & Database */}
           <Tab 
             key="tab-4"
             label="Recent Activity" 
             {...a11yProps(4)} 
           />
-          <Tab 
+          {isSuperAdmin && <Tab 
             key="tab-5"
             label="Media Approvals" 
             {...a11yProps(5)} 
-          />
-          <Tab 
+          />}
+          {isSuperAdmin && <Tab 
             key="tab-6"
             label="System Settings" 
             {...a11yProps(6)} 
-          />
+          />}
         </Tabs>
         
         <div className="dashboard-tab-content" style={{ minHeight: '500px' }}>
@@ -217,12 +214,18 @@ const AccountAdminDashboard: React.FC = () => {
           
           <TabPanel value={activeTab} index={1} key="tab-panel-1">
             <Suspense fallback={<LoadingFallback />}>
+              {/* Horizontal list only */}
               <StorageUsageChart 
-                key="storage-usage-chart" 
+                key="storage-usage-list"
                 allMedia={allMedia} 
                 mediaTypes={mediaTypes} 
                 isLoading={isLoadingUserProfile || isLoadingMedia || isLoadingMediaTypes}
+                listOnly
               />
+              {/* Database metrics below */}
+              <Box sx={{ mt: 2 }}>
+                <DatabaseStats />
+              </Box>
             </Suspense>
           </TabPanel>
           
@@ -232,29 +235,25 @@ const AccountAdminDashboard: React.FC = () => {
             </Suspense>
           </TabPanel>
           
-          <TabPanel value={activeTab} index={3} key="tab-panel-3">
-            <Suspense fallback={<LoadingFallback />}>
-              <DatabaseStats key="database-stats" />
-            </Suspense>
-          </TabPanel>
+          {/* Removed separate Database Stats panel */}
           
-          <TabPanel value={activeTab} index={4} key="tab-panel-4">
+          <TabPanel value={activeTab} index={3} key="tab-panel-3">
             <Suspense fallback={<LoadingFallback />}>
               <RecentActivity key="recent-activity" />
             </Suspense>
           </TabPanel>
           
-          <TabPanel value={activeTab} index={5} key="tab-panel-5">
+          {isSuperAdmin && <TabPanel value={activeTab} index={4} key="tab-panel-4">
             <Suspense fallback={<LoadingFallback />}>
               <MediaApprovalSection key="media-approval-section" />
             </Suspense>
-          </TabPanel>
+          </TabPanel>}
           
-          <TabPanel value={activeTab} index={6} key="tab-panel-6">
+          {isSuperAdmin && <TabPanel value={activeTab} index={5} key="tab-panel-5">
             <Suspense fallback={<LoadingFallback />}>
               <SystemSettings key="system-settings" />
             </Suspense>
-          </TabPanel>
+          </TabPanel>}
         </div>
       </Box>
     </div>

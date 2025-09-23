@@ -12,10 +12,13 @@ import {
   Chip,
   SelectChangeEvent
 } from "@mui/material";
+import Autocomplete from "@mui/material/Autocomplete";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import SearchIcon from "@mui/icons-material/Search";
 import FieldLabel from "./FieldLabel";
 import { MetadataState } from "../types";
+import { useTags, Tag } from "../../../hooks/query-hooks";
+import { useUserProfile } from "../../../hooks/query-hooks";
 import { TagCategory } from "../../../hooks/query-hooks";
 
 interface StandardFieldsProps {
@@ -45,6 +48,10 @@ const StandardFields: React.FC<StandardFieldsProps> = ({
   handleTagCategoryChange,
   handleTagSearch
 }) => {
+  // Load existing tags for selection
+  const { data: userProfile } = useUserProfile();
+  const { data: allTags = [] } = useTags(userProfile);
+  const tagOptions = React.useMemo(() => allTags.map((t: Tag) => t.name), [allTags]);
   return (
     <Box className="standard-fields-container" sx={{ 
       display: 'grid', 
@@ -191,19 +198,31 @@ const StandardFields: React.FC<StandardFieldsProps> = ({
           </Box>
         )}
         
-        <TextField
-          fullWidth
-          name="metadata.tagsInput"
-          value={metadata.tagsInput || ""}
-          onChange={handleTagsChange}
-          onBlur={handleTagsBlur}
-          onKeyDown={handleTagsKeyDown}
-          margin="none"
-          variant="outlined"
-          size="small"
-          InputProps={{
-            sx: { bgcolor: 'background.paper', borderRadius: 1 }
-          }}
+        <Autocomplete
+          multiple
+          options={tagOptions}
+          value={metadata.tags || []}
+          onChange={(_e, newValue) => handleMetadataChange("tags", newValue)}
+          filterSelectedOptions
+          freeSolo
+          renderTags={(value: readonly string[], getTagProps) =>
+            value.map((option: string, index: number) => (
+              <Chip variant="filled" label={option} {...getTagProps({ index })} key={`${option}-${index}`} />
+            ))
+          }
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder="Add tags..."
+              size="small"
+              margin="none"
+              variant="outlined"
+              InputProps={{
+                ...params.InputProps,
+                sx: { bgcolor: 'background.paper', borderRadius: 1 }
+              }}
+            />
+          )}
         />
         
         {showTagFilter && getAvailableTags().length > 0 && (

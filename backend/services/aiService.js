@@ -48,4 +48,31 @@ export async function describeAndTagImageByUrl(url) {
   }
 }
 
+export async function describeAndTagImageFromBuffer(buffer, mimetype = 'image/jpeg') {
+  await ensureOpenAIConfigured();
+  const system = 'You help organize a media library. Return strict JSON with: tags (<=8 short nouns), description (<=40 words), altText (<=16 words).';
+  const base64 = Buffer.from(buffer).toString('base64');
+  const dataUrl = `data:${mimetype};base64,${base64}`;
+  const res = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    response_format: { type: 'json_object' },
+    temperature: 0.2,
+    messages: [
+      { role: 'system', content: system },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'Analyze this image and produce JSON.' },
+          { type: 'image_url', image_url: { url: dataUrl } }
+        ]
+      }
+    ]
+  });
+  try {
+    return JSON.parse(res.choices[0]?.message?.content || '{}');
+  } catch {
+    return { tags: [], description: '', altText: '' };
+  }
+}
+
 

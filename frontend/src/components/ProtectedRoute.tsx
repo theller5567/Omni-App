@@ -52,7 +52,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ element, requiredRole, 
   }
 
   if (!hasRequiredRole) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/media-library" replace />;
   }
 
   return (

@@ -71,7 +71,7 @@ const MediaApprovalSection: React.FC = () => {
     );
   }
 
-  if (!isProfileLoading && (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'superAdmin'))) {
+  if (!isProfileLoading && (!userProfile || userProfile.role !== 'superAdmin')) {
     return (
       <Box p={3}>
         <Alert severity="error">You do not have permission to view this section.</Alert>

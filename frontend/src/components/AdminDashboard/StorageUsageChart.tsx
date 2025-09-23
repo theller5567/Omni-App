@@ -25,9 +25,10 @@ interface StorageUsageChartProps {
   allMedia: TransformedMediaFile[];
   mediaTypes: MediaType[];
   isLoading?: boolean; // Optional loading prop
+  listOnly?: boolean; // If true, render only the horizontal list panel
 }
 
-const StorageUsageChart: React.FC<StorageUsageChartProps> = ({ allMedia, mediaTypes, isLoading }) => {
+const StorageUsageChart: React.FC<StorageUsageChartProps> = ({ allMedia, mediaTypes, isLoading, listOnly }) => {
   const [activeTab, setActiveTab] = React.useState(0);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const theme = useTheme(); // Get the current theme
@@ -36,20 +37,41 @@ const StorageUsageChart: React.FC<StorageUsageChartProps> = ({ allMedia, mediaTy
   // const allMedia = useSelector((state: RootState) => state.media.allMedia);
   // const mediaTypes = useSelector((state: RootState) => state.mediaTypes.mediaTypes);
   
-  // Calculate storage by media type
+  // Resolve a user-friendly media type name from the file (handles id, populated object, or stored name)
+  const resolveMediaTypeName = (file: TransformedMediaFile): string => {
+    const mt: any = (file as any).mediaType;
+    const mtId: string | undefined = (file as any).mediaTypeId;
+    const mtName: string | undefined = (file as any).mediaTypeName;
+    
+    // Prefer explicit name first
+    if (mtName && typeof mtName === 'string') return mtName;
+    // Populated object case
+    if (mt && typeof mt === 'object') return mt.name || mt._id || 'Uncategorized';
+    // If we have an id string, try look up the name from mediaTypes
+    const idOrName = (typeof mt === 'string' && mt) || mtId || '';
+    if (idOrName) {
+      const found = mediaTypes.find((t: any) => t._id === idOrName || t.name === idOrName);
+      return found?.name || idOrName;
+    }
+    return 'Uncategorized';
+  };
+
+  // Calculate storage by media type (group by resolved name)
   const getStorageByMediaType = () => {
     const storageMap: {[key: string]: number} = {};
     
     allMedia.forEach(file => {
-      const mediaType = file.mediaType || 'Uncategorized';
-      storageMap[mediaType] = (storageMap[mediaType] || 0) + (file.fileSize || 0);
+      const name = resolveMediaTypeName(file);
+      storageMap[name] = (storageMap[name] || 0) + (file.fileSize || 0);
     });
     
-    return Object.entries(storageMap).map(([name, size], index) => ({
-      name,
-      size,
-      color: mediaTypes.find(type => type.name === name)?.catColor || DEFAULT_COLORS[index % DEFAULT_COLORS.length]
-    })).sort((a, b) => b.size - a.size);
+    return Object.entries(storageMap)
+      .map(([name, size], index) => ({
+        name,
+        size,
+        color: mediaTypes.find(type => type.name === name)?.catColor || DEFAULT_COLORS[index % DEFAULT_COLORS.length]
+      }))
+      .sort((a, b) => b.size - a.size);
   };
   
   // Calculate storage by file extension
@@ -126,6 +148,53 @@ const StorageUsageChart: React.FC<StorageUsageChartProps> = ({ allMedia, mediaTy
     );
   }
   
+  // If listOnly, render just the right-side list card
+  if (listOnly) {
+    const totalStorage = allMedia.reduce((total, file) => total + (file.fileSize || 0), 0);
+    return (
+      <Paper elevation={2} className="dashboard-card has-scroll" style={{ padding: '1rem', minHeight: '500px' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Total Storage Header */}
+          <Box sx={{ mb: 2, pb: 2, borderBottom: `1px solid ${theme.palette.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <Box>
+              <Typography variant="subtitle2" color="textSecondary" sx={{ fontSize: '0.75rem' }}>Total Storage</Typography>
+              <Typography variant="h4" color="primary" sx={{ mt: 0.5, fontWeight: 600 }}>{formatFileSize(totalStorage)}</Typography>
+            </Box>
+            <Box sx={{ textAlign: 'right' }}>
+              <Typography variant="subtitle2" color="textSecondary" sx={{ fontSize: '0.75rem' }}>Files</Typography>
+              <Typography variant="h6" sx={{ mt: 0.5 }}>{allMedia.length}</Typography>
+            </Box>
+          </Box>
+          <Typography variant="subtitle1" sx={{ mb: 1.5, fontWeight: 500, fontSize: '0.95rem' }}>Storage by Media Type</Typography>
+          <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+            {mediaTypeData.map((item, index) => {
+              const percentage = totalStorage ? (item.size / totalStorage * 100) : 0;
+              return (
+                <Box key={index} sx={{ mb: 1.25, '&:last-child': { mb: 0 } }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: item.color, mr: 1 }} />
+                      <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: index === 0 ? 600 : 400 }}>{item.name}</Typography>
+                    </Box>
+                    <Typography variant="body2" sx={{ fontWeight: index === 0 ? 600 : 400, fontSize: '0.85rem' }}>
+                      {formatFileSize(item.size)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ width: '100%', height: 4, bgcolor: theme.palette.mode === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                    <Box sx={{ width: `${percentage}%`, height: '100%', bgcolor: item.color, borderRadius: 2 }} />
+                  </Box>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem', mt: 0.25, display: 'block', textAlign: 'right' }}>
+                    {percentage.toFixed(1)}%
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Box>
+        </Box>
+      </Paper>
+    );
+  }
+
   return (
     <div className="dashboard-grid" style={{ 
       display: 'grid',

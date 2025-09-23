@@ -4,9 +4,10 @@
   publish = "dist"
 
 # Handle routing for SPA
+# Serve app under subpath
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
+  from = "/projects/omniapp/*"
+  to = "/projects/omniapp/index.html"
   status = 200
 
 # Environment variable settings
