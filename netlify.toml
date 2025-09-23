@@ -5,6 +5,11 @@
 
 # Serve the SPA under /projects/omniapp
 [[redirects]]
+  from = "/projects/omniapp"
+  to = "/projects/omniapp/"
+  status = 301
+
+[[redirects]]
   from = "/projects/omniapp/*"
   to = "/projects/omniapp/index.html"
   status = 200
