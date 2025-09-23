@@ -3,9 +3,10 @@
   publish = "frontend/dist"
   command = "cd frontend && npm install --legacy-peer-deps && npm run build"
 
+# Serve the SPA under /projects/omniapp
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
+  from = "/projects/omniapp/*"
+  to = "/projects/omniapp/index.html"
   status = 200
   
 [build.environment]
