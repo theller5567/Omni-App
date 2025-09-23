@@ -42,9 +42,6 @@ const StandardFields: React.FC<StandardFieldsProps> = ({
   setShowTagFilter,
   tagCategories,
   getAvailableTags,
-  handleTagsChange,
-  handleTagsBlur,
-  handleTagsKeyDown,
   handleTagCategoryChange,
   handleTagSearch
 }) => {
